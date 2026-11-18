@@ -17,6 +17,13 @@
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="preload" href="media/intro-poster.jpg" as="image">
   <link rel="stylesheet" href="css/app.css">
+  <!--PRELOAD-->
+  <link rel="modulepreload" href="dist/a-NCVDBQWQ.js">
+  <link rel="modulepreload" href="dist/c-WI5IF7H2.js">
+  <link rel="modulepreload" href="dist/c-5H7ASYQ4.js">
+  <link rel="modulepreload" href="dist/c-YH7LPRJG.js">
+  <link rel="modulepreload" href="dist/c-VHNSBD2M.js">
+  <!--/PRELOAD-->
 </head>
 <body>
   <div id="intro" class="intro" aria-hidden="true">
@@ -99,6 +106,7 @@
     (function () {
       var lastErr = '';
       function fail(detail) {
+        if (!detail && window.__calStarted) return; // o app carregou: quem cuida de erros agora é ele
         var app = document.getElementById('app');
         if (!app || document.getElementById('view') || app.querySelector('[data-login],[data-retry]')) return;
         var intro = document.getElementById('intro');
@@ -122,7 +130,7 @@
         lastErr = t && t !== window && (t.src || t.href) ? 'não carregou ' + String(t.src || t.href).split('/').slice(-2).join('/') : (e.message || '') + ' ' + String(e.filename || '').split('/').pop();
       }, true);
       window.addEventListener('unhandledrejection', function (e) { lastErr = String(e.reason && (e.reason.message || e.reason)); });
-      var APP = /*APP*/'./dist/a-HQLXQSFX.js'/*APP*/;
+      var APP = /*APP*/'./dist/a-NCVDBQWQ.js'/*APP*/;
       import(APP).catch(function (e) { fail(String(e && (e.message || e))); });
       setTimeout(function () { fail(''); }, 20000);
     })();

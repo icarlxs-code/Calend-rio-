@@ -20,6 +20,8 @@ import * as push from './avisos.js';
 import { dueReminders, reminderMessage } from '../functions/reminder-rules.js';
 
 const root = document.getElementById('app');
+// avisa a página que o app carregou (a proteção de abertura não deve mais agir)
+window.__calStarted = true;
 let cloudApi = null;
 
 /* ---------- casca do app ---------- */
@@ -287,7 +289,6 @@ let loginNotice = '';
 
 function showLogin(errMsg = '') {
   const msg = errMsg || loginNotice;
-  loginNotice = '';
   root.innerHTML = `
   <div class="login">
     <img src="icons/icon-192.png" alt="" width="84" height="84">
@@ -313,6 +314,7 @@ function showLogin(errMsg = '') {
     const email = f.email.value.trim().toLowerCase();
     const pass = f.pass.value;
     loginEmail = email;
+    loginNotice = '';
     if (!email || !pass) return showLogin('Preencha o e-mail e a senha.');
     const go = f.querySelector('[data-go]');
     go.disabled = true;
@@ -422,7 +424,7 @@ async function boot() {
   // Tela do cliente (link compartilhado)
   if (hash.startsWith('#/c/') || hash.startsWith('#/v/')) {
     loading('Carregando cronograma…');
-    const isTeamDevice = !!localStorage.getItem('pauta.me');
+    const isTeamDevice = !!(localStorage.getItem('pauta.me') || localStorage.getItem('cal.team'));
     try {
       if (hash.startsWith('#/v/')) {
         const data = await decodeSnapshot(hash.slice(4));
@@ -454,12 +456,17 @@ async function boot() {
     return cloudError(e);
   }
   let authAnswered = false;
+  let started = false;
   setTimeout(() => {
     if (!authAnswered) cloudError(new Error('o login não respondeu'));
-  }, 15000);
+  }, 25000);
   cloudApi.onUser(async (user) => {
     authAnswered = true;
-    if (!user) return showLogin();
+    if (!user) {
+      // a sessão caiu com o app aberto: recomeça do zero para o próximo login funcionar
+      if (started) return location.reload();
+      return showLogin();
+    }
     if (started) return;
     const allowed = CONFIG.team.some((m) => m.email && m.email.toLowerCase() === (user.email || '').toLowerCase());
     if (!allowed) {
@@ -468,9 +475,17 @@ async function boot() {
       return showLogin();
     }
     started = true;
+    try {
+      localStorage.setItem('cal.team', '1');
+    } catch { /* ok */ }
     loading('Entrando…');
     // se a nuvem demorar, abre mesmo assim: os dados chegam assim que a conexão responder
-    await Promise.race([initCloud(cloudApi.backend, user), new Promise((r) => setTimeout(r, 12000))]);
+    try {
+      await Promise.race([initCloud(cloudApi.backend, user), new Promise((r) => setTimeout(r, 12000))]);
+    } catch (e) {
+      console.error(e);
+      setTimeout(() => toast('Não consegui carregar os dados agora. Verifique a internet.', { ms: 6000 }), 800);
+    }
     startApp();
   });
 }

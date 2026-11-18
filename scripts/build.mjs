@@ -30,7 +30,10 @@ const entry = files.find((f) => /\/a-[^/]+\.js$/.test(f));
 const version = entry.match(/a-([^.]+)\.js$/)[1].slice(0, 8).toLowerCase();
 
 const idxPath = resolve(root, 'index.html');
-writeFileSync(idxPath, readFileSync(idxPath, 'utf8').replace(/\/\*APP\*\/'[^']*'\/\*APP\*\//, `/*APP*/'./${entry}'/*APP*/`));
+const preload = files.filter((f) => f.endsWith('.js')).map((f) => `<link rel="modulepreload" href="${f}">`).join('\n  ');
+writeFileSync(idxPath, readFileSync(idxPath, 'utf8')
+  .replace(/\/\*APP\*\/'[^']*'\/\*APP\*\//, `/*APP*/'./${entry}'/*APP*/`)
+  .replace(/<!--PRELOAD-->[\s\S]*?<!--\/PRELOAD-->/, `<!--PRELOAD-->\n  ${preload}\n  <!--/PRELOAD-->`));
 
 const swPath = resolve(root, 'sw.js');
 writeFileSync(swPath, readFileSync(swPath, 'utf8')

@@ -7,13 +7,25 @@ import * as authMod from 'firebase/auth';
 
 let fs, auth, db, authApi;
 
+/* Só para testes no computador do desenvolvedor: usa o Firebase local (emuladores).
+   Nunca é ativado no site publicado. */
+const useEmulator = () => {
+  try {
+    return ['localhost', '127.0.0.1'].includes(location.hostname) && localStorage.getItem('cal.emulator') === '1';
+  } catch {
+    return false;
+  }
+};
+
 export async function connect(config) {
+  if (useEmulator()) config = { ...config, projectId: 'demo-calendario' };
   fs = fsMod;
   authApi = authMod;
   const app = appMod.initializeApp(config);
   // Cache em memória: o mais confiável no Safari do iPhone (o armazenamento do Safari pode travar).
   // Long polling automático: funciona mesmo em redes que bloqueiam conexões de streaming.
   db = fs.initializeFirestore(app, { localCache: fs.memoryLocalCache(), experimentalAutoDetectLongPolling: true });
+  if (useEmulator()) fs.connectFirestoreEmulator(db, '127.0.0.1', 8085);
   // Login sem janelas extras (o Safari do iPhone pode bloquear a janela invisível do getAuth)
   try {
     auth = authApi.initializeAuth(app, {
@@ -22,6 +34,7 @@ export async function connect(config) {
   } catch {
     auth = authApi.getAuth(app);
   }
+  if (useEmulator()) authApi.connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   return {
     onUser: (cb) => authApi.onAuthStateChanged(auth, cb),
     signIn: (email, pass) => authApi.signInWithEmailAndPassword(auth, email, pass),
@@ -90,9 +103,11 @@ const backend = {
 
 /* Leitura pública (tela do cliente) — não exige login */
 export async function fetchPublic(config, token) {
+  if (useEmulator()) config = { ...config, projectId: 'demo-calendario' };
   const f = fsMod;
   const app = appMod.initializeApp(config, 'public');
   const d = f.getFirestore(app);
+  if (useEmulator()) f.connectFirestoreEmulator(d, '127.0.0.1', 8085);
   const snap = await f.getDoc(f.doc(d, 'public', token));
   return snap.exists() ? snap.data() : null;
 }
