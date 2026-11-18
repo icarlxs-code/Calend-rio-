@@ -4,8 +4,10 @@
 import * as appMod from 'firebase/app';
 import * as fsMod from 'firebase/firestore';
 import * as authMod from 'firebase/auth';
+import * as fnMod from 'firebase/functions';
+import { CONFIG } from '../config.js';
 
-let fs, auth, db, authApi;
+let fs, auth, db, authApi, functions;
 
 /* Só para testes no computador do desenvolvedor: usa o Firebase local (emuladores).
    Nunca é ativado no site publicado. */
@@ -35,6 +37,8 @@ export async function connect(config) {
     auth = authApi.getAuth(app);
   }
   if (useEmulator()) authApi.connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+  functions = fnMod.getFunctions(app, CONFIG.functionsRegion || 'southamerica-east1');
+  if (useEmulator()) fnMod.connectFunctionsEmulator(functions, '127.0.0.1', 5001);
   return {
     onUser: (cb) => authApi.onAuthStateChanged(auth, cb),
     signIn: (email, pass) => authApi.signInWithEmailAndPassword(auth, email, pass),
@@ -47,6 +51,12 @@ export async function connect(config) {
 const clean = (obj) => JSON.parse(JSON.stringify(obj)); // remove undefined
 
 const backend = {
+  /* Pergunta ao assistente (Claude) no servidor */
+  async ask(question, history) {
+    const call = fnMod.httpsCallable(functions, 'perguntar', { timeout: 70000 });
+    const res = await call({ question, history });
+    return res.data.answer;
+  },
   async subscribe(cols, onData, onErr) {
     await Promise.all(
       cols.map(

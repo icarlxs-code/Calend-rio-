@@ -109,6 +109,16 @@ export const store = {
     this.emit();
   },
 
+  /* Assistente (Claude) — só com a nuvem ligada */
+  async askAssistant(question, history = []) {
+    if (this.mode !== 'cloud' || !backend.ask) {
+      const e = new Error('O assistente precisa da sincronização na nuvem.');
+      e.code = 'local';
+      throw e;
+    }
+    return backend.ask(question, history);
+  },
+
   /* Acesso direto à nuvem (aparelhos para notificação, testes, chave pública) */
   writeRaw(col, item) {
     if (this.mode !== 'cloud') return false;

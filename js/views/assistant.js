@@ -1,4 +1,4 @@
-/* Assistente: análise automática da agenda + "Perguntar ao Claude" (login normal) */
+/* Assistente: conversa com o Claude dentro do app + análise automática da agenda */
 import { store } from '../store.js';
 import { ui } from '../ui.js';
 import { TYPES, TYPE_ORDER, isPost } from '../constants.js';
@@ -8,6 +8,64 @@ import { openSheet, sheetHead, avatar, toast } from '../components.js';
 import { dayBrief, freeTime, bestSlots, routine, evLabel } from '../planner.js';
 import { personConflicts } from '../insights.js';
 import { askClaude, PRESETS } from '../claude-link.js';
+
+/* ---------- conversa ---------- */
+const LS_CHAT = 'cal.chat';
+let chat = (() => {
+  try {
+    return JSON.parse(localStorage.getItem(LS_CHAT) || '[]').slice(-30);
+  } catch {
+    return [];
+  }
+})();
+let thinking = false;
+const saveChat = () => {
+  try {
+    localStorage.setItem(LS_CHAT, JSON.stringify(chat.slice(-30)));
+  } catch { /* ok */ }
+};
+/* texto simples com **negrito**, listas e quebras de linha (sempre escapado antes) */
+const md = (t) => esc(t)
+  .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+  .replace(/^#{1,4}\s*(.+)$/gm, '<b>$1</b>')
+  .replace(/^\s*[-•*]\s+(.+)$/gm, '<span class="li">$1</span>')
+  .replace(/<\/span>\n+(?=<span class="li">)/g, '</span>')
+  .replace(/\n{2,}/g, '\n')
+  .replace(/\n/g, '<br>');
+const ERR = {
+  'functions/failed-precondition': null, // usa a mensagem do servidor
+  'functions/permission-denied': 'Só a equipe pode usar o assistente.',
+  'functions/resource-exhausted': null,
+  'functions/unavailable': 'Sem conexão com o assistente agora. Tente de novo.',
+  'functions/deadline-exceeded': 'O assistente demorou demais. Tente de novo.',
+};
+function errText(e) {
+  if (e?.code === 'local') return 'O assistente precisa da sincronização na nuvem ligada.';
+  if (e?.code in ERR) return ERR[e.code] || e.message;
+  if (e?.code === 'functions/not-found' || e?.code === 'functions/internal' && !/assistente|Claude/.test(e.message || '')) {
+    return 'O assistente ainda não foi ligado no servidor. Falta publicar o servidor com a chave do Claude (veja o README, seção 5).';
+  }
+  return e?.message || 'Não consegui falar com o assistente.';
+}
+function chatHtml() {
+  return `<section class="block" data-chat>
+    <h2 class="block__title">${icon('sparkle', 16)} Pergunte ao assistente</h2>
+    <div class="chat">
+      ${chat.length ? chat.map((m) => `<div class="msg msg--${m.role}${m.error ? ' msg--err' : ''}">${md(m.text)}</div>`).join('')
+        : `<div class="msg msg--assistant">Oi! Eu vejo a agenda inteira de vocês: posts, captações, reuniões, empresas e a rotina. Pergunte o que quiser, por exemplo “o que eu tenho amanhã?” ou “qual o melhor horário para um Reels da Pura Vida na sexta?”.</div>`}
+      ${thinking ? `<div class="msg msg--assistant msg--typing"><i></i><i></i><i></i></div>` : ''}
+    </div>
+    <div class="presets">${PRESETS.map((p, i) => `<button class="preset" data-preset="${i}">${esc(p.label)}</button>`).join('')}</div>
+    <form class="chat__form" data-chatform onsubmit="return false">
+      <textarea class="input" rows="1" name="q" placeholder="Escreva sua pergunta…" ${thinking ? 'disabled' : ''}></textarea>
+      <button class="iconbtn iconbtn--accent" type="submit" aria-label="Enviar" ${thinking ? 'disabled' : ''}>${icon('right', 20)}</button>
+    </form>
+    <div class="chat__foot">
+      ${chat.length ? `<button class="btn-text btn-text--sm" data-clearchat>Limpar conversa</button>` : '<span></span>'}
+      <button class="btn-text btn-text--sm" data-extclaude>Abrir no app do Claude</button>
+    </div>
+  </section>`;
+}
 
 const esca = (o) => esc(JSON.stringify(o));
 
@@ -53,6 +111,8 @@ export function openAssistant() {
         <span class="assist-hero__ic">${icon('sparkle', 22)}</span>
         <div><strong>Analisando a agenda de vocês</strong><p>Funciona sozinho, sem internet. Confere conflitos, tempo livre e os melhores horários sempre que algo muda.</p></div>
       </div>
+
+      ${chatHtml()}
 
       <section class="block">
         <h2 class="block__title">${icon('today', 16)} Hoje</h2>
@@ -106,16 +166,6 @@ export function openAssistant() {
         </div>
       </section>
 
-      <section class="block">
-        <h2 class="block__title">${icon('sparkle', 16)} Perguntar ao Claude</h2>
-        <div class="card">
-          <p>Abre o Claude <b>com o seu login normal</b> (app ou site), já com a agenda de vocês e a pergunta prontas. Não precisa de chave.</p>
-          <div class="presets">${PRESETS.map((p, i) => `<button class="preset" data-preset="${i}">${esc(p.label)}</button>`).join('')}</div>
-          <textarea class="input" rows="3" data-f="q" placeholder="Ou escreva sua pergunta… ex.: monte o cronograma da Pura Vida para dezembro">${esc(st.q)}</textarea>
-          <button class="btn btn--primary btn--block" data-ask>${icon('sparkle', 18)} Perguntar ao Claude</button>
-          <p class="fhelp">A agenda também é copiada. Se o Claude abrir vazio, toque e segure no campo de mensagem e escolha <b>Colar</b>.</p>
-        </div>
-      </section>
     </div>`;
   };
 
@@ -126,19 +176,67 @@ export function openAssistant() {
       const el = a.el;
       el.querySelector('[data-f="type"]').onchange = (e) => { st.type = e.target.value; a.set(html()); };
       el.querySelector('[data-f="date"]').onchange = (e) => { if (e.target.value) { st.date = e.target.value; a.set(html()); } };
-      el.querySelector('[data-f="q"]').oninput = (e) => (st.q = e.target.value);
       el.querySelectorAll('[data-new]').forEach((b) => (b.onclick = async () => {
         const [who, time] = b.dataset.new.split('|');
         const { openEventEditor } = await import('./event.js');
         openEventEditor({ date: st.date, type: st.type, time, assignees: [who] });
       }));
-      el.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => askClaude(PRESETS[+b.dataset.preset].q)));
-      el.querySelector('[data-ask]').onclick = () => {
-        if (!st.q.trim()) return toast('Escreva a pergunta ou escolha uma sugestão');
-        askClaude(st.q.trim());
+      const send = async (q) => {
+        q = (q || '').trim();
+        if (!q || thinking) return;
+        const history = chat.filter((m) => !m.error).map((m) => ({ role: m.role, text: m.text }));
+        chat.push({ role: 'user', text: q });
+        thinking = true;
+        redrawChat(a);
+        try {
+          const answer = await store.askAssistant(q, history);
+          chat.push({ role: 'assistant', text: answer });
+        } catch (e) {
+          chat.push({ role: 'assistant', text: errText(e), error: true });
+        }
+        thinking = false;
+        saveChat();
+        redrawChat(a);
       };
+      bindChat(a, send);
     },
   });
+  function redrawChat(a) {
+    const box = a.el.querySelector('[data-chat]');
+    if (!box) return;
+    box.outerHTML = chatHtml();
+    bindChat(a, a.send);
+    const c = a.el.querySelector('.chat');
+    if (c) c.lastElementChild?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  function bindChat(a, send) {
+    a.send = send;
+    const el = a.el;
+    el.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => send(PRESETS[+b.dataset.preset].q)));
+    const f = el.querySelector('[data-chatform]');
+    const ta = f.q;
+    ta.oninput = () => {
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight, 140) + 'px';
+    };
+    ta.onkeydown = (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        send(ta.value);
+      }
+    };
+    f.onsubmit = (e) => {
+      e.preventDefault();
+      send(ta.value);
+    };
+    const clr = el.querySelector('[data-clearchat]');
+    if (clr) clr.onclick = () => {
+      chat = [];
+      saveChat();
+      redrawChat(a);
+    };
+    el.querySelector('[data-extclaude]').onclick = () => askClaude(ta.value.trim() || 'Analise a agenda e me diga o que é mais importante agora.');
+  }
   api.refresh = () => {
     const a = document.activeElement;
     if (a && api.el.contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return; // não atrapalha quem está digitando

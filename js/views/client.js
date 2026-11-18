@@ -9,12 +9,15 @@ import { CONFIG } from '../../config.js';
 
 const st = { data: null, tab: 'proximos', month: monthKey(todayKey()), sel: todayKey() };
 
-export function showClient(root, data, { canGoBack = false } = {}) {
+export function showClient(root, data, { canGoBack = false, preview = false } = {}) {
   st.data = data;
-  document.title = `${data.company.name} · Cronograma`;
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', data.company.color);
-  document.body.classList.add('is-client');
+  st.tab = 'proximos';
+  if (!preview) {
+    document.title = `${data.company.name} · Cronograma`;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', data.company.color);
+    document.body.classList.add('is-client');
+  }
   const draw = () => {
     root.innerHTML = clientHtml(canGoBack);
     root.querySelectorAll('[data-c]').forEach((b) => (b.onclick = () => {

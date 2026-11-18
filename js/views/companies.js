@@ -78,7 +78,8 @@ function companyHtml(id) {
     ${c.instagram ? `<a class="cohero__ig" href="https://instagram.com/${encodeURIComponent(c.instagram)}" target="_blank" rel="noopener">${icon('insta', 14)} @${esc(c.instagram)}</a>` : ''}
     <div class="cohero__btns">
       <button class="btn btn--primary btn--sm" data-act="new">${icon('plus', 16)} Evento</button>
-      <button class="btn btn--soft btn--sm" data-act="share">${icon('link', 16)} Link do cliente</button>
+      <button class="btn btn--soft btn--sm" data-act="clientview">${icon('eye', 16)} Página do cliente</button>
+      <button class="btn btn--soft btn--sm" data-act="share">${icon('share', 16)} Enviar</button>
     </div>
   </div>
 
@@ -120,6 +121,7 @@ function mountCompany(api, id) {
     openEventEditor({ companyId: id });
   };
   el.querySelector('[data-act="share"]').onclick = () => openShare(id);
+  el.querySelector('[data-act="clientview"]').onclick = () => openClientPreview(id);
 }
 
 /* ======================== CADASTRO ======================== */
@@ -307,4 +309,28 @@ export async function openShare(id) {
       };
     },
   });
+}
+
+/* Mostra, dentro do app, exatamente o que o cliente vê (sem notas internas e sem outras empresas) */
+export async function openClientPreview(id) {
+  const c = store.company(id);
+  if (!c) return;
+  const { showClient } = await import('./client.js');
+  const { sanitizePayload } = await import('../sanitize.js');
+  const payload = sanitizePayload(buildClientPayload(c, store.state.events));
+  const wrap = document.createElement('div');
+  wrap.className = 'client-preview';
+  wrap.innerHTML = `<div class="client-preview__bar"><button class="btn btn--soft btn--sm" data-closepv>${icon('left', 16)} Voltar</button><span>Assim o cliente vê</span><button class="btn btn--primary btn--sm" data-sendpv>${icon('share', 16)} Enviar</button></div><div class="client-preview__body"></div>`;
+  document.body.appendChild(wrap);
+  document.body.classList.add('has-sheet');
+  showClient(wrap.querySelector('.client-preview__body'), payload, { canGoBack: false, preview: true });
+  const close = () => {
+    wrap.remove();
+    document.body.classList.toggle('has-sheet', !!document.querySelector('.sheet-wrap'));
+  };
+  wrap.querySelector('[data-closepv]').onclick = close;
+  wrap.querySelector('[data-sendpv]').onclick = () => {
+    close();
+    openShare(id);
+  };
 }

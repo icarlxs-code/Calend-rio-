@@ -9,7 +9,7 @@ import { resolve } from 'node:path';
 const root = resolve(import.meta.dirname, '..');
 const { CONFIG } = await import(pathToFileURL(resolve(root, 'config.js')).href);
 
-const team = CONFIG.team.map(({ id, name }) => ({ id, name }));
+const team = CONFIG.team.map(({ id, name, email }) => ({ id, name, email: (email || '').toLowerCase() }));
 writeFileSync(resolve(root, 'functions/team.js'), `/* Gerado por scripts/prepare-deploy.mjs a partir do config.js */\nexport const TEAM = ${JSON.stringify(team, null, 2)};\n`);
 
 const emails = CONFIG.team.map((m) => (m.email || '').trim().toLowerCase()).filter(Boolean);

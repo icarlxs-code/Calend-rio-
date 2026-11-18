@@ -1,7 +1,7 @@
 # Publica o servidor de notificações (Firebase Functions) e as regras de segurança.
 # Roda sozinho quando o config.js ou o servidor mudam, ou manualmente em Actions.
 # Precisa do segredo FIREBASE_SERVICE_ACCOUNT (veja o README).
-name: Publicar servidor de notificações
+name: Publicar servidor (notificações e assistente)
 
 on:
   workflow_dispatch:
@@ -61,9 +61,11 @@ jobs:
         env:
           SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           FUNCTIONS_REGION: ${{ vars.FUNCTIONS_REGION }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
           echo "FUNCTIONS_REGION=${FUNCTIONS_REGION:-southamerica-east1}" > functions/.env
+          if [ -n "$ANTHROPIC_API_KEY" ]; then echo "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY" >> functions/.env; fi
           npx --yes firebase-tools@15.34.2 deploy --only functions,firestore:rules \
             --project "${{ steps.prep.outputs.project }}" --non-interactive --force

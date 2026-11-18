@@ -118,6 +118,23 @@ Para os avisos chegarem **com o app fechado** e no **celular do parceiro**, é p
 
 Sem o servidor, o app ainda avisa **enquanto estiver aberto**, e os lembretes podem ir para o **Calendário do iPhone** (Ajustes → Lembretes no Calendário), que avisa mesmo com o app fechado.
 
+## 5. Assistente com o Claude dentro do app
+
+No **Assistente** (✨) há uma conversa: vocês perguntam e o Claude responde ali mesmo, vendo a agenda inteira (posts, captações, reuniões, empresas, rotina e bilhetes dos últimos dias). Usa o **Claude Haiku 5.5 com esforço baixo** (rápido e barato).
+
+O login normal do Claude só vale no app/site do próprio Claude; para responder **dentro** do app é preciso uma chave da API (paga por uso, à parte de qualquer assinatura do Claude). A chave fica **só no servidor**, nunca no app, e só vocês dois logados conseguem usar.
+
+1. Fazer a seção 4 (servidor publicado).
+2. Em **console.anthropic.com**: criar conta, adicionar créditos (Billing) e criar uma chave em **API Keys**.
+3. No GitHub: **Settings → Secrets and variables → Actions → New repository secret**, nome `ANTHROPIC_API_KEY`, valor: a chave.
+4. **Actions → Publicar servidor (notificações e assistente) → Run workflow**.
+
+Sem a chave, o botão **Abrir no app do Claude** continua funcionando com o login normal.
+
+## Página do cliente
+
+Em **Empresas → (empresa) → Página do cliente** aparece exatamente o que o cliente vê (sem notas internas e sem outras empresas). O botão **Enviar** manda o link para o cliente.
+
 ## Abertura com vídeo
 
 Ao abrir o app (e ao voltar para ele depois de mais de 30 s fora) toca a animação de abertura, sem som, que termina com uma transição suave para a agenda. Toque na tela para pular. No **Modo Pouca Energia** o iPhone bloqueia vídeos automáticos; nesse caso aparece a imagem da abertura por 1 s. O vídeo fica em `media/intro.mp4`. O tempo fora para repetir está em `js/intro.js` (`AWAY_MS`).

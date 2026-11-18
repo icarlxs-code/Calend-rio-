@@ -6,6 +6,9 @@
    As chaves de notificação (VAPID) são criadas sozinhas na primeira execução. */
 import { onDocumentWritten, onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import Anthropic from '@anthropic-ai/sdk';
+import { ask, buildContext } from './assistant.js';
 import { setGlobalOptions, logger } from 'firebase-functions/v2';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -198,3 +201,44 @@ export const cleanup = onSchedule({ schedule: 'every day 04:00', timeZone: TZ },
   await batch.commit();
 });
 
+
+/* ---------- 6) Assistente dentro do app (Claude Haiku 5.5) ---------- */
+export const perguntar = onCall({ timeoutSeconds: 60, memory: '256MiB' }, async (request) => {
+  const email = (request.auth?.token?.email || '').toLowerCase();
+  const me = TEAM.find((m) => m.email && m.email.toLowerCase() === email);
+  if (!me) throw new HttpsError('permission-denied', 'Só a equipe pode usar o assistente.');
+  const question = String(request.data?.question || '').trim();
+  if (!question) throw new HttpsError('invalid-argument', 'Escreva uma pergunta.');
+  const history = Array.isArray(request.data?.history) ? request.data.history : [];
+
+  const now = nowIn(TZ);
+  const [evSnap, coSnap, setSnap, noteSnap] = await Promise.all([
+    db.collection('events').where('date', '>=', addDaysKey(now.date, -7)).where('date', '<=', addDaysKey(now.date, 30)).get(),
+    db.collection('companies').get(),
+    db.doc('settings/routine').get(),
+    db.collection('notes').where('date', '>=', addDaysKey(now.date, -2)).get(),
+  ]);
+  const context = buildContext({
+    events: evSnap.docs.map((d) => d.data()),
+    companies: coSnap.docs.map((d) => d.data()),
+    routine: setSnap.exists ? setSnap.data() : null,
+    notes: noteSnap.docs.map((d) => d.data()),
+    team: TEAM,
+    me: me.id,
+    now,
+  });
+  try {
+    return { answer: await ask({ question, history, context }) };
+  } catch (err) {
+    if (err.code === 'no-key') throw new HttpsError('failed-precondition', err.message);
+    if (err instanceof Anthropic.AuthenticationError) throw new HttpsError('failed-precondition', 'A chave do Claude é inválida. Confira o segredo ANTHROPIC_API_KEY no GitHub.');
+    if (err instanceof Anthropic.RateLimitError) throw new HttpsError('resource-exhausted', 'Muitas perguntas seguidas. Espere um pouco e tente de novo.');
+    if (err instanceof Anthropic.APIConnectionError) throw new HttpsError('unavailable', 'Não consegui falar com o Claude agora. Tente de novo em instantes.');
+    if (err instanceof Anthropic.APIError) {
+      logger.error('Claude API', { status: err.status, message: err.message });
+      throw new HttpsError('internal', err.status === 402 || /credit|billing/i.test(err.message) ? 'Sem créditos na conta da Anthropic.' : 'O Claude não respondeu. Tente de novo.');
+    }
+    logger.error('assistente', err);
+    throw new HttpsError('internal', 'Algo deu errado no assistente.');
+  }
+});
