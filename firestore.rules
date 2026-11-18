@@ -8,7 +8,7 @@ service cloud.firestore {
 
     function isTeam() {
       return request.auth != null
-        && request.auth.token.email in ['henrique@SEU-EMAIL.com', 'matheus@SEU-EMAIL.com'];
+        && request.auth.token.email in ['icarlxs@gmail.com', 'contatopedrazzi1@gmail.com'];
     }
 
     // Dados internos da dupla: só Henrique e Matheus leem e escrevem

@@ -24,5 +24,12 @@ export const CONFIG = {
   //   messagingSenderId: '...',
   //   appId: '...'
   // },
-  firebase: null,
+  firebase: {
+    apiKey: 'AIzaSyAQb8nUAuN4-gKsBa2SPE9d-SNobBAOqDo',
+    authDomain: 'calendario-48fdb.firebaseapp.com',
+    projectId: 'calendario-48fdb',
+    storageBucket: 'calendario-48fdb.firebasestorage.app',
+    messagingSenderId: '1066297054489',
+    appId: '1:1066297054489:web:0ac54d7989365001942188',
+  },
 };
