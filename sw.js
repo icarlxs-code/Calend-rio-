@@ -1,9 +1,9 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-obdjsow4'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-hqlxqsfx'/*CACHE*/;
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster.jpg',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/a-OBDJSOW4.js', 'dist/c-WI5IF7H2.js', 'dist/c-5H7ASYQ4.js', 'dist/c-66S76OJ6.js', 'dist/c-VHNSBD2M.js',
+  /*FILES*/ 'dist/a-HQLXQSFX.js', 'dist/c-WI5IF7H2.js', 'dist/c-5H7ASYQ4.js', 'dist/c-K4ANOSAB.js', 'dist/c-VHNSBD2M.js',
 ];
 
 self.addEventListener('install', (e) => {

@@ -271,37 +271,72 @@ function openDeepLink(hash = location.hash) {
 }
 
 /* ---------- login (modo nuvem) ---------- */
+const LOGIN_ERRORS = {
+  'auth/invalid-credential': 'E-mail ou senha incorretos. Confira a senha (toque no olho para ver o que digitou).',
+  'auth/wrong-password': 'Senha incorreta.',
+  'auth/user-not-found': 'Este e-mail não está cadastrado no Firebase (Authentication → Usuários).',
+  'auth/invalid-email': 'E-mail inválido.',
+  'auth/too-many-requests': 'Muitas tentativas seguidas. Espere alguns minutos ou use "Esqueci minha senha".',
+  'auth/network-request-failed': 'Sem conexão com a internet. Verifique o Wi-Fi/4G e tente de novo.',
+  'auth/user-disabled': 'Este usuário foi desativado no Firebase.',
+  'auth/operation-not-allowed': 'O login por e-mail/senha não está ativado no Firebase.',
+  'auth/api-key-not-valid': 'Configuração do Firebase inválida (apiKey).',
+};
+let loginEmail = '';
+let loginNotice = '';
+
 function showLogin(errMsg = '') {
+  const msg = errMsg || loginNotice;
+  loginNotice = '';
   root.innerHTML = `
   <div class="login">
     <img src="icons/icon-192.png" alt="" width="84" height="84">
     <h1>${esc(CONFIG.appName)}</h1>
     <p>Agenda de conteúdo · ${esc(CONFIG.agencyName)}</p>
-    <form class="form" data-login>
-      <div class="fgroup"><label class="flabel" for="l-email">E-mail</label><input id="l-email" class="input" type="email" name="email" autocomplete="username" required></div>
-      <div class="fgroup"><label class="flabel" for="l-pass">Senha</label><input id="l-pass" class="input" type="password" name="pass" autocomplete="current-password" required></div>
-      ${errMsg ? `<p class="login__err">${esc(errMsg)}</p>` : ''}
-      <button class="btn btn--primary btn--block" type="submit">Entrar</button>
+    <form class="form" data-login novalidate>
+      <div class="fgroup"><label class="flabel" for="l-email">E-mail</label><input id="l-email" class="input" type="email" name="email" value="${esc(loginEmail)}" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email"></div>
+      <div class="fgroup"><label class="flabel" for="l-pass">Senha</label>
+        <div class="input-eye"><input id="l-pass" class="input" type="password" name="pass" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false">
+        <button type="button" class="iconbtn iconbtn--sm" data-eye aria-label="Mostrar senha">${icon('eye', 18)}</button></div>
+      </div>
+      ${msg ? `<p class="login__err">${esc(msg)}</p>` : ''}
+      <button class="btn btn--primary btn--block" type="submit" data-go>Entrar</button>
       <button class="btn-text btn-text--sm" type="button" data-reset>Esqueci minha senha</button>
     </form>
   </div>`;
   const f = root.querySelector('[data-login]');
+  root.querySelector('[data-eye]').onclick = () => {
+    f.pass.type = f.pass.type === 'password' ? 'text' : 'password';
+  };
   f.onsubmit = async (ev) => {
     ev.preventDefault();
+    const email = f.email.value.trim().toLowerCase();
+    const pass = f.pass.value;
+    loginEmail = email;
+    if (!email || !pass) return showLogin('Preencha o e-mail e a senha.');
+    const go = f.querySelector('[data-go]');
+    go.disabled = true;
+    go.textContent = 'Entrando…';
     try {
-      await cloudApi.signIn(f.email.value.trim(), f.pass.value);
-    } catch {
-      showLogin('E-mail ou senha incorretos.');
+      await Promise.race([
+        cloudApi.signIn(email, pass),
+        new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), 20000)),
+      ]);
+      // deu certo: a tela muda sozinha quando o Firebase confirmar o login
+      go.textContent = 'Abrindo…';
+    } catch (err) {
+      const code = err && err.code;
+      showLogin(code === 'timeout' ? 'O servidor demorou para responder. Verifique a internet e tente de novo.' : LOGIN_ERRORS[code] || `Não foi possível entrar (${code || err?.message || 'erro desconhecido'}).`);
     }
   };
   root.querySelector('[data-reset]').onclick = async () => {
-    const email = f.email.value.trim();
+    const email = f.email.value.trim().toLowerCase();
     if (!email) return toast('Digite seu e-mail primeiro');
     try {
       await cloudApi.resetPassword(email);
-      toast('Enviamos um e-mail para redefinir a senha');
-    } catch {
-      toast('Não foi possível enviar o e-mail');
+      toast('Enviamos um e-mail para criar uma nova senha (veja também o spam)', { ms: 6000 });
+    } catch (err) {
+      toast(LOGIN_ERRORS[err?.code] || 'Não foi possível enviar o e-mail');
     }
   };
 }
@@ -428,11 +463,12 @@ async function boot() {
     if (started) return;
     const allowed = CONFIG.team.some((m) => m.email && m.email.toLowerCase() === (user.email || '').toLowerCase());
     if (!allowed) {
+      loginNotice = `O e-mail ${user.email} não faz parte da equipe deste app.`;
       await cloudApi.signOut();
-      return showLogin('Este e-mail não faz parte da equipe (veja config.js).');
+      return showLogin();
     }
     started = true;
-    loading('Sincronizando…');
+    loading('Entrando…');
     // se a nuvem demorar, abre mesmo assim: os dados chegam assim que a conexão responder
     await Promise.race([initCloud(cloudApi.backend, user), new Promise((r) => setTimeout(r, 12000))]);
     startApp();

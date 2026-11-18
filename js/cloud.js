@@ -11,13 +11,9 @@ export async function connect(config) {
   fs = fsMod;
   authApi = authMod;
   const app = appMod.initializeApp(config);
-  try {
-    db = fs.initializeFirestore(app, {
-      localCache: fs.persistentLocalCache({ tabManager: fs.persistentSingleTabManager() }),
-    });
-  } catch {
-    db = fs.initializeFirestore(app, { localCache: fs.memoryLocalCache() });
-  }
+  // Cache em memória: o mais confiável no Safari do iPhone (o armazenamento do Safari pode travar).
+  // Long polling automático: funciona mesmo em redes que bloqueiam conexões de streaming.
+  db = fs.initializeFirestore(app, { localCache: fs.memoryLocalCache(), experimentalAutoDetectLongPolling: true });
   // Login sem janelas extras (o Safari do iPhone pode bloquear a janela invisível do getAuth)
   try {
     auth = authApi.initializeAuth(app, {
