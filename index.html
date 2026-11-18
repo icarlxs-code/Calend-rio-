@@ -30,19 +30,48 @@
   <div id="toast" role="status" aria-live="polite"></div>
   <noscript>Ative o JavaScript para usar a agenda.</noscript>
   <script>
-    /* Proteção: se o app não abrir, mostra o motivo e um botão para recarregar */
+    /* Carrega o app e, se algo falhar, mostra o motivo exato e um botão para limpar e recarregar */
     (function () {
       var lastErr = '';
-      window.addEventListener('error', function (e) { lastErr = (e.message || '') + ' ' + (e.filename || '').split('/').pop(); });
-      window.addEventListener('unhandledrejection', function (e) { lastErr = String(e.reason && (e.reason.message || e.reason)); });
-      setTimeout(function () {
+      function fail(detail) {
         var app = document.getElementById('app');
         if (!app || document.getElementById('view') || app.querySelector('[data-login],[data-retry]')) return;
-        app.innerHTML = '<div class="splash"><img src="icons/icon-192.png" alt="" width="72" height="72"><h2>O app demorou para abrir</h2><p>Toque para recarregar.</p><button class="btn btn--primary" onclick="location.reload()">Recarregar</button><small class="muted"></small></div>';
-        app.querySelector('small').textContent = lastErr ? 'Detalhe: ' + lastErr : '';
-      }, 20000);
+        var intro = document.getElementById('intro');
+        if (intro) intro.className = 'intro is-gone';
+        document.documentElement.classList.add('intro-done');
+        app.innerHTML = '<div class="splash"><img src="icons/icon-192.png" alt="" width="72" height="72"><h2>O app não abriu</h2>' +
+          '<p>Toque em “Limpar e recarregar”.</p><button class="btn btn--primary" id="fix-btn">Limpar e recarregar</button>' +
+          '<small class="muted" id="fix-detail"></small></div>';
+        document.getElementById('fix-detail').textContent = 'Detalhe: ' + (detail || lastErr || 'sem resposta');
+        document.getElementById('fix-btn').onclick = function () {
+          var jobs = [];
+          if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }));
+          if (window.caches) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }));
+          Promise.all(jobs).catch(function () {}).then(function () { location.replace(location.pathname + '?r=' + Date.now()); });
+        };
+      }
+      window.__pautaFail = fail;
+      // erros de arquivos que não carregam (capturados antes de chegar à página)
+      window.addEventListener('error', function (e) {
+        var t = e.target;
+        lastErr = t && t !== window && (t.src || t.href) ? 'não carregou ' + String(t.src || t.href).split('/').slice(-2).join('/') : (e.message || '') + ' ' + String(e.filename || '').split('/').pop();
+      }, true);
+      window.addEventListener('unhandledrejection', function (e) { lastErr = String(e.reason && (e.reason.message || e.reason)); });
+      // descobre qual arquivo falhou (testa um por um)
+      var FILES = ['config.js', 'functions/reminder-rules.js', 'js/utils.js', 'js/constants.js', 'js/icons.js', 'js/sanitize.js', 'js/share.js', 'js/store.js', 'js/ui.js',
+        'js/components.js', 'js/planner.js', 'js/insights.js', 'js/ics.js', 'js/push.js', 'js/claude-link.js', 'js/views/client.js', 'js/views/companies.js',
+        'js/views/event.js', 'js/views/calendar.js', 'js/views/settings.js', 'js/views/assistant.js', 'js/views/onboarding.js'];
+      function diagnose(first) {
+        var i = 0;
+        (function next() {
+          if (i >= FILES.length) return fail(first);
+          var f = FILES[i++];
+          import('./' + f).then(next, function (e) { fail(f + ': ' + String(e && (e.message || e))); });
+        })();
+      }
+      import('./js/app.js').catch(function (e) { diagnose(String(e && (e.message || e))); });
+      setTimeout(function () { fail(''); }, 20000);
     })();
   </script>
-  <script type="module" src="js/app.js"></script>
 </body>
 </html>

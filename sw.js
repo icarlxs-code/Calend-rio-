@@ -1,5 +1,5 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = 'pauta-v6';
+const CACHE = 'pauta-v7';
 const SHELL = [
   './', 'index.html', 'config.js', 'css/app.css', 'manifest.webmanifest',
   'js/app.js', 'js/store.js', 'js/ui.js', 'js/utils.js', 'js/constants.js', 'js/icons.js',
