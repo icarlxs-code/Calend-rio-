@@ -52,10 +52,31 @@ async function streamBytes(bytes, stream) {
 
 const KEYS = ['date', 'time', 'type', 'title', 'description', 'status', 'duration', 'location'];
 
+/* Reduz a logo para caber no link (modo sem nuvem) */
+function shrinkLogo(dataUrl, size = 72) {
+  return new Promise((resolve) => {
+    if (!dataUrl) return resolve(null);
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = c.height = size;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, 0, 0, size, size);
+      const out = c.toDataURL('image/jpeg', 0.8);
+      resolve(out.length < 12000 ? out : null);
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
+}
+
 export async function encodeSnapshot(payload) {
+  const logo = await shrinkLogo(payload.company.logo);
   const compact = {
     v: 1,
-    c: [payload.company.name, payload.company.color, payload.company.instagram, payload.company.logo && payload.company.logo.length < 9000 ? payload.company.logo : null],
+    c: [payload.company.name, payload.company.color, payload.company.instagram, logo],
     e: payload.events.map((e) => KEYS.map((k) => e[k])),
     u: payload.updatedAt,
   };

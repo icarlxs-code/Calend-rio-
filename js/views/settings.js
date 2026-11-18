@@ -6,6 +6,8 @@ import { esc, todayKey, addDays, isStandalone } from '../utils.js';
 import { icon } from '../icons.js';
 import { avatar, toast, confirmDialog, chooseDialog } from '../components.js';
 import { downloadICS } from '../ics.js';
+import { routine } from '../planner.js';
+import { WD_SHORT } from '../utils.js';
 
 export function renderSettings() {
   const me = store.member(store.me);
@@ -23,6 +25,18 @@ export function renderSettings() {
             <button class="btn btn--soft btn--sm" data-action="logout">${icon('logout', 16)} Sair</button></div>`
         : `<div class="whogrid">${store.team.map((m) => `<button class="whobtn${store.me === m.id ? ' is-on' : ''}" style="--mc:${m.color}" data-action="set-me" data-p="${m.id}">${avatar(m.id, 34)}<span>${esc(m.name)}</span><i class="whobtn__check">${icon('check', 14)}</i></button>`).join('')}</div>
            <p class="fhelp">Usado para saudação, “Criado por” e nos lembretes.</p>`}
+    </section>
+
+    ${routineSection()}
+
+    <section class="block">
+      <h2 class="block__title">${icon('sparkle', 16)} Assistente e Claude</h2>
+      <div class="card card--row">
+        ${icon('sparkle', 22)}
+        <div><strong>Assistente automático ativo</strong><small>Confere conflitos, tempo livre e melhores horários sozinho, sem internet e sem chave.</small></div>
+        <button class="btn btn--soft btn--sm" data-action="assistant">Abrir</button>
+      </div>
+      <p class="fhelp">Para perguntas abertas (ideias, reorganizar a semana), use “Perguntar ao Claude” no Assistente. Abre o Claude com o seu login normal, sem chave de API.</p>
     </section>
 
     <section class="block">
@@ -88,7 +102,43 @@ export function renderSettings() {
   </div>`;
 }
 
+function routineSection() {
+  const r = routine();
+  const mins = [0, 15, 30, 45, 60, 90];
+  return `<section class="block">
+    <h2 class="block__title">${icon('clock', 16)} Rotina e tempo livre</h2>
+    <form class="list" data-routine-form onsubmit="return false">
+      <label class="list__row"><span>Expediente</span><input type="time" name="workStart" value="${r.workStart}"> <input type="time" name="workEnd" value="${r.workEnd}"></label>
+      <label class="list__row"><span>Almoço</span><input type="time" name="lunchStart" value="${r.lunchStart}"> <input type="time" name="lunchEnd" value="${r.lunchEnd}"></label>
+      <label class="list__row"><span>Deslocamento entre lugares</span><select name="travelMin">${mins.map((m) => `<option value="${m}"${r.travelMin === m ? ' selected' : ''}>${m ? m + ' min' : 'não considerar'}</option>`).join('')}</select></label>
+      <label class="list__row"><span>Máximo de tarefas/dia</span><select name="maxTasks">${[4, 5, 6, 7, 8, 10, 12, 15, 20].map((n) => `<option value="${n}"${r.maxTasks === n ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
+      <div class="list__row list__row--col"><span>Dias de folga</span>
+        <div class="daysoff">${WD_SHORT.map((w, i) => `<label class="dayoff"><input type="checkbox" name="off" value="${i}"${r.daysOff.includes(i) ? ' checked' : ''}><span>${w}</span></label>`).join('')}</div>
+      </div>
+    </form>
+    <p class="fhelp">O assistente usa isso para não marcar nada em cima do almoço, da folga ou fora do expediente, e para proteger o tempo livre de vocês.</p>
+  </section>`;
+}
+
 export const settingsActions = {
+  async routine(form) {
+    const t = (n, def) => (/^\d{2}:\d{2}$/.test(form[n].value) ? form[n].value : def);
+    const r = routine();
+    const next = {
+      id: 'routine',
+      workStart: t('workStart', r.workStart),
+      workEnd: t('workEnd', r.workEnd),
+      lunchStart: t('lunchStart', r.lunchStart),
+      lunchEnd: t('lunchEnd', r.lunchEnd),
+      travelMin: Number(form.travelMin.value),
+      maxTasks: Number(form.maxTasks.value),
+      daysOff: [...form.querySelectorAll('input[name="off"]:checked')].map((i) => Number(i.value)),
+    };
+    if (next.workEnd <= next.workStart) return toast('O fim do expediente precisa ser depois do início');
+    if (next.lunchEnd <= next.lunchStart) return toast('O fim do almoço precisa ser depois do início');
+    await store.upsert('settings', next);
+    toast('Rotina salva');
+  },
   async ics(btn) {
     const who = btn.dataset.who === 'me' ? store.me : 'all';
     if (btn.dataset.who === 'me' && !store.me) return toast('Escolha primeiro quem está usando este celular');

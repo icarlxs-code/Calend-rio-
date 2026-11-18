@@ -1,9 +1,9 @@
 /* Service worker: funciona offline e sempre busca a versão mais nova primeiro */
-const CACHE = 'pauta-v1';
+const CACHE = 'pauta-v2';
 const SHELL = [
   './', 'index.html', 'config.js', 'css/app.css', 'manifest.webmanifest',
   'js/app.js', 'js/store.js', 'js/ui.js', 'js/utils.js', 'js/constants.js', 'js/icons.js',
-  'js/components.js', 'js/insights.js', 'js/ics.js', 'js/share.js', 'js/cloud.js',
+  'js/components.js', 'js/insights.js', 'js/planner.js', 'js/sanitize.js', 'js/claude-link.js', 'js/views/assistant.js', 'js/ics.js', 'js/share.js', 'js/cloud.js',
   'js/views/calendar.js', 'js/views/event.js', 'js/views/companies.js', 'js/views/settings.js', 'js/views/client.js',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon.svg',
 ];

@@ -30,7 +30,7 @@ export async function connect(config) {
 const clean = (obj) => JSON.parse(JSON.stringify(obj)); // remove undefined
 
 const backend = {
-  async subscribe(cols, onData) {
+  async subscribe(cols, onData, onErr) {
     await Promise.all(
       cols.map(
         (col) =>
@@ -44,6 +44,7 @@ const backend = {
               },
               (err) => {
                 console.error('Firestore', col, err);
+                onErr && onErr(err);
                 if (first) { first = false; resolve(); }
               },
             );

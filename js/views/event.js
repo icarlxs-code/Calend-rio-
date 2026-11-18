@@ -2,12 +2,12 @@
 import { store } from '../store.js';
 import { ui } from '../ui.js';
 import { TYPES, TYPE_ORDER, STATUS, STATUS_ORDER, DURATIONS, REMINDERS, REPEATS, durationOf } from '../constants.js';
-import { esc, todayKey, addDays, fmtDayLong, fmtDuration, fmtTime, uid, rgba, fromKey, relDay } from '../utils.js';
+import { esc, todayKey, addDays, fmtDayLong, fmtDuration, fmtTime, uid, rgba, fromKey, relDay, toMin, fromMin, dayLabel } from '../utils.js';
 import { icon } from '../icons.js';
 import {
   openSheet, sheetHead, avatar, logo, typeBadge, whoText, timeRange, toast, confirmDialog, chooseDialog,
 } from '../components.js';
-import { draftConflicts, suggestTimes } from '../insights.js';
+import { validateDraft, bestSlots, freePeople, spanOf, evLabel } from '../planner.js';
 import { downloadICS } from '../ics.js';
 import { openCompanyEditor } from './companies.js';
 
@@ -83,6 +83,7 @@ function mountDetail(api, id) {
   });
   act('tomorrow', async () => {
     const e = store.event(id);
+    if (!(await confirmMove(e, { date: addDays(e.date, 1) }))) return;
     await store.upsert('events', { ...e, date: addDays(e.date, 1) });
     toast('Movido para ' + relDay(addDays(e.date, 1)).toLowerCase(), {
       action: 'Desfazer',
@@ -124,7 +125,7 @@ async function deleteEvent(id, api) {
 }
 
 /* ======================== EDITOR ======================== */
-export function openEventEditor({ id = null, date = null, companyId = null, type = null } = {}) {
+export function openEventEditor({ id = null, date = null, companyId = null, type = null, time = null, assignees = null } = {}) {
   const existing = id ? store.event(id) : null;
   const companies = store.companiesSorted();
   const defType = type || 'feed';
@@ -136,9 +137,9 @@ export function openEventEditor({ id = null, date = null, companyId = null, type
         companyId: companyId || (ui.monthCompany || (companies.length === 1 ? companies[0].id : null)),
         title: '',
         date: date || (ui.tab === 'mes' ? ui.monthSel : ui.date) || todayKey(),
-        time: TYPES[defType].best[0] || '12:00',
-        duration: null,
-        assignees: ui.person !== 'all' ? [ui.person] : store.me ? [store.me] : [],
+        time: time || TYPES[defType].best[0] || '12:00',
+        duration: ['shoot', 'meeting', 'work', 'other'].includes(TYPES[defType].kind) ? TYPES[defType].dur : null,
+        assignees: assignees || (ui.person !== 'all' ? [ui.person] : store.me ? [store.me] : []),
         location: '',
         description: '',
         internalNote: '',
@@ -146,7 +147,6 @@ export function openEventEditor({ id = null, date = null, companyId = null, type
         visibleToClient: TYPES[defType].client,
         status: 'pendente',
       };
-  if (draft.date < todayKey() && !existing) draft.date = todayKey();
   const original = existing ? JSON.parse(JSON.stringify(existing)) : null;
   const rep = { mode: 'none', until: addDays(draft.date, 28) };
 
@@ -256,19 +256,15 @@ function mountEditor(api, d, original, rep) {
 
   const refreshHint = () => {
     const box = $('[data-hint]');
-    const t = TYPES[d.type];
-    const sugg = d.time !== undefined ? suggestTimes(d) : [];
-    const conflicts = draftConflicts(d);
-    box.innerHTML = `
-      ${conflicts.length ? `<div class="warnbox">${icon('alert', 16)}<div><strong>Conflito de horário</strong>
-        ${conflicts.map((cf) => `<p>${esc(store.member(cf.person)?.name)} já tem <b>${esc(TYPES[cf.event.type].label)} · ${esc(store.company(cf.event.companyId)?.name || '')}</b> às ${fmtTime(cf.event.time)}.</p>`).join('')}
-      </div></div>` : ''}
-      ${t.tip ? `<div class="hintbox">${icon('bulb', 16)}<div><p>${esc(t.tip)}</p>
-        ${sugg.length ? `<div class="hintbox__times">${sugg.map((s) => `<button type="button" class="tchip${s.busy ? ' is-busy' : ''}${d.time === s.time ? ' is-on' : ''}" data-settime="${s.time}">${fmtTime(s.time)}${s.busy ? '<small>ocupado</small>' : ''}</button>`).join('')}</div>` : ''}
-      </div></div>` : ''}`;
+    box.innerHTML = assistantPanel(d, !original);
     box.querySelectorAll('[data-settime]').forEach((b) => (b.onclick = () => {
       d.time = b.dataset.settime;
       form.time.value = d.time;
+      refreshHint();
+    }));
+    box.querySelectorAll('[data-setwho]').forEach((b) => (b.onclick = () => {
+      d.assignees = [b.dataset.setwho];
+      el.querySelectorAll('[data-who]').forEach((x) => x.classList.toggle('is-on', d.assignees.includes(x.dataset.who)));
       refreshHint();
     }));
   };
@@ -372,6 +368,7 @@ function mountEditor(api, d, original, rep) {
 
   $('[data-save]').onclick = async () => {
     readForm();
+    if (saving) return;
     if (!d.companyId) {
       toast('Escolha a empresa');
       el.querySelector('.cogrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -382,22 +379,155 @@ function mountEditor(api, d, original, rep) {
       const ok = await confirmDialog({ title: 'Ninguém responsável?', text: 'Este evento ficará sem responsável. Deseja salvar assim mesmo?', ok: 'Salvar assim' });
       if (!ok) return;
     }
+    if (saving) return;
+    saving = true;
+    try {
+      await doSave();
+    } finally {
+      saving = false;
+    }
+  };
+  let saving = false;
+  const doSave = async () => {
     if (original) {
+      const timingChanged = ['date', 'time', 'duration', 'type', 'assignees', 'companyId'].some((f) => JSON.stringify(d[f]) !== JSON.stringify(original[f]));
+      if (timingChanged && !(await checkBeforeSave(d, false, api, refreshAll))) return;
       await saveEdit(d, original);
     } else if (rep.mode !== 'none') {
       const dates = repeatDates(d.date, rep);
+      const bad = dates.filter((date) => validateDraft({ ...d, date }, { isNew: true }).some((i) => i.level === 'block'));
+      let use = dates;
+      if (bad.length) {
+        const r = await chooseDialog({
+          title: `${bad.length} de ${dates.length} datas já têm compromisso nesse horário`,
+          text: bad.slice(0, 6).map((k) => dayLabel(k)).join(' · ') + (bad.length > 6 ? ' …' : ''),
+          options: [
+            { label: `Criar só nas ${dates.length - bad.length} datas livres`, value: 'free', primary: true },
+            { label: 'Criar em todas mesmo assim', value: 'all' },
+          ],
+        });
+        if (!r) return;
+        if (r === 'free') use = dates.filter((k) => !bad.includes(k));
+        if (!use.length) return toast('Nenhuma data livre');
+      }
       const seriesId = uid('s_');
-      await store.upsertMany('events', dates.map((date, i) => ({ ...d, id: i === 0 ? d.id : uid('e_'), date, seriesId })));
-      toast(`${dates.length} eventos criados`);
+      await store.upsertMany('events', use.map((date, i) => ({ ...d, id: i === 0 ? d.id : uid('e_'), date, seriesId })));
+      toast(`${use.length} eventos criados`);
     } else {
+      if (!(await checkBeforeSave(d, true, api, refreshAll))) return;
       await store.upsert('events', { ...d });
       toast('Evento salvo');
     }
     api.close();
   };
 
+  function refreshAll() {
+    form.time.value = d.time || '';
+    form.date.value = d.date;
+    el.querySelectorAll('[data-who]').forEach((x) => x.classList.toggle('is-on', d.assignees.includes(x.dataset.who)));
+    refreshWhen();
+    refreshHint();
+  }
+
   refreshWhen();
   refreshHint();
+}
+
+/* ======================== PAINEL DO ASSISTENTE NO EDITOR ======================== */
+const LANE_FROM = 7 * 60, LANE_TO = 23 * 60;
+const pct = (m) => ((Math.min(Math.max(m, LANE_FROM), LANE_TO) - LANE_FROM) / (LANE_TO - LANE_FROM)) * 100;
+
+function lanes(d, issues) {
+  const range = d.time ? spanOf(d) : null;
+  const ticks = [8, 10, 12, 14, 16, 18, 20, 22];
+  return `<div class="lanes">
+    <div class="lanes__head"><strong>Agenda dos dois em ${esc(dayLabel(d.date))}</strong></div>
+    ${store.team.map((m) => {
+      const evs = store.eventsOn(d.date, { person: m.id }).filter((e) => e.id !== d.id && e.time);
+      const mine = (d.assignees || []).includes(m.id);
+      const clash = issues.some((i) => i.level === 'block' && i.person === m.id);
+      return `<div class="lane">
+        <span class="lane__who">${avatar(m.id, 22)}</span>
+        <div class="lane__track">
+          ${ticks.map((h) => `<i class="lane__tick" style="left:${pct(h * 60)}%"></i>`).join('')}
+          ${evs.map((e) => {
+            const s = spanOf(e);
+            const c = store.company(e.companyId);
+            return `<span class="lane__ev" style="left:${pct(s[0])}%;width:max(4px,${pct(s[1]) - pct(s[0])}%);background:${c?.color || '#888'}" title="${esc(evLabel(e))}"></span>`;
+          }).join('')}
+          ${range && mine ? `<span class="lane__draft${clash ? ' is-clash' : ''}" style="left:${pct(range[0])}%;width:max(6px,${pct(range[1]) - pct(range[0])}%)"></span>` : ''}
+        </div>
+      </div>`;
+    }).join('')}
+    <div class="lane lane--axis"><span class="lane__who"></span><div class="lane__track">${ticks.map((h) => `<small style="left:${pct(h * 60)}%">${h}h</small>`).join('')}</div></div>
+  </div>`;
+}
+
+function assistantPanel(d, isNew) {
+  if (!d.date) return '';
+  const issues = validateDraft(d, { isNew });
+  const blocks = issues.filter((i) => i.level === 'block');
+  const warns = issues.filter((i) => i.level === 'warn');
+  const infos = issues.filter((i) => i.level === 'info');
+  const slots = bestSlots(d, { limit: 4 });
+  const free = freePeople(d);
+  const single = (d.assignees || []).length === 1 ? d.assignees[0] : null;
+  const swap = blocks.length && single ? store.team.find((m) => m.id !== single && free.includes(m.id)) : null;
+  const t = TYPES[d.type];
+  const issue = (i) => `<li class="issue issue--${i.level}">${icon(i.level === 'block' ? 'alert' : i.level === 'warn' ? 'flag' : i.code === 'partner' ? 'user' : 'bulb', 15)}<div><strong>${esc(i.title)}</strong><p>${esc(i.text)}</p></div></li>`;
+  return `
+  <section class="assist">
+    <header class="assist__head">${icon('sparkle', 16)} Assistente</header>
+    ${lanes(d, issues)}
+    ${issues.length ? `<ul class="issues">${[...blocks, ...warns, ...infos].map(issue).join('')}</ul>`
+      : d.time ? `<p class="assist__ok">${icon('check', 15)} Horário livre para ${esc(whoText(d.assignees))}, sem conflitos.</p>` : ''}
+    ${swap ? `<button type="button" class="tchip tchip--wide" data-setwho="${swap.id}">${avatar(swap.id, 18)} Passar para ${esc(swap.name)} (está livre)</button>` : ''}
+    <div class="assist__sugg">
+      <p>${esc(t.tip)}</p>
+      ${slots.length ? `<div class="hintbox__times">${slots.map((s) => `<button type="button" class="tchip${d.time === s.time ? ' is-on' : ''}" data-settime="${s.time}">${fmtTime(s.time)}${s.peak ? '<small>pico</small>' : '<small>livre</small>'}</button>`).join('')}</div>`
+        : `<p class="muted">Nenhum horário livre nesse dia${(d.assignees || []).length ? ' para ' + esc(whoText(d.assignees)) : ''}. Tente outro dia ou outra pessoa.</p>`}
+    </div>
+  </section>`;
+}
+
+/* Antes de salvar: se for marcar em cima de outra coisa, avisa e oferece saídas */
+async function checkBeforeSave(d, isNew, api, refreshAll) {
+  const issues = validateDraft(d, { isNew });
+  const blocks = issues.filter((i) => i.level === 'block');
+  if (!blocks.length) return true;
+  const slots = bestSlots(d, { limit: 2 });
+  const single = (d.assignees || []).length === 1 ? d.assignees[0] : null;
+  const swap = single && store.team.find((m) => m.id !== single && freePeople(d).includes(m.id));
+  const options = [
+    ...slots.map((s) => ({ label: `Mudar para ${fmtTime(s.time)} (livre)`, value: 'time:' + s.time, primary: true })),
+    ...(swap ? [{ label: `Passar para ${swap.name} (está livre)`, value: 'who:' + swap.id, primary: !slots.length }] : []),
+    { label: 'Marcar mesmo assim', value: 'force' },
+  ];
+  const r = await chooseDialog({
+    title: blocks[0].code === 'duplicate' ? 'Isso já está na agenda' : 'Já tem compromisso nesse horário',
+    bodyHtml: `<ul class="issues issues--dialog">${blocks.map((i) => `<li class="issue issue--block">${icon('alert', 15)}<div><strong>${esc(i.title)}</strong><p>${esc(i.text)}</p></div></li>`).join('')}</ul>`,
+    options,
+  });
+  if (!r) return false;
+  if (r === 'force') return true;
+  if (r.startsWith('time:')) d.time = r.slice(5);
+  if (r.startsWith('who:')) d.assignees = [r.slice(4)];
+  refreshAll();
+  // confere de novo com a mudança aplicada
+  return checkBeforeSave(d, isNew, api, refreshAll);
+}
+
+/* Usado por outras telas (ex.: "Passar para amanhã", correções do assistente) */
+export async function confirmMove(ev, patch) {
+  const next = { ...ev, ...patch };
+  const blocks = validateDraft(next).filter((i) => i.level === 'block');
+  if (!blocks.length) return true;
+  const r = await chooseDialog({
+    title: 'Já tem compromisso nesse horário',
+    bodyHtml: `<ul class="issues issues--dialog">${blocks.map((i) => `<li class="issue issue--block">${icon('alert', 15)}<div><strong>${esc(i.title)}</strong><p>${esc(i.text)}</p></div></li>`).join('')}</ul>`,
+    options: [{ label: 'Mover mesmo assim', value: 'force', primary: true }],
+  });
+  return r === 'force';
 }
 
 function repeatDates(start, rep) {

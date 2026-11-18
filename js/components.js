@@ -25,7 +25,7 @@ export function logo(company, size = 36, radius = null) {
   const r = radius ?? Math.round(size * 0.28);
   if (!company) return `<span class="logo" style="--s:${size}px;--r:${r}px;background:#999">?</span>`;
   if (company.logo) {
-    return `<span class="logo logo--img" style="--s:${size}px;--r:${r}px;--c:${company.color}"><img src="${company.logo}" alt=""></span>`;
+    return `<span class="logo logo--img" style="--s:${size}px;--r:${r}px"><img src="${esc(company.logo)}" alt=""></span>`;
   }
   return `<span class="logo" style="--s:${size}px;--r:${r}px;background:${company.color};color:${textOn(company.color)}">${esc(initials(company.name))}</span>`;
 }
@@ -203,13 +203,13 @@ export function confirmDialog({ title, text = '', ok = 'Confirmar', danger = fal
   });
 }
 
-export function chooseDialog({ title, text = '', options }) {
+export function chooseDialog({ title, text = '', bodyHtml = '', options }) {
   return new Promise((resolve) => {
     let picked = null;
     openSheet({
       className: 'sheet--dialog',
       html: `<div class="dialog">
-        <h3>${esc(title)}</h3>${text ? `<p>${esc(text)}</p>` : ''}
+        <h3>${esc(title)}</h3>${text ? `<p>${esc(text)}</p>` : ''}${bodyHtml}
         ${options.map((o, i) => `<button class="btn ${o.danger ? 'btn--danger' : o.primary ? 'btn--primary' : 'btn--soft'} btn--block" data-i="${i}">${esc(o.label)}</button>`).join('')}
         <button class="btn btn--ghost btn--block" data-close>Cancelar</button>
       </div>`,

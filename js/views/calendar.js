@@ -4,11 +4,12 @@ import { ui } from '../ui.js';
 import { TYPES, isPost, durationOf } from '../constants.js';
 import {
   esc, todayKey, addDays, startOfWeek, fromKey, toKey, fmtDayLong, fmtDayShort, relDay, fmtMonth,
-  WD_LETTER, WD_SHORT, dayLabel, MONTHS_SHORT, toMin, nowMin, fmtTime, fmtCountdown, greeting, rgba, textOn,
+  WD_LETTER, WD_SHORT, dayLabel, fmtDuration, MONTHS_SHORT, toMin, nowMin, fmtTime, fmtCountdown, greeting, rgba, textOn,
 } from '../utils.js';
 import { icon } from '../icons.js';
 import { avatar, avatars, logo, eventCard, emptyState, typeBadge, whoText, timeRange } from '../components.js';
 import { dayInsights, nextUp } from '../insights.js';
+import { dayBrief, freeTime } from '../planner.js';
 
 /* ---------- elementos compartilhados ---------- */
 export function personSwitch() {
@@ -55,6 +56,7 @@ export function renderToday() {
       </div>
       <div class="hdr__actions">
         ${date !== today ? `<button class="chip chip--accent" data-action="go-today">Hoje</button>` : ''}
+        <button class="iconbtn iconbtn--ai" data-action="assistant" aria-label="Assistente">${icon('sparkle', 20)}</button>
         <button class="iconbtn" data-action="tab" data-tab="ajustes" aria-label="Perfil">${me ? avatar(me.id, 34) : icon('user', 20)}</button>
       </div>
     </div>
@@ -163,6 +165,7 @@ export function renderToday() {
           return line + eventCard(e, { highlight: flagged });
         }).join('')}
       </div>`).join('');
+    if (!nowPlaced && date === today) timeline += `<div class="nowline nowline--end"><span>Agora · ${fmtTime(`${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`)} · fim da agenda</span></div>`;
   }
 
   // Bilhetes
@@ -186,6 +189,11 @@ export function renderToday() {
   <div class="page">
     ${store.demo ? demoBanner() : ''}
     ${next}
+    <button class="brief" data-action="assistant">
+      <span class="brief__ic">${icon('sparkle', 18)}</span>
+      <div><strong>Assistente</strong>${dayBrief(date, ui.person).map((l) => `<p>${esc(l)}</p>`).join('')}</div>
+      ${icon('right', 18, 'muted')}
+    </button>
     ${team}
     <section class="block">
       <h2 class="block__title">${icon('clock', 16)} Agenda ${ui.person === 'all' ? 'da dupla' : 'de ' + esc(store.member(ui.person)?.name || '')}</h2>
@@ -203,7 +211,10 @@ function teamCol(m, date) {
   const onsite = evs.filter((e) => ['shoot', 'meeting'].includes(TYPES[e.type]?.kind));
   const posts = evs.filter((e) => isPost(e.type)).length;
   const next = evs.find((e) => e.time && e.status !== 'feito' && toMin(e.time) + durationOf(e) > now);
+  const ft = freeTime(m.id, date);
+  const freeTxt = ft.dayOff ? 'Folga' : `${fmtDuration(Math.round(ft.minutes / 15) * 15) || '0 min'} livres`;
   return `<button class="team__col" data-action="set-person" data-p="${m.id}">
+    <span class="team__free ${ft.dayOff ? 'is-off' : ft.minutes >= 240 ? 'is-good' : ft.minutes >= 120 ? 'is-mid' : 'is-low'}">${icon('clock', 12)} ${freeTxt}</span>
     <div class="team__head">${avatar(m.id, 30)}<div><strong>${esc(m.name)}</strong><small>${evs.length} tarefa${evs.length === 1 ? '' : 's'} · ${posts} post${posts === 1 ? '' : 's'}</small></div></div>
     <ul class="team__where">
       ${onsite.length ? onsite.map((e) => `<li>${icon(TYPES[e.type].icon, 13)}<span><b>${fmtTime(e.time)}</b> ${esc(store.company(e.companyId)?.name || '')}</span></li>`).join('')
@@ -214,9 +225,12 @@ function teamCol(m, date) {
 }
 
 function tipCard(t) {
-  return `<div class="tip tip--${t.level}"${t.ids?.length === 1 ? ` data-action="open-event" data-id="${t.ids[0]}"` : ''}>
+  const fixes = t.fixes?.length
+    ? `<div class="fixes">${t.fixes.map((f) => `<button class="fixbtn" data-action="apply-fix" data-id="${f.eventId}" data-patch="${esc(JSON.stringify(f.patch))}">${icon('check', 13)} ${esc(f.label)}</button>`).join('')}</div>`
+    : '';
+  return `<div class="tip tip--${t.level}"${t.ids?.length === 1 && !fixes ? ` data-action="open-event" data-id="${t.ids[0]}"` : ''}>
     <span class="tip__ic">${icon(t.icon, 16)}</span>
-    <div><strong>${esc(t.title)}</strong><p>${esc(t.text)}</p></div>
+    <div><strong>${esc(t.title)}</strong><p>${esc(t.text)}</p>${fixes}</div>
   </div>`;
 }
 

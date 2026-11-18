@@ -11,7 +11,10 @@ import { renderCompanies, openCompany, openCompanyEditor } from './views/compani
 import { renderSettings, settingsActions } from './views/settings.js';
 import { openEventDetail, openEventEditor } from './views/event.js';
 import { showClient, showClientError } from './views/client.js';
+import { openAssistant } from './views/assistant.js';
+import { upcomingConflicts } from './insights.js';
 import { decodeSnapshot } from './share.js';
+import { sanitizePayload } from './sanitize.js';
 
 const root = document.getElementById('app');
 let cloudApi = null;
@@ -34,10 +37,17 @@ function render() {
   const view = document.getElementById('view');
   if (!view) return;
   const scroll = window.scrollY;
+  // preserva o que estiver sendo digitado (ex.: bilhete) quando a tela atualiza
+  const noteInput = view.querySelector('[data-form="note"] input');
+  const draftNote = noteInput ? noteInput.value : '';
+  const hadFocus = noteInput && document.activeElement === noteInput;
   const html = ui.tab === 'mes' ? renderMonth() : ui.tab === 'empresas' ? renderCompanies() : ui.tab === 'ajustes' ? renderSettings() : renderToday();
   view.innerHTML = html;
   document.querySelectorAll('.tabbar__btn').forEach((b) => b.classList.toggle('is-on', b.dataset.tab === ui.tab));
   window.scrollTo(0, scroll);
+  const ni = view.querySelector('[data-form="note"] input');
+  if (ni && draftNote) ni.value = draftNote;
+  if (ni && hadFocus) ni.focus({ preventScroll: true });
   bindSwipes();
 }
 function rerenderAll() {
@@ -100,6 +110,25 @@ const actions = {
     render();
   },
   'open-event': (b) => openEventDetail(b.dataset.id),
+  assistant: () => openAssistant(),
+  'apply-fix': async (b) => {
+    const e = store.event(b.dataset.id);
+    if (!e) return;
+    let patch;
+    try {
+      patch = JSON.parse(b.dataset.patch);
+    } catch {
+      return;
+    }
+    const allowed = {};
+    if (typeof patch.time === 'string' && /^\d{2}:\d{2}$/.test(patch.time)) allowed.time = patch.time;
+    if (Array.isArray(patch.assignees)) allowed.assignees = patch.assignees.filter((id) => store.member(id));
+    const { confirmMove } = await import('./views/event.js');
+    if (!(await confirmMove(e, allowed))) return;
+    const before = { ...e };
+    await store.upsert('events', { ...e, ...allowed });
+    toast('Pronto, ajustado', { action: 'Desfazer', onAction: () => store.upsert('events', before) });
+  },
   'toggle-done': async (b) => {
     const e = store.event(b.dataset.id);
     if (!e) return;
@@ -154,6 +183,7 @@ document.addEventListener('click', (ev) => {
 });
 document.addEventListener('change', (ev) => {
   if (ev.target.matches('[data-action-change="import"]')) settingsActions.import(ev.target);
+  if (ev.target.closest('[data-routine-form]')) settingsActions.routine(ev.target.closest('[data-routine-form]'));
 });
 document.addEventListener('submit', async (ev) => {
   const f = ev.target.closest('[data-form="note"]');
@@ -261,8 +291,17 @@ function startApp() {
   shell();
   render();
   store.on(rerenderAll);
+  store.onError = (err) => {
+    const quota = err && /quota/i.test(String(err.name || err.message));
+    const denied = err && /permission/i.test(String(err.code || err.message));
+    toast(quota ? 'Memória do aparelho cheia: use logos menores ou ative a nuvem' : denied ? 'Sem permissão na nuvem: confira as regras do Firebase' : 'Não foi possível salvar. Verifique a conexão.', { ms: 5000 });
+  };
+  watchConflicts();
+  store.on(watchConflicts);
   setInterval(() => {
-    if (ui.tab === 'hoje' && !openSheets().length) render();
+    const a = document.activeElement;
+    const typing = a && /INPUT|TEXTAREA|SELECT/.test(a.tagName);
+    if (ui.tab === 'hoje' && !openSheets().length && !typing) render();
     checkReminders();
   }, 60000);
   checkReminders();
@@ -273,6 +312,30 @@ function startApp() {
     }
   });
   if (!store.me && store.mode === 'local') setTimeout(askWhoAmI, 400);
+}
+
+/* Avisa quando aparece um conflito novo na SUA agenda (ex.: o parceiro marcou algo em cima) */
+let knownConflicts = null;
+function watchConflicts() {
+  if (!store.me) return;
+  const list = upcomingConflicts(store.me, 14);
+  const sig = (c) => c.date + ':' + c.ids.slice().sort().join('|');
+  const now = new Set(list.map(sig));
+  if (knownConflicts) {
+    const fresh = list.find((c) => !knownConflicts.has(sig(c)) && c.ids.some((id) => store.event(id)?.updatedBy && store.event(id).updatedBy !== store.me));
+    if (fresh) {
+      toast(`Atenção: ${fresh.title} (${fresh.date.slice(8)}/${fresh.date.slice(5, 7)})`, {
+        action: 'Ver',
+        onAction: () => {
+          ui.date = fresh.date;
+          ui.person = 'all';
+          setTab('hoje');
+        },
+        ms: 7000,
+      });
+    }
+  }
+  knownConflicts = now;
 }
 
 async function askWhoAmI() {
@@ -303,13 +366,13 @@ async function boot() {
     try {
       if (hash.startsWith('#/v/')) {
         const data = await decodeSnapshot(hash.slice(4));
-        return showClient(root, data, { canGoBack: isTeamDevice });
+        return showClient(root, sanitizePayload(data), { canGoBack: isTeamDevice });
       }
       if (!fb) return showClientError(root, 'Este link precisa da sincronização na nuvem ativada.');
       const { fetchPublic } = await import('./cloud.js');
       const data = await fetchPublic(fb, hash.slice(4));
       if (!data) return showClientError(root, 'Este link não existe mais. Peça um novo link para a equipe.');
-      return showClient(root, data, { canGoBack: isTeamDevice });
+      return showClient(root, sanitizePayload(data), { canGoBack: isTeamDevice });
     } catch (e) {
       console.error(e);
       return showClientError(root, 'Não foi possível abrir o cronograma. Verifique a conexão e tente novamente.');

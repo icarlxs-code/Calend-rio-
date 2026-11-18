@@ -13,6 +13,7 @@ service cloud.firestore {
     match /companies/{id} { allow read, write: if isTeam(); }
     match /events/{id}    { allow read, write: if isTeam(); }
     match /notes/{id}     { allow read, write: if isTeam(); }
+    match /settings/{id}  { allow read, write: if isTeam(); }
 
     // Cronograma público de cada empresa (link do cliente).
     // Qualquer pessoa COM o link lê UM cronograma; ninguém consegue listar os outros.

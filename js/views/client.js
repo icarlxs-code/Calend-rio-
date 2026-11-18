@@ -39,7 +39,7 @@ export function showClientError(root, msg) {
 }
 
 function coLogo(c, size) {
-  if (c.logo) return `<span class="logo logo--img" style="--s:${size}px;--r:${Math.round(size * 0.28)}px"><img src="${c.logo}" alt=""></span>`;
+  if (c.logo) return `<span class="logo logo--img" style="--s:${size}px;--r:${Math.round(size * 0.28)}px"><img src="${esc(c.logo)}" alt=""></span>`;
   return `<span class="logo" style="--s:${size}px;--r:${Math.round(size * 0.28)}px;background:#fff;color:${c.color}">${esc(initials(c.name))}</span>`;
 }
 

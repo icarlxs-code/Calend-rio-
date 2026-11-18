@@ -2,10 +2,11 @@
 import { CONFIG } from '../config.js';
 import { todayKey, addDays, uid, randomToken, debounce, toMin, nowMin } from './utils.js';
 import { buildClientPayload } from './share.js';
+import { sanitizeItem } from './sanitize.js';
 
 const LS_DATA = 'pauta.data.v1';
 const LS_ME = 'pauta.me';
-const COLS = ['companies', 'events', 'notes'];
+const COLS = ['companies', 'events', 'notes', 'settings'];
 
 const listeners = new Set();
 let backend = null;
@@ -19,7 +20,7 @@ const readLocal = () => {
 };
 
 export const store = {
-  state: { companies: [], events: [], notes: [] },
+  state: { companies: [], events: [], notes: [], settings: [] },
   mode: 'local',
   me: null,
   demo: false,
@@ -66,10 +67,11 @@ export const store = {
   /* ---------- escrita ---------- */
   async upsert(col, item) {
     item.updatedAt = Date.now();
+    if (this.me) item.updatedBy = this.me;
     if (!item.createdAt) item.createdAt = item.updatedAt;
     if (!item.createdBy && this.me) item.createdBy = this.me;
     applyLocal(col, item);
-    await backend.write(col, item);
+    persist(() => backend.write(col, item));
     touch(col, item);
     this.emit();
     return item;
@@ -78,25 +80,27 @@ export const store = {
     const now = Date.now();
     items.forEach((it) => {
       it.updatedAt = now;
+      if (this.me) it.updatedBy = this.me;
       if (!it.createdAt) it.createdAt = now;
       if (!it.createdBy && this.me) it.createdBy = this.me;
       applyLocal(col, it);
     });
-    await backend.writeMany(items.map((it) => ({ col, item: it })));
+    persist(() => backend.writeMany(items.map((it) => ({ col, item: it }))));
     items.forEach((it) => touch(col, it));
     this.emit();
   },
   async remove(col, id) {
     const old = this.state[col].find((x) => x.id === id);
     this.state[col] = this.state[col].filter((x) => x.id !== id);
-    await backend.del(col, id);
+    persist(() => backend.del(col, id));
+    if (col === 'companies' && old?.shareToken && backend.unpublish) persist(() => backend.unpublish(old.shareToken));
     if (old) touch(col, old);
     this.emit();
   },
   async removeMany(col, ids) {
     const olds = this.state[col].filter((x) => ids.includes(x.id));
     this.state[col] = this.state[col].filter((x) => !ids.includes(x.id));
-    await backend.delMany(col, ids);
+    if (ids.length) persist(() => backend.delMany(col, ids));
     olds.forEach((o) => touch(col, o));
     this.emit();
   },
@@ -119,14 +123,14 @@ export const store = {
     const old = company.shareToken;
     company.shareToken = randomToken();
     await this.upsert('companies', company);
-    if (old && backend.unpublish) await backend.unpublish(old);
+    if (old && backend.unpublish) persist(() => backend.unpublish(old));
     await this.publishCompany(company.id);
   },
   async publishCompany(companyId) {
     if (this.mode !== 'cloud') return;
     const c = this.company(companyId);
     if (!c || !c.shareToken) return;
-    await backend.publish(c.shareToken, buildClientPayload(c, this.state.events));
+    persist(() => backend.publish(c.shareToken, buildClientPayload(c, this.state.events)));
   },
 
   /* ---------- backup ---------- */
@@ -138,10 +142,10 @@ export const store = {
     if (!data || !Array.isArray(data.events) || !Array.isArray(data.companies)) throw new Error('Arquivo inválido');
     if (replace) await this.clearAll();
     for (const col of COLS) {
-      const items = (data[col] || []).filter((x) => x && x.id);
+      const items = (data[col] || []).filter((x) => x && typeof x.id === 'string').map((x) => sanitizeItem(col, x)).filter(Boolean);
       if (items.length) {
         items.forEach((it) => applyLocal(col, it));
-        await backend.writeMany(items.map((item) => ({ col, item })));
+        persist(() => backend.writeMany(items.map((item) => ({ col, item }))));
       }
     }
     this.demo = false;
@@ -154,7 +158,7 @@ export const store = {
     for (const col of COLS) {
       const ids = this.state[col].map((x) => x.id);
       this.state[col] = [];
-      if (ids.length) await backend.delMany(col, ids);
+      if (ids.length) persist(() => backend.delMany(col, ids));
     }
     this.demo = false;
     saveLocalFlags();
@@ -164,6 +168,21 @@ export const store = {
     await this.clearAll();
   },
 };
+
+/* Grava sem travar a tela: na nuvem, a gravação só "termina" quando o servidor
+   confirma; sem internet isso pode demorar. O Firestore guarda localmente e envia depois. */
+function persist(fn) {
+  try {
+    const p = fn();
+    if (p && p.catch) p.catch((err) => {
+      console.error('Falha ao salvar', err);
+      store.onError && store.onError(err);
+    });
+  } catch (err) {
+    console.error('Falha ao salvar', err);
+    store.onError && store.onError(err);
+  }
+}
 
 /* aplica no estado em memória */
 function applyLocal(col, item) {
@@ -199,7 +218,13 @@ function touch(col, item) {
 
 /* ---------- backend local ---------- */
 function saveLocal() {
-  localStorage.setItem(LS_DATA, JSON.stringify({ ...store.state, demo: store.demo }));
+  try {
+    localStorage.setItem(LS_DATA, JSON.stringify({ ...store.state, demo: store.demo }));
+  } catch (err) {
+    // Ex.: memória do navegador cheia (muitas logos grandes)
+    store.onError && store.onError(err);
+    throw err;
+  }
 }
 function saveLocalFlags() {
   if (store.mode === 'local') saveLocal();
@@ -217,7 +242,7 @@ export async function initLocal() {
   store.me = localStorage.getItem(LS_ME);
   const saved = readLocal();
   if (saved) {
-    COLS.forEach((c) => (store.state[c] = saved[c] || []));
+    COLS.forEach((c) => (store.state[c] = (Array.isArray(saved[c]) ? saved[c] : []).map((x) => sanitizeItem(c, x)).filter(Boolean)));
     store.demo = !!saved.demo;
   } else {
     Object.assign(store.state, seedDemo());
@@ -234,9 +259,9 @@ export async function initCloud(cloud, user) {
   store.me = m ? m.id : null;
   backend = cloud;
   await cloud.subscribe(COLS, (col, items) => {
-    store.state[col] = items;
+    store.state[col] = items.map((x) => sanitizeItem(col, x)).filter(Boolean);
     store.emit();
-  });
+  }, (err) => store.onError && store.onError(err));
 }
 
 /* ---------- dados de exemplo ---------- */
@@ -324,5 +349,5 @@ function seedDemo() {
     { id: uid('n_'), date: t, text: 'Levar o tripé grande e o refletor para a Studio Fit.', author: 'matheus', createdAt: now - 5000 },
     { id: uid('n_'), date: t, text: 'O cliente da Pura Vida pediu para não colocar preço no feed.', author: 'henrique', createdAt: now },
   ];
-  return { companies, events, notes };
+  return { companies, events, notes, settings: [] };
 }

@@ -19,6 +19,21 @@ Feed · Story · Reels · Carrossel · Captação · Reunião · Edição · Out
 local (com botão para abrir no Mapas), descrição/legenda (o cliente vê), **nota interna** (só a equipe vê), lembrete, repetição (todo dia, dias úteis, toda semana)
 e status (A fazer → Pronto → Feito).
 
+### Assistente automático (sem chave, sem internet)
+Botão ✨ no topo da tela **Hoje** (ou o cartão “Assistente”). Ele roda dentro do próprio app e analisa a agenda sozinho a cada mudança:
+- **Proteção contra marcação em cima de outra**: ao criar ou editar um evento, o app mostra a **agenda dos dois naquele dia** (linha do tempo do Henrique e do Matheus) e, se a pessoa já tiver compromisso no horário, **bloqueia o salvamento** com um aviso dizendo o que já existe e **quem marcou**. Oferece saídas prontas: *Mudar para HH:MM (livre)*, *Passar para o parceiro (está livre)* ou *Marcar mesmo assim*.
+- **Duplicados**: se o Matheus tentar marcar um post que o Henrique já marcou (mesma empresa, mesmo tipo, horário parecido), o app avisa “Isso já está na agenda”.
+- **Repetições**: ao criar eventos repetidos, mostra quais datas batem com outros compromissos e permite criar só nas datas livres.
+- **Aviso em tempo real**: se o parceiro marcar algo que cria conflito na sua agenda, aparece um alerta na tela.
+- **Correção com 1 toque** nos alertas: “Passar para Matheus”, “Mover story para 12h”.
+- **Tempo livre**: horas livres de cada um por dia, respeitando expediente, almoço, folga e deslocamento (configuráveis em **Ajustes → Rotina e tempo livre**). Avisa quando alguém fica sem pausa ou sobrecarregado.
+- **Encontrar o melhor horário**: escolha o tipo de post e o dia e veja os horários livres de cada um, priorizando os horários de pico.
+
+### Perguntar ao Claude (com o login normal)
+No Assistente, **Perguntar ao Claude** abre o Claude (app ou claude.ai) **com a sua conta normal**, já com a agenda dos próximos 14 dias e a pergunta escritas. Não usa chave de API e o app não envia nada sozinho: é você que manda a mensagem no Claude.
+- O modelo é escolhido no próprio Claude. Para usar o **Haiku 5.5**, selecione-o uma vez no seletor de modelo do Claude. O app não consegue escolher o modelo pela sua conta, e “esforço baixo” é uma opção que só existe na API paga. O pedido já vai escrito para respostas curtas e diretas.
+- A agenda também fica copiada. Se o Claude abrir vazio, cole no campo de mensagem.
+
 ### Dicas e alertas automáticos
 - **Conflito**: post marcado no meio de uma captação. O app sugere deixar programado ou passar para o parceiro, se ele estiver livre.
 - **Alguém em dois lugares** ao mesmo tempo.
@@ -85,7 +100,10 @@ config.js             configurações (equipe, Firebase)
 css/app.css           visual (claro e escuro automático)
 js/app.js             inicialização e navegação
 js/store.js           dados (no aparelho ou na nuvem)
-js/insights.js        dicas, conflitos e sugestões de horário
+js/planner.js         assistente: conflitos, horários livres, tempo livre
+js/insights.js        dicas e alertas do dia
+js/claude-link.js     “Perguntar ao Claude” (login normal)
+js/sanitize.js        validação de dados importados e links
 js/share.js           link do cliente
 js/ics.js             exportação para o Calendário do iPhone
 js/views/*.js         telas

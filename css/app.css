@@ -693,3 +693,85 @@ body.is-client #toast { bottom: calc(var(--safe-b) + 20px); }
   body { background: var(--surface-3); }
   #app { background: var(--bg); box-shadow: 0 0 0 1px var(--line); }
 }
+
+/* ==========================================================
+   Assistente
+   ========================================================== */
+.iconbtn--ai { color: var(--tip); }
+.brief {
+  display: flex; align-items: flex-start; gap: 12px; text-align: left; width: 100%;
+  padding: 14px; border-radius: var(--radius); background: var(--tip-soft); color: var(--text);
+}
+.brief > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.brief strong { font-size: 14px; color: var(--tip); }
+.brief p { font-size: 14px; color: var(--text-2); line-height: 1.4; }
+.brief__ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--surface); color: var(--tip); flex: none; }
+.brief > .ic { align-self: center; }
+
+.team__free { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+.is-good { background: var(--ok-soft); color: var(--ok); }
+.is-mid { background: var(--note); color: var(--note-text); }
+.is-low { background: var(--danger-soft); color: var(--danger); }
+.is-off { background: var(--surface-2); color: var(--text-3); }
+
+.fixes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.fixbtn { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 12px; border-radius: 999px; background: var(--ink); color: var(--ink-on); font-size: 13px; font-weight: 650; }
+.tip__date { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-3); margin-bottom: 2px; }
+.nowline--end { margin-top: 10px; }
+
+/* painel do assistente no editor */
+.assist { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.assist__head { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--tip); }
+.assist__ok { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ok); }
+.assist__sugg { font-size: 14px; color: var(--text-2); padding-top: 10px; border-top: 0.5px solid var(--line); }
+.tchip--wide { flex-direction: row; gap: 6px; width: 100%; height: 42px; background: var(--ok-soft); color: var(--ok); }
+.hintbox__times .tchip { background: var(--surface-2); }
+.hintbox__times .tchip.is-on { background: var(--tip); color: #fff; }
+
+.lanes { display: flex; flex-direction: column; gap: 6px; }
+.lanes__head { font-size: 13px; color: var(--text-2); margin-bottom: 2px; }
+.lane { display: grid; grid-template-columns: 26px 1fr; align-items: center; gap: 6px; }
+.lane__track { position: relative; height: 22px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.lane--axis .lane__track { height: 14px; background: none; overflow: visible; }
+.lane--axis small { position: absolute; transform: translateX(-50%); font-size: 10px; color: var(--text-3); font-weight: 600; }
+.lane__tick { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); }
+.lane__ev { position: absolute; top: 3px; bottom: 3px; border-radius: 4px; opacity: 0.85; }
+.lane__draft { position: absolute; top: 1px; bottom: 1px; border-radius: 5px; border: 2px dashed var(--ink); background: color-mix(in srgb, var(--ink) 12%, transparent); }
+.lane__draft.is-clash { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 22%, transparent); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.55; } }
+
+.issues { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.issue { display: flex; gap: 9px; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.4; text-align: left; }
+.issue strong { display: block; font-size: 14px; }
+.issue p { color: var(--text-2); }
+.issue .ic { margin-top: 2px; }
+.issue--block { background: var(--danger-soft); color: var(--danger); }
+.issue--block strong { color: var(--danger); }
+.issue--warn { background: var(--warn-soft); color: var(--warn); }
+.issue--warn strong { color: var(--warn); }
+.issue--info { background: var(--surface-2); color: var(--text-2); }
+.issue--info strong { color: var(--text); }
+.issues--dialog { margin: 4px 0 8px; }
+
+/* folha do assistente */
+.assist-hero { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: 20px; background: linear-gradient(135deg, var(--tip-soft), var(--prep-soft)); }
+.assist-hero__ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--surface); color: var(--tip); flex: none; }
+.assist-hero strong { font-size: 16px; }
+.assist-hero p { font-size: 14px; color: var(--text-2); margin-top: 2px; }
+.freegrid { display: grid; grid-template-columns: 28px repeat(7, 1fr); gap: 4px; align-items: center; background: var(--surface); padding: 12px 10px; border-radius: var(--radius); box-shadow: var(--shadow); }
+.freegrid__d { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: var(--text-3); font-weight: 700; text-transform: uppercase; }
+.freegrid__d b { font-size: 14px; color: var(--text); }
+.freecell { height: 34px; border-radius: 8px; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.findrow { display: flex; align-items: center; gap: 10px; }
+.findrow .hintbox__times { margin-top: 0; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.preset { padding: 8px 12px; border-radius: 999px; background: var(--tip-soft); color: var(--tip); font-size: 13px; font-weight: 650; }
+
+/* ajustes: rotina */
+.list__row input[type="time"] { border: 0; background: var(--surface-2); border-radius: 10px; padding: 7px 8px; font-size: 15px; font-weight: 600; -webkit-appearance: none; appearance: none; }
+.list__row--col { flex-direction: column; align-items: stretch; gap: 10px; cursor: default; }
+.daysoff { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.dayoff { position: relative; }
+.dayoff input { position: absolute; opacity: 0; inset: 0; }
+.dayoff span { display: grid; place-items: center; height: 38px; border-radius: 10px; background: var(--surface-2); font-size: 13px; font-weight: 700; color: var(--text-2); }
+.dayoff input:checked + span { background: var(--ink); color: var(--ink-on); }
