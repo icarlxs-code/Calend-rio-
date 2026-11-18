@@ -57,6 +57,7 @@ export function sanitizeItem(col, x) {
     return { ...x, date, text: str(x.text, 500), author: str(x.author, 40) };
   }
   if (col === 'settings') {
+    if (x.id === 'seed-v1') return { id: 'seed-v1', done: ids(x.done), updatedAt: x.updatedAt };
     if (x.id !== 'routine') return null;
     return {
       id: 'routine',

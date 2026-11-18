@@ -134,11 +134,12 @@ export function resizeImage(file, size = 160) {
       const c = document.createElement('canvas');
       c.width = c.height = size;
       const ctx = c.getContext('2d');
-      ctx.fillStyle = '#ffffff';
+      // logo inteira, centralizada, sem cortar (fundo preto: combina com logos de fundo escuro ou transparente)
+      ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, size, size);
-      const s = Math.min(img.width, img.height);
-      const sx = (img.width - s) / 2, sy = (img.height - s) / 2;
-      ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
+      const scale = Math.min(size / img.width, size / img.height) * 0.9;
+      const w = img.width * scale, h = img.height * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
       URL.revokeObjectURL(url);
       resolve(c.toDataURL('image/jpeg', 0.86));
     };

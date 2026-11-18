@@ -16,6 +16,7 @@ import { upcomingConflicts } from './insights.js';
 import { decodeSnapshot } from './share.js';
 import { sanitizePayload } from './sanitize.js';
 import { maybeOnboard } from './views/onboarding.js';
+import { ensureSeedCompanies } from './seed-companies.js';
 import * as push from './avisos.js';
 import { dueReminders, reminderMessage } from '../functions/reminder-rules.js';
 
@@ -385,6 +386,8 @@ function startApp() {
       render();
     }
   });
+  // empresas pré-cadastradas (uma única vez)
+  ensureSeedCompanies().catch((e) => console.warn('pré-cadastro', e));
   // boas-vindas / permissão de notificações (depois da abertura)
   setTimeout(maybeOnboard, 600);
   // atualiza o cadastro deste celular para notificações (se já tiver permissão)
