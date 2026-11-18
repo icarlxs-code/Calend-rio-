@@ -9,8 +9,8 @@ export const CONFIG = {
   // Equipe. O "email" só é usado quando a sincronização na nuvem
   // (Firebase) estiver ligada — é o login de cada um.
   team: [
-    { id: 'henrique', name: 'Henrique', email: '', color: '#2563EB' },
-    { id: 'matheus',  name: 'Matheus',  email: '', color: '#D9480F' },
+    { id: 'henrique', name: 'Henrique', email: 'icarlxs@gmail.com', color: '#2563EB' },
+    { id: 'matheus',  name: 'Matheus',  email: 'contatopedrazzi1@gmail.com', color: '#D9480F' },
   ],
 
   // SINCRONIZAÇÃO NA NUVEM (opcional, recomendado)
