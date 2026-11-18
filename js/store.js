@@ -241,12 +241,13 @@ export async function initLocal() {
   backend = localBackend;
   store.me = localStorage.getItem(LS_ME);
   const saved = readLocal();
-  if (saved) {
+  if (saved && !saved.demo) {
     COLS.forEach((c) => (store.state[c] = (Array.isArray(saved[c]) ? saved[c] : []).map((x) => sanitizeItem(c, x)).filter(Boolean)));
-    store.demo = !!saved.demo;
+    store.demo = false;
   } else {
-    Object.assign(store.state, seedDemo());
-    store.demo = true;
+    // Começa zerado. Se o celular ainda tinha os exemplos antigos, eles são removidos.
+    COLS.forEach((c) => (store.state[c] = []));
+    store.demo = false;
     saveLocal();
   }
 }
