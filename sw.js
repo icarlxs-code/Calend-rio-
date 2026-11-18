@@ -1,15 +1,9 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = 'pauta-v8';
+const CACHE = /*CACHE*/'cal-obdjsow4'/*CACHE*/;
 const SHELL = [
-  './', 'index.html', 'config.js', 'css/app.css', 'manifest.webmanifest',
-  'js/app.js', 'js/store.js', 'js/ui.js', 'js/utils.js', 'js/constants.js', 'js/icons.js',
-  'js/components.js', 'js/insights.js', 'js/planner.js', 'js/sanitize.js', 'js/claude-link.js', 'js/avisos.js', 'js/intro.js',
-  'js/ics.js', 'js/share.js', 'js/cloud.js',
-  'js/views/calendar.js', 'js/views/event.js', 'js/views/companies.js', 'js/views/settings.js', 'js/views/client.js',
-  'js/views/assistant.js', 'js/views/onboarding.js',
-  'functions/reminder-rules.js',
-  'media/intro-poster.jpg',
+  './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster.jpg',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
+  /*FILES*/ 'dist/a-OBDJSOW4.js', 'dist/c-WI5IF7H2.js', 'dist/c-5H7ASYQ4.js', 'dist/c-66S76OJ6.js', 'dist/c-VHNSBD2M.js',
 ];
 
 self.addEventListener('install', (e) => {

@@ -1,14 +1,15 @@
 /* Sincronização na nuvem (Firebase Firestore + login por e-mail).
    Só é carregado quando CONFIG.firebase estiver preenchido. */
-const V = '10.14.1';
-const BASE = `https://www.gstatic.com/firebasejs/${V}`;
+/* O Firebase vem embutido no próprio app (sem baixar de outro servidor ao abrir). */
+import * as appMod from 'firebase/app';
+import * as fsMod from 'firebase/firestore';
+import * as authMod from 'firebase/auth';
 
 let fs, auth, db, authApi;
 
 export async function connect(config) {
-  const appMod = await import(`${BASE}/firebase-app.js`);
-  fs = await import(`${BASE}/firebase-firestore.js`);
-  authApi = await import(`${BASE}/firebase-auth.js`);
+  fs = fsMod;
+  authApi = authMod;
   const app = appMod.initializeApp(config);
   try {
     db = fs.initializeFirestore(app, {
@@ -93,8 +94,7 @@ const backend = {
 
 /* Leitura pública (tela do cliente) — não exige login */
 export async function fetchPublic(config, token) {
-  const appMod = await import(`${BASE}/firebase-app.js`);
-  const f = await import(`${BASE}/firebase-firestore.js`);
+  const f = fsMod;
   const app = appMod.initializeApp(config, 'public');
   const d = f.getFirestore(app);
   const snap = await f.getDoc(f.doc(d, 'public', token));

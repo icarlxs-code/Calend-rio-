@@ -151,5 +151,5 @@ sw.js                 funcionamento offline
 firestore.rules       regras de segurança do Firebase
 ```
 
-Sem dependências nem etapa de build: é só HTML, CSS e JavaScript.
+O app publicado fica em `dist/`: um arquivo só, com nome versionado, gerado a partir de `js/` com `npm install && npm run build`. **Rode o build depois de mudar qualquer coisa em `js/` ou no `config.js`.**
 Para testar no computador: `npx http-server .` e abrir `http://localhost:8080`.

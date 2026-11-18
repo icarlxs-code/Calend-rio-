@@ -22,7 +22,72 @@
   <div id="intro" class="intro" aria-hidden="true">
     <video id="intro-video" src="media/intro.mp4" poster="media/intro-poster.jpg" muted autoplay playsinline webkit-playsinline preload="auto" disablepictureinpicture></video>
   </div>
-  <script src="js/intro.js"></script>
+  <script>
+/* Abertura com vídeo (sem som). Aparece ao abrir o app e ao voltar para ele
+   depois de um tempo fora. Termina com uma transição suave para a agenda. */
+(function () {
+  var intro = document.getElementById('intro');
+  var video = document.getElementById('intro-video');
+  var root = document.documentElement;
+  if (!intro || !video) return;
+  var AWAY_MS = 30000; // tempo fora do app para repetir a abertura
+  var leaving = false, timer = null, hiddenAt = 0;
+  var isClient = function () { return /^#\/(c|v)\//.test(location.hash); };
+
+  function finish() {
+    if (leaving) return;
+    leaving = true;
+    clearTimeout(timer);
+    intro.classList.add('is-leaving');
+    root.classList.add('intro-done');
+    setTimeout(function () {
+      intro.classList.add('is-gone');
+      try { video.pause(); } catch (e) { /* ok */ }
+    }, 800);
+  }
+
+  function play() {
+    leaving = false;
+    intro.classList.remove('is-gone', 'is-leaving');
+    root.classList.remove('intro-done');
+    try { video.currentTime = 0; } catch (e) { /* ok */ }
+    clearTimeout(timer);
+    timer = setTimeout(finish, 4500); // segurança: nunca prende a pessoa na abertura
+    var p = video.play();
+    if (p && p.catch) {
+      p.catch(function () {
+        // Modo Pouca Energia do iPhone bloqueia vídeo automático: mostra a imagem e segue
+        clearTimeout(timer);
+        timer = setTimeout(finish, 1100);
+      });
+    }
+  }
+
+  // começa a transição um pouco antes do fim, para emendar sem "pulo"
+  video.addEventListener('timeupdate', function () {
+    if (video.duration && video.currentTime >= video.duration - 0.35) finish();
+  });
+  video.addEventListener('ended', finish);
+  video.addEventListener('error', function () { setTimeout(finish, 600); });
+  intro.addEventListener('click', finish); // toque para pular
+
+  if (isClient()) {
+    intro.classList.add('is-gone');
+    root.classList.add('intro-done');
+  } else {
+    play();
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      hiddenAt = Date.now();
+    } else if (hiddenAt && Date.now() - hiddenAt > AWAY_MS && !isClient()) {
+      play();
+    }
+  });
+  window.PautaIntro = { play: play, finish: finish };
+})();
+  </script>
   <div id="app">
     <div class="splash"><img src="icons/icon-192.png" alt="" width="72" height="72"><p>Carregando…</p></div>
   </div>
@@ -57,19 +122,8 @@
         lastErr = t && t !== window && (t.src || t.href) ? 'não carregou ' + String(t.src || t.href).split('/').slice(-2).join('/') : (e.message || '') + ' ' + String(e.filename || '').split('/').pop();
       }, true);
       window.addEventListener('unhandledrejection', function (e) { lastErr = String(e.reason && (e.reason.message || e.reason)); });
-      // descobre qual arquivo falhou (testa um por um)
-      var FILES = ['config.js', 'functions/reminder-rules.js', 'js/utils.js', 'js/constants.js', 'js/icons.js', 'js/sanitize.js', 'js/share.js', 'js/store.js', 'js/ui.js',
-        'js/components.js', 'js/planner.js', 'js/insights.js', 'js/ics.js', 'js/avisos.js', 'js/claude-link.js', 'js/views/client.js', 'js/views/companies.js',
-        'js/views/event.js', 'js/views/calendar.js', 'js/views/settings.js', 'js/views/assistant.js', 'js/views/onboarding.js'];
-      function diagnose(first) {
-        var i = 0;
-        (function next() {
-          if (i >= FILES.length) return fail(first);
-          var f = FILES[i++];
-          import('./' + f).then(next, function (e) { fail(f + ': ' + String(e && (e.message || e))); });
-        })();
-      }
-      import('./js/app.js').catch(function (e) { diagnose(String(e && (e.message || e))); });
+      var APP = /*APP*/'./dist/a-OBDJSOW4.js'/*APP*/;
+      import(APP).catch(function (e) { fail(String(e && (e.message || e))); });
       setTimeout(function () { fail(''); }, 20000);
     })();
   </script>
