@@ -1,0 +1,25 @@
+rules_version = '2';
+// Regras de segurança do Firebase — cole no console:
+// Firestore Database > Regras. Troque os dois e-mails pelos de vocês.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isTeam() {
+      return request.auth != null
+        && request.auth.token.email in ['henrique@SEU-EMAIL.com', 'matheus@SEU-EMAIL.com'];
+    }
+
+    // Dados internos da dupla: só Henrique e Matheus leem e escrevem
+    match /companies/{id} { allow read, write: if isTeam(); }
+    match /events/{id}    { allow read, write: if isTeam(); }
+    match /notes/{id}     { allow read, write: if isTeam(); }
+
+    // Cronograma público de cada empresa (link do cliente).
+    // Qualquer pessoa COM o link lê UM cronograma; ninguém consegue listar os outros.
+    match /public/{token} {
+      allow get: if true;
+      allow list: if false;
+      allow write: if isTeam();
+    }
+  }
+}

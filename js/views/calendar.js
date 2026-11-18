@@ -1,0 +1,316 @@
+/* Telas "Hoje" (agenda do dia) e "Calendário" (mês) */
+import { store } from '../store.js';
+import { ui } from '../ui.js';
+import { TYPES, isPost, durationOf } from '../constants.js';
+import {
+  esc, todayKey, addDays, startOfWeek, fromKey, toKey, fmtDayLong, fmtDayShort, relDay, fmtMonth,
+  WD_LETTER, WD_SHORT, dayLabel, MONTHS_SHORT, toMin, nowMin, fmtTime, fmtCountdown, greeting, rgba, textOn,
+} from '../utils.js';
+import { icon } from '../icons.js';
+import { avatar, avatars, logo, eventCard, emptyState, typeBadge, whoText, timeRange } from '../components.js';
+import { dayInsights, nextUp } from '../insights.js';
+
+/* ---------- elementos compartilhados ---------- */
+export function personSwitch() {
+  const opts = [{ id: 'all', name: 'Todos' }, ...store.team];
+  return `<div class="seg" role="tablist">
+    ${opts.map((o) => `<button class="seg__btn${ui.person === o.id ? ' is-on' : ''}" data-action="set-person" data-p="${o.id}">
+      ${o.id === 'all' ? icon('users', 15) : avatar(o.id, 18)}<span>${esc(o.name)}${store.me === o.id ? '<em> (você)</em>' : ''}</span></button>`).join('')}
+  </div>`;
+}
+
+function companyDots(evs, max = 4) {
+  const seen = [];
+  evs.forEach((e) => {
+    if (!seen.includes(e.companyId)) seen.push(e.companyId);
+  });
+  return seen.slice(0, max).map((id) => `<i style="background:${store.company(id)?.color || '#999'}"></i>`).join('');
+}
+
+/* ======================== HOJE ======================== */
+export function renderToday() {
+  const date = ui.date;
+  const today = todayKey();
+  const evs = store.eventsOn(date, { person: ui.person });
+  const insights = dayInsights(date, ui.person);
+  const flagged = insights.filter((i) => i.level === 'warn' && i.icon !== 'flag').flatMap((i) => i.ids || []);
+  const me = store.member(store.me);
+
+  // Semana
+  const ws = startOfWeek(date);
+  const week = Array.from({ length: 7 }, (_, i) => addDays(ws, i));
+  const weekLabel = (() => {
+    const a = fromKey(week[0]), b = fromKey(week[6]);
+    return a.getMonth() === b.getMonth()
+      ? `${a.getDate()}–${b.getDate()} de ${MONTHS_SHORT[b.getMonth()]}`
+      : `${a.getDate()} ${MONTHS_SHORT[a.getMonth()]} – ${b.getDate()} ${MONTHS_SHORT[b.getMonth()]}`;
+  })();
+
+  const header = `
+  <header class="hdr">
+    <div class="hdr__row">
+      <div class="hdr__titles">
+        <p class="hdr__eyebrow">${date === today ? `${greeting()}${me ? ', ' + esc(me.name) : ''}` : esc(fmtDayLong(date))}</p>
+        <h1>${esc(relDay(date))}${date === today ? `<span class="hdr__date">${esc(fmtDayShort(date))}</span>` : ''}</h1>
+      </div>
+      <div class="hdr__actions">
+        ${date !== today ? `<button class="chip chip--accent" data-action="go-today">Hoje</button>` : ''}
+        <button class="iconbtn" data-action="tab" data-tab="ajustes" aria-label="Perfil">${me ? avatar(me.id, 34) : icon('user', 20)}</button>
+      </div>
+    </div>
+    ${personSwitch()}
+    <div class="week">
+      <div class="week__bar">
+        <button class="iconbtn iconbtn--sm" data-action="week" data-n="-7" aria-label="Semana anterior">${icon('left', 18)}</button>
+        <span>${esc(weekLabel)}</span>
+        <button class="iconbtn iconbtn--sm" data-action="week" data-n="7" aria-label="Próxima semana">${icon('right', 18)}</button>
+      </div>
+      <div class="week__days" data-swipe="week">
+        ${week.map((k) => {
+          const d = fromKey(k);
+          const de = store.eventsOn(k, { person: ui.person });
+          const pending = de.filter((e) => e.status !== 'feito').length;
+          return `<button class="wday${k === date ? ' is-sel' : ''}${k === today ? ' is-today' : ''}" data-action="set-date" data-k="${k}">
+            <span class="wday__l">${WD_SHORT[d.getDay()]}</span>
+            <span class="wday__n">${d.getDate()}</span>
+            <span class="wday__dots">${companyDots(de, 3)}${!de.length ? '<i class="none"></i>' : ''}</span>
+            ${pending ? `<span class="sr">${pending} pendentes</span>` : ''}
+          </button>`;
+        }).join('')}
+      </div>
+    </div>
+  </header>`;
+
+  // Resumo
+  const counts = {};
+  evs.forEach((e) => (counts[e.type] = (counts[e.type] || 0) + 1));
+  const done = evs.filter((e) => e.status === 'feito').length;
+  const pct = evs.length ? Math.round((done / evs.length) * 100) : 0;
+  const summary = evs.length
+    ? `<div class="summary">
+        <div class="summary__progress">
+          <div class="ring" style="--p:${pct}"><span>${pct}%</span></div>
+          <div><strong>${done} de ${evs.length}</strong><small>tarefas concluídas</small></div>
+        </div>
+        <div class="summary__types">
+          ${Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([t, n]) => `<span class="tcount tbadge--${t}">${icon(TYPES[t].icon, 13)}<b>${n}</b> ${TYPES[t].label}</span>`).join('')}
+        </div>
+      </div>`
+    : '';
+
+  // Equipe no dia (onde cada um estará)
+  const team = ui.person === 'all' ? `<section class="block">
+      <h2 class="block__title">${icon('route', 16)} Onde cada um vai estar</h2>
+      <div class="team">${store.team.map((m) => teamCol(m, date)).join('')}</div>
+    </section>` : '';
+
+  // Próximo
+  let next = '';
+  if (date === today) {
+    const n = nextUp(ui.person);
+    if (n) {
+      const c = store.company(n.companyId);
+      const mins = toMin(n.time) - nowMin();
+      const color = c?.color || '#555';
+      next = `<button class="next" style="--cc:${color};--cc-soft:${rgba(color, 0.12)}" data-action="open-event" data-id="${n.id}">
+        <div class="next__label">${icon('bell', 14)} ${mins > 0 ? 'Próximo · ' + fmtCountdown(mins) : 'Acontecendo agora'}</div>
+        <div class="next__row">
+          ${logo(c, 44)}
+          <div class="next__txt">
+            <strong>${fmtTime(n.time)} · ${esc(TYPES[n.type].label)} · ${esc(c?.name || '')}</strong>
+            <span>${esc(n.title || '')}</span>
+          </div>
+          ${avatars(n.assignees, 26)}
+        </div>
+        ${n.location ? `<div class="next__loc">${icon('pin', 13)} ${esc(n.location)}</div>` : ''}
+      </button>`;
+    }
+  }
+
+  // Dicas e alertas
+  const visibleTips = ui.showAllTips ? insights : insights.filter((i, idx) => i.level === 'warn' || idx < 2);
+  const hiddenCount = insights.length - visibleTips.length;
+  const tips = `<section class="block">
+    <h2 class="block__title">${icon('bulb', 16)} Dicas e alertas</h2>
+    <div class="tips">${visibleTips.map(tipCard).join('')}</div>
+    ${hiddenCount > 0 ? `<button class="btn-text btn-text--sm" data-action="toggle-tips">Ver mais ${hiddenCount} dica${hiddenCount > 1 ? 's' : ''}</button>`
+      : ui.showAllTips && insights.length > 2 ? `<button class="btn-text btn-text--sm" data-action="toggle-tips">Mostrar menos</button>` : ''}
+  </section>`;
+
+  // Linha do tempo
+  let timeline;
+  if (!evs.length) {
+    timeline = emptyState('Dia livre', ui.person === 'all' ? 'Nada agendado para este dia.' : `Nada agendado para ${store.member(ui.person)?.name}.`,
+      `<button class="btn btn--primary" data-action="new-event" data-date="${date}">${icon('plus', 18)} Adicionar</button>`);
+  } else {
+    const groups = [
+      { k: 'Manhã', icon: 'sun', items: evs.filter((e) => e.time && toMin(e.time) < 720) },
+      { k: 'Tarde', items: evs.filter((e) => e.time && toMin(e.time) >= 720 && toMin(e.time) < 1080) },
+      { k: 'Noite', items: evs.filter((e) => e.time && toMin(e.time) >= 1080) },
+      { k: 'Sem horário', items: evs.filter((e) => !e.time) },
+    ];
+    const now = nowMin();
+    let nowPlaced = date !== today;
+    timeline = groups.filter((g) => g.items.length).map((g) => `
+      <div class="tl-group">
+        <h3 class="tl-group__h">${g.k}<span>${g.items.length}</span></h3>
+        ${g.items.map((e) => {
+          let line = '';
+          if (!nowPlaced && e.time && toMin(e.time) > now) {
+            nowPlaced = true;
+            line = `<div class="nowline"><span>Agora · ${fmtTime(`${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`)}</span></div>`;
+          }
+          return line + eventCard(e, { highlight: flagged });
+        }).join('')}
+      </div>`).join('');
+  }
+
+  // Bilhetes
+  const notes = store.notesOn(date);
+  const notesHtml = `<section class="block">
+    <h2 class="block__title">${icon('note', 16)} Bilhetes do dia</h2>
+    <div class="notes">
+      ${notes.map((n) => `<div class="note">
+        <p>${esc(n.text)}</p>
+        <footer>${avatar(n.author, 18)}<span>${esc(store.member(n.author)?.name || '')}</span>
+          <button class="note__del" data-action="del-note" data-id="${n.id}" aria-label="Apagar bilhete">${icon('x', 14)}</button></footer>
+      </div>`).join('')}
+      <form class="note-add" data-form="note">
+        <input name="text" placeholder="Escreva um bilhete para a dupla…" autocomplete="off" maxlength="280">
+        <button class="iconbtn iconbtn--accent" aria-label="Adicionar bilhete">${icon('plus', 18)}</button>
+      </form>
+    </div>
+  </section>`;
+
+  return `${header}
+  <div class="page">
+    ${store.demo ? demoBanner() : ''}
+    ${next}
+    ${team}
+    <section class="block">
+      <h2 class="block__title">${icon('clock', 16)} Agenda ${ui.person === 'all' ? 'da dupla' : 'de ' + esc(store.member(ui.person)?.name || '')}</h2>
+      ${summary}
+      ${timeline}
+    </section>
+    ${tips}
+    ${notesHtml}
+  </div>`;
+}
+
+function teamCol(m, date) {
+  const evs = store.eventsOn(date, { person: m.id });
+  const now = date === todayKey() ? nowMin() : -1;
+  const onsite = evs.filter((e) => ['shoot', 'meeting'].includes(TYPES[e.type]?.kind));
+  const posts = evs.filter((e) => isPost(e.type)).length;
+  const next = evs.find((e) => e.time && e.status !== 'feito' && toMin(e.time) + durationOf(e) > now);
+  return `<button class="team__col" data-action="set-person" data-p="${m.id}">
+    <div class="team__head">${avatar(m.id, 30)}<div><strong>${esc(m.name)}</strong><small>${evs.length} tarefa${evs.length === 1 ? '' : 's'} · ${posts} post${posts === 1 ? '' : 's'}</small></div></div>
+    <ul class="team__where">
+      ${onsite.length ? onsite.map((e) => `<li>${icon(TYPES[e.type].icon, 13)}<span><b>${fmtTime(e.time)}</b> ${esc(store.company(e.companyId)?.name || '')}</span></li>`).join('')
+        : `<li class="muted">${icon('building', 13)}<span>Trabalho interno / remoto</span></li>`}
+    </ul>
+    ${next ? `<div class="team__next">Próximo: <b>${fmtTime(next.time)}</b> ${esc(TYPES[next.type].label)} · ${esc(store.company(next.companyId)?.name || '')}</div>` : `<div class="team__next muted">${evs.length ? 'Tudo concluído ✓' : 'Livre'}</div>`}
+  </button>`;
+}
+
+function tipCard(t) {
+  return `<div class="tip tip--${t.level}"${t.ids?.length === 1 ? ` data-action="open-event" data-id="${t.ids[0]}"` : ''}>
+    <span class="tip__ic">${icon(t.icon, 16)}</span>
+    <div><strong>${esc(t.title)}</strong><p>${esc(t.text)}</p></div>
+  </div>`;
+}
+
+function demoBanner() {
+  return `<div class="banner">
+    ${icon('sparkle', 18)}
+    <p><strong>Você está vendo dados de exemplo.</strong> Explore à vontade e, quando quiser começar de verdade, apague os exemplos.</p>
+    <button class="btn btn--soft btn--sm" data-action="clear-demo">Apagar exemplos</button>
+  </div>`;
+}
+
+/* ======================== MÊS ======================== */
+export function renderMonth() {
+  const mk = ui.month;
+  const [y, m] = mk.split('-').map(Number);
+  const first = new Date(y, m - 1, 1);
+  const startK = addDays(toKey(first), -first.getDay());
+  const today = todayKey();
+  const cells = Array.from({ length: 42 }, (_, i) => addDays(startK, i));
+  const lastRowUsed = cells.slice(35).some((k) => k.slice(0, 7) === mk);
+  const shown = lastRowUsed ? cells : cells.slice(0, 35);
+  const filter = { person: ui.person, companyId: ui.monthCompany };
+
+  const companies = store.companiesSorted();
+  const sel = ui.monthSel;
+  const selEvents = store.eventsOn(sel, filter);
+
+  // Estatística do mês
+  const monthEvs = store.eventsBetween(`${mk}-01`, `${mk}-31`, filter);
+  const posts = monthEvs.filter((e) => isPost(e.type)).length;
+  const shoots = monthEvs.filter((e) => e.type === 'captacao').length;
+  const meetings = monthEvs.filter((e) => e.type === 'reuniao').length;
+
+  return `
+  <header class="hdr">
+    <div class="hdr__row">
+      <div class="hdr__titles">
+        <p class="hdr__eyebrow">Calendário</p>
+        <h1>${esc(fmtMonth(mk).split(' ')[0])}<span class="hdr__date">${mk.slice(0, 4)}</span></h1>
+      </div>
+      <div class="hdr__actions">
+        <button class="iconbtn" data-action="month" data-n="-1" aria-label="Mês anterior">${icon('left', 20)}</button>
+        <button class="chip" data-action="month-today">Hoje</button>
+        <button class="iconbtn" data-action="month" data-n="1" aria-label="Próximo mês">${icon('right', 20)}</button>
+      </div>
+    </div>
+    ${personSwitch()}
+  </header>
+  <div class="page">
+    <div class="chips-scroll">
+      <button class="chip${!ui.monthCompany ? ' is-on' : ''}" data-action="month-company" data-id="">Todas as empresas</button>
+      ${companies.map((c) => `<button class="chip chip--co${ui.monthCompany === c.id ? ' is-on' : ''}" style="--cc:${c.color}" data-action="month-company" data-id="${c.id}">${logo(c, 18, 5)}${esc(c.name)}</button>`).join('')}
+    </div>
+
+    <div class="mstats">
+      <div><b>${posts}</b><span>posts</span></div>
+      <div><b>${shoots}</b><span>captações</span></div>
+      <div><b>${meetings}</b><span>reuniões</span></div>
+      <div><b>${monthEvs.filter((e) => e.status === 'feito').length}/${monthEvs.length}</b><span>concluídos</span></div>
+    </div>
+
+    <div class="month" data-swipe="month">
+      <div class="month__wd">${WD_LETTER.map((l) => `<span>${l}</span>`).join('')}</div>
+      <div class="month__grid">
+        ${shown.map((k) => {
+          const inMonth = k.slice(0, 7) === mk;
+          const de = store.eventsOn(k, filter);
+          const hasShoot = de.some((e) => e.type === 'captacao');
+          return `<button class="mday${inMonth ? '' : ' is-out'}${k === today ? ' is-today' : ''}${k === sel ? ' is-sel' : ''}" data-action="month-select" data-k="${k}">
+            <span class="mday__n">${Number(k.slice(8))}</span>
+            ${de.length ? `<span class="mday__bars">${companyBars(de)}</span><span class="mday__count">${hasShoot ? icon('camera', 10) : ''}${de.length}</span>` : ''}
+          </button>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <section class="block">
+      <div class="block__row">
+        <h2 class="block__title">${esc(dayLabel(sel))}</h2>
+        <button class="btn-text btn-text--sm" data-action="open-day" data-k="${sel}">Abrir dia ${icon('right', 14)}</button>
+      </div>
+      ${selEvents.length ? selEvents.map((e) => eventCard(e)).join('')
+        : emptyState('Nada neste dia', 'Toque no + para agendar.', `<button class="btn btn--soft" data-action="new-event" data-date="${sel}">${icon('plus', 16)} Novo evento</button>`)}
+    </section>
+
+    ${companies.length ? `<section class="block">
+      <h2 class="block__title">Legenda</h2>
+      <div class="legend">${companies.map((c) => `<span><i style="background:${c.color}"></i>${esc(c.name)}</span>`).join('')}</div>
+    </section>` : ''}
+  </div>`;
+}
+
+function companyBars(evs) {
+  const byC = {};
+  evs.forEach((e) => (byC[e.companyId] = (byC[e.companyId] || 0) + 1));
+  return Object.entries(byC).slice(0, 4).map(([id]) => `<i style="background:${store.company(id)?.color || '#999'}"></i>`).join('');
+}
