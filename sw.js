@@ -1,5 +1,5 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = 'pauta-v4';
+const CACHE = 'pauta-v5';
 const SHELL = [
   './', 'index.html', 'config.js', 'css/app.css', 'manifest.webmanifest',
   'js/app.js', 'js/store.js', 'js/ui.js', 'js/utils.js', 'js/constants.js', 'js/icons.js',
@@ -26,8 +26,10 @@ self.addEventListener('fetch', (e) => {
   // vídeo: o iPhone pede em pedaços (Range); deixa o navegador cuidar direto
   if (url.pathname.endsWith('.mp4')) return;
   // demais arquivos: rede primeiro (para receber atualizações); cache se estiver offline
+  // "no-cache": sempre confere com o servidor se há versão nova (evita ficar preso numa versão antiga)
+  const req = e.request.mode === 'navigate' ? e.request.url : e.request;
   e.respondWith(
-    fetch(e.request)
+    fetch(req, { cache: 'no-cache' })
       .then((res) => {
         if (res.ok && res.status === 200) {
           const copy = res.clone();
