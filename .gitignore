@@ -1,0 +1,4 @@
+node_modules/
+functions/.env
+functions/.env.local
+prep.txt

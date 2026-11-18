@@ -72,6 +72,10 @@ const backend = {
       await batch.commit();
     }
   },
+  async getDoc(path) {
+    const s = await fs.getDoc(fs.doc(db, path));
+    return s.exists() ? s.data() : null;
+  },
   publish(token, payload) {
     return fs.setDoc(fs.doc(db, 'public', token), clean(payload));
   },

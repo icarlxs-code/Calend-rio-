@@ -76,10 +76,11 @@ export const store = {
     this.emit();
     return item;
   },
-  async upsertMany(col, items) {
+  async upsertMany(col, items, { activity = null } = {}) {
     const now = Date.now();
     items.forEach((it) => {
       it.updatedAt = now;
+      it.bulkAt = now; // gravação em lote: o servidor não manda uma notificação por item
       if (this.me) it.updatedBy = this.me;
       if (!it.createdAt) it.createdAt = now;
       if (!it.createdBy && this.me) it.createdBy = this.me;
@@ -87,22 +88,40 @@ export const store = {
     });
     persist(() => backend.writeMany(items.map((it) => ({ col, item: it }))));
     items.forEach((it) => touch(col, it));
+    if (activity) logActivity(activity);
     this.emit();
   },
   async remove(col, id) {
     const old = this.state[col].find((x) => x.id === id);
+    if (col === 'events' && old) logActivity({ kind: 'deleted', events: [compactEvent(old)] });
     this.state[col] = this.state[col].filter((x) => x.id !== id);
     persist(() => backend.del(col, id));
     if (col === 'companies' && old?.shareToken && backend.unpublish) persist(() => backend.unpublish(old.shareToken));
     if (old) touch(col, old);
     this.emit();
   },
-  async removeMany(col, ids) {
+  async removeMany(col, ids, opts = {}) {
     const olds = this.state[col].filter((x) => ids.includes(x.id));
+    if (col === 'events' && olds.length && !opts.silent) logActivity({ kind: 'deleted', events: olds.slice(0, 20).map(compactEvent) });
     this.state[col] = this.state[col].filter((x) => !ids.includes(x.id));
     if (ids.length) persist(() => backend.delMany(col, ids));
     olds.forEach((o) => touch(col, o));
     this.emit();
+  },
+
+  /* Acesso direto à nuvem (aparelhos para notificação, testes, chave pública) */
+  writeRaw(col, item) {
+    if (this.mode !== 'cloud') return false;
+    persist(() => backend.write(col, item));
+    return true;
+  },
+  async readDoc(path) {
+    if (this.mode !== 'cloud' || !backend.getDoc) return null;
+    try {
+      return await backend.getDoc(path);
+    } catch {
+      return null;
+    }
   },
 
   setMe(id) {
@@ -143,6 +162,8 @@ export const store = {
     if (replace) await this.clearAll();
     for (const col of COLS) {
       const items = (data[col] || []).filter((x) => x && typeof x.id === 'string').map((x) => sanitizeItem(col, x)).filter(Boolean);
+      const stamp = Date.now();
+      items.forEach((it) => (it.updatedAt = it.bulkAt = stamp));
       if (items.length) {
         items.forEach((it) => applyLocal(col, it));
         persist(() => backend.writeMany(items.map((item) => ({ col, item }))));
@@ -150,6 +171,7 @@ export const store = {
     }
     this.demo = false;
     saveLocalFlags();
+    logActivity({ kind: 'import', count: (data.events || []).length });
     this.state.companies.forEach((c) => c.shareToken && pendingPublish.add(c.id));
     flushPublish();
     this.emit();
@@ -182,6 +204,14 @@ function persist(fn) {
     console.error('Falha ao salvar', err);
     store.onError && store.onError(err);
   }
+}
+
+/* Registro de atividade: o servidor usa para avisar o parceiro (ex.: "Matheus removeu…") */
+const compactEvent = (e) => ({ id: e.id, type: e.type, companyId: e.companyId || '', date: e.date, time: e.time || '', title: e.title || '', assignees: e.assignees || [] });
+function logActivity(a) {
+  if (store.mode !== 'cloud' || !backend.write) return;
+  const item = { id: uid('a_'), by: store.me || '', at: Date.now(), ...a };
+  persist(() => backend.write('activity', item));
 }
 
 /* aplica no estado em memória */

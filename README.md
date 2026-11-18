@@ -88,6 +88,40 @@ Com o Firebase (gratuito para esse uso), tudo fica **em tempo real** para a dupl
 
 > Já tem dados no celular e quer levar para a nuvem? Antes de ativar: **Ajustes → Exportar backup**. Depois de entrar: **Ajustes → Importar backup**.
 
+## 4. Notificações no celular (lembretes e avisos do parceiro)
+
+O que chega no iPhone:
+- **Lembretes inteligentes** de cada post: 2h antes, 30 min antes, na hora e uma **cobrança 30 min depois** se ainda não foi marcado como feito (“Já postou? Reels · Pura Vida”).
+- **Captações**: aviso na véspera (com checklist), 2h antes e 45 min antes.
+- **Aviso do parceiro**: quando um marca, muda o horário, passa para o outro, conclui ou remove algo, o outro recebe na hora (“Matheus marcou para você: Story · Café Aroma — amanhã, 16h”).
+- **Resumo do dia** às 8h e **da véspera** às 20h.
+- **Número no ícone** do app com as tarefas pendentes de hoje.
+
+Cada pessoa liga ou desliga cada tipo em **Ajustes → Notificações**.
+
+**Limites do iPhone:** só funciona com o app **instalado na Tela de Início** (iOS 16.4 ou mais novo), e o app pede **apenas a permissão de notificações**. Apps da Tela de Início não podem pedir acesso a Atalhos, Ajustes ou outras áreas do iPhone (isso é exclusivo de apps da App Store).
+
+Para os avisos chegarem **com o app fechado** e no **celular do parceiro**, é preciso um pequeno servidor sempre ligado. Ele já está pronto em `functions/` e é publicado sozinho pelo GitHub. Precisa fazer **uma vez**:
+
+1. Fazer o passo 3 (Firebase com login dos dois).
+2. No Firebase, mudar o plano para **Blaze** (engrenagem → Uso e faturamento). O Google exige cartão, mas o uso da dupla fica dentro da cota gratuita (na prática, R$ 0). Dica: crie um alerta de orçamento de R$ 5.
+3. **Configurações do projeto → Contas de serviço → Gerar nova chave privada**. Vai baixar um arquivo `.json`.
+4. No Google Cloud (console.cloud.google.com → IAM), encontre a conta `firebase-adminsdk-…` e adicione o papel **Proprietário**. Esse papel é necessário para ela publicar o servidor.
+5. No GitHub: **Settings → Secrets and variables → Actions → New repository secret**:
+   - nome `FIREBASE_SERVICE_ACCOUNT`
+   - valor: todo o conteúdo do arquivo `.json`
+   - **Nunca** compartilhe esse arquivo nem coloque o conteúdo dele no código.
+6. Em **Actions → Publicar servidor de notificações → Run workflow**. Na primeira vez pode falhar dizendo que as permissões ainda estão sendo ativadas. Espere 5 minutos e rode de novo.
+7. No iPhone: **Ajustes → Notificações → Ativar** e depois **Enviar notificação de teste**.
+
+> Se o Firestore foi criado numa região diferente de `southamerica-east1`, crie em **Settings → Secrets and variables → Actions → Variables** a variável `FUNCTIONS_REGION` com a região usada.
+
+Sem o servidor, o app ainda avisa **enquanto estiver aberto**, e os lembretes podem ir para o **Calendário do iPhone** (Ajustes → Lembretes no Calendário), que avisa mesmo com o app fechado.
+
+## Abertura com vídeo
+
+Ao abrir o app (e ao voltar para ele depois de mais de 30 s fora) toca a animação de abertura, sem som, que termina com uma transição suave para a agenda. Toque na tela para pular. No **Modo Pouca Energia** o iPhone bloqueia vídeos automáticos; nesse caso aparece a imagem da abertura por 1 s. O vídeo fica em `media/intro.mp4`. O tempo fora para repetir está em `js/intro.js` (`AWAY_MS`).
+
 ## Personalizar
 
 Tudo em [`config.js`](config.js): nome do app, nome da agência (aparece para o cliente), nomes e cores da dupla.
@@ -103,6 +137,12 @@ js/store.js           dados (no aparelho ou na nuvem)
 js/planner.js         assistente: conflitos, horários livres, tempo livre
 js/insights.js        dicas e alertas do dia
 js/claude-link.js     “Perguntar ao Claude” (login normal)
+js/push.js            notificações no celular
+js/intro.js           abertura com vídeo
+js/views/onboarding.js boas-vindas e pedido de notificações
+functions/            servidor de notificações (Firebase Functions)
+functions/reminder-rules.js regras dos lembretes (usadas pelo app e pelo servidor)
+.github/workflows/    publicação automática do servidor
 js/sanitize.js        validação de dados importados e links
 js/share.js           link do cliente
 js/ics.js             exportação para o Calendário do iPhone

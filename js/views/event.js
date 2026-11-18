@@ -411,7 +411,9 @@ function mountEditor(api, d, original, rep) {
         if (!use.length) return toast('Nenhuma data livre');
       }
       const seriesId = uid('s_');
-      await store.upsertMany('events', use.map((date, i) => ({ ...d, id: i === 0 ? d.id : uid('e_'), date, seriesId })));
+      await store.upsertMany('events', use.map((date, i) => ({ ...d, id: i === 0 ? d.id : uid('e_'), date, seriesId })), {
+        activity: { kind: 'series', count: use.length, label: `${TYPES[d.type].label} ${REPEATS.find((x) => x.v === rep.mode)?.label.toLowerCase() || ''} às ${fmtTime(d.time)}`, sample: { companyId: d.companyId, date: use[0] } },
+      });
       toast(`${use.length} eventos criados`);
     } else {
       if (!(await checkBeforeSave(d, true, api, refreshAll))) return;
@@ -562,7 +564,9 @@ async function saveEdit(d, original) {
       if (!r) return;
       if (r === 'next') {
         const patch = Object.fromEntries(changed.map((f) => [f, d[f]]));
-        await store.upsertMany('events', [{ ...d }, ...next.map((x) => ({ ...x, ...patch }))]);
+        await store.upsertMany('events', [{ ...d }, ...next.map((x) => ({ ...x, ...patch }))], {
+          activity: { kind: 'series-edit', count: next.length + 1, label: `${TYPES[d.type].label} · a partir de ${d.date.slice(8)}/${d.date.slice(5, 7)}`, sample: { companyId: d.companyId, date: d.date } },
+        });
         toast('Série atualizada');
         return;
       }

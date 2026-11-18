@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Pauta · Agenda de conteúdo</title>
   <meta name="description" content="Agenda diária de postagens, captações e reuniões por empresa.">
-  <meta name="theme-color" content="#F4F4F6" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#F3F3F3" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -13,11 +13,16 @@
   <meta name="apple-mobile-web-app-title" content="Pauta">
   <meta name="format-detection" content="telephone=no">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/favicon-64.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="preload" href="media/intro-poster.jpg" as="image">
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
+  <div id="intro" class="intro" aria-hidden="true">
+    <video id="intro-video" src="media/intro.mp4" poster="media/intro-poster.jpg" muted autoplay playsinline webkit-playsinline preload="auto" disablepictureinpicture></video>
+  </div>
+  <script src="js/intro.js"></script>
   <div id="app">
     <div class="splash"><img src="icons/icon-192.png" alt="" width="72" height="72"><p>Carregando…</p></div>
   </div>

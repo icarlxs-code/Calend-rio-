@@ -7,6 +7,8 @@ import { icon } from '../icons.js';
 import { avatar, toast, confirmDialog, chooseDialog } from '../components.js';
 import { downloadICS } from '../ics.js';
 import { routine } from '../planner.js';
+import * as push from '../push.js';
+import { resetOnboarding } from './onboarding.js';
 import { WD_SHORT } from '../utils.js';
 
 export function renderSettings() {
@@ -39,8 +41,10 @@ export function renderSettings() {
       <p class="fhelp">Para perguntas abertas (ideias, reorganizar a semana), use “Perguntar ao Claude” no Assistente. Abre o Claude com o seu login normal, sem chave de API.</p>
     </section>
 
+    ${notifySection()}
+
     <section class="block">
-      <h2 class="block__title">${icon('bell', 16)} Lembretes no iPhone</h2>
+      <h2 class="block__title">${icon('calendar', 16)} Lembretes no Calendário do iPhone</h2>
       <div class="card">
         <p>Envie a agenda para o <b>Calendário do iPhone</b> com alarmes. Assim o celular avisa na hora certa, mesmo com o app fechado.</p>
         <div class="btnrow">
@@ -49,11 +53,6 @@ export function renderSettings() {
           <button class="btn btn--soft btn--sm" data-action="ics" data-who="all" data-days="7">Semana da dupla</button>
         </div>
         <p class="fhelp">No iPhone, toque em “Calendário” ou abra o arquivo baixado e escolha “Adicionar tudo”. Se mudar algo depois, exporte de novo.</p>
-      </div>
-      <div class="card card--row">
-        ${icon('bell', 22)}
-        <div><strong>Avisos com o app aberto</strong><small>${notifOk ? 'Ativados neste aparelho' : 'Notifica o próximo compromisso enquanto o app estiver aberto'}</small></div>
-        ${notifOk ? `<span class="spill spill--feito">${icon('check', 12)} Ativo</span>` : `<button class="btn btn--soft btn--sm" data-action="notif">Ativar</button>`}
       </div>
     </section>
 
@@ -102,6 +101,45 @@ export function renderSettings() {
   </div>`;
 }
 
+function notifySection() {
+  const perm = push.permission();
+  const install = push.needsInstall();
+  const cloud = store.mode === 'cloud';
+  const device = !!localStorage.getItem('pauta.device');
+  const prefs = push.getPrefs();
+  let state, text, btn = '';
+  if (install) {
+    state = 'warn'; text = 'No iPhone, as notificações só funcionam com o app instalado: Compartilhar → Adicionar à Tela de Início, e abra pelo ícone.';
+  } else if (perm === 'unsupported') {
+    state = 'warn'; text = 'Este navegador não aceita notificações.';
+  } else if (perm === 'denied') {
+    state = 'warn'; text = 'Bloqueadas. Para ligar: Ajustes do iPhone → Notificações → Pauta.';
+  } else if (perm !== 'granted') {
+    state = 'warn'; text = 'Desativadas neste celular.'; btn = `<button class="btn btn--primary btn--sm" data-action="notify-enable">Ativar</button>`;
+  } else if (cloud && device) {
+    state = 'ok'; text = 'Ativadas. Os lembretes e os avisos do parceiro chegam mesmo com o app fechado.';
+  } else if (cloud) {
+    state = 'warn'; text = 'Permissão concedida, mas o servidor de notificações ainda não foi publicado (veja o README).'; btn = `<button class="btn btn--soft btn--sm" data-action="notify-enable">Tentar</button>`;
+  } else {
+    state = 'warn'; text = 'Ativadas só com o app aberto. Para receber com o app fechado e no celular do parceiro, ligue a nuvem e o servidor (README).';
+  }
+  return `<section class="block">
+    <h2 class="block__title">${icon('bell', 16)} Notificações</h2>
+    <div class="card card--row ${state === 'ok' ? 'card--ok' : 'card--warn'}">
+      ${icon('bell', 22)}
+      <div><strong>${state === 'ok' ? 'Funcionando' : 'Atenção'}</strong><small>${esc(text)}</small></div>
+      ${btn}
+    </div>
+    <form class="list notif-prefs" data-notify-form onsubmit="return false">
+      <label class="list__row"><span><b>Lembretes dos meus posts</b><small>2h e 30 min antes, na hora e cobrança se atrasar</small></span><input type="checkbox" class="switch" name="reminders" ${prefs.reminders ? 'checked' : ''}></label>
+      <label class="list__row"><span><b>Avisos do parceiro</b><small>quando marcar, mudar ou concluir algo</small></span><input type="checkbox" class="switch" name="partner" ${prefs.partner ? 'checked' : ''}></label>
+      <label class="list__row"><span><b>Resumo do dia</b><small>às 8h (hoje) e às 20h (amanhã)</small></span><input type="checkbox" class="switch" name="daily" ${prefs.daily ? 'checked' : ''}></label>
+    </form>
+    ${perm === 'granted' ? `<button class="btn btn--soft btn--block" data-action="notify-test">${icon('bell', 16)} Enviar notificação de teste</button>` : ''}
+    <button class="btn-text btn-text--sm" data-action="onboarding-again">Ver a apresentação de novo</button>
+  </section>`;
+}
+
 function routineSection() {
   const r = routine();
   const mins = [0, 15, 30, 45, 60, 90];
@@ -121,6 +159,26 @@ function routineSection() {
 }
 
 export const settingsActions = {
+  async notifyEnable() {
+    const r = await push.enable().catch(() => ({ ok: false, reason: 'error' }));
+    if (r.ok) toast(r.local ? 'Ativado (com o app aberto)' : 'Notificações ativadas');
+    else if (r.reason === 'install') toast('Instale o app na Tela de Início primeiro');
+    else if (r.reason === 'denied') toast('Bloqueado: libere em Ajustes do iPhone → Notificações');
+    else if (r.reason === 'server') toast('Servidor de notificações ainda não publicado');
+    else toast('Não foi possível ativar');
+    store.emit();
+  },
+  async notifyTest() {
+    const where = await push.sendTest().catch(() => null);
+    toast(where === 'server' ? 'Enviando… deve chegar em alguns segundos' : where ? 'Notificação enviada' : 'Não foi possível enviar');
+  },
+  async notifyPrefs(form) {
+    await push.setPrefs({ reminders: form.reminders.checked, partner: form.partner.checked, daily: form.daily.checked });
+    toast('Preferências salvas');
+  },
+  onboardingAgain() {
+    resetOnboarding();
+  },
   async routine(form) {
     const t = (n, def) => (/^\d{2}:\d{2}$/.test(form[n].value) ? form[n].value : def);
     const r = routine();
@@ -148,14 +206,6 @@ export const settingsActions = {
     if (!evs.length) return toast('Nada agendado nesse período');
     const name = who === 'all' ? 'Pauta – Dupla' : `Pauta – ${store.member(who).name}`;
     await downloadICS(evs, `pauta-${who}-${t}.ics`, name);
-  },
-  async notif() {
-    if (!('Notification' in window)) {
-      return toast('No iPhone, instale o app na Tela de Início para ativar avisos');
-    }
-    const p = await Notification.requestPermission();
-    toast(p === 'granted' ? 'Avisos ativados' : 'Permissão negada');
-    store.emit();
   },
   export() {
     const blob = new Blob([store.exportData()], { type: 'application/json' });

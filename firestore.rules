@@ -1,6 +1,8 @@
 rules_version = '2';
-// Regras de segurança do Firebase — cole no console:
-// Firestore Database > Regras. Troque os dois e-mails pelos de vocês.
+// Regras de segurança do Firebase.
+// Os e-mails abaixo são preenchidos automaticamente a partir do config.js
+// quando o servidor é publicado pelo GitHub (Actions). Se for colar à mão no
+// console (Firestore Database > Regras), troque pelos e-mails de vocês.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -15,6 +17,12 @@ service cloud.firestore {
     match /notes/{id}     { allow read, write: if isTeam(); }
     match /settings/{id}  { allow read, write: if isTeam(); }
 
+    // Notificações: aparelhos cadastrados, pedidos de teste e registro de atividade
+    match /devices/{id}   { allow read, write: if isTeam(); }
+    match /pings/{id}     { allow create: if isTeam(); }
+    match /activity/{id}  { allow create: if isTeam(); }
+    match /meta/{id}      { allow read: if isTeam(); }
+
     // Cronograma público de cada empresa (link do cliente).
     // Qualquer pessoa COM o link lê UM cronograma; ninguém consegue listar os outros.
     match /public/{token} {
@@ -22,5 +30,8 @@ service cloud.firestore {
       allow list: if false;
       allow write: if isTeam();
     }
+
+    // /private (chaves do servidor) e /sent (controle de envios):
+    // ninguém acessa pelo app; só o servidor.
   }
 }

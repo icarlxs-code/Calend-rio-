@@ -1,0 +1,69 @@
+# Publica o servidor de notificações (Firebase Functions) e as regras de segurança.
+# Roda sozinho quando o config.js ou o servidor mudam, ou manualmente em Actions.
+# Precisa do segredo FIREBASE_SERVICE_ACCOUNT (veja o README).
+name: Publicar servidor de notificações
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'config.js'
+      - 'functions/**'
+      - 'firestore.rules'
+      - 'firebase.json'
+      - 'scripts/prepare-deploy.mjs'
+      - '.github/workflows/servidor-notificacoes.yml'
+
+concurrency:
+  group: firebase-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Conferir configuração
+        id: check
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::notice::Segredo FIREBASE_SERVICE_ACCOUNT não configurado. Nada a publicar ainda (veja o README)."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! node -e "import('./config.js').then(m=>process.exit(m.CONFIG.firebase?.projectId?0:1))"; then
+            echo "::notice::config.js ainda sem a configuração do Firebase. Nada a publicar."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Testar regras dos lembretes
+        if: steps.check.outputs.skip != '1'
+        working-directory: functions
+        run: |
+          npm ci
+          npm test
+
+      - name: Preparar (equipe e regras a partir do config.js)
+        if: steps.check.outputs.skip != '1'
+        id: prep
+        run: node scripts/prepare-deploy.mjs --deploy | tee prep.txt && echo "project=$(grep '^projectId=' prep.txt | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+
+      - name: Publicar no Firebase
+        if: steps.check.outputs.skip != '1'
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FUNCTIONS_REGION: ${{ vars.FUNCTIONS_REGION }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          echo "FUNCTIONS_REGION=${FUNCTIONS_REGION:-southamerica-east1}" > functions/.env
+          npx --yes firebase-tools@15.34.2 deploy --only functions,firestore:rules \
+            --project "${{ steps.prep.outputs.project }}" --non-interactive --force

@@ -15,6 +15,9 @@ import { openAssistant } from './views/assistant.js';
 import { upcomingConflicts } from './insights.js';
 import { decodeSnapshot } from './share.js';
 import { sanitizePayload } from './sanitize.js';
+import { maybeOnboard } from './views/onboarding.js';
+import * as push from './push.js';
+import { dueReminders, reminderMessage } from '../functions/reminder-rules.js';
 
 const root = document.getElementById('app');
 let cloudApi = null;
@@ -162,7 +165,9 @@ const actions = {
   },
   'clear-all': () => settingsActions.clearAll(),
   ics: (b) => settingsActions.ics(b),
-  notif: () => settingsActions.notif(),
+  'notify-enable': () => settingsActions.notifyEnable(),
+  'notify-test': () => settingsActions.notifyTest(),
+  'onboarding-again': () => settingsActions.onboardingAgain(),
   export: () => settingsActions.export(),
   logout: async () => {
     if (await confirmDialog({ title: 'Sair da conta?', ok: 'Sair' })) {
@@ -183,6 +188,7 @@ document.addEventListener('click', (ev) => {
 });
 document.addEventListener('change', (ev) => {
   if (ev.target.matches('[data-action-change="import"]')) settingsActions.import(ev.target);
+  if (ev.target.closest('[data-notify-form]')) settingsActions.notifyPrefs(ev.target.closest('[data-notify-form]'));
   if (ev.target.closest('[data-routine-form]')) settingsActions.routine(ev.target.closest('[data-routine-form]'));
 });
 document.addEventListener('submit', async (ev) => {
@@ -226,25 +232,42 @@ function bindSwipes() {
 
 /* ---------- avisos com o app aberto ---------- */
 const notified = new Set();
+/* Com o app aberto: mostra os lembretes na tela (e como notificação, se o servidor
+   ainda não estiver mandando). Usa as mesmas regras do servidor. */
 function checkReminders() {
   if (!store.me) return;
-  const t = todayKey();
-  const now = nowMin();
-  store.eventsOn(t, { person: store.me }).forEach((e) => {
-    const rem = e.reminder ?? 30;
-    if (rem < 0 || rem >= 1440 || !e.time || e.status === 'feito') return;
-    const at = toMin(e.time) - rem;
-    const key = `${e.id}@${e.date}${e.time}`;
-    if (now >= at && now <= toMin(e.time) && !notified.has(key)) {
-      notified.add(key);
-      const c = store.company(e.companyId);
-      const msg = `${e.time} · ${TYPES[e.type].label} · ${c?.name || ''}`;
-      toast(`Lembrete: ${msg}`, { ms: 6000 });
-      if ('Notification' in window && Notification.permission === 'granted' && navigator.serviceWorker?.ready) {
-        navigator.serviceWorker.ready.then((reg) => reg.showNotification('Pauta · Lembrete', { body: `${msg}\n${e.title || ''}`, tag: key, icon: 'icons/icon-192.png' }));
-      }
+  const d = new Date();
+  const now = { date: todayKey(), minutes: d.getHours() * 60 + d.getMinutes() };
+  const mine = store.eventsBetween(addDays(now.date, -1), addDays(now.date, 1), { person: store.me });
+  const serverOn = store.mode === 'cloud' && !!localStorage.getItem('pauta.device');
+  dueReminders(mine, now, 2).forEach(({ ev, offset }) => {
+    const key = `${ev.id}@${offset}@${ev.date}${ev.time}`;
+    if (notified.has(key)) return;
+    notified.add(key);
+    const msg = reminderMessage(ev, offset, store.company(ev.companyId)?.name || '');
+    toast(`${msg.title}`, { ms: 7000, action: 'Ver', onAction: () => openEventDetail(ev.id) });
+    if (!serverOn && push.permission() === 'granted' && navigator.serviceWorker) {
+      navigator.serviceWorker.ready.then((reg) => reg.showNotification(msg.title, { body: msg.body, tag: `rem-${ev.id}`, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', data: { url: `./#/e/${ev.id}` } })).catch(() => {});
     }
   });
+  // número no ícone: tarefas pendentes de hoje
+  push.updateBadge(store.eventsOn(now.date, { person: store.me }).filter((e) => e.status !== 'feito').length);
+}
+
+/* Abre o lugar certo quando a pessoa toca numa notificação (#/e/ID ou #/d/DATA) */
+function openDeepLink(hash = location.hash) {
+  const m = /^#\/(e|d)\/([\w-]+)/.exec(hash || '');
+  if (!m) return false;
+  history.replaceState(null, '', location.pathname + location.search);
+  if (m[1] === 'e' && store.event(m[2])) {
+    ui.date = store.event(m[2]).date;
+    setTab('hoje');
+    openEventDetail(m[2]);
+  } else if (m[1] === 'd' && /^\d{4}-\d{2}-\d{2}$/.test(m[2])) {
+    ui.date = m[2];
+    setTab('hoje');
+  }
+  return true;
 }
 
 /* ---------- login (modo nuvem) ---------- */
@@ -298,6 +321,7 @@ function startApp() {
   };
   watchConflicts();
   store.on(watchConflicts);
+  store.on(() => push.updateBadge(store.me ? store.eventsOn(todayKey(), { person: store.me }).filter((e) => e.status !== 'feito').length : 0));
   setInterval(() => {
     const a = document.activeElement;
     const typing = a && /INPUT|TEXTAREA|SELECT/.test(a.tagName);
@@ -311,7 +335,11 @@ function startApp() {
       render();
     }
   });
-  if (!store.me && store.mode === 'local') setTimeout(askWhoAmI, 400);
+  // boas-vindas / permissão de notificações (depois da abertura)
+  setTimeout(maybeOnboard, 600);
+  // atualiza o cadastro deste celular para notificações (se já tiver permissão)
+  if (store.mode === 'cloud' && push.permission() === 'granted') push.register().catch(() => {});
+  setTimeout(() => openDeepLink(), 300);
 }
 
 /* Avisa quando aparece um conflito novo na SUA agenda (ex.: o parceiro marcou algo em cima) */
@@ -336,22 +364,6 @@ function watchConflicts() {
     }
   }
   knownConflicts = now;
-}
-
-async function askWhoAmI() {
-  const { openSheet } = await import('./components.js');
-  openSheet({
-    className: 'sheet--dialog',
-    html: `<div class="dialog">
-      <h3>Quem está usando este celular?</h3>
-      <p>Assim o app te cumprimenta e mostra “Minha agenda”. Dá para trocar depois em Ajustes.</p>
-      <div class="whogrid">${store.team.map((m) => `<button class="whobtn" style="--mc:${m.color}" data-me="${m.id}">${avatar(m.id, 34)}<span>${esc(m.name)}</span></button>`).join('')}</div>
-    </div>`,
-    onMount: (api) => api.el.querySelectorAll('[data-me]').forEach((b) => (b.onclick = () => {
-      store.setMe(b.dataset.me);
-      api.close();
-    })),
-  });
 }
 
 /* ---------- rotas ---------- */
@@ -411,7 +423,15 @@ async function boot() {
   });
 }
 
+navigator.serviceWorker?.addEventListener('message', (ev) => {
+  if (ev.data?.type === 'open' && ev.data.url) {
+    const h = ev.data.url.split('#')[1];
+    if (h) openDeepLink('#' + h);
+  }
+});
+
 window.addEventListener('hashchange', () => {
+  if (/^#\/(e|d)\//.test(location.hash)) return openDeepLink();
   if (/^#\/(c|v)\//.test(location.hash)) location.reload();
 });
 
