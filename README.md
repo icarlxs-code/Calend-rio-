@@ -137,7 +137,7 @@ js/store.js           dados (no aparelho ou na nuvem)
 js/planner.js         assistente: conflitos, horários livres, tempo livre
 js/insights.js        dicas e alertas do dia
 js/claude-link.js     “Perguntar ao Claude” (login normal)
-js/push.js            notificações no celular
+js/avisos.js          notificações no celular
 js/intro.js           abertura com vídeo
 js/views/onboarding.js boas-vindas e pedido de notificações
 functions/            servidor de notificações (Firebase Functions)

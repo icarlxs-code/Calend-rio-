@@ -1,9 +1,9 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = 'pauta-v7';
+const CACHE = 'pauta-v8';
 const SHELL = [
   './', 'index.html', 'config.js', 'css/app.css', 'manifest.webmanifest',
   'js/app.js', 'js/store.js', 'js/ui.js', 'js/utils.js', 'js/constants.js', 'js/icons.js',
-  'js/components.js', 'js/insights.js', 'js/planner.js', 'js/sanitize.js', 'js/claude-link.js', 'js/push.js', 'js/intro.js',
+  'js/components.js', 'js/insights.js', 'js/planner.js', 'js/sanitize.js', 'js/claude-link.js', 'js/avisos.js', 'js/intro.js',
   'js/ics.js', 'js/share.js', 'js/cloud.js',
   'js/views/calendar.js', 'js/views/event.js', 'js/views/companies.js', 'js/views/settings.js', 'js/views/client.js',
   'js/views/assistant.js', 'js/views/onboarding.js',

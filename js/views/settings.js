@@ -7,7 +7,7 @@ import { icon } from '../icons.js';
 import { avatar, toast, confirmDialog, chooseDialog } from '../components.js';
 import { downloadICS } from '../ics.js';
 import { routine } from '../planner.js';
-import * as push from '../push.js';
+import * as push from '../avisos.js';
 import { resetOnboarding } from './onboarding.js';
 import { WD_SHORT } from '../utils.js';
 

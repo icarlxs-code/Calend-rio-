@@ -4,7 +4,7 @@ import { CONFIG } from '../../config.js';
 import { esc, isStandalone } from '../utils.js';
 import { icon } from '../icons.js';
 import { avatar, toast } from '../components.js';
-import * as push from '../push.js';
+import * as push from '../avisos.js';
 
 const LS_DONE = 'pauta.onboarded';
 const LS_ASKED = 'pauta.notifyAskedAt';

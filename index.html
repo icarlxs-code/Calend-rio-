@@ -59,7 +59,7 @@
       window.addEventListener('unhandledrejection', function (e) { lastErr = String(e.reason && (e.reason.message || e.reason)); });
       // descobre qual arquivo falhou (testa um por um)
       var FILES = ['config.js', 'functions/reminder-rules.js', 'js/utils.js', 'js/constants.js', 'js/icons.js', 'js/sanitize.js', 'js/share.js', 'js/store.js', 'js/ui.js',
-        'js/components.js', 'js/planner.js', 'js/insights.js', 'js/ics.js', 'js/push.js', 'js/claude-link.js', 'js/views/client.js', 'js/views/companies.js',
+        'js/components.js', 'js/planner.js', 'js/insights.js', 'js/ics.js', 'js/avisos.js', 'js/claude-link.js', 'js/views/client.js', 'js/views/companies.js',
         'js/views/event.js', 'js/views/calendar.js', 'js/views/settings.js', 'js/views/assistant.js', 'js/views/onboarding.js'];
       function diagnose(first) {
         var i = 0;

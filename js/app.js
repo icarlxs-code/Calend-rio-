@@ -16,7 +16,7 @@ import { upcomingConflicts } from './insights.js';
 import { decodeSnapshot } from './share.js';
 import { sanitizePayload } from './sanitize.js';
 import { maybeOnboard } from './views/onboarding.js';
-import * as push from './push.js';
+import * as push from './avisos.js';
 import { dueReminders, reminderMessage } from '../functions/reminder-rules.js';
 
 const root = document.getElementById('app');
