@@ -29,6 +29,20 @@
   <div id="sheets"></div>
   <div id="toast" role="status" aria-live="polite"></div>
   <noscript>Ative o JavaScript para usar a agenda.</noscript>
+  <script>
+    /* Proteção: se o app não abrir, mostra o motivo e um botão para recarregar */
+    (function () {
+      var lastErr = '';
+      window.addEventListener('error', function (e) { lastErr = (e.message || '') + ' ' + (e.filename || '').split('/').pop(); });
+      window.addEventListener('unhandledrejection', function (e) { lastErr = String(e.reason && (e.reason.message || e.reason)); });
+      setTimeout(function () {
+        var app = document.getElementById('app');
+        if (!app || document.getElementById('view') || app.querySelector('[data-login],[data-retry]')) return;
+        app.innerHTML = '<div class="splash"><img src="icons/icon-192.png" alt="" width="72" height="72"><h2>O app demorou para abrir</h2><p>Toque para recarregar.</p><button class="btn btn--primary" onclick="location.reload()">Recarregar</button><small class="muted"></small></div>';
+        app.querySelector('small').textContent = lastErr ? 'Detalhe: ' + lastErr : '';
+      }, 20000);
+    })();
+  </script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

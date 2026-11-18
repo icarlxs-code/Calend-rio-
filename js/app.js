@@ -306,6 +306,19 @@ function showLogin(errMsg = '') {
   };
 }
 
+/* Não conseguiu falar com a nuvem: mostra o motivo e deixa tentar de novo */
+function cloudError(err) {
+  if (document.querySelector('[data-login]') || document.getElementById('view')) return;
+  root.innerHTML = `<div class="splash">
+    <img src="icons/icon-192.png" alt="" width="72" height="72">
+    <h2>Não consegui conectar</h2>
+    <p>Verifique a internet e tente de novo.</p>
+    <button class="btn btn--primary" data-retry>Tentar de novo</button>
+    <small class="muted">Detalhe: ${esc(String(err && (err.code || err.message) || err))}</small>
+  </div>`;
+  root.querySelector('[data-retry]').onclick = () => location.reload();
+}
+
 function loading(msg = 'Carregando…') {
   root.innerHTML = `<div class="splash"><img src="icons/icon-192.png" alt="" width="72" height="72"><p>${esc(msg)}</p></div>`;
 }
@@ -396,19 +409,21 @@ async function boot() {
     return startApp();
   }
 
-  loading();
+  loading('Conectando à nuvem…');
+  const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('tempo esgotado')), ms))]);
   try {
     const { connect } = await import('./cloud.js');
-    cloudApi = await connect(fb);
+    cloudApi = await withTimeout(connect(fb), 15000);
   } catch (e) {
     console.error(e);
-    // Sem internet na primeira abertura: segue no modo local
-    toast('Sem conexão com a nuvem — usando dados deste aparelho');
-    await initLocal();
-    return startApp();
+    return cloudError(e);
   }
-  let started = false;
+  let authAnswered = false;
+  setTimeout(() => {
+    if (!authAnswered) cloudError(new Error('o login não respondeu'));
+  }, 15000);
   cloudApi.onUser(async (user) => {
+    authAnswered = true;
     if (!user) return showLogin();
     if (started) return;
     const allowed = CONFIG.team.some((m) => m.email && m.email.toLowerCase() === (user.email || '').toLowerCase());
@@ -418,7 +433,8 @@ async function boot() {
     }
     started = true;
     loading('Sincronizando…');
-    await initCloud(cloudApi.backend, user);
+    // se a nuvem demorar, abre mesmo assim: os dados chegam assim que a conexão responder
+    await Promise.race([initCloud(cloudApi.backend, user), new Promise((r) => setTimeout(r, 12000))]);
     startApp();
   });
 }

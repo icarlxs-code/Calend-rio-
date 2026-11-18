@@ -12,12 +12,19 @@ export async function connect(config) {
   const app = appMod.initializeApp(config);
   try {
     db = fs.initializeFirestore(app, {
-      localCache: fs.persistentLocalCache({ tabManager: fs.persistentMultipleTabManager() }),
+      localCache: fs.persistentLocalCache({ tabManager: fs.persistentSingleTabManager() }),
     });
   } catch {
-    db = fs.getFirestore(app);
+    db = fs.initializeFirestore(app, { localCache: fs.memoryLocalCache() });
   }
-  auth = authApi.getAuth(app);
+  // Login sem janelas extras (o Safari do iPhone pode bloquear a janela invisível do getAuth)
+  try {
+    auth = authApi.initializeAuth(app, {
+      persistence: [authApi.indexedDBLocalPersistence, authApi.browserLocalPersistence, authApi.inMemoryPersistence],
+    });
+  } catch {
+    auth = authApi.getAuth(app);
+  }
   return {
     onUser: (cb) => authApi.onAuthStateChanged(auth, cb),
     signIn: (email, pass) => authApi.signInWithEmailAndPassword(auth, email, pass),
