@@ -117,7 +117,7 @@ function show(steps) {
       localStorage.setItem(LS_ASKED, String(Date.now()));
       if (push.needsInstall()) {
         msg(`<b>Primeiro instale o app.</b> No iPhone, as notificações só funcionam pelo ícone da Tela de Início:<br>
-          1. Toque em ${icon('share', 14)} <b>Compartilhar</b><br>2. <b>Adicionar à Tela de Início</b><br>3. Abra o Pauta pelo ícone`, 'warn');
+          1. Toque em ${icon('share', 14)} <b>Compartilhar</b><br>2. <b>Adicionar à Tela de Início</b><br>3. Abra o ${esc(CONFIG.appName)} pelo ícone`, 'warn');
         en.outerHTML = `<button class="btn btn--primary btn--block" data-next>Entendi</button>`;
         bind();
         return;
@@ -140,7 +140,7 @@ function show(steps) {
         en.outerHTML = `<button class="btn btn--primary btn--block" data-next>Continuar</button>`;
         bind();
       } else if (r.reason === 'denied') {
-        msg('As notificações foram bloqueadas. Para ligar depois: <b>Ajustes do iPhone → Notificações → Pauta</b>.', 'warn');
+        msg(`As notificações foram bloqueadas. Para ligar depois: <b>Ajustes do iPhone → Notificações → ${esc(CONFIG.appName)}</b>.`, 'warn');
         en.outerHTML = `<button class="btn btn--primary btn--block" data-next>Continuar</button>`;
         bind();
       } else {

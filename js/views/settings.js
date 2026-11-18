@@ -113,7 +113,7 @@ function notifySection() {
   } else if (perm === 'unsupported') {
     state = 'warn'; text = 'Este navegador não aceita notificações.';
   } else if (perm === 'denied') {
-    state = 'warn'; text = 'Bloqueadas. Para ligar: Ajustes do iPhone → Notificações → Pauta.';
+    state = 'warn'; text = `Bloqueadas. Para ligar: Ajustes do iPhone → Notificações → ${CONFIG.appName}.`;
   } else if (perm !== 'granted') {
     state = 'warn'; text = 'Desativadas neste celular.'; btn = `<button class="btn btn--primary btn--sm" data-action="notify-enable">Ativar</button>`;
   } else if (cloud && device) {
@@ -204,7 +204,7 @@ export const settingsActions = {
     const t = todayKey();
     const evs = store.eventsBetween(t, addDays(t, days), { person: who }).filter((e) => e.status !== 'feito');
     if (!evs.length) return toast('Nada agendado nesse período');
-    const name = who === 'all' ? 'Pauta – Dupla' : `Pauta – ${store.member(who).name}`;
+    const name = who === 'all' ? `${CONFIG.appName} – Dupla` : `${CONFIG.appName} – ${store.member(who).name}`;
     await downloadICS(evs, `pauta-${who}-${t}.ics`, name);
   },
   export() {

@@ -1,5 +1,5 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = 'pauta-v3';
+const CACHE = 'pauta-v4';
 const SHELL = [
   './', 'index.html', 'config.js', 'css/app.css', 'manifest.webmanifest',
   'js/app.js', 'js/store.js', 'js/ui.js', 'js/utils.js', 'js/constants.js', 'js/icons.js',
@@ -45,10 +45,10 @@ self.addEventListener('push', (e) => {
   try {
     d = e.data ? e.data.json() : {};
   } catch {
-    d = { title: 'Pauta', body: e.data ? e.data.text() : '' };
+    d = { title: 'Calendário', body: e.data ? e.data.text() : '' };
   }
   const jobs = [
-    self.registration.showNotification(d.title || 'Pauta', {
+    self.registration.showNotification(d.title || 'Calendário', {
       body: d.body || '',
       icon: 'icons/icon-192.png',
       badge: 'icons/icon-192.png',

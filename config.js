@@ -3,7 +3,7 @@
    ============================================================ */
 export const CONFIG = {
   // Nome que aparece no topo do app e na tela do cliente
-  appName: 'Pauta',
+  appName: 'Calendário',
   agencyName: 'Henrique & Matheus',
 
   // Equipe. O "email" só é usado quando a sincronização na nuvem

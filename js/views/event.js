@@ -1,5 +1,6 @@
 /* Detalhe do evento e editor (criar/editar) */
 import { store } from '../store.js';
+import { CONFIG } from '../../config.js';
 import { ui } from '../ui.js';
 import { TYPES, TYPE_ORDER, STATUS, STATUS_ORDER, DURATIONS, REMINDERS, REPEATS, durationOf } from '../constants.js';
 import { esc, todayKey, addDays, fmtDayLong, fmtDuration, fmtTime, uid, rgba, fromKey, relDay, toMin, fromMin, dayLabel } from '../utils.js';
@@ -92,7 +93,7 @@ function mountDetail(api, id) {
   });
   act('ics', () => {
     const e = store.event(id);
-    downloadICS([e], `${TYPES[e.type].label}-${e.date}.ics`, 'Pauta');
+    downloadICS([e], `${TYPES[e.type].label}-${e.date}.ics`, CONFIG.appName);
   });
   act('del', () => deleteEvent(id, api));
 }

@@ -1,4 +1,4 @@
-/* Servidor de notificações do Pauta (Firebase Cloud Functions).
+/* Servidor de notificações do Calendário (Firebase Cloud Functions).
    - Avisa o parceiro quando alguém marca, muda, conclui ou remove algo.
    - Lembretes inteligentes: 1 dia antes (captação), 2h antes, 30 min antes, na hora
      e uma cobrança 30 min depois se ainda não foi marcado como feito.

@@ -1,4 +1,4 @@
-# Pauta — agenda de conteúdo da dupla Henrique & Matheus
+# Calendário — agenda de conteúdo da dupla Henrique & Matheus
 
 Calendário pensado para o celular (iPhone 16 Pro Max / 17 Pro Max) para organizar o dia a dia de quem faz marketing para várias empresas:
 o que postar, para qual empresa, em que horário, quem faz e onde cada um vai estar.
@@ -67,7 +67,7 @@ Em **Empresas → (empresa) → Link do cliente**. O cliente abre no celular e v
 
 1. Abra o endereço no **Safari**.
 2. Toque em **Compartilhar** → **Adicionar à Tela de Início**.
-3. O app “Pauta” abre em tela cheia, como um aplicativo.
+3. O app “Calendário” abre em tela cheia, como um aplicativo.
 
 > Na primeira abertura aparecem **dados de exemplo** (Pura Vida, Café Aroma, Studio Fit e Bella Estética). Explore e depois toque em **Apagar exemplos**.
 

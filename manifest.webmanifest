@@ -1,6 +1,6 @@
 {
-  "name": "Pauta · Agenda de conteúdo",
-  "short_name": "Pauta",
+  "name": "Calendário · Agenda de conteúdo",
+  "short_name": "Calendário",
   "description": "Agenda diária de postagens, captações e reuniões por empresa.",
   "lang": "pt-BR",
   "start_url": "./",
