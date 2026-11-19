@@ -44,9 +44,9 @@
   var canvas = document.getElementById('intro-canvas');
   var root = document.documentElement;
   if (!intro || !canvas) return;
-  var FRAMES = 48, FPS = 30, AHEAD = 5;
+  var FRAMES = 96, FPS = 60, AHEAD = 8;
   var URLS = [];
-  for (var i = 1; i <= FRAMES; i++) URLS.push('media/intro2/f' + ('00' + i).slice(-3) + '.webp');
+  for (var i = 1; i <= FRAMES; i++) URLS.push('media/intro3/f' + ('00' + i).slice(-3) + '.webp');
   var AWAY_MS = 30000; // tempo fora do app para repetir a abertura
   var leaving = false, timers = [], hiddenAt = 0, run = 0, blobs = null, loading = null;
   var isClient = function () { return /^#\/(c|v)\//.test(location.hash); };

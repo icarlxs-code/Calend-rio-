@@ -2,7 +2,7 @@
 const CACHE = /*CACHE*/'cal-34vxyjk7'/*CACHE*/;
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster.jpg',
-  ...Array.from({ length: 48 }, (_, i) => `media/intro2/f${String(i + 1).padStart(3, '0')}.webp`),
+  ...Array.from({ length: 96 }, (_, i) => `media/intro3/f${String(i + 1).padStart(3, '0')}.webp`),
   'media/logos/pura-vida.jpg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
   /*FILES*/ 'dist/a-34VXYJK7.js', 'dist/c-JBFK46OY.js', 'dist/c-FJTSIK4O.js', 'dist/c-EJYUXBR7.js', 'dist/c-4OPZHBQG.js', 'dist/c-TYCTILQS.js', 'dist/c-QNJTKFWY.js', 'dist/c-SIJUFJQD.js', 'dist/c-3GA6RSWB.js', 'dist/c-43VYY7Q5.js', 'dist/c-W6W2IM5K.js', 'dist/c-VHNSBD2M.js',
 ];
@@ -21,7 +21,7 @@ self.addEventListener('fetch', (e) => {
   // vídeo: o iPhone pede em pedaços (Range); deixa o navegador cuidar direto
   if (url.pathname.endsWith('.mp4')) return;
   // abertura animada: quadros sempre do celular (instantâneo e sem internet)
-  if (url.pathname.includes('/media/intro2/')) {
+  if (url.pathname.includes('/media/intro3/')) {
     e.respondWith(caches.match(e.request, { ignoreSearch: true }).then((r) => r || fetch(e.request).then((res) => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); }
       return res;
