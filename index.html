@@ -18,20 +18,20 @@
   <link rel="preload" href="media/intro-poster.jpg" as="image">
   <link rel="stylesheet" href="css/app.css">
   <!--PRELOAD-->
-  <link rel="modulepreload" href="dist/a-5ZJVZZ2G.js">
+  <link rel="modulepreload" href="dist/a-RRB6LVQH.js">
   <link rel="modulepreload" href="dist/c-FQHFFL2B.js">
-  <link rel="modulepreload" href="dist/c-QDOQX3PM.js">
-  <link rel="modulepreload" href="dist/c-AMPJQXQ2.js">
-  <link rel="modulepreload" href="dist/c-47FVQY4C.js">
-  <link rel="modulepreload" href="dist/c-PLPXE3LW.js">
+  <link rel="modulepreload" href="dist/c-PBEL6IR7.js">
+  <link rel="modulepreload" href="dist/c-RXG44YSJ.js">
+  <link rel="modulepreload" href="dist/c-FG4DVISF.js">
+  <link rel="modulepreload" href="dist/c-EG2IIMYB.js">
   <link rel="modulepreload" href="dist/c-NMZR3K7N.js">
-  <link rel="modulepreload" href="dist/c-QLRFWMR3.js">
-  <link rel="modulepreload" href="dist/c-V4NPYBPI.js">
-  <link rel="modulepreload" href="dist/c-AMOLME4T.js">
-  <link rel="modulepreload" href="dist/c-I45ASIRD.js">
+  <link rel="modulepreload" href="dist/c-2FTTPW72.js">
+  <link rel="modulepreload" href="dist/c-PTZLGXSD.js">
+  <link rel="modulepreload" href="dist/c-HNECSR5J.js">
+  <link rel="modulepreload" href="dist/c-DOOMBXLW.js">
   <link rel="modulepreload" href="dist/c-3GA6RSWB.js">
-  <link rel="modulepreload" href="dist/c-W6I347G3.js">
-  <link rel="modulepreload" href="dist/c-W6W2IM5K.js">
+  <link rel="modulepreload" href="dist/c-3ZIQX7NE.js">
+  <link rel="modulepreload" href="dist/c-LUBY74EX.js">
   <link rel="modulepreload" href="dist/c-VHNSBD2M.js">
   <!--/PRELOAD-->
 </head>
@@ -52,7 +52,16 @@
   for (var i = 1; i <= FRAMES; i++) URLS.push('media/intro4/f' + ('00' + i).slice(-3) + '.webp');
   var AWAY_MS = 30000; // tempo fora do app para repetir a abertura
   var leaving = false, timers = [], hiddenAt = 0, run = 0, blobs = null, loading = null;
-  var isClient = function () { return /^#\/(c|v|e|d)\//.test(location.hash); };
+  // ícone "Pessoal" da Tela de Início (?modo=pessoal) ou último modo usado: abre direto no Pessoal
+  var personalMode = false;
+  try {
+    var st = JSON.parse(localStorage.getItem('pauta.ui') || '{}');
+    if (/[?&]modo=pessoal/.test(location.search)) { st.space = 'personal'; localStorage.setItem('pauta.ui', JSON.stringify(st)); }
+    else if (/[?&]modo=trabalho/.test(location.search)) { st.space = 'work'; localStorage.setItem('pauta.ui', JSON.stringify(st)); }
+    personalMode = st.space === 'personal' || /^#\/p\//.test(location.hash);
+  } catch (e) {}
+  if (personalMode) root.setAttribute('data-space', 'personal');
+  var isClient = function () { return root.getAttribute('data-space') === 'personal' || /^#\/(c|v|e|d|p)\//.test(location.hash); };
   var clear = function () { timers.forEach(clearTimeout); timers = []; };
 
   function loadAll() {
@@ -188,7 +197,7 @@
         lastErr = t && t !== window && (t.src || t.href) ? 'não carregou ' + String(t.src || t.href).split('/').slice(-2).join('/') : (e.message || '') + ' ' + String(e.filename || '').split('/').pop();
       }, true);
       window.addEventListener('unhandledrejection', function (e) { lastErr = String(e.reason && (e.reason.message || e.reason)); });
-      var APP = /*APP*/'./dist/a-5ZJVZZ2G.js'/*APP*/;
+      var APP = /*APP*/'./dist/a-RRB6LVQH.js'/*APP*/;
       import(APP).catch(function (e) { fail(String(e && (e.message || e))); });
       setTimeout(function () { fail(''); }, 20000);
       // Atualiza sozinho: ao voltar para o app, confere se há versão nova e recarrega

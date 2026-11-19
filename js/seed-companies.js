@@ -22,6 +22,25 @@ const toDataUrl = async (url) => {
   });
 };
 
+/* Fotos como logo das empresas pessoais: a do Matheus (nome dele) e a do @euvarejao (Henrique) — uma vez cada */
+const PHOTO_LOGOS = [
+  { id: 'seed-logo-matheus-v1', file: 'matheus.jpg', match: (c) => /matheus/i.test(c.name) },
+  { id: 'seed-logo-henrique-v1', file: 'henrique.jpg', match: (c) => /euvarej[aã]o/i.test(c.instagram || '') || /euvarej[aã]o/i.test(c.name) },
+];
+export async function ensureMatheusLogo() {
+  if (!store.ready || store.mode !== 'cloud') return;
+  for (const p of PHOTO_LOGOS) {
+    if (store.state.settings.some((s) => s.id === p.id)) continue;
+    const cos = store.state.companies.filter(p.match);
+    if (!cos.length) continue;
+    try {
+      const logo = await toDataUrl(`media/logos/${p.file}`);
+      cos.forEach((c) => store.writeRaw('companies', { ...c, logo, updatedAt: Date.now() }));
+      store.writeRaw('settings', { id: p.id, done: cos.map((c) => c.id) });
+    } catch { /* tenta de novo na próxima abertura */ }
+  }
+}
+
 let running = false;
 export async function ensureSeedCompanies() {
   if (running || !store.ready || store.state.settings.some((s) => s.id === SEED_ID)) return;

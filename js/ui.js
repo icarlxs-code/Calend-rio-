@@ -10,7 +10,12 @@ const saved = (() => {
 })();
 
 export const ui = {
-  tab: saved.tab || 'hoje',
+  tab: saved.tab === 'pessoal' ? 'hoje' : saved.tab || 'hoje',
+  space: saved.space === 'personal' ? 'personal' : 'work',
+  ptab: saved.ptab || 'p-hoje',
+  pMonth: null,
+  pSel: null,
+  pView: 'mes',
   person: saved.person || 'all',
   date: todayKey(),
   month: monthKey(todayKey()),
@@ -21,6 +26,6 @@ export const ui = {
 
 export function saveUi() {
   try {
-    localStorage.setItem('pauta.ui', JSON.stringify({ tab: ui.tab, person: ui.person }));
+    localStorage.setItem('pauta.ui', JSON.stringify({ tab: ui.tab, person: ui.person, space: ui.space, ptab: ui.ptab }));
   } catch { /* ignore */ }
 }

@@ -9,6 +9,7 @@ import { platformIcons } from './platforms.js';
 export function avatar(id, size = 26) {
   const m = store.member(id);
   if (!m) return '';
+  if (m.photo) return `<span class="avatar avatar--photo" style="--s:${size}px;background:${m.color}" title="${esc(m.name)}"><img src="${m.photo}" alt="" loading="lazy"></span>`;
   return `<span class="avatar" style="--s:${size}px;background:${m.color}" title="${esc(m.name)}">${esc(m.name[0])}</span>`;
 }
 export function avatars(ids = [], size = 24) {

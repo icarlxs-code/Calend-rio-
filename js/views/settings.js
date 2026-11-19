@@ -22,6 +22,7 @@ export function renderSettings() {
     <div class="hdr__row"><div class="hdr__titles"><p class="hdr__eyebrow">${esc(CONFIG.appName)} · ${esc(CONFIG.agencyName)}</p><h1>Ajustes</h1></div></div>
   </header>
   <div class="page">
+    <button class="pbig pbig--toPersonal" data-action="space" data-space="personal">${icon('heart', 22)}<div><strong>Abrir o modo Pessoal</strong><small>Aniversários, compromissos, listas — só você vê</small></div>${icon('right', 18)}</button>
     <section class="block">
       <h2 class="block__title">${icon('user', 16)} Quem está usando este celular?</h2>
       ${cloud

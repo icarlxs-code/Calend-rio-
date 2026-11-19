@@ -56,6 +56,7 @@ export function renderToday() {
       </div>
       <div class="hdr__actions">
         ${date !== today ? `<button class="chip chip--accent" data-action="go-today">Hoje</button>` : ''}
+        <button class="iconbtn iconbtn--personal" data-action="space" data-space="personal" aria-label="Ir para o Pessoal">${icon('heart', 19)}</button>
         <button class="iconbtn iconbtn--ai" data-action="assistant" aria-label="Assistente">${icon('sparkle', 20)}</button>
         <button class="iconbtn" data-action="tab" data-tab="ajustes" aria-label="Perfil">${me ? avatar(me.id, 34) : icon('user', 20)}</button>
       </div>

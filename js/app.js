@@ -1,6 +1,6 @@
 /* Inicialização, navegação e ações globais */
 import { syncCoach } from './coach.js';
-import { renderPersonal, bindPersonal, personalActions, openPersonalEditor } from './views/personal.js';
+import { renderPersonalSpace, personalTabbar, bindPersonal, personalActions, openPersonalEditor } from './views/personal.js';
 import { personal, startPersonal } from './personal.js';
 import { CONFIG } from '../config.js';
 import { store, initLocal, initCloud } from './store.js';
@@ -19,7 +19,7 @@ import { upcomingConflicts } from './insights.js';
 import { decodeSnapshot } from './share.js';
 import { sanitizePayload } from './sanitize.js';
 import { maybeOnboard } from './views/onboarding.js';
-import { ensureSeedCompanies } from './seed-companies.js';
+import { ensureSeedCompanies, ensureMatheusLogo } from './seed-companies.js';
 import { ensureSeedRoutine } from './seed-routine.js';
 import { onEventChange, onActivity, syncSchedule, setNotifyFeedback } from './notifier.js';
 import { buildContext } from '../functions/context.js';
@@ -34,17 +34,48 @@ let cloudApi = null;
 
 /* ---------- casca do app ---------- */
 function shell() {
+  const personalMode = ui.space === 'personal';
+  document.documentElement.dataset.space = personalMode ? 'personal' : 'work';
+  applySpaceMeta(personalMode);
   root.innerHTML = `
     <main id="view" class="view"></main>
     <nav class="tabbar" aria-label="Navegação">
+      ${personalMode ? personalTabbar() : `
       ${tabBtn('hoje', 'today', 'Hoje')}
       ${tabBtn('mes', 'calendar', 'Calendário')}
       <button class="tabbar__fab" data-action="new-event" aria-label="Novo evento">${icon('plus', 28)}</button>
       ${tabBtn('empresas', 'building', 'Empresas')}
-      ${tabBtn('pessoal', 'heart', 'Pessoal')}
-      ${tabBtn('ajustes', 'settings', 'Ajustes')}
+      ${tabBtn('ajustes', 'settings', 'Ajustes')}`}
     </nav>`;
 }
+/* Pessoal parece outro app: título, ícone e cor da barra do iPhone próprios */
+function applySpaceMeta(personalMode) {
+  const set = (sel, attr, val) => { const el = document.querySelector(sel); if (el) el.setAttribute(attr, val); };
+  set('link[rel="manifest"]', 'href', personalMode ? 'pessoal.webmanifest' : 'manifest.webmanifest');
+  set('link[rel="apple-touch-icon"]', 'href', personalMode ? 'icons/pessoal-180.png' : 'icons/icon-180.png');
+  set('meta[name="apple-mobile-web-app-title"]', 'content', personalMode ? 'Pessoal' : 'Calendário');
+  document.title = personalMode ? 'Pessoal · Calendário' : 'Calendário · Agenda de conteúdo';
+}
+/* Troca entre Trabalho e Pessoal com uma transição de "outro app" */
+function switchSpace(space) {
+  if (ui.space === space) return;
+  document.querySelectorAll('.sheet-wrap.is-open [data-close]').forEach((b) => b.click());
+  const veil = document.createElement('div');
+  veil.className = `spaceveil spaceveil--${space}`;
+  veil.innerHTML = space === 'personal' ? `<div>${icon('heart', 44)}<strong>Pessoal</strong><small>Só você vê</small></div>` : `<div>${icon('briefcase', 44)}<strong>Trabalho</strong><small>Agenda da dupla</small></div>`;
+  document.body.appendChild(veil);
+  requestAnimationFrame(() => veil.classList.add('is-in'));
+  setTimeout(() => {
+    ui.space = space;
+    saveUi();
+    shell();
+    render();
+    window.scrollTo(0, 0);
+    veil.classList.add('is-out');
+    setTimeout(() => veil.remove(), 450);
+  }, 380);
+}
+window.__calRender = () => render();
 const tabBtn = (id, ic, label) => `<button class="tabbar__btn" data-action="tab" data-tab="${id}">${icon(ic, 24)}<span>${label}</span></button>`;
 
 function render() {
@@ -58,15 +89,16 @@ function render() {
   const pIn = view.querySelector('[data-form="pquick"] input');
   const draftP = pIn ? pIn.value : '';
   const hadP = pIn && document.activeElement === pIn;
-  const html = ui.tab === 'mes' ? renderMonth() : ui.tab === 'empresas' ? renderCompanies() : ui.tab === 'ajustes' ? renderSettings() : ui.tab === 'pessoal' ? renderPersonal() : renderToday();
+  const personalMode = ui.space === 'personal';
+  const html = personalMode ? renderPersonalSpace() : ui.tab === 'mes' ? renderMonth() : ui.tab === 'empresas' ? renderCompanies() : ui.tab === 'ajustes' ? renderSettings() : renderToday();
   view.innerHTML = html;
-  document.querySelectorAll('.tabbar__btn').forEach((b) => b.classList.toggle('is-on', b.dataset.tab === ui.tab));
+  document.querySelectorAll('.tabbar__btn').forEach((b) => b.classList.toggle('is-on', b.dataset.tab === (personalMode ? ui.ptab || 'p-hoje' : ui.tab)));
   window.scrollTo(0, scroll);
   const ni = view.querySelector('[data-form="note"] input');
   if (ni && draftNote) ni.value = draftNote;
   if (ni && hadFocus) ni.focus({ preventScroll: true });
   bindSwipes();
-  if (ui.tab === 'pessoal') {
+  if (personalMode) {
     const pq = view.querySelector('[data-form="pquick"] input');
     bindPersonal(view);
     if (pq && draftP) pq.value = draftP;
@@ -88,6 +120,7 @@ function setTab(tab) {
 /* ---------- ações (delegação de cliques) ---------- */
 const actions = {
   tab: (b) => setTab(b.dataset.tab),
+  space: (b) => switchSpace(b.dataset.space),
   'set-person': (b) => {
     ui.person = b.dataset.p;
     saveUi();
@@ -161,7 +194,6 @@ const actions = {
   },
   ...personalActions,
   'new-event': (b) => {
-    if (ui.tab === 'pessoal') return openPersonalEditor();
     if (!store.state.companies.length) {
       toast('Cadastre uma empresa primeiro');
       return openCompanyEditor(null, () => openEventEditor({}));
@@ -284,9 +316,11 @@ function openDeepLink(hash = location.hash, tries = 0) {
   window.PautaIntro && window.PautaIntro.finish(); // veio de uma notificação: vai direto ao ponto
   // app abrindo do zero: espera os dados chegarem (até ~10 s) antes de procurar o evento
   if (m[1] === 'p') {
-    if (!personal.item(m[2]) && tries < 20) { setTimeout(() => openDeepLink(hash, tries + 1), 500); return true; }
+    if (m[2] !== 'hoje' && !personal.item(m[2]) && tries < 20) { setTimeout(() => openDeepLink(hash, tries + 1), 500); return true; }
     history.replaceState(null, '', location.pathname + location.search);
-    setTab('pessoal');
+    if (ui.space !== 'personal') { ui.space = 'personal'; saveUi(); shell(); }
+    ui.ptab = 'p-hoje';
+    render();
     if (personal.item(m[2])) openPersonalEditor(m[2]);
     return true;
   }
@@ -295,6 +329,7 @@ function openDeepLink(hash = location.hash, tries = 0) {
     return true;
   }
   history.replaceState(null, '', location.pathname + location.search);
+  if (ui.space !== 'work') { ui.space = 'work'; saveUi(); shell(); }
   if (m[1] === 'e' && store.event(m[2])) {
     // fecha o que estiver aberto e mostra o evento certo
     document.querySelectorAll('.sheet-wrap.is-open [data-close]').forEach((b) => b.closest('.sheet-wrap') && b.click());
@@ -403,7 +438,7 @@ function startApp() {
   render();
   store.on(rerenderAll);
   startPersonal();
-  personal.on(() => { if (ui.tab === 'pessoal') render(); });
+  personal.on(() => { if (ui.space === 'personal') rerenderAll(); });
   store.onDenied = (msg) => toast(msg, { ms: 5000 });
   store.onError = (err) => {
     const quota = err && /quota/i.test(String(err.name || err.message));
@@ -454,6 +489,7 @@ function startApp() {
   if (store.mode === 'cloud') setTimeout(() => offerLocalMigration().catch((e) => console.warn('migração', e)), 2500);
   // empresas pré-cadastradas (uma única vez)
   ensureSeedCompanies()
+    .then(() => setTimeout(() => ensureMatheusLogo().catch(() => {}), 800))
     .then(() => setTimeout(() => ensureSeedRoutine().catch((e) => console.warn('rotina', e)), 1500))
     .catch((e) => console.warn('pré-cadastro', e));
   // boas-vindas / permissão de notificações (depois da abertura)

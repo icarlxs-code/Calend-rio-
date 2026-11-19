@@ -1,26 +1,40 @@
-/* Agenda pessoal: privada de cada pessoa. Fica em pessoal/{uid}/itens na nuvem
-   (só o dono lê e escreve) e não se mistura com o calendário de trabalho. */
+/* Espaço Pessoal: privado de cada pessoa. Fica em pessoal/{uid}/itens na nuvem
+   (só o dono lê e escreve) e não se mistura com o calendário de trabalho.
+   Tipos de documento: compromisso/lembrete (padrão), lista ("list") e preferências ("prefs"). */
 import { store } from './store.js';
-import { todayKey, addDays, fromKey, toKey, pad, uid } from './utils.js';
+import { todayKey, addDays, fromKey, pad, uid } from './utils.js';
 import { server, api } from './avisos.js';
 
 export const CATS = {
   lembrete: { label: 'Lembrete', emoji: '📝', color: '#8E8E93', words: [] },
   aniversario: { label: 'Aniversário', emoji: '🎂', color: '#FF2D55', words: ['aniversário', 'aniversario', 'niver', 'aniver'] },
-  compromisso: { label: 'Compromisso', emoji: '📍', color: '#007AFF', words: ['ir ao', 'ir na', 'ir no', 'ir para', 'ir pra', 'reunião', 'encontro', 'evento', 'festa', 'casamento'] },
+  compromisso: { label: 'Compromisso', emoji: '📍', color: '#007AFF', words: ['ir ao', 'ir na', 'ir no', 'ir para', 'ir pra', 'reunião', 'encontro', 'evento', 'festa', 'casamento', 'igreja', 'culto', 'missa'] },
   buscar: { label: 'Buscar / levar', emoji: '🚗', color: '#FF9500', words: ['buscar', 'levar', 'pegar ', 'carona'] },
   beleza: { label: 'Cabelo / beleza', emoji: '💈', color: '#AF52DE', words: ['cabelo', 'barba', 'barbeiro', 'unha', 'manicure', 'sobrancelha', 'salão'] },
   saude: { label: 'Saúde', emoji: '🩺', color: '#34C759', words: ['médico', 'medico', 'dentista', 'exame', 'consulta', 'remédio', 'remedio', 'academia', 'treino', 'vacina'] },
   pagar: { label: 'Pagar conta', emoji: '💸', color: '#30B0C7', words: ['pagar', 'conta de', 'boleto', 'fatura', 'aluguel', 'pix'] },
   compras: { label: 'Compras', emoji: '🛒', color: '#5856D6', words: ['comprar', 'mercado', 'farmácia', 'farmacia'] },
 };
-export const REPEATS = { none: 'Não repete', weekly: 'Toda semana', monthly: 'Todo mês', yearly: 'Todo ano' };
+export const REPEATS = { none: 'Não repete', daily: 'Todo dia', weekly: 'Toda semana', monthly: 'Todo mês', yearly: 'Todo ano' };
+export const LIST_PRESETS = [
+  { emoji: '🛒', name: 'Mercado' },
+  { emoji: '✅', name: 'Coisas para fazer' },
+  { emoji: '💡', name: 'Ideias' },
+  { emoji: '🎁', name: 'Presentes' },
+];
+const DEFAULT_PREFS = { reminders: true, morning: true, night: true };
 
 const LS = 'cal.pessoal.v1';
-let items = [], unsub = null, started = false;
+let items = [], started = false;
 const listeners = new Set();
+const isEvent = (x) => !x.kind || x.kind === 'event';
+
 export const personal = {
   get items() { return items; },
+  get events() { return items.filter(isEvent); },
+  get lists() { return items.filter((x) => x.kind === 'list').sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)); },
+  get prefs() { return { ...DEFAULT_PREFS, ...(items.find((x) => x.kind === 'prefs') || {}) }; },
+  ready: false,
   on(fn) { listeners.add(fn); return () => listeners.delete(fn); },
   item: (id) => items.find((x) => x.id === id),
 };
@@ -32,9 +46,10 @@ export function startPersonal() {
   started = true;
   const c = cloud();
   if (c) {
-    unsub = c.subscribePersonal((list) => { items = list; emit(); }, (err) => store.onError && store.onError(err));
+    c.subscribePersonal((list) => { items = list; personal.ready = true; emit(); }, (err) => store.onError && store.onError(err));
   } else {
     try { items = JSON.parse(localStorage.getItem(LS) || '[]'); } catch { items = []; }
+    personal.ready = true;
     emit();
   }
 }
@@ -57,32 +72,45 @@ export function removePersonal(id) {
   if (c) c.delPersonal(id).catch((e) => store.onError && store.onError(e)); else saveLocal();
   emit();
 }
+export const savePrefs = (p) => savePersonal({ ...personal.prefs, ...p, id: 'prefs', kind: 'prefs' });
 
-/* Quando um item cai num dia (inclui repetições) */
-function occursOn(it, day) {
-  if (day < it.date) return false;
+/* ---------- listas (mercado, coisas para fazer...) ---------- */
+export const newList = (name, emoji = '📝') => savePersonal({ kind: 'list', name, emoji, entries: [] });
+export function addEntry(list, text) {
+  const t = text.trim();
+  if (!t) return list;
+  return savePersonal({ ...list, entries: [...(list.entries || []), { id: uid('i'), text: t.slice(0, 200), done: false }] });
+}
+export const toggleEntry = (list, eid) => savePersonal({ ...list, entries: list.entries.map((e) => (e.id === eid ? { ...e, done: !e.done } : e)) });
+export const removeEntry = (list, eid) => savePersonal({ ...list, entries: list.entries.filter((e) => e.id !== eid) });
+export const clearDone = (list) => savePersonal({ ...list, entries: list.entries.filter((e) => !e.done) });
+
+/* ---------- compromissos e repetições ---------- */
+export function occursOn(it, day) {
+  if (!it.date || day < it.date) return false;
   if (it.until && day > it.until) return false;
   const r = it.repeat || 'none';
   if (r === 'none') return day === it.date;
+  if (r === 'daily') return true;
   if (r === 'yearly') return day.slice(5) === it.date.slice(5);
   if (r === 'monthly') return day.slice(8) === it.date.slice(8);
   if (r === 'weekly') return fromKey(day).getDay() === fromKey(it.date).getDay();
   return false;
 }
-const doneOn = (it, day) => (it.repeat && it.repeat !== 'none' ? (it.doneDates || []).includes(day) : !!it.done);
-export { doneOn };
+export const doneOn = (it, day) => (it.repeat && it.repeat !== 'none' ? (it.doneDates || []).includes(day) : !!it.done);
 
-/* Lista de { item, date } entre duas datas, em ordem */
+/* Lista de { item, date, done } entre duas datas, em ordem */
 export function occurrences(from, to) {
   const out = [];
+  const evs = personal.events;
   for (let d = from; d <= to; d = addDays(d, 1)) {
-    for (const it of items) if (occursOn(it, d)) out.push({ item: it, date: d, done: doneOn(it, d) });
+    for (const it of evs) if (occursOn(it, d)) out.push({ item: it, date: d, done: doneOn(it, d) });
   }
   return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.item.time || '99') < (b.item.time || '99') ? -1 : 1));
 }
 export function overdue() {
   const t = todayKey();
-  return items.filter((it) => (it.repeat || 'none') === 'none' && !it.done && it.date < t && it.date >= addDays(t, -60))
+  return personal.events.filter((it) => (it.repeat || 'none') === 'none' && !it.done && it.date < t && it.date >= addDays(t, -60))
     .sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 export function toggleDone(it, day) {
@@ -93,12 +121,23 @@ export function toggleDone(it, day) {
   }
   return savePersonal({ ...it, done: !it.done });
 }
+/* Todos os aniversários, do mais próximo ao mais distante */
+export function birthdays() {
+  const t = todayKey();
+  return personal.events.filter((it) => it.cat === 'aniversario').map((it) => {
+    let next = `${t.slice(0, 4)}-${it.date.slice(5)}`;
+    if (next < t) next = `${+t.slice(0, 4) + 1}-${it.date.slice(5)}`;
+    const age = it.birthYear ? +next.slice(0, 4) - it.birthYear : null;
+    return { item: it, next, age };
+  }).sort((a, b) => (a.next < b.next ? -1 : 1));
+}
 
 /* ---------- escrever do jeito que fala: "cortar cabelo amanhã 15h" ---------- */
 const WD = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 export function guessCat(text) {
   const t = ' ' + text.toLowerCase() + ' ';
-  for (const [k, c] of Object.entries(CATS)) if (c.words.some((w) => t.includes(w))) return k;
+  // do mais específico para o mais geral ("ir no mercado" é compras, não compromisso)
+  for (const k of ['aniversario', 'beleza', 'saude', 'pagar', 'compras', 'buscar', 'compromisso']) if (CATS[k].words.some((w) => t.includes(w))) return k;
   return 'lembrete';
 }
 export function parseQuick(raw) {
@@ -117,8 +156,7 @@ export function parseQuick(raw) {
     date = k;
   });
   take(/\s(?:no |na |nesta |nessa |próxima |proxima )?(domingo|segunda|terça|terca|quarta|quinta|sexta|sábado|sabado)(?:-feira)?\s/, (m) => {
-    const name = m[1].replace('terca', 'terça').replace('sabado', 'sábado');
-    const want = WD.indexOf(name);
+    const want = WD.indexOf(m[1].replace('terca', 'terça').replace('sabado', 'sábado'));
     let d = addDays(t, 1);
     while (fromKey(d).getDay() !== want) d = addDays(d, 1);
     date = d;
@@ -132,39 +170,133 @@ export function parseQuick(raw) {
   const cat = guessCat(raw);
   return { title: title.charAt(0).toUpperCase() + title.slice(1), date: date || t, time, cat, repeat: cat === 'aniversario' ? 'yearly' : 'none' };
 }
-export const quickParse = parseQuick;
 
-/* ---------- lembretes no celular (só para o dono) ---------- */
+/* ---------- frase do dia ---------- */
+const PHRASES = [
+  'Um passo de cada vez ainda é andar para frente.',
+  'Você é melhor do que imagina.',
+  'Deus está contigo em cada detalhe do seu dia.',
+  'Anotar é cuidar de você no futuro.',
+  'Pequenas vitórias também contam. Comemore.',
+  'Confia no seu processo.',
+  'Hoje é um bom dia para começar.',
+  'Feito é melhor que perfeito.',
+  'Respira. Você dá conta.',
+  'Quem planeja o dia, ganha o dia.',
+  'Seja gentil com você hoje.',
+  'Você tem potencial. Use um pouco dele hoje.',
+  'Organização é liberdade.',
+  'Não precisa lembrar de tudo: o app lembra por você.',
+];
+export const phraseOfDay = (k = todayKey()) => PHRASES[(+k.replace(/-/g, '') * 7) % PHRASES.length];
+
+/* ---------- mensagens de amigo (humanizadas) ---------- */
+// {t} = o que foi anotado, {h} = horário. Cada aviso sorteia uma frase (sempre a mesma para o mesmo aviso).
+const V = {
+  beleza: {
+    m60: ['Daqui 1h tem {t}, hein! Já vai se organizando 💈', 'Lembrete carinhoso: {t} às {h}. Hoje é dia de se cuidar ✨'],
+    m30: ['Não esquece de {tl}, tá? Vai melhorar sua autoestima demais 💈', 'Meia hora pra {tl}! Se cuidar também é prioridade 😉'],
+    m20: ['Vai lá, hein! Você tem que ficar bonito pra você mesmo. Não esquece: você é lindo 💜', 'Bora? Daqui a pouco é {tl}. Vai sair de lá se sentindo outra pessoa ✨'],
+    m0: ['É agora! {t} — aproveita esse momento seu 💈', 'Chegou a hora de {tl}. Você merece esse cuidado 💜'],
+    after: ['E aí, ficou top? 😍 Marca como feito pra eu saber!', 'Já foi? Aposto que ficou lindo. Marca como feito 💜'],
+  },
+  compras: {
+    m60: ['Daqui 1h é hora de {tl}. Já pensa no que precisa 🛒', 'Lembrete: {t} às {h}. Faz a lista no app pra não esquecer nada 📝'],
+    m30: ['Vai no mercado, cara! Não enrola não, você precisa fazer compras 🛒', 'Meia hora pra {tl}. Já confere a lista de Mercado aqui no app 😉'],
+    m20: ['Para de procrastinar, hein! Não deixa de ir fazer compra não, você precisa 😅', 'Bora, bora! {t} daqui a pouco. Você consegue 💪'],
+    m0: ['É agora! {t}. Vai lá que depois você relaxa 🛒', 'Hora de {tl}! Missão rápida, você dá conta 😉'],
+    after: ['Conseguiu ir? Marca como feito que eu paro de te perturbar 😂', 'E aí, fez as compras? Orgulho! Marca como feito ✅'],
+  },
+  saude: {
+    m60: ['Daqui 1h: {t}. Cuidar da saúde é cuidar de você 🩺', 'Não esquece: {t} às {h}. Seu corpo agradece 💚'],
+    m30: ['Meia hora pra {tl}. Vai lá, você está fazendo a coisa certa 💚', 'Já se arruma pra {tl}! Saúde em primeiro lugar 🩺'],
+    m20: ['Bora, sem desculpa hoje! {t} é por você 💪', 'Vai lá! Quem se cuida vive melhor. Você consegue 💚'],
+    m0: ['É agora: {t}. Tô torcendo por você 💚', 'Hora de {tl}! Orgulho de você por se cuidar 🙌'],
+    after: ['Como foi? Espero que tudo certo 💚 Marca como feito!', 'Mandou bem demais em se cuidar hoje. Marca como feito ✅'],
+  },
+  buscar: {
+    m60: ['Daqui 1h você precisa {tl}. Já se programa 🚗', 'Lembrete: {t} às {h}. Não vai deixar ninguém esperando, né? 😉'],
+    m30: ['Meia hora pra {tl}! Confere se tá tudo certo pra sair 🚗', 'Já vai se organizando: {t} daqui a 30 min 😉'],
+    m20: ['Hora de ir saindo! {t} — quem chega cedo é gente boa 😄', 'Bora? Daqui a pouco é {tl}. Pega a chave 🔑'],
+    m0: ['É agora! {t} 🚗 Vai com calma e atenção no caminho.', 'Hora de {tl}! Dirige com cuidado, tá? 💜'],
+    after: ['Deu tudo certo? Marca como feito 🚗', 'Missão cumprida? Marca como feito ✅'],
+  },
+  pagar: {
+    m60: ['Daqui 1h: {t}. Bora deixar isso resolvido? 💸', 'Não esquece: {t} às {h}. Conta paga = cabeça leve 😌'],
+    m30: ['Meia hora pra {tl}. Resolve logo e esquece o assunto 💸', 'Já separa o que precisa pra {tl} 😉'],
+    m20: ['Paga logo, vai! Depois é só alívio 😌', 'Não deixa pra depois não, hein! {t} 💸'],
+    m0: ['É agora: {t}. Dois minutinhos e pronto 💸', 'Hora de {tl}! Você é organizado(a), olha só 😎'],
+    after: ['Pagou? Marca como feito e dorme tranquilo 😌', 'Resolvido? Marca como feito ✅'],
+  },
+  compromisso: {
+    m60: ['Daqui 1h: {t}. Já vai se arrumando 📍', 'Lembrete: {t} às {h}. Vai ser bom, confia 😉'],
+    m30: ['Meia hora pra {tl}! Confere o caminho e vai tranquilo 📍', 'Já se prepara: {t} daqui a pouco ✨'],
+    m20: ['Bora sair! Melhor chegar com folga 😉', 'Vai lá! {t} — você vai arrasar 💜'],
+    m0: ['É agora! {t} 📍 Aproveita!', 'Hora de {tl}! Vai com tudo ✨'],
+    after: ['Como foi? Marca como feito 📍', 'Foi bom? Marca como feito ✅'],
+  },
+  lembrete: {
+    m60: ['Daqui 1h: {t}. Só pra você não esquecer 😉', 'Ei, lembra: {t} às {h} 📝'],
+    m30: ['Meia hora pra {tl}. Tô aqui te lembrando 💜', 'Não esquece de {tl}, tá? 😉'],
+    m20: ['Bora resolver? {t} daqui a pouco. Você consegue 💪', 'Não deixa pra depois não, hein! {t} 😄'],
+    m0: ['É agora: {t}! Faz e marca como feito 😉', 'Hora de {tl}! Vai lá ✨'],
+    after: ['Fez? Marca como feito pra eu parar de te lembrar 😂', 'E aí, resolvido? Marca como feito ✅'],
+  },
+};
+const hash = (str) => { let h = 0; for (const c of str) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
+function voice(it, stage, date) {
+  const t = (it.title || '').trim();
+  const pool = (V[it.cat] || V.lembrete)[stage] || V.lembrete[stage];
+  const s = pool[hash(it.id + date + stage) % pool.length];
+  const tl = t.charAt(0).toLowerCase() + t.slice(1);
+  return s.replace(/\{tl\}/g, tl).replace(/\{t\}/g, t).replace(/\{h\}/g, it.time ? hm(it.time) : '');
+}
+const TITLES = { m60: 'Daqui a 1 hora', m30: 'Daqui a 30 min', m20: 'Daqui a 20 min', m0: 'É agora!', after: 'E aí? 👀' };
+
+/* ---------- avisos no celular (só para o dono) ---------- */
 const at = (date, time) => Date.parse(`${date}T${time}:00-03:00`);
-export function buildPersonalSchedule() {
-  const now = Date.now(), t = todayKey();
+const hm = (t) => t.replace(/^0/, '').replace(':00', 'h').replace(':', 'h');
+const short = (o) => `${(CATS[o.item.cat] || CATS.lembrete).emoji} ${o.item.time ? hm(o.item.time) + ' ' : ''}${o.item.title}`;
+export function buildPersonalSchedule(now = Date.now()) {
+  const t = todayKey();
+  const prefs = personal.prefs;
   const out = [];
-  for (const { item: it, date, done } of occurrences(addDays(t, -1), addDays(t, 35))) {
-    if (done || it.remind === 'none') continue;
-    const c = CATS[it.cat] || CATS.lembrete;
-    const name = `${c.emoji} ${it.title}`;
-    const url = `./#/p/${it.id}`;
-    const push = (when, title, body, key) => { if (when > now - 60e3) out.push({ id: `p-${it.id}-${date}-${key}`, at: when, title, body, tag: `p-${it.id}`, url }); };
-    if (it.cat === 'aniversario') {
-      push(at(addDays(date, -1), '20:00'), 'Amanhã tem aniversário 🎂', it.title, 'd1');
-      push(at(date, '08:00'), 'Hoje é aniversário 🎂', `${it.title} — não esquece de dar os parabéns!`, 'd0');
-    } else if (it.time) {
-      const [h, m] = it.time.split(':').map(Number);
-      const base = at(date, it.time);
-      push(base - 60 * 60e3, 'Daqui a 1 hora', `${name} às ${it.time.replace(':00', 'h')}`, 'm60');
-      push(base - 15 * 60e3, 'Daqui a 15 min', name, 'm15');
-      push(base, 'Agora', name, 'm0');
-      if (h >= 10 || m) push(at(date, '08:00'), 'Hoje você tem', `${name} às ${it.time.replace(':00', 'h')}`, 'am');
-    } else {
-      push(at(addDays(date, -1), '20:00'), 'Amanhã', name, 'd1');
-      push(at(date, '08:00'), 'Não esquece hoje', name, 'd0');
+  const add = (when, title, body, id, tag, url) => { if (when > now - 60e3) out.push({ id, at: when, title, body, tag, url }); };
+  const occ = occurrences(addDays(t, -1), addDays(t, 35));
+  if (prefs.reminders) {
+    for (const { item: it, date, done } of occ) {
+      if (done || it.remind === 'none') continue;
+      const c = CATS[it.cat] || CATS.lembrete;
+      const name = `${c.emoji} ${it.title}`;
+      const url = `./#/p/${it.id}`, tag = `p-${it.id}`;
+      const k = (s) => `p-${it.id}-${date}-${s}`;
+      if (it.cat === 'aniversario') {
+        add(at(addDays(date, -1), '20:00'), 'Amanhã tem aniversário 🎂', `${it.title} — já pensou no presente?`, k('d1'), tag, url);
+        add(at(date, '08:00'), 'Hoje é aniversário 🎂', `${it.title} — não esquece de dar os parabéns!`, k('d0'), tag, url);
+      } else if (it.time) {
+        const base = at(date, it.time);
+        for (const [stage, min] of [['m60', 60], ['m30', 30], ['m20', 20], ['m0', 0], ['after', -45]]) {
+          add(base - min * 60e3, `${c.emoji} ${TITLES[stage]}`, voice(it, stage, date), k(stage), tag, url);
+        }
+      } else if (!prefs.morning) {
+        add(at(date, '08:00'), `${c.emoji} Não esquece hoje`, voice(it, 'm30', date), k('d0'), tag, url);
+      }
     }
+  }
+  // resumo da manhã (o dia de hoje) e da noite (o dia de amanhã)
+  for (let i = 0; i <= 14; i++) {
+    const d = addDays(t, i);
+    const list = occ.filter((o) => o.date === d && !o.done);
+    if (!list.length) continue;
+    const body = list.slice(0, 4).map(short).join(' · ') + (list.length > 4 ? ` · +${list.length - 4}` : '');
+    if (prefs.morning) add(at(d, '08:00'), `Bom dia! Hoje você tem ${list.length} ${list.length > 1 ? 'coisas' : 'coisa'} ☀️`, body, `pm-${d}-${list.length}`, 'p-manha', './#/p/hoje');
+    if (prefs.night) add(at(addDays(d, -1), '21:00'), `Amanhã: ${list.length} ${list.length > 1 ? 'coisas' : 'coisa'} na agenda 🌙`, body, `pn-${d}-${list.length}`, 'p-noite', './#/p/hoje');
   }
   return out.sort((a, b) => a.at - b.at).slice(0, 300);
 }
 let timer = null, lastSig = '';
 export function syncPersonalSchedule() {
-  if (store.mode !== 'cloud' || !server()) return;
+  if (store.mode !== 'cloud' || !server() || !personal.ready) return;
   clearTimeout(timer);
   timer = setTimeout(() => {
     const list = buildPersonalSchedule();
