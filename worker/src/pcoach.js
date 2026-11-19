@@ -90,6 +90,8 @@ const T = {
     'Descansa os olhos da tela um pouco, {n} 👀',
   ],
 };
+const OPENERS = ['Ei, {n}!', 'Opa, passando aqui:', 'Ô {n},', 'Só um toque de amigo:', 'Olha só,', 'Psiu, {n}!', 'Rapidinho:', 'Ei, campeão,', 'Fala, {n}!', 'Lembrete de quem torce por você:'];
+const CLOSERS = ['Tô contigo 💜', 'Bora! 💪', 'Você consegue.', 'Confia.', 'Orgulho de você.', 'Conta comigo.', 'Vai dar certo 🙏', 'Um passo de cada vez.', 'Você é importante, viu?', 'Segue firme!'];
 const pick = (a, seed) => a[Math.abs(seed) % a.length];
 const fill = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
 const verseText = ([t, ref]) => `“${t}” — ${ref}`;
@@ -163,14 +165,16 @@ export function nextNudge(p, st, now, rand = Math.random) {
     if (anchor.key === 'morning') {
       const count = (p.today || []).filter((x) => !x.done).length;
       const base = fill(pick(T.morning, seed), V);
-      msg = { title: `Bom dia, ${n} ☀️`, body: prefs.faith ? `${base}\n${verseText(pick(VERSES, seed + br.wd))}` : base };
+      const v = prefs.faith ? pick(VERSES, seed + br.wd) : null;
+      msg = { title: `Bom dia, ${n} ☀️`, body: v ? `${base}\n${verseText(v)}` : base, kind: 'morning', verse: v };
       if (count) msg.body += `\nHoje você tem ${count} ${count > 1 ? 'coisas' : 'coisa'} anotada${count > 1 ? 's' : ''}.`;
       if (prefs.faith) st.verses++;
     } else if (anchor.key === 'night') {
       const base = fill(pick(T.night, seed), V);
-      msg = { title: 'Boa noite 🌙', body: prefs.faith ? `${base}\n${verseText(pick(NIGHT_VERSES, seed))}` : base };
+      const v = prefs.faith ? pick(NIGHT_VERSES, seed) : null;
+      msg = { title: 'Boa noite 🌙', body: v ? `${base}\n${verseText(v)}` : base, kind: 'night', verse: v };
     } else {
-      msg = { title: anchor.key === 'lunch' ? 'Hora do almoço 🍽️' : 'Hora de jantar 🍽️', body: fill(pick(T[anchor.key], seed), V) };
+      msg = { title: anchor.key === 'lunch' ? 'Hora do almoço 🍽️' : 'Hora de jantar 🍽️', body: fill(pick(T[anchor.key], seed), V), kind: anchor.key };
     }
   } else {
     if (now < (st.next || 0)) return null;
@@ -190,22 +194,68 @@ export function nextNudge(p, st, now, rand = Math.random) {
     if (kind === 'agenda') {
       const m = agenda[seed % agenda.length];
       st.asked = { ...st.asked, [m.key]: br.date };
-      msg = { title: m.title, body: m.body };
+      msg = { title: m.title, body: m.body, kind: 'agenda', fact: m.body };
     } else if (kind === 'water') {
       st.water++;
-      msg = { title: 'Água 💧', body: fill(pick(T.water, seed), V) };
+      msg = { title: 'Água 💧', body: fill(pick(T.water, seed), V), kind: 'water' };
     } else if (kind === 'verse') {
       st.verses++;
-      msg = { title: 'Palavra pra você 📖', body: verseText(pick(VERSES, seed)) };
+      const v = pick(VERSES, seed);
+      msg = { title: 'Palavra pra você 📖', body: verseText(v), kind: 'verse', verse: v };
     } else {
       const pool = T[kind].filter((s) => !st.recent.includes(fill(s, V)));
-      msg = { title: kind === 'selfcare' ? 'Pausa 🌿' : 'Pra você 💜', body: fill(pick(pool.length ? pool : T[kind], seed), V) };
+      msg = { title: kind === 'selfcare' ? 'Pausa 🌿' : 'Pra você 💜', body: fill(pick(pool.length ? pool : T[kind], seed), V), kind };
     }
+  }
+  // variedade mesmo sem IA: às vezes um jeito diferente de começar e de terminar
+  if (!['morning', 'night', 'verse'].includes(msg.kind)) {
+    const r1 = rand(), r2 = rand();
+    if (r1 < 0.45 && !/^(ei|opa|ô|psiu|fala|olha)\b/i.test(msg.body)) msg.body = `${pick(OPENERS, Math.floor(r1 * 1e6))} ${msg.body.charAt(0).toLowerCase()}${msg.body.slice(1)}`.replace(/\{n\}/g, n);
+    if (r2 < 0.4) msg.body = `${msg.body} ${pick(CLOSERS, Math.floor(r2 * 1e6))}`.replace(/\{n\}/g, n);
   }
   const [a, b] = INTERVAL[prefs.freq] || INTERVAL.normal;
   st.next = now + (a + rand() * (b - a)) * 60e3;
   st.recent = [...(st.recent || []), msg.body].slice(-12);
   return { msg: { ...msg, tag: 'p-amigo', url: './#/p/hoje' }, state: st };
+}
+
+/* Reescreve a mensagem com IA, como um amigo/conselheiro de verdade.
+   Versículos ficam exatamente como estão (a IA só escreve em volta). */
+const AI_MODELS = ['@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/meta/llama-3.1-8b-instruct-fast'];
+const KIND_TASK = {
+  morning: 'Mensagem de bom dia carinhosa e animadora, que faça a pessoa se sentir importante. Se ela tiver coisas hoje, cite 1 ou 2 com leveza.',
+  night: 'Mensagem de boa noite acolhedora: reconheça o esforço do dia, diga que ela foi bem e que pode descansar.',
+  lunch: 'Lembre com carinho que está na hora de almoçar e de fazer uma pausa de verdade.',
+  dinner: 'Lembre com carinho de jantar e desacelerar.',
+  water: 'Lembre de beber água de um jeito divertido e cuidadoso (varie: copo, garrafinha, hidratação, cabeça boa).',
+  agenda: 'Lembre a pessoa disto da agenda pessoal dela, como um amigo que se importa e dá aquela força: ',
+  verse: 'Escreva UMA frase curta e acolhedora para apresentar o versículo (sem repetir o versículo).',
+  motivation: 'Mensagem de ânimo e autoestima, sincera e específica (não genérica), como um amigo próximo ou conselheiro que acredita muito nela.',
+  selfcare: 'Sugira um cuidado rápido com o corpo/mente (respirar, alongar, postura, tomar um ar, descansar os olhos).',
+};
+export async function humanize(env, msg, p, recent, br) {
+  if (!env.AI || !msg.kind || !KIND_TASK[msg.kind]) return null;
+  const today = (p.today || []).filter((x) => !x.done).map((x) => `${x.time ? x.time + ' ' : ''}${x.title}`).slice(0, 5).join('; ');
+  const sys = `Você escreve notificações de celular em português do Brasil para ${p.name}, como o melhor amigo dele(a) — alguém que se importa de verdade, conselheiro, que levanta a autoestima e a moral. Pode citar fé em Deus com naturalidade.
+Estilo: humano, caloroso, informal, como mensagem de WhatsApp de um amigo. Frases curtas. No máximo 1 ou 2 emojis. Nunca soe robótico, nunca use "lembrete:" seco, não use aspas, não repita frases prontas.
+Agora são ${String(br.h).padStart(2, '0')}h${String(br.m).padStart(2, '0')} (${['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][br.wd]}).
+${today ? `Coisas de hoje na agenda pessoal: ${today}.` : 'Hoje a agenda pessoal está livre.'}
+NÃO repita nem parafraseie estas mensagens recentes: ${(recent || []).slice(-8).join(' | ') || '—'}
+Responda SÓ com JSON: {"title":"até 38 caracteres, com 1 emoji","body":"até 170 caracteres"}`;
+  const task = KIND_TASK[msg.kind] + (msg.kind === 'agenda' ? msg.fact : '');
+  for (const model of AI_MODELS) {
+    try {
+      const out = await env.AI.run(model, { messages: [{ role: 'system', content: sys }, { role: 'user', content: task }], max_tokens: 220, temperature: 1.0 });
+      const m = /\{[\s\S]*\}/.exec(String(out?.response || ''));
+      if (!m) continue;
+      const j = JSON.parse(m[0]);
+      if (!j.title || !j.body) continue;
+      let body = String(j.body).replace(/^["“]|["”]$/g, '').slice(0, 220);
+      if (msg.verse) body = msg.kind === 'verse' ? `${body}\n${verseText(msg.verse)}` : `${body}\n${verseText(msg.verse)}`;
+      return { title: String(j.title).slice(0, 50), body };
+    } catch (e) { console.log('amigo IA', model, e.message); }
+  }
+  return null;
 }
 
 /* Roda a cada minuto (cron) */
@@ -231,9 +281,16 @@ export async function runPersonalCoach(env, sendToMember, team) {
     }
     const r = nextNudge(p, st, now);
     if (!r) { all[m.id] = st; continue; }
+    // 7 em cada 10 mensagens escritas pela IA (as outras do banco variado): quase nunca iguais
+    let out = r.msg;
+    if (Math.random() < 0.7) {
+      const h = await humanize(env, r.msg, p, st.recent, br).catch(() => null);
+      if (h) { out = { ...r.msg, ...h }; r.state.recent = [...(r.state.recent || []).slice(0, -1), h.body].slice(-12); }
+    }
     all[m.id] = r.state;
     changed = true;
-    sent += await sendToMember(env, m.id, r.msg);
+    const { kind, fact, verse, ...push } = out;
+    sent += await sendToMember(env, m.id, push);
   }
   if (changed) await env.CAL.put('pcoach', JSON.stringify(all));
   return sent;

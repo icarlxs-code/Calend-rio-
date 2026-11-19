@@ -70,3 +70,22 @@ test('cron: só manda para quem tem resumo e usa o pedido de teste', async () =>
     assert.equal(sent[0][1].url, './#/p/hoje');
   } finally { Date.now = realNow; }
 });
+
+import { humanize } from '../src/pcoach.js';
+test('IA escreve a mensagem como amigo e mantém o versículo exato', async () => {
+  const env = { AI: { run: async (_m, o) => { assert.match(o.messages[0].content, /melhor amigo/); return { response: '{"title":"Bom dia, campeão ☀️","body":"Hoje é teu dia, Henrique. Vai com fé!"}' }; } } };
+  const br = { h: 7, m: 40, date: '2026-11-20', wd: 5 };
+  const r = await humanize(env, { kind: 'morning', verse: ['Tudo posso naquele que me fortalece.', 'Filipenses 4:13'] }, { name: 'Henrique', today: [] }, [], br);
+  assert.equal(r.title, 'Bom dia, campeão ☀️');
+  assert.match(r.body, /Vai com fé!\n“Tudo posso naquele que me fortalece.” — Filipenses 4:13/);
+  assert.equal(await humanize({ AI: { run: async () => ({ response: 'sem json' }) } }, { kind: 'water' }, { name: 'H' }, [], br), null);
+});
+test('um dia inteiro sem IA: quase nenhuma mensagem repetida', () => {
+  let st = {}; const bodies = [];
+  for (let d = 0; d < 3; d++) for (let t = Date.parse(`2026-11-2${d}T07:00:00-03:00`); t <= Date.parse(`2026-11-2${d}T22:30:00-03:00`); t += 60e3) {
+    const r = nextNudge({ name: 'Henrique', prefs: { freq: 'alta' }, today: [] }, st, t);
+    if (r) { st = r.state; bodies.push(r.msg.body); }
+  }
+  const uniq = new Set(bodies).size;
+  assert.ok(uniq / bodies.length > 0.85, `${uniq}/${bodies.length} diferentes`);
+});

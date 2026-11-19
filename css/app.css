@@ -1097,3 +1097,16 @@ html:not(.intro-done) .tabbar { opacity: 0; }
 .palert div { display: flex; flex-direction: column; gap: 2px; }
 .palert small { color: var(--text-2); font-size: 13px; }
 .premind > span { text-align: left; align-items: flex-start; } .premind b { font-size: 15px; }
+/* cartão de ações do assistente */
+.acard { margin: 2px 0 8px; padding: 12px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); border: 1.5px solid var(--tip, #4338CA); display: flex; flex-direction: column; gap: 8px; max-width: 94%; }
+.acard--done { border-color: var(--ok); }
+.acard--cancelled { opacity: .55; border-color: var(--line-2); }
+.acard__head { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; color: var(--tip, #4338CA); text-transform: uppercase; letter-spacing: .03em; }
+.acard--done .acard__head { color: var(--ok); }
+.acard__row { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; line-height: 1.35; }
+.acard__row .ic { flex: none; margin-top: 2px; color: var(--text-3); }
+.acard__row span { display: flex; flex-direction: column; gap: 2px; }
+.acard__row small { color: var(--warn); font-size: 12px; font-weight: 600; }
+.acard__row.is-bad { color: var(--danger); }
+.acard__btns { display: flex; gap: 8px; }
+.acard__res { color: var(--text-3); font-size: 12px; }

@@ -1,7 +1,7 @@
 /* Inicialização, navegação e ações globais */
 import { syncCoach } from './coach.js';
 import { renderPersonalSpace, personalTabbar, bindPersonal, personalActions, openPersonalEditor } from './views/personal.js';
-import { personal, startPersonal } from './personal.js';
+import { personal, startPersonal, occurrences } from './personal.js';
 import { CONFIG } from '../config.js';
 import { store, initLocal, initCloud } from './store.js';
 import { ui, saveUi } from './ui.js';
@@ -485,8 +485,11 @@ function startApp() {
       const context = buildContext({
         events: store.state.events, companies: store.state.companies, routine: routine(), notes: store.state.notes,
         team: store.team, me: store.me, now: { date: todayKey(), minutes: d.getHours() * 60 + d.getMinutes() },
+        withIds: true,
+        personal: occurrences(todayKey(), addDays(todayKey(), 30)).map((o) => ({ id: o.item.id, date: o.date, time: o.item.time, title: o.item.title, cat: o.item.cat, done: o.done })),
       });
-      return (await push.api('/ask', { question, history, context })).answer;
+      const r = await push.api('/ask', { question, history, context, today: todayKey() });
+      return { text: r.answer, actions: Array.isArray(r.actions) ? r.actions : [] };
     };
     store.on(syncSchedule);
     syncSchedule();

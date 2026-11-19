@@ -109,6 +109,21 @@ const reply = (env, req, data, status = 200) =>
 
 const clean = (s, n) => String(s || '').slice(0, n);
 const MEMBERS = (env) => JSON.parse(env.TEAM || '[]').map((m) => m.id);
+/* Separa o texto da resposta das ações (<acoes>[...]</acoes>) que o app executa após confirmação */
+export function splitActions(raw) {
+  let text = String(raw || '');
+  let actions = [];
+  const m = /<acoes>\s*([\s\S]*?)\s*(?:<\/acoes>|$)/i.exec(text) || /```json\s*(\[[\s\S]*?\])\s*```/i.exec(text);
+  if (m) {
+    try {
+      const j = JSON.parse(m[1].replace(/^[^\[{]*/, '').replace(/[^\]}]*$/, ''));
+      actions = (Array.isArray(j) ? j : [j]).filter((a) => a && typeof a === 'object' && typeof a.acao === 'string').slice(0, 20);
+    } catch { /* sem ações válidas */ }
+    text = text.replace(m[0], '').trim();
+  }
+  return { answer: text.replace(/<\/?acoes>/gi, '').trim() || (actions.length ? 'Pronto, confira e confirme abaixo 👇' : ''), actions };
+}
+
 /* Resumo da agenda pessoal usado pelas mensagens de ânimo (só títulos, datas e categorias) */
 function cleanProfile(p, me) {
   const arr = (a, n) => (Array.isArray(a) ? a.slice(0, n) : []);
@@ -228,8 +243,9 @@ async function handle(req, env) {
     // com chave da Anthropic usa o Claude; sem chave, a IA grátis do Cloudflare
     const ask = env.ANTHROPIC_API_KEY ? (await import('./claude.js')).askClaude : (await import('./freeai.js')).askFree;
     try {
-      const answer = await ask(env, { question: clean(body.question, 2000), history: body.history, context: clean(body.context, 60000), me });
-      return reply(env, req, { answer });
+      const raw = await ask(env, { question: clean(body.question, 2000), history: body.history, context: clean(body.context, 60000), me, today: clean(body.today, 10) });
+      const { answer, actions } = splitActions(raw);
+      return reply(env, req, { answer, actions });
     } catch (e) {
       return reply(env, req, { error: e.message || 'O Claude não respondeu. Tente de novo.' }, e.status || 502);
     }

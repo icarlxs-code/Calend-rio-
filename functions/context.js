@@ -6,7 +6,7 @@ const WEEKDAYS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', '
 const weekday = (k) => WEEKDAYS[new Date(Date.UTC(+k.slice(0, 4), +k.slice(5, 7) - 1, +k.slice(8, 10))).getUTCDay()];
 const STATUS = { pendente: 'a fazer', pronto: 'pronto/agendado', feito: 'feito' };
 
-export function buildContext({ events, companies, routine, notes, team, me, now }) {
+export function buildContext({ events, companies, routine, notes, team, me, now, withIds = false, personal = null }) {
   const co = new Map(companies.map((c) => [c.id, c.name]));
   const name = (id) => team.find((m) => m.id === id)?.name || id;
   const from = addDaysKey(now.date, -7), to = addDaysKey(now.date, 30);
@@ -36,11 +36,15 @@ export function buildContext({ events, companies, routine, notes, team, me, now 
       }
     }
     const extra = [e.location && `local ${e.location}`, e.description && `legenda: ${e.description.slice(0, 140)}`, e.internalNote && `obs: ${e.internalNote.slice(0, 140)}`].filter(Boolean).join('; ');
-    lines.push(`- ${when} — ${TYPE_LABEL[e.type] || e.type}: ${e.title || 'sem título'} — empresa ${co.get(e.companyId) || '?'} — responsável ${who}${e.status === 'feito' ? ' (já feito)' : ''}${extra ? ' — ' + extra : ''}`);
+    lines.push(`- ${when} — ${TYPE_LABEL[e.type] || e.type}: ${e.title || 'sem título'} — empresa ${co.get(e.companyId) || '?'} — responsável ${who}${e.status === 'feito' ? ' (já feito)' : ''}${extra ? ' — ' + extra : ''}${withIds ? ` [id ${e.id}${e.createdBy ? `, cadastrado por ${name(e.createdBy)}` : ''}]` : ''}`);
   });
   if (!evs.length) lines.push('(nenhum compromisso)');
   const recentNotes = (notes || []).filter((n) => n.date >= addDaysKey(now.date, -2)).slice(-10);
   if (recentNotes.length) lines.push('', 'Bilhetes recentes da dupla:', ...recentNotes.map((n) => `- ${n.date.split('-').reverse().join('/')} ${name(n.author)}: ${n.text}`));
+  if (personal && personal.length) {
+    lines.push('', `Agenda PESSOAL de ${name(me)} (privada, só ele vê; próximos 30 dias):`);
+    personal.slice(0, 80).forEach((p) => lines.push(`- ${p.date.split('-').reverse().join('/')} ${p.time ? hm(p.time) : 'sem horário'} — ${p.title} (${p.cat})${p.done ? ' (feito)' : ''}${withIds ? ` [id ${p.id}]` : ''}`));
+  }
   return lines.join('\n');
 }
 

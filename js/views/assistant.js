@@ -8,6 +8,7 @@ import { openSheet, sheetHead, avatar, toast } from '../components.js';
 import { dayBrief, freeTime, bestSlots, routine, evLabel } from '../planner.js';
 import { personConflicts } from '../insights.js';
 import { askClaude, PRESETS } from '../claude-link.js';
+import { planAction } from '../agent.js';
 
 /* ---------- conversa ---------- */
 const LS_CHAT = 'cal.chat';
@@ -41,6 +42,18 @@ const md = (t) => esc(t)
   .replace(/<\/span>\n+(?=<span class="li">)/g, '</span>')
   .replace(/\n{2,}/g, '\n')
   .replace(/\n/g, '<br>');
+/* Cartão com o que o assistente vai fazer na agenda */
+function actionsCard(m, i) {
+  const plans = m.actions.map((a) => { try { return planAction(a); } catch (e) { return { ok: false, text: 'Não entendi uma das ações.' }; } });
+  const okCount = plans.filter((p) => p.ok).length;
+  const st = m.actStatus || 'pending';
+  return `<div class="acard acard--${st}">
+    <div class="acard__head">${icon(st === 'done' ? 'check' : 'sparkle', 15)} ${st === 'done' ? 'Feito na agenda' : st === 'cancelled' ? 'Cancelado' : 'Vou fazer na agenda:'}</div>
+    ${plans.map((p) => `<div class="acard__row${p.ok ? '' : ' is-bad'}">${icon(p.ok ? 'calendar' : 'alert', 14)}<span>${esc(p.text)}${p.warn && st === 'pending' ? `<small>${esc(p.warn)}</small>` : ''}</span></div>`).join('')}
+    ${st === 'pending' && okCount ? `<div class="acard__btns"><button class="btn btn--primary btn--sm" data-act-ok="${i}">Confirmar</button><button class="btn btn--soft btn--sm" data-act-no="${i}">Cancelar</button></div>` : ''}
+    ${st === 'done' && m.actResult ? `<small class="acard__res">${esc(m.actResult)}</small>` : ''}
+  </div>`;
+}
 const ERR = {
   'functions/failed-precondition': null, // usa a mensagem do servidor
   'functions/permission-denied': 'Só a equipe pode usar o assistente.',
@@ -58,17 +71,33 @@ function errText(e) {
   }
   return e?.message || 'Não consegui falar com o assistente.';
 }
+/* Pedidos antigos (de antes do assistente poder agir) que nunca foram feitos na agenda */
+const ORDER = /\b(marc|coloc|agend|cri[ae]|lan[cç]|cadastr|inclu|adicion|bota|põe|poe|p[oô]r\b|mud|mov|remarc|passa|apag|exclu|tira|anot)/i;
+function pendingOrders() {
+  const out = [];
+  chat.forEach((m, i) => {
+    if (m.role !== 'user' || m.redone || !ORDER.test(m.text || '')) return;
+    const next = chat[i + 1];
+    if (next && next.role === 'assistant' && !next.error && Array.isArray(next.actions)) return; // já veio com ações
+    out.push(i);
+  });
+  return out;
+}
 function chatHtml() {
+  const pend = inAppChat && !thinking ? pendingOrders() : [];
   return `<section class="block" data-chat>
     <h2 class="block__title">${icon('sparkle', 16)} Pergunte ao assistente</h2>
+    ${pend.length ? `<div class="acard"><div class="acard__head">${icon('alert', 15)} Pedidos que ficaram sem fazer</div>
+      ${pend.map((i) => `<div class="acard__row">${icon('calendar', 14)}<span>${esc(chat[i].text.slice(0, 160))}</span></div>`).join('')}
+      <div class="acard__btns"><button class="btn btn--primary btn--sm" data-redo>Fazer agora</button><button class="btn btn--soft btn--sm" data-redo-skip>Ignorar</button></div></div>` : ''}
     <div class="chat">
-      ${chat.length ? chat.map((m) => `<div class="msg msg--${m.role}${m.error ? ' msg--err' : ''}">${md(m.text)}</div>`).join('')
-        : `<div class="msg msg--assistant">Oi! Eu vejo a agenda inteira de vocês: posts, captações, reuniões, empresas e a rotina. Pergunte o que quiser, por exemplo “o que eu tenho amanhã?” ou “qual o melhor horário para um Reels da Garcia na sexta?”.</div>`}
+      ${chat.length ? chat.map((m, i) => `<div class="msg msg--${m.role}${m.error ? ' msg--err' : ''}">${md(m.text)}</div>${m.actions && m.actions.length ? actionsCard(m, i) : ''}`).join('')
+        : `<div class="msg msg--assistant">Oi! Eu vejo e <b>mexo</b> na agenda de vocês. Peça o que quiser, por exemplo: “coloca captação na JG Garcia de segunda a sábado, das 7h ao meio-dia, até o fim do mês”, “passa o reels da Pura Vida para sexta 18h”, “marca cortar cabelo sábado 15h no meu pessoal”. Eu mostro o que vou fazer e você confirma.</div>`}
       ${thinking ? `<div class="msg msg--assistant msg--typing"><i></i><i></i><i></i></div>` : ''}
     </div>
     <div class="presets">${PRESETS.map((p, i) => `<button class="preset" data-preset="${i}">${esc(p.label)}</button>`).join('')}</div>
     <form class="chat__form" data-chatform onsubmit="return false">
-      <textarea class="input" rows="1" name="q" placeholder="Escreva sua pergunta…" ${thinking ? 'disabled' : ''}></textarea>
+      <textarea class="input" rows="1" name="q" placeholder="Peça ou pergunte algo…" ${thinking ? 'disabled' : ''}></textarea>
       <button class="iconbtn iconbtn--accent" type="submit" aria-label="Enviar" ${thinking ? 'disabled' : ''}>${icon('right', 20)}</button>
     </form>
     <div class="chat__foot">
@@ -204,13 +233,15 @@ export function openAssistant() {
           redrawChat(a);
           return;
         }
-        const history = chat.filter((m) => !m.error).map((m) => ({ role: m.role, text: m.text }));
+        const history = chat.filter((m) => !m.error).map((m) => ({ role: m.role, text: m.text + (m.actions?.length ? (m.actStatus === 'done' ? ' (ações confirmadas e feitas na agenda)' : m.actStatus === 'cancelled' ? ' (a pessoa cancelou essas ações)' : ' (ações aguardando confirmação)') : '') }));
         chat.push({ role: 'user', text: q });
         thinking = true;
         redrawChat(a);
         try {
-          const answer = await store.askAssistant(q, history);
-          chat.push({ role: 'assistant', text: answer });
+          const r = await store.askAssistant(q, history);
+          const text = typeof r === 'string' ? r : r.text;
+          const actions = typeof r === 'string' ? [] : r.actions || [];
+          chat.push({ role: 'assistant', text: text || 'Certo.', actions, actStatus: actions.length ? 'pending' : undefined });
         } catch (e) {
           chat.push({ role: 'assistant', text: errText(e), error: true });
         }
@@ -233,6 +264,37 @@ export function openAssistant() {
     a.send = send;
     const el = a.el;
     el.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => send(PRESETS[+b.dataset.preset].q)));
+    el.querySelectorAll('[data-act-ok]').forEach((b) => (b.onclick = async () => {
+      const m = chat[+b.dataset.actOk];
+      if (!m || m.actStatus !== 'pending') return;
+      b.disabled = true;
+      let n = 0, fails = 0;
+      for (const a of m.actions) {
+        try { const p = planAction(a); if (p.ok) n += (await p.run()) || 0; else fails++; } catch (e) { console.error(e); fails++; }
+      }
+      m.actStatus = 'done';
+      m.actResult = `${n} alteraç${n === 1 ? 'ão feita' : 'ões feitas'}${fails ? ` · ${fails} não deu para fazer` : ''}.`;
+      saveChat();
+      toast(n ? 'Pronto! Agenda atualizada ✓' : 'Nada foi alterado');
+      redrawChat(a);
+    }));
+    const redo = el.querySelector('[data-redo]');
+    if (redo) redo.onclick = () => {
+      const pend = pendingOrders();
+      const text = pend.map((i) => chat[i].text);
+      pend.forEach((i) => (chat[i].redone = true));
+      saveChat();
+      send(`Antes eu pedi isto e não foi feito na agenda. Faça agora (gere as ações), considerando a conversa:\n- ${text.join('\n- ')}`);
+    };
+    const skip = el.querySelector('[data-redo-skip]');
+    if (skip) skip.onclick = () => { pendingOrders().forEach((i) => (chat[i].redone = true)); saveChat(); redrawChat(a); };
+    el.querySelectorAll('[data-act-no]').forEach((b) => (b.onclick = () => {
+      const m = chat[+b.dataset.actNo];
+      if (!m) return;
+      m.actStatus = 'cancelled';
+      saveChat();
+      redrawChat(a);
+    }));
     const f = el.querySelector('[data-chatform]');
     const ta = f.q;
     ta.oninput = () => {
