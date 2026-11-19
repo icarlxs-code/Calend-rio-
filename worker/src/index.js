@@ -84,6 +84,13 @@ async function handle(req, env) {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors(env, req) });
   if (url.pathname === '/vapid') return reply(env, req, { publicKey: (await getVapid(env)).publicKey });
   if (url.pathname === '/' || url.pathname === '/health') return reply(env, req, { ok: true, servico: 'Calendário', chat: !!(env.ANTHROPIC_API_KEY || env.AI) });
+  // Abre o lembrete direto na tela "Adicionar ao Calendário" do iPhone (sem menu de apps)
+  if (url.pathname === '/ics' && req.method === 'POST') {
+    const form = await req.formData().catch(() => null);
+    const text = String((form && form.get('ics')) || '');
+    if (!text.startsWith('BEGIN:VCALENDAR') || text.length > 300000) return new Response('Arquivo inválido', { status: 400 });
+    return new Response(text, { headers: { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': 'inline; filename="lembrete.ics"', 'Cache-Control': 'no-store' } });
+  }
   if (req.method !== 'POST') return reply(env, req, { error: 'método não permitido' }, 405);
 
   let me;

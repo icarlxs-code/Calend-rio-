@@ -3,6 +3,7 @@ import { store } from './store.js';
 import { TYPES, durationOf } from './constants.js';
 import { toMin, fromMin, addDays } from './utils.js';
 import { CONFIG } from '../config.js';
+import { server as pushServer } from './avisos.js';
 
 const EMOJI = { feed: '🖼️', carrossel: '🗂️', reels: '🎬', story: '⭕', captacao: '📸', reuniao: '🤝', producao: '✂️', outro: '•' };
 
@@ -49,6 +50,15 @@ export function buildICS(events, calName) {
 
 export async function downloadICS(events, filename, calName) {
   const text = buildICS(events, calName);
+  // Com o servidor: abre direto em "Adicionar ao Calendário", sem passar pelo menu de apps
+  const server = pushServer();
+  if (server) {
+    const f = document.createElement('form');
+    f.method = 'POST'; f.action = server.replace(/\/$/, '') + '/ics'; f.target = '_blank'; f.style.display = 'none';
+    const inp = document.createElement('textarea'); inp.name = 'ics'; inp.value = text; f.appendChild(inp);
+    document.body.appendChild(f); f.submit(); f.remove();
+    return;
+  }
   const file = new File([text], filename, { type: 'text/calendar' });
   // No iPhone, o menu Compartilhar oferece abrir direto no Calendário
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
