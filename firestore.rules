@@ -41,6 +41,11 @@ service cloud.firestore {
     match /ws/{uid}/{rest=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+    // Resumo de uso de cada conta: a própria conta grava; só o dono do app lê (Painel do dono)
+    match /stats/{uid} {
+      allow create, update: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null && (request.auth.uid == uid || request.auth.token.email == 'icarlxs@gmail.com');
+    }
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }

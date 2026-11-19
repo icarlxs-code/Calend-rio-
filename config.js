@@ -5,6 +5,8 @@ export const CONFIG = {
   // Nome que aparece no topo do app e na tela do cliente
   appName: 'Calendário',
   agencyName: 'Henrique & Matheus',
+  // dono do app: vê o painel com todas as contas (Ajustes → Painel do dono)
+  adminEmail: 'icarlxs@gmail.com',
 
   // Endereço do servidor gratuito de avisos (Cloudflare Workers). Preenchido depois de publicar.
   pushServer: 'https://calend-rio.icarlxs.workers.dev',

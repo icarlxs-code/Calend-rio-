@@ -21,6 +21,7 @@ import { decodeSnapshot } from './share.js';
 import { sanitizePayload } from './sanitize.js';
 import { maybeOnboard } from './views/onboarding.js';
 import { showInstallGuide } from './install.js';
+import { reportStats, loadStatsDays, reportSoon } from './stats.js';
 import { ensureSeedCompanies, ensureMatheusLogo, ensureNotifyOwners } from './seed-companies.js';
 import { ensureMatheusJG } from './seed-matheus.js';
 import { ensureSeedRoutine } from './seed-routine.js';
@@ -154,6 +155,7 @@ const actions = {
   space: (b) => switchSpace(b.dataset.space, b),
   'edit-profile': async () => (await import('./views/profile.js')).openProfile(),
   'install-guide': () => showInstallGuide({ force: true }),
+  admin: async () => (await import('./views/admin.js')).openAdmin(),
   'set-person': (b) => {
     ui.person = b.dataset.p;
     saveUi();
@@ -670,6 +672,13 @@ function startApp() {
     .catch((e) => console.warn('pré-cadastro', e));
   // boas-vindas / permissão de notificações (depois da abertura)
   setTimeout(maybeOnboard, 600);
+  // resumo de uso da conta (para o Painel do dono)
+  if (store.mode === 'cloud') {
+    loadStatsDays().then(() => setTimeout(() => reportStats({ open: true }), 4000));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) reportStats(); });
+    store.on(reportSoon);
+    personal.on(reportSoon);
+  }
   // aberto pelo navegador: ensina a colocar na tela inicial (quando nenhuma outra tela estiver aberta)
   const tryInstall = (n = 0) => {
     if (document.querySelector('.sheet-wrap.is-open, .spaceveil') && n < 20) return setTimeout(() => tryInstall(n + 1), 3000);

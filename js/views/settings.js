@@ -24,6 +24,7 @@ export function renderSettings() {
   </header>
   <div class="page">
     <button class="pbig pbig--toPersonal" data-action="space" data-space="personal">${icon('heart', 22)}<div><strong>Abrir o modo Pessoal</strong><small>Aniversários, compromissos, listas — só você vê</small></div>${icon('right', 18)}</button>
+    ${cloud && (store.user?.email || '').toLowerCase() === (CONFIG.adminEmail || '').toLowerCase() ? `<button class="pbig" data-action="admin">${icon('users', 22)}<div><strong>Painel do dono</strong><small>Quantas pessoas usam o app e os detalhes de cada conta</small></div>${icon('right', 18)}</button>` : ''}
     <section class="block">
       <h2 class="block__title">${icon('user', 16)} Quem está usando este celular?</h2>
       ${cloud

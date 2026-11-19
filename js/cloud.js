@@ -62,6 +62,17 @@ const ref = (name, id) => fs.doc(db, ...base, name, id);
 
 const backend = {
   setWorkspace(uid) { base = uid ? ['ws', uid] : []; },
+  /* Resumo de uso de cada conta (o dono vê no painel) */
+  writeStats(uid, data) {
+    return fs.setDoc(fs.doc(db, 'stats', uid), { ...clean(data), opens: fs.increment(1) }, { merge: true });
+  },
+  touchStats(uid, data) {
+    return fs.setDoc(fs.doc(db, 'stats', uid), clean(data), { merge: true });
+  },
+  async listStats() {
+    const snap = await fs.getDocs(fs.collection(db, 'stats'));
+    return snap.docs.map((d) => ({ ...d.data(), uid: d.id }));
+  },
   async getProfile(uid) {
     const s = await fs.getDoc(fs.doc(db, 'users', uid));
     return s.exists() ? s.data() : null;
