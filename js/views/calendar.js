@@ -9,7 +9,7 @@ import {
 import { icon } from '../icons.js';
 import { avatar, avatars, logo, eventCard, emptyState, typeBadge, whoText, timeRange } from '../components.js';
 import { dayInsights, nextUp } from '../insights.js';
-import { dayBrief, freeTime } from '../planner.js';
+import { dayBrief, dayBriefRows, freeTime } from '../planner.js';
 
 /* ---------- elementos compartilhados ---------- */
 export function personSwitch() {
@@ -191,7 +191,21 @@ export function renderToday() {
     ${next}
     <button class="brief" data-action="assistant">
       <span class="brief__ic">${icon('sparkle', 18)}</span>
-      <div><strong>Assistente</strong>${dayBrief(date, ui.person).map((l) => `<p>${esc(l)}</p>`).join('')}</div>
+      <div class="brief__body"><strong>Resumo do dia</strong>
+        ${dayBriefRows(date, ui.person).map((r) => `<div class="brow">
+          ${avatar(r.id, 30)}
+          <div class="brow__main">
+            <b>${esc(r.name)}</b>
+            <div class="brow__chips">
+              <span class="bchip">${r.total ? `${r.total} tarefa${r.total > 1 ? 's' : ''}` : 'Sem tarefas'}</span>
+              ${r.done ? `<span class="bchip bchip--ok">${icon('check', 11)} ${r.done} feita${r.done > 1 ? 's' : ''}</span>` : ''}
+              ${r.late ? `<span class="bchip bchip--late">${r.late} atrasad${r.late > 1 ? 'as' : 'a'}</span>` : ''}
+              ${r.free ? `<span class="bchip${r.busy ? ' bchip--warn' : ' bchip--free'}">${icon('clock', 11)} ${esc(r.free)}</span>` : ''}
+            </div>
+            ${r.next ? `<small class="brow__next">Próximo: ${esc(r.next)}</small>` : ''}
+          </div>
+        </div>`).join('')}
+      </div>
       ${icon('right', 18, 'muted')}
     </button>
     ${team}

@@ -231,6 +231,24 @@ export function fixesFor(person, a, b) {
 }
 
 /* ======================== RESUMO DO DIA (texto do assistente) ======================== */
+/* Resumo do dia em dados (para o cartão organizado): uma linha por pessoa */
+export function dayBriefRows(date, person = 'all') {
+  const people = person === 'all' ? store.team : store.team.filter((m) => m.id === person);
+  const nowM = date === todayKey() ? nowMin() : -1;
+  return people.map((m) => {
+    const mine = store.eventsOn(date, { person: m.id });
+    const done = mine.filter((e) => e.status === 'feito').length;
+    const late = mine.filter((e) => e.status === 'pendente' && e.time && nowM >= 0 && (isPost(e.type) ? toMin(e.time) : toMin(e.time) + durationOf(e)) < nowM).length;
+    const ft = freeTime(m.id, date);
+    const next = mine.find((e) => e.status !== 'feito' && e.time && toMin(e.time) >= nowM);
+    return {
+      id: m.id, name: m.name, total: mine.length, done, late,
+      free: ft.dayOff ? 'Folga' : ft.minutes == null ? null : ft.minutes < 30 ? 'Dia cheio' : `${fmtDuration(ft.minutes)} livre${ft.minutes >= 120 ? 's' : ''}`,
+      busy: !ft.dayOff && ft.minutes != null && ft.minutes < 30,
+      next: next ? `${fmtTime(next.time)} · ${next.title || coName(next)}` : null,
+    };
+  });
+}
 export function dayBrief(date, person = 'all') {
   const people = person === 'all' ? store.team : store.team.filter((m) => m.id === person);
   const lines = [];

@@ -1128,3 +1128,15 @@ html:not(.intro-done) .tabbar { opacity: 0; }
 .daystrip .wday.is-first { position: relative; }
 .daystrip .wday.is-first::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 1.5px; border-radius: 2px; background: var(--line-2); }
 
+/* resumo do dia organizado */
+.brief__body { display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 0; text-align: left; }
+.brow { display: flex; gap: 10px; align-items: flex-start; }
+.brow__main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.brow__main b { font-size: 15px; color: var(--text); }
+.brow__chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.bchip { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--surface); color: var(--text-2); }
+.bchip--ok { color: var(--ok); background: var(--ok-soft); }
+.bchip--late { color: #fff; background: var(--danger); }
+.bchip--warn { color: var(--warn); background: var(--warn-soft); }
+.bchip--free { color: var(--tip, #4338CA); }
+.brow__next { font-size: 12.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
