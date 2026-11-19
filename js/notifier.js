@@ -5,7 +5,7 @@
 import { store } from './store.js';
 import { api, server } from './avisos.js';
 import { debounce, todayKey, addDays } from './utils.js';
-import { reminderOffsets, reminderMessage, changeMessage, dailyMessage, isPostType, TYPE_LABEL as TYPE_NAME } from '../functions/reminder-rules.js';
+import { reminderOffsets, reminderMessage, lateReminders, changeMessage, dailyMessage, isPostType, TYPE_LABEL as TYPE_NAME } from '../functions/reminder-rules.js';
 
 const nameOf = (id) => store.member(id)?.name || 'Alguém';
 const coName = (id) => store.company(id)?.name || '';
@@ -105,6 +105,17 @@ export function buildSchedule(now = Date.now()) {
         at, member, title: msg.title, body: resp && !(ev.assignees.length === 1 && ev.assignees[0] === member) ? `${msg.body} · ${resp}` : msg.body, tag: `rem-${ev.id}`, url: `./#/e/${ev.id}`, kind: 'reminders', badge: pendingOn(member, ev.date),
       }));
     });
+    // atrasado: cobrança a cada 10 min (só para quem é responsável) até marcar como feito
+    if (ev.status === 'pendente') {
+      const who = (ev.assignees || []).length ? ev.assignees : [ev.createdBy || store.me].filter(Boolean);
+      lateReminders(ev, at0, coName(ev.companyId)).forEach((r) => {
+        if (r.at < now - 10 * 60e3 || r.at > now + 4 * 86400e3) return;
+        who.forEach((member) => items.push({
+          id: `l_${ev.id}_${r.late}_${ev.date}${ev.time.replace(':', '')}_${member}`,
+          at: r.at, member, title: r.title, body: r.body, tag: `late-${ev.id}`, url: `./#/e/${ev.id}`, kind: 'reminders', badge: pendingOn(member, ev.date),
+        }));
+      });
+    }
   });
   // resumo do dia (8h) e da véspera (20h)
   for (let i = 0; i < 4; i++) {

@@ -37,8 +37,9 @@ export function nowIn(tz = TZ, date = new Date()) {
 export function reminderOffsets(ev) {
   const custom = Number.isFinite(ev.reminder) ? ev.reminder : 30;
   let list;
-  if (isPostType(ev.type)) list = [60, 30, 0, -30];
-  else if (ev.type === 'captacao') list = [1440, 60, 30, -30];
+  // a cobrança depois do horário é feita por lateReminders (a cada 10 min)
+  if (isPostType(ev.type)) list = [60, 30, 0];
+  else if (ev.type === 'captacao') list = [1440, 60, 30];
   else if (ev.type === 'reuniao') list = [1440, 60, 15];
   else list = [60, 30, 0];
   if (custom >= 0 && !list.includes(custom)) list.push(custom);
@@ -79,6 +80,48 @@ const dur = (min) => {
 };
 
 /* Texto da notificação de lembrete */
+/* ---------- atrasado: cobrança a cada 10 minutos até marcar como feito ---------- */
+export const LATE_EVERY = 10, LATE_MAX = 180;
+const LATE = [
+  'Tá atrasado {m} min. Cada minuto parado é dinheiro saindo do seu bolso. Bora {fazer} agora! 💸',
+  'A {co} precisa de você. Enquanto isso não sai, o cliente perde alcance — e você perde valor.',
+  'Como você quer ser melhor se não cumpre nem o próprio horário? {Fazer} agora e prova pra você mesmo 💪',
+  'Cada minuto de atraso é 1% a menos do seu processo. Não deixa escapar.',
+  'Profissional de verdade entrega no horário. Você é profissional. {Fazer} agora.',
+  'O algoritmo não espera, campeão. {m} min de atraso já custaram alcance. Bora!',
+  'Disciplina é fazer o que precisa mesmo sem vontade. Abre e resolve isso agora.',
+  'Você não chegou até aqui pra perder pra preguiça. A {co} está esperando.',
+  'Combinado com cliente é compromisso. Cumpre agora: {fazer}!',
+  'Quem quer crescer cumpre horário. {m} minutos... ainda dá tempo de virar o jogo.',
+  'Seu eu do futuro vai agradecer se você resolver isso AGORA.',
+  'Menos desculpa, mais entrega. {Fazer} e marca como feito ✓',
+  'Já são {m} min. Para tudo e resolve isso — leva poucos minutos.',
+  'Cliente satisfeito = contrato renovado = dinheiro no bolso. {Fazer} já!',
+  'Você é melhor que esse atraso. Mostra isso agora.',
+  'Cada minuto que passa é menos dinheiro na sua conta. Vai!',
+  'Sonho grande com atitude pequena não combina. {Fazer} agora, sem enrolar.',
+  'Ninguém vai fazer por você. Levanta e resolve: a {co} conta contigo.',
+];
+const hashStr = (s) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
+/* Lista de cobranças de um evento atrasado: [{ late, at, title, body }] */
+export function lateReminders(ev, startMs, company = '') {
+  const post = isPostType(ev.type);
+  const base = post ? startMs : startMs + (Number(ev.duration) || 30) * 60e3; // post: no horário; o resto: quando termina
+  const what = `${TYPE_LABEL[ev.type] || 'Tarefa'}${company ? ' · ' + company : ''}`;
+  const fazer = post ? 'postar' : 'fazer', Fazer = post ? 'Posta' : 'Faz';
+  const out = [];
+  const h0 = hashStr(ev.id);
+  for (let m = LATE_EVERY, k = 0; m <= LATE_MAX; m += LATE_EVERY, k++) {
+    const at = base + m * 60e3;
+    const brHour = new Date(at - 3 * 3600e3).getUTCHours();
+    if (brHour >= 23 || brHour < 7) break; // não cobra de madrugada
+    const text = LATE[(h0 + k) % LATE.length].replace(/\{m\}/g, m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, '0') : ''}` : String(m))
+      .replace(/\{co\}/g, company || 'empresa').replace(/\{fazer\}/g, fazer).replace(/\{Fazer\}/g, Fazer);
+    out.push({ late: m, at, title: `⏰ Atrasado ${m >= 60 ? Math.floor(m / 60) + 'h' + (m % 60 ? String(m % 60).padStart(2, '0') : '') : m + ' min'} · ${what}`, body: `${ev.title ? ev.title + ' — ' : ''}${text} Toque e marque como feito.` });
+  }
+  return out;
+}
+
 export function reminderMessage(ev, offset, company = '') {
   const what = `${TYPE_LABEL[ev.type] || 'Tarefa'}${company ? ' · ' + company : ''}`;
   const title = ev.title ? `“${ev.title}”` : '';

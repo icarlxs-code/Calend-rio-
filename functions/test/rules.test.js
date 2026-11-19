@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nowIn, dueReminders, reminderMessage, changeMessage, dailyMessage, reminderOffsets, addDaysKey } from '../reminder-rules.js';
+import { nowIn, dueReminders, reminderMessage, lateReminders, changeMessage, dailyMessage, reminderOffsets, addDaysKey } from '../reminder-rules.js';
 
 const ev = (o) => ({ id: 'e1', date: '2026-11-18', time: '18:00', type: 'reels', status: 'pendente', reminder: 30, assignees: ['henrique'], ...o });
 
@@ -32,22 +32,23 @@ test('captação: aviso na véspera, mesmo virando o dia', () => {
   assert.match(reminderMessage(c, 1440, 'Pura Vida').title, /^Amanhã: Captação · Pura Vida às 9h/);
 });
 
-test('cobrança 30 min depois só se ainda estiver "a fazer"', () => {
-  const now = { date: '2026-11-18', minutes: 18 * 60 + 30 };
-  assert.equal(dueReminders([ev()], now)[0].offset, -30);
-  assert.equal(dueReminders([ev({ status: 'pronto' })], now).length, 0);
-  assert.equal(dueReminders([ev({ status: 'feito' })], { date: '2026-11-18', minutes: 17 * 60 }).length, 0);
+test('atrasado: cobrança a cada 10 min até 3h, nunca de madrugada, textos variados', () => {
+  const start = Date.parse('2026-11-18T18:00:00-03:00');
+  const list = lateReminders(ev({ id: 'e1' }), start, 'Pura Vida');
+  assert.equal(list[0].late, 10);
+  assert.equal(list[0].at, start + 10 * 60e3);
+  assert.match(list[0].title, /^⏰ Atrasado 10 min · Reels · Pura Vida/);
+  assert.equal(list.length, 18);
+  assert.match(list[17].title, /Atrasado 3h/);
+  assert.ok(new Set(list.map((x) => x.body)).size >= 15);
+  const late = lateReminders(ev({ id: 'e2' }), Date.parse('2026-11-18T22:30:00-03:00'), 'X');
+  assert.ok(late.length <= 3); // para às 23h
   assert.match(reminderMessage(ev(), 0, 'Pura Vida').title, /^Já postou\?/);
-  assert.match(reminderMessage(ev(), -30, 'Pura Vida').title, /^Atrasado/);
-});
-
-test('sem horário não gera lembrete', () => {
-  assert.equal(dueReminders([ev({ time: '' })], { date: '2026-11-18', minutes: 17 * 60 }).length, 0);
 });
 
 test('lembrete personalizado de 1 dia antes é incluído', () => {
   assert.ok(reminderOffsets(ev({ reminder: 1440 })).includes(1440));
-  assert.deepEqual(reminderOffsets(ev({ reminder: -1 })), [-30]);
+  assert.deepEqual(reminderOffsets(ev({ reminder: -1 })), []);
 });
 
 test('mensagens de mudança na agenda', () => {
