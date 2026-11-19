@@ -1,5 +1,6 @@
 /* Ajustes: perfil, lembretes, sincronização, backup */
 import { coachTest } from '../coach.js';
+import { fmtLeft } from '../billing.js';
 import { usagePlaceholder, fillUsage } from '../usage.js';
 import { store } from '../store.js';
 import { CONFIG } from '../../config.js';
@@ -25,6 +26,8 @@ export function renderSettings() {
   <div class="page">
     <button class="pbig pbig--toPersonal" data-action="space" data-space="personal">${icon('heart', 22)}<div><strong>Abrir o modo Pessoal</strong><small>Aniversários, compromissos, listas — só você vê</small></div>${icon('right', 18)}</button>
     ${cloud && (store.user?.email || '').toLowerCase() === (CONFIG.adminEmail || '').toLowerCase() ? `<button class="pbig" data-action="admin">${icon('users', 22)}<div><strong>Painel do dono</strong><small>Quantas pessoas usam o app e os detalhes de cada conta</small></div>${icon('right', 18)}</button>` : ''}
+    ${store.solo ? planSection() : ''}
+    <button class="pbig" data-action="guide">${icon('sparkles', 22)}<div><strong>Como funciona o Lembra</strong><small>Para que serve o modo Trabalho e o modo Pessoal</small></div>${icon('right', 18)}</button>
     <section class="block">
       <h2 class="block__title">${icon('user', 16)} Quem está usando este celular?</h2>
       ${cloud
@@ -161,6 +164,20 @@ function fillDevices() {
       return `<div class="list__row"><span><b>${esc(m.name)}</b><small>${n ? `${n} celular${n > 1 ? 'es' : ''} recebendo avisos` : 'Nenhum celular cadastrado — não recebe notificações. Abra o app pelo ícone → Ajustes → Notificações → Ativar/Cadastrar.'}</small></span><span>${n ? '✅' : '⚠️'}</span></div>`;
     }).join('');
   });
+}
+
+function planSection() {
+  const b = store.billing || {};
+  const label = { trial: 'Teste grátis', monthly: 'Mensal · R$ 9,90/mês', lifetime: 'Vitalício', expired: 'Teste encerrado', blocked: 'Sem plano', unknown: 'Verificando…' }[b.plan] || '—';
+  const detail = b.plan === 'trial' ? `Termina em ${fmtLeft(b.trialEndsAt - Date.now())}`
+    : b.plan === 'monthly' ? (b.cancelAt ? `Cancelada: vale até ${new Date(b.cancelAt).toLocaleDateString('pt-BR')}` : b.paidUntil ? `Renova em ${new Date(b.paidUntil).toLocaleDateString('pt-BR')}` : 'Ativa')
+      : b.plan === 'lifetime' ? 'Pago uma vez, para sempre. Obrigado!' : '';
+  return `<section class="block">
+    <h2 class="block__title">${icon('card', 16)} Seu plano</h2>
+    <div class="card card--row"><div><strong>${esc(label)}</strong>${detail ? `<small>${esc(detail)}</small>` : ''}</div>
+      ${b.plan === 'monthly' ? '<button class="btn btn--soft btn--sm" data-action="billing-portal">Gerenciar</button>' : b.plan !== 'lifetime' ? '<button class="btn btn--primary btn--sm" data-action="plans">Assinar</button>' : ''}
+    </div>
+  </section>`;
 }
 
 function routineSection() {

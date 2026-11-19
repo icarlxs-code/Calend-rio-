@@ -28,6 +28,8 @@ function last30(u) {
   const set = new Set(u.activeDays || []);
   return Array.from({ length: 30 }, (_, i) => addDays(t, i - 29)).map((d) => `<i class="${set.has(d) ? 'on' : ''}" title="${d.split('-').reverse().join('/')}"></i>`).join('');
 }
+let planOf = () => null;
+const planLabel = (p) => (!p ? 'Conta própria' : { trial: 'Teste grátis', monthly: 'Mensal', lifetime: 'Vitalício', expired: 'Teste acabou', blocked: 'Sem plano', none: 'Sem plano' }[p.plan] || 'Conta própria');
 function card(u, open) {
   const c = u.counts || {};
   const d = u.device || {};
@@ -36,7 +38,7 @@ function card(u, open) {
     <button class="acct__top" data-toggle="${esc(u.uid)}">
       ${face(u)}
       <div class="acct__id"><strong>${esc(u.name || 'Sem nome')}${online ? ' <span class="adot" title="Usando agora"></span>' : ''}</strong><small>${esc(u.email || '')}</small></div>
-      <div class="acct__last"><b>${esc(ago(u.lastSeen))}</b><small>${u.workspace === 'dupla' ? 'Dupla' : 'Conta própria'}</small></div>
+      <div class="acct__last"><b>${esc(ago(u.lastSeen))}</b><small>${u.workspace === 'dupla' ? 'Dupla' : planLabel(planOf(u.uid))}</small></div>
     </button>
     <div class="acct__chips">
       <span>${icon('building', 12)} ${c.companies || 0} empresas</span>
@@ -79,7 +81,7 @@ function card(u, open) {
 }
 
 export async function openAdmin() {
-  let users = null, err = null, openUid = null, q = '';
+  let users = null, err = null, openUid = null, q = '', plans = {};
   const html = () => {
     if (err) return `${sheetHead('Painel do dono')}<div class="page page--sheet"><div class="empty"><h3>Não consegui carregar</h3><p>${esc(err)}</p></div></div>`;
     if (!users) return `${sheetHead('Painel do dono')}<div class="page page--sheet"><p class="fhelp">Carregando contas…</p></div>`;
@@ -87,6 +89,9 @@ export async function openAdmin() {
     const act = (days) => users.filter((u) => u.lastSeen && now - u.lastSeen < days * 864e5).length;
     const list = users.filter((u) => !q || `${u.name} ${u.email}`.toLowerCase().includes(q)).sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
     const newWeek = users.filter((u) => u.createdAt && now - u.createdAt < 7 * 864e5).length;
+    planOf = (uid) => plans[uid] || null;
+    const paying = Object.values(plans).filter((p) => p.plan === 'monthly' || p.plan === 'lifetime');
+    const mrr = Object.values(plans).filter((p) => p.plan === 'monthly').length * 9.9;
     return `${sheetHead('Painel do dono', { right: '<button class="btn-text" data-reload>Atualizar</button>' })}
     <div class="page page--sheet">
       <div class="akpis">
@@ -98,6 +103,10 @@ export async function openAdmin() {
         <div><b>${users.filter((u) => u.device?.installed).length}</b><small>instalaram</small></div>
         <div><b>${users.filter((u) => u.device?.notifications === 'granted' && u.device?.registered).length}</b><small>com avisos</small></div>
         <div><b>${users.reduce((a, u) => a + (u.counts?.myEvents || 0), 0)}</b><small>eventos criados</small></div>
+        <div><b>${paying.length}</b><small>pagantes</small></div>
+        <div><b>${Object.values(plans).filter((p) => p.plan === 'trial').length}</b><small>em teste</small></div>
+        <div><b>${Object.values(plans).filter((p) => p.plan === 'lifetime').length}</b><small>vitalícios</small></div>
+        <div><b>R$ ${mrr.toFixed(2).replace('.', ',')}</b><small>por mês</small></div>
       </div>
       <input class="input" type="search" placeholder="Buscar por nome ou e-mail" data-q value="${esc(q)}">
       <div class="accts">${list.map((u) => card(u, u.uid === openUid)).join('') || '<p class="fhelp">Nenhuma conta encontrada.</p>'}</div>
@@ -116,7 +125,10 @@ export async function openAdmin() {
     },
   });
   const load = async () => {
-    try { users = await store.backendApi.listStats(); err = null; }
+    try {
+      users = await store.backendApi.listStats(); err = null;
+      try { const { api } = await import('../avisos.js'); plans = (await api('/billing/all', {})).byWs || {}; } catch { plans = {}; }
+    }
     catch (e) { err = /permission/i.test(String(e.code || e.message)) ? 'Falta atualizar as regras do Firebase (bloco “stats”).' : 'Verifique a internet e toque em Atualizar.'; }
     api.set(html());
   };

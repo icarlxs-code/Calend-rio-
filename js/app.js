@@ -21,6 +21,7 @@ import { decodeSnapshot } from './share.js';
 import { sanitizePayload } from './sanitize.js';
 import { maybeOnboard } from './views/onboarding.js';
 import { showInstallGuide } from './install.js';
+import { checkBilling, trialBanner, openPlans, confirmPayment, openPortal } from './billing.js';
 import { reportStats, loadStatsDays, reportSoon } from './stats.js';
 import { ensureSeedCompanies, ensureMatheusLogo, ensureNotifyOwners } from './seed-companies.js';
 import { ensureMatheusJG } from './seed-matheus.js';
@@ -128,6 +129,9 @@ function render() {
   const ni = view.querySelector('[data-form="note"] input');
   if (ni && draftNote) ni.value = draftNote;
   if (ni && hadFocus) ni.focus({ preventScroll: true });
+  // faixa do teste grátis (contagem regressiva)
+  const tb = trialBanner();
+  if (tb) (view.querySelector('.page') || view).insertAdjacentHTML('afterbegin', tb);
   bindSwipes();
   bindStrip(view);
   if (personalMode) {
@@ -155,6 +159,9 @@ const actions = {
   space: (b) => switchSpace(b.dataset.space, b),
   'edit-profile': async () => (await import('./views/profile.js')).openProfile(),
   'install-guide': () => showInstallGuide({ force: true }),
+  plans: () => openPlans(),
+  'billing-portal': () => openPortal().catch((e) => toast(e.message || 'Não consegui abrir agora')),
+  guide: async () => (await import('./views/guide.js')).openGuide(),
   admin: async () => (await import('./views/admin.js')).openAdmin(),
   'set-person': (b) => {
     ui.person = b.dataset.p;
@@ -601,6 +608,32 @@ function loading(msg = 'Carregando…') {
   root.innerHTML = `<div class="splash"><img src="icons/icon-192.png" alt="" width="72" height="72"><p>${esc(msg)}</p></div>`;
 }
 
+async function startBilling() {
+  const fromStripe = /^#\/pago/.test(location.hash);
+  if (fromStripe) { history.replaceState(null, '', location.pathname + location.search); return confirmPayment(); }
+  const st = await checkBilling();
+  render();
+  if (!st.active) return openPlans({ blocking: true });
+  if (/^#\/planos/.test(location.hash)) { history.replaceState(null, '', location.pathname + location.search); openPlans(); }
+  // 1º acesso: explica os dois modos
+  const { guideSeen, openGuide } = await import('./views/guide.js');
+  const showGuide = (n = 0) => {
+    if (document.querySelector('.sheet-wrap.is-open, .paywall, .iguide') && n < 40) return setTimeout(() => showGuide(n + 1), 1500);
+    openGuide();
+  };
+  if (!guideSeen()) setTimeout(showGuide, 1200);
+  // confere o tempo do teste a cada minuto; acabou → tela de planos
+  setInterval(async () => {
+    const b = store.billing;
+    if (!b || b.plan !== 'trial') return;
+    if (b.trialEndsAt <= Date.now()) {
+      const s2 = await checkBilling();
+      if (!s2.active) openPlans({ blocking: true });
+    }
+    if (!document.querySelector('.sheet-wrap.is-open')) render();
+  }, 60000);
+}
+
 function startApp() {
   // pessoa escolhida no filtro precisa existir neste espaço (ex.: celular usado por outra conta antes)
   if (ui.person !== 'all' && !store.member(ui.person)) ui.person = 'all';
@@ -671,6 +704,8 @@ function startApp() {
     .catch((e) => console.warn('pré-cadastro', e));
   // boas-vindas / permissão de notificações (depois da abertura)
   setTimeout(maybeOnboard, 600);
+  // plano da conta: teste grátis de 24h, depois precisa assinar (a dupla não paga)
+  if (store.solo) startBilling();
   // resumo de uso da conta (para o Painel do dono)
   if (store.mode === 'cloud') {
     loadStatsDays().then(() => setTimeout(() => reportStats({ open: true }), 4000));

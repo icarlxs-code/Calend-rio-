@@ -8,6 +8,7 @@ import { generateVapid, sendPush } from './webpush.js';
 import { verifyIdToken } from './auth.js';
 import { runCoach } from './coach.js';
 import { runPersonalCoach } from './pcoach.js';
+import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll } from './billing.js';
 
 const SUBJECT = 'mailto:avisos@calendario.app';
 
@@ -176,6 +177,18 @@ async function handle(req, env) {
     if (!text.startsWith('BEGIN:VCALENDAR') || text.length > 300000) return new Response('Arquivo inválido', { status: 400 });
     return new Response(text, { headers: { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': 'inline; filename="lembrete.ics"', 'Cache-Control': 'no-store' } });
   }
+  // Avisos da Stripe (pagamento confirmado, renovação, cancelamento): conferidos pela assinatura
+  if (url.pathname === '/billing/webhook' && req.method === 'POST') {
+    const payload = await req.text();
+    try {
+      const ev = await verifyStripe(env, payload, req.headers.get('Stripe-Signature'));
+      await handleStripeEvent(env, ev);
+      return new Response('ok');
+    } catch (e) {
+      console.log('webhook stripe', e.message);
+      return new Response('assinatura inválida', { status: 400 });
+    }
+  }
   if (req.method !== 'POST') return reply(env, req, { error: 'método não permitido' }, 405);
 
   let me;
@@ -185,6 +198,27 @@ async function handle(req, env) {
     return reply(env, req, { error: 'Sem permissão: ' + e.message }, 401);
   }
   const body = await req.json().catch(() => ({}));
+
+  // ---------- cobrança e teste grátis ----------
+  if (url.pathname === '/billing/status') return reply(env, req, await billingStatus(env, me));
+  if (url.pathname === '/billing/trial') {
+    const st = await startTrial(env, me, { deviceId: clean(body.deviceId, 80), ip: req.headers.get('CF-Connecting-IP') || '' });
+    await registerUser(env, me);
+    return reply(env, req, st);
+  }
+  if (url.pathname === '/billing/checkout' || url.pathname === '/billing/portal') {
+    try {
+      const fn = url.pathname === '/billing/checkout' ? createCheckout : createPortal;
+      return reply(env, req, await fn(env, me, { plan: clean(body.plan, 20), returnUrl: clean(body.returnUrl, 300) }));
+    } catch (e) {
+      return reply(env, req, { error: e.message }, e.status || 500);
+    }
+  }
+  if (url.pathname === '/billing/all') {
+    const owner = (env.ADMIN_EMAIL || JSON.parse(env.TEAM || '[]')[0]?.email || '').toLowerCase();
+    if (me.email?.toLowerCase() !== owner) return reply(env, req, { error: 'só o dono do app' }, 403);
+    return reply(env, req, { ok: true, byWs: await billingAll(env) });
+  }
 
   if (url.pathname === '/subscribe') {
     const s = body.subscription;
