@@ -44,7 +44,16 @@ export function detectPlatforms(e) {
   return found;
 }
 
+import { TYPES } from './constants.js';
+export const POST_NETS = ['instagram', 'tiktok', 'facebook', 'youtube', 'linkedin', 'whatsapp', 'pinterest', 'x'];
+export const platformById = (id) => PLATFORMS.find((p) => p.id === id);
+/* Rede do evento: a escolhida no editor; se for post sem escolha, Instagram; mais as citadas no texto */
+export function eventPlatforms(e) {
+  const found = detectPlatforms(e);
+  const main = e?.platform ? platformById(e.platform) : TYPES[e?.type]?.kind === 'post' ? platformById('instagram') : null;
+  return main ? [main, ...found.filter((p) => p.id !== main.id)] : found;
+}
 export function platformIcons(e, size = 18) {
-  const list = Array.isArray(e) ? e : detectPlatforms(e);
+  const list = Array.isArray(e) ? e : eventPlatforms(e);
   return list.map((p) => `<span class="pf" style="width:${size}px;height:${size}px" title="${p.name}">${p.svg}</span>`).join('');
 }

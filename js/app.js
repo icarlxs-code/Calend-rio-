@@ -1,5 +1,6 @@
 /* Inicialização, navegação e ações globais */
 import { syncCoach } from './coach.js';
+import { polishSoon } from './polish.js';
 import { renderPersonalSpace, personalTabbar, bindPersonal, personalActions, openPersonalEditor } from './views/personal.js';
 import { personal, startPersonal, occurrences } from './personal.js';
 import { CONFIG } from '../config.js';
@@ -496,6 +497,8 @@ function startApp() {
     syncSchedule();
     store.on(syncCoach);
     syncCoach();
+    store.on(polishSoon);
+    polishSoon();
     setInterval(syncSchedule, 15 * 60e3);
   }
   // dados cadastrados antes do login (guardados só neste aparelho): oferece levar para a nuvem

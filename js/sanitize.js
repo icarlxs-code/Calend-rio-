@@ -37,6 +37,7 @@ export function sanitizeItem(col, x) {
       reminder: num(x.reminder, -1, 10080, 30),
       visibleToClient: x.visibleToClient !== false,
       notifyPartner: x.notifyPartner !== false,
+      platform: typeof x.platform === 'string' && /^[a-z]{1,12}$/.test(x.platform) ? x.platform : null,
     };
   }
   if (col === 'companies') {

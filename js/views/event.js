@@ -10,6 +10,8 @@ import {
 } from '../components.js';
 import { validateDraft, bestSlots, freePeople, spanOf, evLabel } from '../planner.js';
 import { downloadICS } from '../ics.js';
+import { POST_NETS, platformById } from '../platforms.js';
+import { tidyTitle } from '../tidy.js';
 import { platformIcons } from '../platforms.js';
 import { openCompanyEditor } from './companies.js';
 
@@ -196,6 +198,11 @@ function editorHtml(d, editing, rep) {
       </div>
     </div>
 
+    <div class="fgroup" data-when="net" ${TYPES[d.type].kind === 'post' ? '' : 'hidden'}>
+      <label class="flabel">Onde vai postar?</label>
+      <div class="netgrid">${POST_NETS.map((id) => { const p = platformById(id); return p ? `<button type="button" class="netbtn${(d.platform || 'instagram') === id ? ' is-on' : ''}" data-net="${id}"><span class="pf" style="width:22px;height:22px">${p.svg}</span><span>${esc(p.name.replace(' (Twitter)', ''))}</span></button>` : ''; }).join('')}</div>
+    </div>
+
     <div class="fgroup">
       <label class="flabel" for="f-title">Título</label>
       <input id="f-title" class="input" name="title" value="${esc(d.title)}" placeholder="${esc(TYPES[d.type].placeholder)}" autocomplete="off" maxlength="120">
@@ -284,6 +291,8 @@ function mountEditor(api, d, original, rep) {
 
   const refreshWhen = () => {
     el.querySelector('[data-when="duration"]').hidden = !needsDuration(d.type);
+    const net = el.querySelector('[data-when="net"]');
+    if (net) net.hidden = TYPES[d.type].kind !== 'post';
     el.querySelector('[data-when="location"]').hidden = !needsLocation(d.type);
     const c = store.company(d.companyId);
     const useAddr = $('[data-useaddr]');
@@ -362,8 +371,14 @@ function mountEditor(api, d, original, rep) {
     refreshWhen();
   };
 
+  el.querySelectorAll('[data-net]').forEach((b) => (b.onclick = () => {
+    d.platform = b.dataset.net;
+    el.querySelectorAll('[data-net]').forEach((x) => x.classList.toggle('is-on', x === b));
+  }));
   const readForm = () => {
-    d.title = form.title.value.trim();
+    d.title = tidyTitle(form.title.value.trim());
+    if (TYPES[d.type].kind === 'post' && !d.platform) d.platform = 'instagram';
+    if (TYPES[d.type].kind !== 'post') d.platform = null;
     d.date = form.date.value;
     d.time = form.time.value || '';
     d.duration = needsDuration(d.type) ? Number(form.duration.value) : null;

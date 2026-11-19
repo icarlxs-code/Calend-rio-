@@ -231,6 +231,22 @@ async function handle(req, env) {
     return reply(env, req, { ok: true, count: items.length });
   }
 
+  // Corrige ortografia e acentos de títulos curtos (sem mudar o sentido)
+  if (url.pathname === '/tidy') {
+    const titles = (Array.isArray(body.titles) ? body.titles : []).slice(0, 20).map((t) => clean(t, 120));
+    if (!titles.length || !env.AI) return reply(env, req, { titles: [] });
+    const prompt = `Corrija SÓ a ortografia, os acentos e as maiúsculas destes títulos curtos de posts de redes sociais em português do Brasil. Nomes próprios, produtos e variedades com inicial maiúscula (ex.: Manga Palmer, Couve-flor). NÃO acrescente nem tire palavras, NÃO mude o sentido. Responda só com um JSON: lista de textos na mesma ordem.\n${JSON.stringify(titles)}`;
+    for (const model of ['@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/meta/llama-3.1-8b-instruct-fast']) {
+      try {
+        const out = await env.AI.run(model, { messages: [{ role: 'user', content: prompt }], max_tokens: 800, temperature: 0 });
+        const m = /\[[\s\S]*\]/.exec(String(out?.response || ''));
+        const arr = m ? JSON.parse(m[0]) : null;
+        if (Array.isArray(arr) && arr.length === titles.length) return reply(env, req, { titles: arr.map((t) => clean(t, 140)) });
+      } catch (e) { console.log('tidy', model, e.message); }
+    }
+    return reply(env, req, { titles: [] });
+  }
+
   if (url.pathname === '/devices') {
     const subs = Object.values(await getSubs(env));
     const counts = {};

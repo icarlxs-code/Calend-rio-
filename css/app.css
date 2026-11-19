@@ -1112,3 +1112,7 @@ html:not(.intro-done) .tabbar { opacity: 0; }
 .acard__res { color: var(--text-3); font-size: 12px; }
 .notifyrow { background: var(--surface); border-radius: 14px; margin-top: 8px; } .notifyrow > span { display: flex; flex-direction: column; gap: 2px; text-align: left; } .notifyrow b { display: inline-flex; align-items: center; gap: 6px; } .notifyrow small { color: var(--text-3); font-size: 12px; }
 .notifyrow > span { flex: 1; align-items: flex-start; } .notifyrow b { justify-content: flex-start; }
+.netgrid { display: flex; gap: 8px; overflow-x: auto; margin: 0 calc(-1 * var(--gutter)); padding: 2px var(--gutter) 4px; scrollbar-width: none; }
+.netgrid::-webkit-scrollbar { display: none; }
+.netbtn { flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px 6px 6px; border-radius: 999px; border: 1.5px solid var(--line-2); background: var(--surface); font: inherit; font-size: 14px; font-weight: 600; color: var(--text); }
+.netbtn.is-on { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink) inset; }

@@ -4,6 +4,7 @@
 import { store } from './store.js';
 import { TYPES } from './constants.js';
 import { uid, todayKey, addDays, fromKey, toMin, fromMin, fmtTime, dayLabel, fmtDayShort } from './utils.js';
+import { tidyTitle } from './tidy.js';
 import { savePersonal, removePersonal, personal, CATS, guessCat } from './personal.js';
 
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -81,7 +82,7 @@ export function planAction(a) {
     let dur = start && end ? toMin(end) - toMin(start) : Number(a.duracao_min) || null;
     if (dur && dur <= 0) dur = null;
     const people = resolvePeople(a.responsaveis);
-    const title = String(a.titulo || '').slice(0, 120) || TYPES[type].label;
+    const title = tidyTitle(String(a.titulo || '').slice(0, 120)) || TYPES[type].label;
     const busy = dates.filter((d) => overlaps(d, start, dur || TYPES[type].dur, people).length);
     const span = dates.length === 1 ? dayLabel(dates[0]) : `${dates.length} dias, de ${fmtDayShort(dates[0])} a ${fmtDayShort(dates[dates.length - 1])}`;
     return {
@@ -92,7 +93,7 @@ export function planAction(a) {
         const seriesId = dates.length > 1 ? uid('s_') : null;
         const items = dates.map((date) => ({
           id: uid('e_'), type, companyId: co.id, title, date, time: start, duration: dur || null, assignees: people,
-          status: 'pendente', reminder: 30, visibleToClient: TYPES[type].client !== false, description: String(a.descricao || '').slice(0, 2000), location: String(a.local || '').slice(0, 300), seriesId,
+          platform: TYPES[type].kind === 'post' ? (a.rede || 'instagram') : null, status: 'pendente', reminder: 30, visibleToClient: TYPES[type].client !== false, description: String(a.descricao || '').slice(0, 2000), location: String(a.local || '').slice(0, 300), seriesId,
         }));
         if (items.length > 1) await store.upsertMany('events', items, { activity: { kind: 'series', count: items.length, label: `${TYPES[type].label} ${title}`, sample: { companyId: co.id, date: dates[0] } } });
         else await store.upsert('events', items[0]);
