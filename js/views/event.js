@@ -28,8 +28,10 @@ function detailHtml(id) {
   const color = c?.color || '#666';
   const rem = REMINDERS.find((r) => r.v === (e.reminder ?? 30));
   const series = e.seriesId ? store.state.events.filter((x) => x.seriesId === e.seriesId).length : 0;
+  const mine = store.canEdit('events', e);
+  const ownerName = store.member(store.ownerOf('events', e))?.name || 'o parceiro';
   return `
-  ${sheetHead('', { right: `<button class="btn-text" data-act="edit">Editar</button>` })}
+  ${sheetHead('', { right: mine ? `<button class="btn-text" data-act="edit">Editar</button>` : '' })}
   <div class="detail">
     <div class="detail__hero" style="--cc:${color};--cc-soft:${rgba(color, 0.12)}">
       <div class="detail__co">${logo(c, 40)}<div><strong>${esc(c?.name || 'Sem empresa')}</strong>${c?.instagram ? `<small>@${esc(c.instagram)}</small>` : ''}</div>${typeBadge(e.type, { solid: true })}</div>
@@ -37,7 +39,8 @@ function detailHtml(id) {
       <p class="detail__when">${icon('calendar', 15)} ${esc(relDay(e.date))}, ${esc(fmtDayLong(e.date).split(', ')[1])} · ${icon('clock', 15)} ${esc(timeRange(e))}</p>
     </div>
 
-    <div class="seg seg--status">
+    ${mine ? '' : `<p class="detail__lock">${icon('eye', 14)} Cadastrado por ${esc(ownerName)} — você só pode ver. Use “Duplicar” para criar uma cópia sua.</p>`}
+    <div class="seg seg--status"${mine ? '' : ' hidden'}>
       ${STATUS_ORDER.map((s) => `<button class="seg__btn${e.status === s ? ' is-on' : ''} st-${s}" data-status="${s}">${s === 'feito' ? icon('check', 14) : ''}${STATUS[s].label}</button>`).join('')}
     </div>
 
@@ -55,9 +58,9 @@ function detailHtml(id) {
 
     <div class="actions">
       <button data-act="ics">${icon('bell', 20)}<span>Lembrete no iPhone</span></button>
-      <button data-act="tomorrow">${icon('right', 20)}<span>Passar p/ amanhã</span></button>
+      ${mine ? `<button data-act="tomorrow">${icon('right', 20)}<span>Passar p/ amanhã</span></button>` : ''}
       <button data-act="dup">${icon('copy', 20)}<span>Duplicar</span></button>
-      <button data-act="del" class="is-danger">${icon('trash', 20)}<span>Excluir</span></button>
+      ${mine ? `<button data-act="del" class="is-danger">${icon('trash', 20)}<span>Excluir</span></button>` : ''}
     </div>
     <p class="detail__meta">Criado por ${esc(store.member(e.createdBy)?.name || '—')}${e.updatedAt ? ' · atualizado ' + new Date(e.updatedAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}</p>
   </div>`;
@@ -128,6 +131,7 @@ async function deleteEvent(id, api) {
 /* ======================== EDITOR ======================== */
 export function openEventEditor({ id = null, date = null, companyId = null, type = null, time = null, assignees = null } = {}) {
   const existing = id ? store.event(id) : null;
+  if (existing && !store.canEdit('events', existing)) { store._denied('events', existing); return; }
   const companies = store.companiesSorted();
   const defType = type || 'feed';
   const draft = existing

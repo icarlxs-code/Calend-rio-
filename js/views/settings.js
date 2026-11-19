@@ -15,6 +15,7 @@ export function renderSettings() {
   const me = store.member(store.me);
   const cloud = store.mode === 'cloud';
   const notifOk = 'Notification' in window && Notification.permission === 'granted';
+  if (cloud) setTimeout(fillDevices, 0);
   return `
   <header class="hdr">
     <div class="hdr__row"><div class="hdr__titles"><p class="hdr__eyebrow">${esc(CONFIG.appName)} · ${esc(CONFIG.agencyName)}</p><h1>Ajustes</h1></div></div>
@@ -135,9 +136,22 @@ function notifySection() {
       <label class="list__row"><span><b>Avisos do parceiro</b><small>quando marcar, mudar ou concluir algo</small></span><input type="checkbox" class="switch" name="partner" ${prefs.partner ? 'checked' : ''}></label>
       <label class="list__row"><span><b>Resumo do dia</b><small>às 8h (hoje) e às 20h (amanhã)</small></span><input type="checkbox" class="switch" name="daily" ${prefs.daily ? 'checked' : ''}></label>
     </form>
+    ${cloud ? `<div class="list" data-devices><div class="list__row"><span><small>Conferindo celulares cadastrados…</small></span></div></div>` : ''}
     ${perm === 'granted' ? `<button class="btn btn--soft btn--block" data-action="notify-test">${icon('bell', 16)} Enviar notificação de teste</button>` : ''}
     <button class="btn-text btn-text--sm" data-action="onboarding-again">Ver a apresentação de novo</button>
   </section>`;
+}
+
+function fillDevices() {
+  push.teamDevices().then((counts) => {
+    const box = document.querySelector('[data-devices]');
+    if (!box) return;
+    if (!counts) { box.innerHTML = '<div class="list__row"><span><small>Não deu para conferir os celulares agora.</small></span></div>'; return; }
+    box.innerHTML = store.team.map((m) => {
+      const n = counts[m.id] || 0;
+      return `<div class="list__row"><span><b>${esc(m.name)}</b><small>${n ? `${n} celular${n > 1 ? 'es' : ''} recebendo avisos` : 'Nenhum celular cadastrado — não recebe notificações. Abra o app pelo ícone → Ajustes → Notificações → Ativar/Cadastrar.'}</small></span><span>${n ? '✅' : '⚠️'}</span></div>`;
+    }).join('');
+  });
 }
 
 function routineSection() {

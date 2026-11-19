@@ -178,7 +178,7 @@ export function renderToday() {
       ${notes.map((n) => `<div class="note">
         <p>${esc(n.text)}</p>
         <footer>${avatar(n.author, 18)}<span>${esc(store.member(n.author)?.name || '')}</span>
-          <button class="note__del" data-action="del-note" data-id="${n.id}" aria-label="Apagar bilhete">${icon('x', 14)}</button></footer>
+          ${store.canEdit('notes', n) ? `<button class="note__del" data-action="del-note" data-id="${n.id}" aria-label="Apagar bilhete">${icon('x', 14)}</button>` : ''}</footer>
       </div>`).join('')}
       <form class="note-add" data-form="note">
         <input name="text" placeholder="Escreva um bilhete para a dupla…" autocomplete="off" maxlength="280">

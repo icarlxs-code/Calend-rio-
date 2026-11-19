@@ -121,6 +121,13 @@ export async function sendTest() {
   return { kind: 'local' };
 }
 
+/* Quantos celulares de cada pessoa estão cadastrados para receber avisos */
+export async function teamDevices() {
+  if (store.mode !== 'cloud' || !server()) return null;
+  const r = await api('/devices').catch(() => null);
+  return r && r.counts ? r.counts : null;
+}
+
 export const deviceRegistered = () => !!localStorage.getItem(LS_DEVICE);
 
 /* Número no ícone do app = tarefas pendentes de hoje */

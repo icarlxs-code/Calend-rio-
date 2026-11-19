@@ -79,9 +79,9 @@ export function eventCard(e, { showDate = false, compact = false, highlight = []
         ${e.visibleToClient === false ? `<span class="ecard__private" title="Não aparece para o cliente">${icon('eyeoff', 12)}</span>` : ''}
       </div>` : ''}
     </div>
-    <button class="ecard__check${done ? ' is-on' : ''}" data-action="toggle-done" data-id="${e.id}" aria-label="${done ? 'Desmarcar' : 'Marcar como feito'}">
+    ${store.canEdit('events', e) ? `<button class="ecard__check${done ? ' is-on' : ''}" data-action="toggle-done" data-id="${e.id}" aria-label="${done ? 'Desmarcar' : 'Marcar como feito'}">
       ${icon('check', 16)}
-    </button>
+    </button>` : ''}
   </article>`;
 }
 

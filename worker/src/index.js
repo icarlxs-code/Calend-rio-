@@ -136,6 +136,13 @@ async function handle(req, env) {
     return reply(env, req, { ok: true, sent, devices: Object.values(subs).filter((d) => d.member === me.id).length, statuses });
   }
 
+  if (url.pathname === '/devices') {
+    const subs = Object.values(await getSubs(env));
+    const counts = {};
+    for (const d of subs) counts[d.member] = (counts[d.member] || 0) + 1;
+    return reply(env, req, { ok: true, counts });
+  }
+
   if (url.pathname === '/ask') {
     if (!env.ANTHROPIC_API_KEY && !env.AI) return reply(env, req, { error: 'A IA do assistente ainda não foi ligada no servidor.' }, 412);
     // com chave da Anthropic usa o Claude; sem chave, a IA grátis do Cloudflare

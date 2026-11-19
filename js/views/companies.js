@@ -71,7 +71,7 @@ function companyHtml(id) {
   }).join('');
 
   return `
-  ${sheetHead('', { right: `<button class="btn-text" data-act="edit">Editar</button>` })}
+  ${sheetHead('', { right: store.canEdit('companies', c) ? `<button class="btn-text" data-act="edit">Editar</button>` : '' })}
   <div class="cohero" style="--cc:${c.color};--cc-soft:${rgba(c.color, 0.14)}">
     ${logo(c, 72, 20)}
     <h2>${esc(c.name)}</h2>
@@ -115,7 +115,7 @@ function companyHtml(id) {
 
 function mountCompany(api, id) {
   const el = api.el;
-  el.querySelector('[data-act="edit"]').onclick = () => openCompanyEditor(id);
+  (el.querySelector('[data-act="edit"]') || {}).onclick = () => openCompanyEditor(id);
   el.querySelector('[data-act="new"]').onclick = async () => {
     const { openEventEditor } = await import('./event.js');
     openEventEditor({ companyId: id });

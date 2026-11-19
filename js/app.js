@@ -379,6 +379,7 @@ function startApp() {
   shell();
   render();
   store.on(rerenderAll);
+  store.onDenied = (msg) => toast(msg, { ms: 5000 });
   store.onError = (err) => {
     const quota = err && /quota/i.test(String(err.name || err.message));
     const denied = err && /permission/i.test(String(err.code || err.message));

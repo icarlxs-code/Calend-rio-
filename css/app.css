@@ -888,3 +888,4 @@ html:not(.intro-done) .tabbar { opacity: 0; }
 .tipsbar em { font-style: normal; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--text-3); }
 .tipsbar em.tipsbar__warn { background: var(--warn-soft); color: var(--warn); }
 .tipsbar.is-open { border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
+.detail__lock { font-size: 13px; color: var(--text-2); background: var(--fill, rgba(127,127,127,.12)); border-radius: 12px; padding: 10px 12px; margin: 0 0 12px; display: flex; gap: 6px; align-items: flex-start; }

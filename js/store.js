@@ -66,7 +66,30 @@ export const store = {
   },
 
   /* ---------- escrita ---------- */
+  /* Quem cadastrou é o dono: só ele altera ou apaga. O outro só vê. */
+  ownerOf(col, item) {
+    if (!item) return null;
+    if (col === 'notes') return item.author || item.createdBy || null;
+    if (col === 'events') return item.createdBy || (item.assignees || [])[0] || null;
+    if (col === 'companies') return item.createdBy || null;
+    return null;
+  },
+  canEdit(col, item) {
+    if (this.mode !== 'cloud' || !['events', 'notes', 'companies'].includes(col)) return true;
+    const owner = this.ownerOf(col, item);
+    return !owner || owner === this.me;
+  },
+  _denied(col, item) {
+    const owner = this.member(this.ownerOf(col, item))?.name || 'o parceiro';
+    if (this.onDenied) this.onDenied(`Só ${owner} pode alterar isso (foi ${owner === 'o parceiro' ? 'ele' : owner} quem cadastrou).`);
+  },
+
   async upsert(col, item) {
+    const existing = this.state[col]?.find((x) => x.id === item.id);
+    if (existing && !this.canEdit(col, existing)) {
+      this._denied(col, existing);
+      return existing;
+    }
     const before = col === 'events' ? this.state.events.find((x) => x.id === item.id) : null;
     const prev = before ? { ...before } : null;
     item.updatedAt = Date.now();
@@ -81,6 +104,11 @@ export const store = {
     return item;
   },
   async upsertMany(col, items, { activity = null } = {}) {
+    items = items.filter((it) => {
+      const existing = this.state[col]?.find((x) => x.id === it.id);
+      return !existing || this.canEdit(col, existing);
+    });
+    if (!items.length) return;
     const now = Date.now();
     items.forEach((it) => {
       it.updatedAt = now;
@@ -96,6 +124,11 @@ export const store = {
     this.emit();
   },
   async remove(col, id) {
+    const target = this.state[col]?.find((x) => x.id === id);
+    if (target && !this.canEdit(col, target)) {
+      this._denied(col, target);
+      return;
+    }
     const old = this.state[col].find((x) => x.id === id);
     if (col === 'events' && old) logActivity({ kind: 'deleted', events: [compactEvent(old)] });
     this.state[col] = this.state[col].filter((x) => x.id !== id);
@@ -105,6 +138,12 @@ export const store = {
     this.emit();
   },
   async removeMany(col, ids, opts = {}) {
+    const blocked = this.state[col].filter((x) => ids.includes(x.id) && !this.canEdit(col, x));
+    if (blocked.length) {
+      if (!opts.silent) this._denied(col, blocked[0]);
+      ids = ids.filter((id) => !blocked.some((b) => b.id === id));
+      if (!ids.length) return;
+    }
     const olds = this.state[col].filter((x) => ids.includes(x.id));
     if (col === 'events' && olds.length && !opts.silent) logActivity({ kind: 'deleted', events: olds.slice(0, 20).map(compactEvent) });
     this.state[col] = this.state[col].filter((x) => !ids.includes(x.id));
