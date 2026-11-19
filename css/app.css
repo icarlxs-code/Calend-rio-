@@ -1160,4 +1160,11 @@ html, body { overflow-x: hidden; max-width: 100%; }
 /* o topo da transição tem a mesma cor da barra do iPhone (emenda invisível) */
 .spaceveil--personal { background: linear-gradient(180deg, #C88AE8 0%, #A06BFF 45%, #5B6BFF 100%); }
 .spaceveil--work { background: linear-gradient(180deg, #1E1E25 0%, #0E0E12 100%); }
-.spaceveil { top: calc(-1 * env(safe-area-inset-top, 0px)); }
+
+/* Faixa da hora/bateria: o app desenha atrás dela (barra translúcida do iPhone).
+   Escura no Trabalho (combina com a ilha do iPhone) e roxa no Pessoal; texto da barra fica branco. */
+:root { --bar: #0E0E12; }
+:root[data-space="personal"] { --bar: linear-gradient(90deg, #C88AE8 0%, #A06BFF 55%, #7C6BFF 100%); }
+body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: var(--bar); z-index: 150; pointer-events: none; }
+.spaceveil { z-index: 300; }
+body.is-client::before { display: none; }
