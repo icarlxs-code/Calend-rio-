@@ -1140,3 +1140,20 @@ html:not(.intro-done) .tabbar { opacity: 0; }
 .bchip--warn { color: var(--warn); background: var(--warn-soft); }
 .bchip--free { color: var(--tip, #4338CA); }
 .brow__next { font-size: 12.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+/* trava a largura: a faixa de dias nunca pode alargar a página (Safari do iPhone) */
+html, body { overflow-x: hidden; max-width: 100%; }
+#app, .view, .hdr, .week { max-width: 100%; min-width: 0; }
+.week { overflow: hidden; }
+.daystrip { width: 100%; max-width: 100%; min-width: 0; contain: inline-size; }
+.daystrip .wday { flex: 0 0 calc((min(100vw, 540px) - 2 * var(--gutter)) / 7); width: calc((min(100vw, 540px) - 2 * var(--gutter)) / 7); min-width: 0; }
+.wday { position: relative; } .wday .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* resumo do dia compacto */
+.brief { padding: 10px 12px; gap: 10px; align-items: center; }
+.brief .brief__ic { width: 30px; height: 30px; }
+.brief__body { gap: 6px; }
+.brow { display: flex; align-items: center; gap: 7px; font-size: 14px; min-width: 0; }
+.brow b { font-size: 14px; color: var(--text); }
+.brow__st { font-weight: 600; color: var(--text-2); white-space: nowrap; }
+.brow__st.is-ok { color: var(--ok); }
+.brow__st.is-late { color: var(--danger); }
+.brow__next { color: var(--text-3); font-size: 13px; }

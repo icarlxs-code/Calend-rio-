@@ -191,20 +191,16 @@ export function renderToday() {
     ${next}
     <button class="brief" data-action="assistant">
       <span class="brief__ic">${icon('sparkle', 18)}</span>
-      <div class="brief__body"><strong>Resumo do dia</strong>
-        ${dayBriefRows(date, ui.person).map((r) => `<div class="brow">
-          ${avatar(r.id, 30)}
-          <div class="brow__main">
-            <b>${esc(r.name)}</b>
-            <div class="brow__chips">
-              <span class="bchip">${r.total ? `${r.total} tarefa${r.total > 1 ? 's' : ''}` : 'Sem tarefas'}</span>
-              ${r.done ? `<span class="bchip bchip--ok">${icon('check', 11)} ${r.done} feita${r.done > 1 ? 's' : ''}</span>` : ''}
-              ${r.late ? `<span class="bchip bchip--late">${r.late} atrasad${r.late > 1 ? 'as' : 'a'}</span>` : ''}
-              ${r.free ? `<span class="bchip${r.busy ? ' bchip--warn' : ' bchip--free'}">${icon('clock', 11)} ${esc(r.free)}</span>` : ''}
-            </div>
-            ${r.next ? `<small class="brow__next">Próximo: ${esc(r.next)}</small>` : ''}
-          </div>
-        </div>`).join('')}
+      <div class="brief__body">
+        ${dayBriefRows(date, ui.person).map((r) => {
+          const left = r.total - r.done;
+          const status = !r.total ? 'nada marcado hoje'
+            : r.late ? `${r.late} atrasad${r.late > 1 ? 'as' : 'a'}`
+            : !left ? 'fez tudo ✓'
+            : `${left} para fazer`;
+          const cls = !r.total ? '' : r.late ? ' is-late' : !left ? ' is-ok' : '';
+          return `<div class="brow">${avatar(r.id, 22)}<b>${esc(r.name)}</b><span class="brow__st${cls}">${esc(status)}</span>${r.next && !r.late ? `<small class="brow__next">· próximo às ${esc(r.next.split(' · ')[0])}</small>` : ''}</div>`;
+        }).join('')}
       </div>
       ${icon('right', 18, 'muted')}
     </button>
