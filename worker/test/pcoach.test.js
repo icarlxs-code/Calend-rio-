@@ -89,3 +89,7 @@ test('um dia inteiro sem IA: quase nenhuma mensagem repetida', () => {
   const uniq = new Set(bodies).size;
   assert.ok(uniq / bodies.length > 0.85, `${uniq}/${bodies.length} diferentes`);
 });
+test('mensagens começam às 7h20', () => {
+  assert.equal(nextNudge(prof, {}, at('07:19')), null);
+  assert.match(nextNudge(prof, {}, at('07:20'), () => 0.3).msg.title, /Bom dia/);
+});

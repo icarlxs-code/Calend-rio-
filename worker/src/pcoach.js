@@ -1,4 +1,4 @@
-/* "Amigo" do modo Pessoal: ao longo do dia (7h30 às 22h15) manda para cada pessoa
+/* "Amigo" do modo Pessoal: ao longo do dia (7h20 às 22h15) manda para cada pessoa
    mensagens de ânimo, versículos, água, hora de comer e lembretes do que ela anotou.
    Cada pessoa recebe só sobre a própria agenda pessoal. */
 import { brNow } from './coach.js';
@@ -138,7 +138,7 @@ export function agendaMessages(p, br, st) {
 
 const INTERVAL = { alta: [85, 100], normal: [90, 150], calma: [180, 240] };
 const ANCHORS = [
-  { key: 'morning', from: 7 * 60 + 30, to: 9 * 60 },
+  { key: 'morning', from: 7 * 60 + 20, to: 9 * 60 },
   { key: 'lunch', from: 11 * 60 + 40, to: 12 * 60 + 40, pref: 'meals' },
   { key: 'dinner', from: 19 * 60 + 15, to: 20 * 60 + 15, pref: 'meals' },
   { key: 'night', from: 21 * 60 + 40, to: 22 * 60 + 15 },
@@ -152,7 +152,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
   if (!prefs.nudges) return null;
   st = { next: 0, day: '', done: {}, water: 0, verses: 0, recent: [], asked: {}, ...st };
   if (st.day !== br.date) st = { ...st, day: br.date, done: {}, water: 0, verses: 0 };
-  if (mins < 7 * 60 + 30 || mins > 22 * 60 + 15) return null;
+  if (mins < 7 * 60 + 20 || mins > 22 * 60 + 15) return null;
   const seed = Math.floor(rand() * 1e6);
   const n = p.name || '';
   const V = { n };
@@ -263,7 +263,7 @@ export async function runPersonalCoach(env, sendToMember, team) {
   const now = Date.now();
   const br = brNow(now);
   const mins = br.h * 60 + br.m;
-  if (mins < 7 * 60 + 30 || mins > 22 * 60 + 15) return 0;
+  if (mins < 7 * 60 + 20 || mins > 22 * 60 + 15) return 0;
   const [state, force] = await Promise.all([env.CAL.get('pcoach', 'json'), env.CAL.get('pnudge-force', 'json')]);
   const all = state || {};
   let sent = 0, changed = false;
