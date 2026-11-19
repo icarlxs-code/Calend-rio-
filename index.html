@@ -16,7 +16,6 @@
   <link rel="icon" href="icons/favicon-64.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="preload" href="media/intro-poster.jpg" as="image">
-  <link rel="preload" href="media/intro-3.webp" as="image">
   <link rel="stylesheet" href="css/app.css">
   <!--PRELOAD-->
   <link rel="modulepreload" href="dist/a-34VXYJK7.js">
@@ -34,52 +33,100 @@
   <!--/PRELOAD-->
 </head>
 <body>
-  <div id="intro" class="intro" aria-hidden="true"></div>
+  <div id="intro" class="intro" aria-hidden="true"><canvas id="intro-canvas"></canvas></div>
   <script>
-/* Abertura animada (sem som). É uma animação de imagem, não vídeo: toca sempre,
-   inclusive no Modo Pouca Energia do iPhone, e fica guardada no celular (abre sem internet).
-   Aparece ao abrir o app e ao voltar para ele depois de um tempo fora. */
+/* Abertura animada (sem som), desenhada quadro a quadro pelo próprio app.
+   Funciona sempre, inclusive no Modo Pouca Energia do iPhone (que bloqueia vídeos e
+   segura animações), e os quadros ficam guardados no celular: abre na hora, sem internet.
+   Para não pesar na memória, só os próximos quadros são preparados enquanto toca. */
 (function () {
   var intro = document.getElementById('intro');
+  var canvas = document.getElementById('intro-canvas');
   var root = document.documentElement;
-  if (!intro) return;
-  var SRC = 'media/intro-3.webp';
-  var DURATION = 3000;  // duração da animação (ms)
-  var AWAY_MS = 30000;  // tempo fora do app para repetir a abertura
-  var leaving = false, timers = [], hiddenAt = 0, n = 0;
+  if (!intro || !canvas) return;
+  var FRAMES = 72, FPS = 24, AHEAD = 4;
+  var URLS = [];
+  for (var i = 1; i <= FRAMES; i++) URLS.push('media/intro/f' + ('00' + i).slice(-3) + '.webp');
+  var AWAY_MS = 30000; // tempo fora do app para repetir a abertura
+  var leaving = false, timers = [], hiddenAt = 0, run = 0, blobs = null, loading = null;
   var isClient = function () { return /^#\/(c|v)\//.test(location.hash); };
   var clear = function () { timers.forEach(clearTimeout); timers = []; };
+
+  function loadAll() {
+    if (blobs) return Promise.resolve(blobs);
+    if (!loading) {
+      loading = Promise.all(URLS.map(function (u) { return fetch(u).then(function (r) { if (!r.ok) throw new Error(u); return r.blob(); }); }))
+        .then(function (b) { blobs = b; return b; })
+        .catch(function (e) { loading = null; throw e; });
+    }
+    return loading;
+  }
 
   function finish() {
     if (leaving) return;
     leaving = true;
+    run++;
     clear();
     intro.classList.add('is-leaving');
     root.classList.add('intro-done');
-    timers.push(setTimeout(function () {
-      intro.classList.add('is-gone');
-      intro.innerHTML = '';
-    }, 800));
+    timers.push(setTimeout(function () { intro.classList.add('is-gone'); }, 800));
+  }
+
+  function draw(ctx, bmp) {
+    var cw = canvas.width, ch = canvas.height;
+    var s = Math.max(cw / bmp.width, ch / bmp.height);
+    var w = bmp.width * s, h = bmp.height * s;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.drawImage(bmp, (cw - w) / 2, (ch - h) / 2, w, h);
+  }
+
+  function animate(myRun) {
+    var dpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = Math.round(innerWidth * dpr);
+    canvas.height = Math.round(innerHeight * dpr);
+    var ctx = canvas.getContext('2d');
+    var decode = function (i) { return createImageBitmap(blobs[i]); };
+    var queue = [];
+    for (var k = 0; k < AHEAD && k < FRAMES; k++) queue[k] = decode(k);
+    var start = null;
+    function step(now) {
+      if (myRun !== run) return;
+      if (start === null) start = now;
+      var idx = Math.floor(((now - start) / 1000) * FPS);
+      if (idx >= FRAMES - Math.round(FPS * 0.3)) finish(); // emenda a transição no fim
+      if (idx >= FRAMES) return;
+      // pega o quadro da vez (pula quadros se o celular atrasar, para manter o tempo)
+      var p = queue[idx];
+      if (!p) p = queue[idx] = decode(idx);
+      p.then(function (bmp) {
+        if (myRun !== run) return bmp.close && bmp.close();
+        draw(ctx, bmp);
+        if (bmp.close) bmp.close();
+      }).catch(function () {});
+      for (var j = 0; j < idx; j++) if (queue[j] && j !== idx) { queue[j].then(function (b) { if (b.close) b.close(); }).catch(function () {}); queue[j] = null; }
+      for (var a = idx + 1; a <= idx + AHEAD && a < FRAMES; a++) if (!queue[a]) queue[a] = decode(a);
+      requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
   }
 
   function play() {
     clear();
     leaving = false;
+    var myRun = ++run;
     intro.classList.remove('is-gone', 'is-leaving');
     root.classList.remove('intro-done');
-    // imagem nova a cada abertura: a animação recomeça do início
-    var img = new Image();
-    img.alt = '';
-    img.decoding = 'async';
-    img.onload = function () {
-      intro.innerHTML = '';
-      intro.appendChild(img);
-      clear();
-      timers.push(setTimeout(finish, DURATION - 300)); // emenda a transição antes do último quadro
-    };
-    img.onerror = function () { clear(); timers.push(setTimeout(finish, 500)); };
-    img.src = SRC + '?p=' + (++n) + '-' + Date.now();
-    timers.push(setTimeout(finish, DURATION + 2500)); // segurança: nunca prende a pessoa na abertura
+    var ctx = canvas.getContext('2d');
+    ctx && ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // primeira vez sem os quadros no celular: mostra a capa e segue (eles baixam por trás)
+    timers.push(setTimeout(function () { if (myRun === run && !blobs) finish(); }, 2500));
+    timers.push(setTimeout(finish, 3000 + 3500)); // segurança: nunca prende a pessoa na abertura
+    loadAll().then(function () {
+      if (myRun !== run || leaving) return;
+      if (typeof createImageBitmap !== 'function') return finish();
+      animate(myRun);
+    }).catch(function () { if (myRun === run) finish(); });
   }
 
   intro.addEventListener('click', finish); // toque para pular

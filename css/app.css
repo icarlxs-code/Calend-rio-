@@ -882,3 +882,4 @@ html:not(.intro-done) .tabbar { opacity: 0; }
 .client-preview .client__hero { padding-top: 34px; }
 .intro { background: #000 url("../media/intro-poster.jpg") center / cover no-repeat; }
 .intro img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.intro canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
