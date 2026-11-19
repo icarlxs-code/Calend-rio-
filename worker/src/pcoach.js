@@ -51,6 +51,20 @@ const T = {
     'Lembrete de amigo: água! Cabeça boa começa com corpo hidratado 💧',
     'Tá bebendo água direitinho? Bora mais um copo 💧',
     'Só passando pra lembrar: água, {n}! 💧',
+    'Hora da água! Um copo agora e a cabeça agradece 💧',
+    'Garrafinha do lado? Dá uns goles aí, {n} 💧',
+    'Seu corpo é 70% água. Repõe aí, campeão 💧',
+    'Cansaço às vezes é só sede. Bebe um copo e sente a diferença 💧',
+    'Mais um copo pra conta de hoje! Bora, {n} 💧',
+    'Pausa de 10 segundos: bebe água e volta com tudo 💧',
+    'Pele, foco e disposição agradecem: vai beber água 💧',
+    'Água agora, {n}! Cuidar de você é prioridade 💧',
+    'Lembra da água? Um copinho já ajuda 💧',
+    'Hidratado rende mais. Bebe um copo aí 💧',
+    'Ô {n}, cadê a água? Vai lá rapidinho 💧',
+    'Brinde com você mesmo: um copo d’água agora 💧',
+    'Cuidar do corpo também é produtividade. Água! 💧',
+    'Já faz uma hora... hora de mais um copo 💧',
   ],
   lunch: [
     'Já tá dando a hora do almoço, {n}. Vai almoçar, hein! Não pula refeição 🍽️',
@@ -149,7 +163,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
   const br = brNow(now);
   const mins = br.h * 60 + br.m;
   const prefs = { nudges: true, water: true, meals: true, faith: true, freq: 'normal', ...(p.prefs || {}) };
-  if (!prefs.nudges) return null;
+  if (!prefs.nudges && !prefs.water) return null;
   st = { next: 0, day: '', done: {}, water: 0, verses: 0, recent: [], asked: {}, ...st };
   if (st.day !== br.date) st = { ...st, day: br.date, done: {}, water: 0, verses: 0 };
   if (mins < 7 * 60 + 20 || mins > 22 * 60 + 15) return null;
@@ -159,8 +173,16 @@ export function nextNudge(p, st, now, rand = Math.random) {
   let msg = null;
 
   // 1) momentos fixos do dia
-  const anchor = ANCHORS.find((a) => mins >= a.from && mins <= a.to && !st.done[a.key] && (!a.pref || prefs[a.pref]));
-  if (anchor) {
+  const anchor = prefs.nudges ? ANCHORS.find((a) => mins >= a.from && mins <= a.to && !st.done[a.key] && (!a.pref || prefs[a.pref])) : null;
+  // água: de hora em hora, das 8h às 21h30 (independente das outras mensagens)
+  const waterDue = prefs.water && mins >= 8 * 60 && mins <= 21 * 60 + 30 && now - (st.lastWater || 0) >= 60 * 60e3 && now - (st.lastAny || 0) >= 10 * 60e3;
+  let isWater = false;
+  if (!anchor && waterDue) {
+    isWater = true;
+    st.water++;
+    st.lastWater = now;
+    msg = { title: 'Água 💧', body: fill(pick(T.water, seed), V), kind: 'water' };
+  } else if (anchor) {
     st.done = { ...st.done, [anchor.key]: true };
     if (anchor.key === 'morning') {
       const count = (p.today || []).filter((x) => !x.done).length;
@@ -177,14 +199,13 @@ export function nextNudge(p, st, now, rand = Math.random) {
       msg = { title: anchor.key === 'lunch' ? 'Hora do almoço 🍽️' : 'Hora de jantar 🍽️', body: fill(pick(T[anchor.key], seed), V), kind: anchor.key };
     }
   } else {
-    if (now < (st.next || 0)) return null;
+    if (!prefs.nudges || now < (st.next || 0) || now - (st.lastAny || 0) < 15 * 60e3) return null;
     // não manda logo antes de um momento fixo
     if (ANCHORS.some((a) => !st.done[a.key] && a.from - mins > 0 && a.from - mins < 25)) return null;
     // 2) mensagens ao longo do dia: agenda > água > fé > ânimo > autocuidado
     const agenda = agendaMessages(p, br, st).filter((m) => !st.recent.includes(m.body));
     const options = [];
     if (agenda.length) options.push(['agenda', 4]);
-    if (prefs.water && st.water < 5) options.push(['water', 3]);
     if (prefs.faith && st.verses < 3) options.push(['verse', 2]);
     options.push(['motivation', 3]);
     if (mins > 10 * 60 && mins < 18 * 60) options.push(['selfcare', 1]);
@@ -214,7 +235,8 @@ export function nextNudge(p, st, now, rand = Math.random) {
     if (r2 < 0.4) msg.body = `${msg.body} ${pick(CLOSERS, Math.floor(r2 * 1e6))}`.replace(/\{n\}/g, n);
   }
   const [a, b] = INTERVAL[prefs.freq] || INTERVAL.normal;
-  st.next = now + (a + rand() * (b - a)) * 60e3;
+  if (!isWater) st.next = now + (a + rand() * (b - a)) * 60e3;
+  st.lastAny = now;
   st.recent = [...(st.recent || []), msg.body].slice(-12);
   return { msg: { ...msg, tag: 'p-amigo', url: './#/p/hoje' }, state: st };
 }
@@ -270,7 +292,8 @@ export async function runPersonalCoach(env, sendToMember, team) {
   for (const m of team) {
     const st = { ...(all[m.id] || {}) };
     if (force && force[m.id] && force[m.id] > (st.forcedAt || 0)) { st.next = 0; st.forcedAt = force[m.id]; changed = true; }
-    if ((st.next || 0) > now && !ANCHORS.some((a) => mins >= a.from && mins <= a.to && !(st.day === br.date && st.done?.[a.key]))) continue;
+    const waterMaybe = mins >= 8 * 60 && mins <= 21 * 60 + 30 && now - (st.lastWater || 0) >= 60 * 60e3;
+    if ((st.next || 0) > now && !waterMaybe && !ANCHORS.some((a) => mins >= a.from && mins <= a.to && !(st.day === br.date && st.done?.[a.key]))) continue;
     const prof = await env.CAL.get(`pprofile:${m.id}`, 'json');
     if (!prof) continue; // a pessoa ainda não abriu o app novo
     // resumo de outro dia (a pessoa não abriu o app hoje): ajusta "hoje" e "amanhã"
@@ -283,10 +306,13 @@ export async function runPersonalCoach(env, sendToMember, team) {
     if (!r) { all[m.id] = st; continue; }
     // 7 em cada 10 mensagens escritas pela IA (as outras do banco variado): quase nunca iguais
     let out = r.msg;
-    if (Math.random() < 0.7) {
+    const u = r.state.usage && r.state.usage.date === br.date ? r.state.usage : { date: br.date, sent: 0, ai: 0 };
+    if (Math.random() < 0.7 && r.msg.kind !== 'water') {
       const h = await humanize(env, r.msg, p, st.recent, br).catch(() => null);
-      if (h) { out = { ...r.msg, ...h }; r.state.recent = [...(r.state.recent || []).slice(0, -1), h.body].slice(-12); }
+      if (h) { out = { ...r.msg, ...h }; u.ai++; r.state.recent = [...(r.state.recent || []).slice(0, -1), h.body].slice(-12); }
     }
+    u.sent++;
+    r.state.usage = u;
     all[m.id] = r.state;
     changed = true;
     const { kind, fact, verse, ...push } = out;

@@ -1,5 +1,6 @@
 /* Ajustes: perfil, lembretes, sincronização, backup */
 import { coachTest } from '../coach.js';
+import { usagePlaceholder, fillUsage } from '../usage.js';
 import { store } from '../store.js';
 import { CONFIG } from '../../config.js';
 import { TYPES, BEST_TIMES_TABLE } from '../constants.js';
@@ -16,7 +17,7 @@ export function renderSettings() {
   const me = store.member(store.me);
   const cloud = store.mode === 'cloud';
   const notifOk = 'Notification' in window && Notification.permission === 'granted';
-  if (cloud) setTimeout(fillDevices, 0);
+  if (cloud) setTimeout(() => { fillDevices(); fillUsage(); }, 0);
   return `
   <header class="hdr">
     <div class="hdr__row"><div class="hdr__titles"><p class="hdr__eyebrow">${esc(CONFIG.appName)} · ${esc(CONFIG.agencyName)}</p><h1>Ajustes</h1></div></div>
@@ -141,6 +142,7 @@ function notifySection() {
     </form>
     ${cloud ? `<div class="list" data-devices><div class="list__row"><span><small>Conferindo celulares cadastrados…</small></span></div></div>` : ''}
     ${perm === 'granted' ? `<button class="btn btn--soft btn--block" data-action="notify-test">${icon('bell', 16)} Enviar notificação de teste</button>` : ''}
+    ${usagePlaceholder() ? `<h3 class="block__sub">Uso de hoje (grátis)</h3>${usagePlaceholder()}` : ''}
     ${perm === 'granted' && cloud ? `<button class="btn btn--soft btn--block" data-action="coach-test">✨ Receber uma dica agora</button>` : ''}
     <button class="btn-text btn-text--sm" data-action="onboarding-again">Ver a apresentação de novo</button>
   </section>`;

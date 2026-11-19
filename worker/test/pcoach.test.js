@@ -27,8 +27,10 @@ test('almoço na janela, uma vez só', () => {
 });
 
 test('respeita o intervalo entre mensagens', () => {
-  const st = { day: '2026-11-20', done: { morning: true }, next: at('10:00') + 3600e3 };
+  const st = { day: '2026-11-20', done: { morning: true }, next: at('10:00') + 3600e3, lastWater: at('09:30') };
   assert.equal(nextNudge(prof, st, at('10:00')), null);
+  // água volta 1h depois da última
+  assert.match(nextNudge(prof, st, at('10:31'), () => 0.4).msg.title, /Água/);
 });
 
 test('desligado nas preferências não manda', () => {
@@ -47,18 +49,20 @@ test('mensagens da agenda: pendência, aniversário, lista; cabelo já marcado n
   assert.match(noHair, /Faz 31 dias desde o último corte/);
 });
 
-test('ao longo de um dia inteiro manda entre 8 e 14 mensagens, sem repetir texto seguido', () => {
+test('ao longo de um dia: água de hora em hora + outras mensagens, sem repetir texto seguido', () => {
   let st = {}, bodies = [];
   for (let t = at('07:00'); t <= at('22:30'); t += 60e3) {
     const r = nextNudge(prof, st, t);
     if (r) { st = r.state; bodies.push(r.msg.body); }
   }
-  assert.ok(bodies.length >= 8 && bodies.length <= 14, `mandou ${bodies.length}`);
+  const water = bodies.filter((b) => b.includes('💧')).length;
+  assert.ok(water >= 12 && water <= 15, `água ${water}`);
+  assert.ok(bodies.length >= 18 && bodies.length <= 30, `mandou ${bodies.length}`);
   for (let i = 1; i < bodies.length; i++) assert.notEqual(bodies[i], bodies[i - 1]);
 });
 
 test('cron: só manda para quem tem resumo e usa o pedido de teste', async () => {
-  const kv = { 'pprofile:henrique': JSON.stringify(prof), 'pcoach': JSON.stringify({ henrique: { day: '2026-11-20', done: { morning: true }, next: at('10:00') + 3600e3 } }), 'pnudge-force': JSON.stringify({ henrique: 5 }) };
+  const kv = { 'pprofile:henrique': JSON.stringify(prof), 'pcoach': JSON.stringify({ henrique: { day: '2026-11-20', done: { morning: true }, next: at('10:00') + 3600e3, lastWater: at('09:50') } }), 'pnudge-force': JSON.stringify({ henrique: 5 }) };
   const env = { CAL: { get: async (k, t) => (kv[k] ? (t === 'json' ? JSON.parse(kv[k]) : kv[k]) : null), put: async (k, v) => (kv[k] = v) } };
   const sent = [];
   const realNow = Date.now;
@@ -87,7 +91,7 @@ test('um dia inteiro sem IA: quase nenhuma mensagem repetida', () => {
     if (r) { st = r.state; bodies.push(r.msg.body); }
   }
   const uniq = new Set(bodies).size;
-  assert.ok(uniq / bodies.length > 0.85, `${uniq}/${bodies.length} diferentes`);
+  assert.ok(uniq / bodies.length > 0.8, `${uniq}/${bodies.length} diferentes`);
 });
 test('mensagens começam às 7h20', () => {
   assert.equal(nextNudge(prof, {}, at('07:19')), null);

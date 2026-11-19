@@ -79,7 +79,7 @@ Não repita estas mensagens recentes: ${recent.join(' | ') || '—'}`;
       const m = /\{[\s\S]*\}/.exec(txt);
       if (!m) continue;
       const j = JSON.parse(m[0]);
-      if (j.title && j.body) return { title: String(j.title).slice(0, 60), body: String(j.body).slice(0, 220) };
+      if (j.title && j.body) return { title: String(j.title).slice(0, 60), body: String(j.body).slice(0, 220), byAI: true };
     } catch (e) { console.log('coach IA', model, e.message); }
   }
   return null;
@@ -120,6 +120,10 @@ export async function runCoach(env, sendToMember, team) {
       || fallback(co ? kind : 'motivacao', co, m.name, dates);
     sent += await sendToMember(env, m.id, { title: msg.title, body: msg.body, tag: 'coach', url: './' }, 'coach');
     st.recent[m.id] = [...recent, msg.body].slice(-6);
+    const u = st.usage && st.usage.date === br.date ? st.usage : { date: br.date, sent: 0, ai: 0 };
+    u.sent++;
+    if (msg.byAI) u.ai++;
+    st.usage = u;
   }
   await env.CAL.put('coach', JSON.stringify(st));
   return sent;

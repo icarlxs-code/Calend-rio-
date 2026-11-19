@@ -247,6 +247,23 @@ async function handle(req, env) {
     return reply(env, req, { titles: [] });
   }
 
+  // Uso de hoje (para a pessoa saber se está dentro do limite grátis)
+  if (url.pathname === '/usage') {
+    const dayStart = Date.parse(new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10) + 'T00:00:00-03:00');
+    const [ss, ps, pc, co] = await Promise.all(['schedule-sent', 'personal-sent', 'pcoach', 'coach'].map((k) => env.CAL.get(k, 'json')));
+    const today = (o) => Object.values(o || {}).filter((t) => t >= dayStart).length;
+    const date = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
+    const amigo = Object.values(pc || {}).reduce((acc, st) => (st.usage?.date === date ? { sent: acc.sent + st.usage.sent, ai: acc.ai + st.usage.ai } : acc), { sent: 0, ai: 0 });
+    const coach = co?.usage?.date === date ? co.usage : { sent: 0, ai: 0 };
+    const aiMsgs = amigo.ai + coach.ai;
+    return reply(env, req, {
+      ok: true,
+      lembretes: today(ss), pessoais: today(ps), amigo, coach,
+      // estimativa: cada mensagem escrita pela IA gasta ~40 "neurônios" de 10.000 grátis por dia
+      iaPercent: Math.min(100, Math.round((aiMsgs * 40) / 10000 * 100)),
+    });
+  }
+
   if (url.pathname === '/devices') {
     const subs = Object.values(await getSubs(env));
     const counts = {};

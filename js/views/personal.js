@@ -9,6 +9,7 @@ import { icon } from '../icons.js';
 import { store } from '../store.js';
 import { ui, saveUi } from '../ui.js';
 import * as push from '../avisos.js';
+import { usagePlaceholder, fillUsage } from '../usage.js';
 import { esc, todayKey, addDays, dayLabel, fmtTime, fromKey, toKey, diffDays, greeting, fmtDayLong, monthKey, addMonths, fmtMonth, WD_LETTER, MONTHS } from '../utils.js';
 
 const firstName = () => store.member(store.me)?.name || '';
@@ -182,11 +183,13 @@ function renderPSettings() {
         <label class="list__row"><span><b>Boa noite, às 21h</b><small>o que vem amanhã, pra não ser pego de surpresa</small></span><input type="checkbox" class="switch" name="night" ${prefs.night ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Mensagens de ânimo</b><small>ao longo do dia: motivação, versículos e lembretes do que você anotou</small></span><input type="checkbox" class="switch" name="nudges" ${prefs.nudges ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Frequência</b><small>das mensagens de ânimo</small></span><select class="input input--inline" name="freq"><option value="alta"${prefs.freq === 'alta' ? ' selected' : ''}>A cada 1h30</option><option value="normal"${prefs.freq === 'normal' ? ' selected' : ''}>A cada 1h30–2h30</option><option value="calma"${prefs.freq === 'calma' ? ' selected' : ''}>A cada 3–4h</option></select></label>
-        <label class="list__row"><span><b>Beber água</b><small>lembretes leves durante o dia</small></span><input type="checkbox" class="switch" name="water" ${prefs.water ? 'checked' : ''}></label>
+        <label class="list__row"><span><b>Beber água</b><small>de hora em hora, das 8h às 21h30</small></span><input type="checkbox" class="switch" name="water" ${prefs.water ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Hora de comer</b><small>almoço e jantar</small></span><input type="checkbox" class="switch" name="meals" ${prefs.meals ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Versículos e fé</b><small>uma palavra da Bíblia de manhã e à noite</small></span><input type="checkbox" class="switch" name="faith" ${prefs.faith ? 'checked' : ''}></label>
       </form>
       ${ok ? `<button class="btn btn--soft btn--block" data-action="notify-test">${icon('bell', 16)} Enviar aviso de teste</button><button class="btn btn--soft btn--block" data-action="p-nudge-test">${icon('sparkles', 16)} Receber uma mensagem agora</button>` : ''}`)}
+
+    ${usagePlaceholder() ? section(`${icon('bell', 16)} Uso de hoje`, `${usagePlaceholder()}<p class="fhelp">Os avisos, a água, os versículos e os lembretes não gastam crédito: o servidor e as notificações são grátis. Só as mensagens escritas pela IA usam uma cota grátis diária; se ela acabar, as mensagens continuam chegando com textos prontos e a cota volta no dia seguinte.</p>`) : ''}
 
     ${section(`${icon('heart', 16)} Ícone próprio na Tela de Início`, `<div class="pcard"><p>Quer o Pessoal como se fosse outro app, com ícone próprio?</p>
       <ol><li>Abra este endereço no <b>Safari</b> com o modo Pessoal aberto.</li><li>Toque em <b>Compartilhar</b> → <b>Adicionar à Tela de Início</b>.</li><li>Vai aparecer o ícone <b>“Pessoal”</b>, que abre direto aqui. Entre com o mesmo e-mail e senha.</li></ol></div>`)}
@@ -223,6 +226,7 @@ export function bindPersonal(view) {
     toast(`Anotado: ${dayLabel(it.date)}${it.time ? ' às ' + fmtTime(it.time) : ''}`, { action: 'Ajustar', onAction: () => openPersonalEditor(it.id), ms: 4000 });
     return false;
   };
+  if (view.querySelector('[data-usage]')) fillUsage(view);
   const pf = view.querySelector('[data-form="pprefs"]');
   if (pf) pf.onchange = () => {
     const v = { freq: pf.freq.value };

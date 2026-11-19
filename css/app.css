@@ -1118,3 +1118,4 @@ html:not(.intro-done) .tabbar { opacity: 0; }
 .netbtn.is-on { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink) inset; }
 .ecard__late { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 800; color: #fff; background: var(--danger); border-radius: 999px; padding: 2px 8px; white-space: nowrap; text-transform: uppercase; letter-spacing: .02em; }
 .ecard__late--row { align-self: flex-start; margin: 4px 0 2px; }
+.block__sub { font-size: 13px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; margin-top: 6px; }
