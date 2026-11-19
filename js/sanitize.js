@@ -36,6 +36,7 @@ export function sanitizeItem(col, x) {
       duration: x.duration ? num(x.duration, 5, 1440, null) : null,
       reminder: num(x.reminder, -1, 10080, 30),
       visibleToClient: x.visibleToClient !== false,
+      notifyPartner: x.notifyPartner !== false,
     };
   }
   if (col === 'companies') {

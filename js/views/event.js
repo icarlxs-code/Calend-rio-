@@ -164,6 +164,12 @@ export function openEventEditor({ id = null, date = null, companyId = null, type
   return api;
 }
 
+/* Explica o que acontece com a chave "Avisar o parceiro" */
+function notifyHelp(d, m) {
+  const resp = (d.assignees || []).includes(m.id);
+  if (d.notifyPartner === false) return resp ? `Sem aviso agora. Como ${m.name} é responsável, ele ainda recebe os lembretes do horário.` : `${m.name} não recebe aviso nem lembretes deste evento. Fica só na agenda.`;
+  return `${m.name} recebe o aviso de que você marcou e os lembretes do horário.`;
+}
 const needsDuration = (type) => ['shoot', 'meeting', 'work', 'other'].includes(TYPES[type].kind);
 const needsLocation = (type) => ['shoot', 'meeting'].includes(TYPES[type].kind);
 
@@ -215,6 +221,7 @@ function editorHtml(d, editing, rep) {
         ${store.team.map((m) => `<button type="button" class="whobtn${(d.assignees || []).includes(m.id) ? ' is-on' : ''}" style="--mc:${m.color}" data-who="${m.id}">${avatar(m.id, 30)}<span>${esc(m.name)}</span><i class="whobtn__check">${icon('check', 14)}</i></button>`).join('')}
       </div>
       <p class="fhelp">Marque os dois se forem juntos.</p>
+      ${store.team.filter((m) => m.id !== store.me).map((m) => `<label class="list__row notifyrow"><span><b>${icon('bell', 15)} Avisar ${m.name === 'Matheus' || m.name === 'Henrique' ? 'o ' : ''}${esc(m.name)}</b><small data-notifyhelp>${notifyHelp(d, m)}</small></span><input type="checkbox" class="switch" name="notifyPartner" ${d.notifyPartner !== false ? 'checked' : ''}></label>`).join('')}
     </div>
 
     <div class="fgroup" data-when="location" ${needsLocation(d.type) ? '' : 'hidden'}>
@@ -336,7 +343,17 @@ function mountEditor(api, d, original, rep) {
     d.assignees = d.assignees.includes(id) ? d.assignees.filter((x) => x !== id) : [...d.assignees, id];
     b.classList.toggle('is-on', d.assignees.includes(id));
     refreshHint();
+    const h = el.querySelector('[data-notifyhelp]');
+    const partner = store.team.find((m) => m.id !== store.me);
+    if (h && partner) h.textContent = notifyHelp(d, partner);
   }));
+  const nt = el.querySelector('input[name="notifyPartner"]');
+  if (nt) nt.onchange = () => {
+    d.notifyPartner = nt.checked;
+    const h = el.querySelector('[data-notifyhelp]');
+    const partner = store.team.find((m) => m.id !== store.me);
+    if (h && partner) h.textContent = notifyHelp(d, partner);
+  };
 
   $('[data-useaddr]').onclick = () => {
     const c = store.company(d.companyId);
@@ -418,7 +435,7 @@ function mountEditor(api, d, original, rep) {
       }
       const seriesId = uid('s_');
       await store.upsertMany('events', use.map((date, i) => ({ ...d, id: i === 0 ? d.id : uid('e_'), date, seriesId })), {
-        activity: { kind: 'series', count: use.length, label: `${TYPES[d.type].label} ${REPEATS.find((x) => x.v === rep.mode)?.label.toLowerCase() || ''} às ${fmtTime(d.time)}`, sample: { companyId: d.companyId, date: use[0] } },
+        activity: { notifyPartner: d.notifyPartner, kind: 'series', count: use.length, label: `${TYPES[d.type].label} ${REPEATS.find((x) => x.v === rep.mode)?.label.toLowerCase() || ''} às ${fmtTime(d.time)}`, sample: { companyId: d.companyId, date: use[0] } },
       });
       toast(`${use.length} eventos criados`);
     } else {

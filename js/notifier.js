@@ -41,7 +41,9 @@ export function onEventChange(before, after) {
   const who = (ev.assignees || []).map(nameOf).join(' e ') || 'sem responsável';
   // qualquer mudança vira aviso (as pequenas, como legenda ou título, também)
   const generic = (actor) => ({ title: `${actor} alterou: ${what}`, body: `${whenText(ev)}${ev.title ? ' · ' + ev.title : ''} · ${who}` });
-  const others = store.team.map((m) => m.id).filter((id) => id !== store.me);
+  // "Avisar o parceiro" desligado no evento: o outro só recebe se for responsável por ele
+  const silent = (after || before).notifyPartner === false;
+  const others = store.team.map((m) => m.id).filter((id) => id !== store.me && (!silent || (ev.assignees || []).includes(id)));
   const jobs = others.map((r) => {
     const msg = changeMessage(before, after, { actor: nameOf(store.me), company: coName(ev.companyId), recipient: r, now: nowSP() }) || generic(nameOf(store.me));
     return notify([r], msg, `ev-${ev.id}`, `./#/e/${ev.id}`).then((d) => ({ r, d }));
@@ -65,7 +67,7 @@ export function onEventChange(before, after) {
 
 export function onActivity(a) {
   if (!active()) return;
-  const others = store.team.map((m) => m.id).filter((id) => id !== store.me);
+  const others = a.notifyPartner === false ? [] : store.team.map((m) => m.id).filter((id) => id !== store.me);
   const actor = nameOf(store.me);
   let msg = null;
   if (a.kind === 'deleted' && a.events?.length) {
@@ -98,7 +100,7 @@ export function buildSchedule(now = Date.now()) {
       if (at < now - 10 * 60e3 || at > now + 4 * 86400e3) return;
       const msg = reminderMessage(ev, offset, coName(ev.companyId));
       const resp = (ev.assignees || []).map(nameOf).join(' e ');
-      store.team.map((m) => m.id).forEach((member) => items.push({
+      store.team.map((m) => m.id).filter((member) => ev.notifyPartner !== false || member === ev.createdBy || (ev.assignees || []).includes(member)).forEach((member) => items.push({
         id: `r_${ev.id}_${offset}_${ev.date}${ev.time.replace(':', '')}_${member}`,
         at, member, title: msg.title, body: resp && !(ev.assignees.length === 1 && ev.assignees[0] === member) ? `${msg.body} · ${resp}` : msg.body, tag: `rem-${ev.id}`, url: `./#/e/${ev.id}`, kind: 'reminders', badge: pendingOn(member, ev.date),
       }));

@@ -1110,3 +1110,5 @@ html:not(.intro-done) .tabbar { opacity: 0; }
 .acard__row.is-bad { color: var(--danger); }
 .acard__btns { display: flex; gap: 8px; }
 .acard__res { color: var(--text-3); font-size: 12px; }
+.notifyrow { background: var(--surface); border-radius: 14px; margin-top: 8px; } .notifyrow > span { display: flex; flex-direction: column; gap: 2px; text-align: left; } .notifyrow b { display: inline-flex; align-items: center; gap: 6px; } .notifyrow small { color: var(--text-3); font-size: 12px; }
+.notifyrow > span { flex: 1; align-items: flex-start; } .notifyrow b { justify-content: flex-start; }
