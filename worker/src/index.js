@@ -8,7 +8,7 @@ import { generateVapid, sendPush } from './webpush.js';
 import { verifyIdToken } from './auth.js';
 import { runCoach } from './coach.js';
 import { runPersonalCoach } from './pcoach.js';
-import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive } from './billing.js';
+import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling } from './billing.js';
 
 const SUBJECT = 'mailto:avisos@calendario.app';
 
@@ -141,6 +141,11 @@ export async function everyone(env) {
   const reg = (await env.CAL.get('users', 'json')) || {};
   return [...team, ...Object.entries(reg).map(([id, u]) => ({ id, name: u.name, ws: u.ws, ctxKey: `coach-ctx:${u.ws}` }))];
 }
+/* Dono do app (painel): e-mail configurado no servidor (ADMIN_EMAIL) */
+const isAdmin = (env, me) => {
+  const owner = (env.ADMIN_EMAIL || JSON.parse(env.TEAM || '[]')[0]?.email || '').toLowerCase();
+  return !!owner && (me.email || '').toLowerCase() === owner;
+};
 /* Separa o texto da resposta das ações (<acoes>[...]</acoes>) que o app executa após confirmação */
 export function splitActions(raw) {
   let text = String(raw || '');
@@ -171,6 +176,7 @@ function cleanProfile(p, me) {
       // horários da ficha (janela das mensagens do dia) e o tom que a pessoa escolheu
       ...Object.fromEntries(['wake', 'sleep', 'lunch'].filter((k) => /^\d{2}:\d{2}$/.test(P[k] || '')).map((k) => [k, P[k]])),
       ...(['carinhoso', 'firme', 'direto'].includes(P.tone) ? { tone: P.tone } : {}),
+      ...(['f', 'm', 'n'].includes(P.pronoun) ? { pronoun: P.pronoun } : {}),
     },
     work: p.work && typeof p.work === 'object' ? { profession: clean(p.work.profession, 80), goal: clean(p.work.goal, 80) } : null,
     today: arr(p.today, 20).map(ev), tomorrow: arr(p.tomorrow, 20).map(ev), overdue: arr(p.overdue, 10).map(ev),
@@ -248,9 +254,29 @@ async function handle(req, env) {
     }
   }
   if (url.pathname === '/billing/all') {
-    const owner = (env.ADMIN_EMAIL || JSON.parse(env.TEAM || '[]')[0]?.email || '').toLowerCase();
-    if (me.email?.toLowerCase() !== owner) return reply(env, req, { error: 'só o dono do app' }, 403);
+    if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
     return reply(env, req, { ok: true, byWs: await billingAll(env) });
+  }
+
+  // ---------- erros do app (para o Painel do dono) ----------
+  if (url.pathname === '/log') {
+    const e = { msg: clean(body.msg, 300), where: clean(body.where, 160), ver: clean(body.ver, 40), dev: clean(body.dev, 40), space: clean(body.space, 20) };
+    if (!e.msg) return reply(env, req, { ok: true });
+    const list = (await env.CAL.get('errors', 'json')) || [];
+    const sig = `${e.msg}|${e.where}`.slice(0, 400);
+    const now = Date.now();
+    const hit = list.find((x) => x.sig === sig);
+    // o mesmo erro da mesma pessoa na última hora não gasta outra gravação
+    if (hit && now - hit.last < 3600e3 && (hit.users || []).includes(me.id)) return reply(env, req, { ok: true });
+    if (hit) { hit.count++; hit.last = now; hit.ver = e.ver || hit.ver; hit.users = [...new Set([...(hit.users || []), me.id])].slice(-20); }
+    else list.unshift({ sig, ...e, count: 1, first: now, last: now, users: [me.id] });
+    await env.CAL.put('errors', JSON.stringify(list.sort((a, b) => b.last - a.last).slice(0, 150)));
+    return reply(env, req, { ok: true });
+  }
+  if (url.pathname === '/admin/errors') {
+    if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
+    if (body.clear) { await env.CAL.put('errors', '[]'); return reply(env, req, { ok: true, errors: [] }); }
+    return reply(env, req, { ok: true, errors: (await env.CAL.get('errors', 'json')) || [] });
   }
 
   if (url.pathname === '/subscribe') {
@@ -287,6 +313,22 @@ async function handle(req, env) {
     await env.CAL.put(scheduleKey(me), JSON.stringify({ items, updatedAt: now, by: me.id }));
     await registerUser(env, me);
     return reply(env, req, { ok: true, count: items.length });
+  }
+
+  // Excluir conta (LGPD): assinaturas, aparelhos, lembretes, mensagens e registro de uso
+  if (url.pathname === '/account/delete') {
+    const out = await closeBilling(env, me);
+    const subs = await getSubs(env);
+    let devices = 0;
+    for (const [id, d] of Object.entries(subs)) if (d.member === me.id) { delete subs[id]; devices++; }
+    if (devices) await env.CAL.put('subs', JSON.stringify(subs));
+    await Promise.all([`pitems:${me.id}`, `pprofile:${me.id}`].map((k) => env.CAL.delete(k)));
+    if (me.ws !== 'main') {
+      await Promise.all([`schedule:${me.ws}`, `coach-ctx:${me.ws}`].map((k) => env.CAL.delete(k)));
+      const reg = (await env.CAL.get('users', 'json')) || {};
+      if (reg[me.id]) { delete reg[me.id]; await env.CAL.put('users', JSON.stringify(reg)); }
+    }
+    return reply(env, req, { ok: true, devices, ...out });
   }
 
   if (url.pathname === '/test') {

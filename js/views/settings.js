@@ -10,6 +10,7 @@ import { icon } from '../icons.js';
 import { avatar, toast, confirmDialog, chooseDialog } from '../components.js';
 import { downloadICS } from '../ics.js';
 import { routine } from '../planner.js';
+import { THEMES, themePref } from '../theme.js';
 import * as push from '../avisos.js';
 import { resetOnboarding } from './onboarding.js';
 import { WD_SHORT } from '../utils.js';
@@ -30,6 +31,7 @@ export function renderSettings() {
     ${cloud ? fichaCard() : ''}
     ${cloud && store.solo ? `<button class="pbig pbig--share" data-action="share">${icon('share2', 22)}<div><strong>Agenda compartilhada</strong><small>${store.shared ? `Você está na agenda de ${esc(store.shared.ownerName)}` : store.billing?.addon?.active ? `Plano ${store.billing.addon.plan === 'equipe' ? 'Equipe' : 'Dupla'} ativo · convide e gerencie` : 'Divida a agenda de trabalho com sócio ou equipe · à parte'}</small></div>${icon('right', 18)}</button>` : ''}
     <button class="pbig" data-action="guide">${icon('sparkles', 22)}<div><strong>Como funciona o Lembra</strong><small>Para que serve o modo Trabalho e o modo Pessoal</small></div>${icon('right', 18)}</button>
+    ${cloud ? `<button class="pbig pbig--privacy" data-action="privacy">${icon('lock', 22)}<div><strong>Privacidade e dados</strong><small>LGPD: termos, baixar meus dados, excluir conta</small></div>${icon('right', 18)}</button>` : ''}
     <section class="block">
       <h2 class="block__title">${icon('user', 16)} Quem está usando este celular?</h2>
       ${cloud
@@ -39,6 +41,8 @@ export function renderSettings() {
         : `<div class="whogrid">${store.team.map((m) => `<button class="whobtn${store.me === m.id ? ' is-on' : ''}" style="--mc:${m.color}" data-action="set-me" data-p="${m.id}">${avatar(m.id, 34)}<span>${esc(m.name)}</span><i class="whobtn__check">${icon('check', 14)}</i></button>`).join('')}</div>
            <p class="fhelp">Usado para saudação, “Criado por” e nos lembretes.</p>`}
     </section>
+
+    ${themeCard()}
 
     ${routineSection()}
 
@@ -113,10 +117,18 @@ export function renderSettings() {
 }
 
 /* Ficha da pessoa: profissão + índice calculado (abre para editar) */
+function themeCard() {
+  const cur = themePref();
+  return `<section class="block">
+    <h2 class="block__title">${icon('sun', 16)} Aparência</h2>
+    <div class="seg3">${THEMES.map((t) => `<button class="seg3__btn${cur === t.id ? ' is-on' : ''}" data-action="theme" data-v="${t.id}">${icon(t.id === 'dark' ? 'moon' : t.id === 'light' ? 'sun' : 'phone', 18)}<b>${t.label}</b><small>${t.hint}</small></button>`).join('')}</div>
+    ${!isMarketing() && WORK.theme ? `<p class="fhelp">As cores do modo Trabalho combinam com a sua área${WORK.profession ? ` (${esc(WORK.profession)})` : ''}.</p>` : ''}
+  </section>`;
+}
 function fichaCard() {
   const p = store.profile || {};
   if (!p.onboardedAt) return `<button class="pbig pbig--ficha" data-action="ficha">${icon('idcard', 22)}<div><strong>Preencha sua ficha</strong><small>2 minutos: o Lembra se adapta à sua profissão e calcula seus lembretes</small></div>${icon('right', 18)}</button>`;
-  return `<button class="pbig pbig--ficha" data-action="ficha">${icon('idcard', 22)}<div><strong>Sua ficha</strong><small>${esc(p.profession || 'Profissão')} · índice de esquecimento ${Number(p.index) || 0}/100 · toque para ajustar</small></div>${icon('right', 18)}</button>`;
+  return `<button class="pbig pbig--ficha" data-action="ficha">${icon(!isMarketing() && WORK.badge ? WORK.badge : 'idcard', 22)}<div><strong>Sua ficha</strong><small>${esc(p.profession || 'Profissão')} · índice de esquecimento ${Number(p.index) || 0}/100 · toque para ajustar</small></div>${icon('right', 18)}</button>`;
 }
 
 function notifySection() {

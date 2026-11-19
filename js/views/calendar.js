@@ -1,7 +1,7 @@
 /* Telas "Hoje" (agenda do dia) e "Calendário" (mês) */
 import { store } from '../store.js';
 import { ui } from '../ui.js';
-import { TYPES, isPost, durationOf, typeStyle, WORK, ent, isMarketing, crew } from '../constants.js';
+import { TYPES, isPost, durationOf, typeStyle, WORK, ent, isMarketing, crew, todos } from '../constants.js';
 import {
   esc, todayKey, addDays, startOfWeek, fromKey, toKey, fmtDayLong, fmtDayShort, relDay, fmtMonth,
   WD_LETTER, WD_SHORT, dayLabel, fmtDuration, MONTHS_SHORT, MONTHS, toMin, nowMin, fmtTime, fmtCountdown, greeting, rgba, textOn,
@@ -51,7 +51,10 @@ export function renderToday() {
       <div class="hdr__titles">
         <p class="hdr__eyebrow">${date === today ? `${greeting()}${me ? ', ' + esc(me.name) : ''}` : esc(fmtDayLong(date))}</p>
         <h1>${esc(relDay(date))}${date === today ? `<span class="hdr__date">${esc(fmtDayShort(date))}</span>` : ''}</h1>
-        ${store.shared || Object.keys(store.profile?.teams || {}).length ? `<button class="wschip" data-action="share">${icon('users', 13)} ${store.shared ? `Agenda de ${esc(store.shared.ownerName)}` : 'Minha agenda'} ${icon('down', 12)}</button>` : ''}
+        ${(!isMarketing() && WORK.profession) || store.shared || Object.keys(store.profile?.teams || {}).length ? `<div class="hdr__chips">
+          ${!isMarketing() && WORK.profession ? `<button class="profchip" data-action="ficha">${icon(WORK.badge || 'briefcase', 13)} ${esc(WORK.profession)}</button>` : ''}
+          ${store.shared || Object.keys(store.profile?.teams || {}).length ? `<button class="wschip" data-action="share">${icon('users', 13)} ${store.shared ? `Agenda de ${esc(store.shared.ownerName)}` : 'Minha agenda'} ${icon('down', 12)}</button>` : ''}
+        </div>` : ''}
       </div>
       <div class="hdr__actions">
         ${date !== today ? `<button class="chip chip--accent" data-action="go-today">Hoje</button>` : ''}
@@ -232,7 +235,7 @@ function teamCol(m, date) {
       ${onsite.length ? onsite.map((e) => `<li>${icon(TYPES[e.type].icon, 13)}<span><b>${fmtTime(e.time)}</b> ${esc(store.company(e.companyId)?.name || '')}</span></li>`).join('')
         : `<li class="muted">${icon('building', 13)}<span>Trabalho interno / remoto</span></li>`}
     </ul>
-    ${next ? `<div class="team__next">Próximo: <b>${fmtTime(next.time)}</b> ${esc(TYPES[next.type].label)} · ${esc(store.company(next.companyId)?.name || '')}</div>` : `<div class="team__next muted">${evs.length ? 'Tudo concluído ✓' : 'Livre'}</div>`}
+    ${next ? `<div class="team__next">Próximo: <b>${fmtTime(next.time)}</b> ${esc(TYPES[next.type].label)}${store.company(next.companyId) ? ' · ' + esc(store.company(next.companyId).name) : ''}</div>` : `<div class="team__next muted">${evs.length ? 'Tudo concluído ✓' : 'Livre'}</div>`}
   </button>`;
 }
 
@@ -293,7 +296,7 @@ export function renderMonth() {
   </header>
   <div class="page">
     <div class="chips-scroll">
-      <button class="chip${!ui.monthCompany ? ' is-on' : ''}" data-action="month-company" data-id="">Todos(as)</button>
+      <button class="chip${!ui.monthCompany ? ' is-on' : ''}" data-action="month-company" data-id="">${todos()}</button>
       ${companies.map((c) => `<button class="chip chip--co${ui.monthCompany === c.id ? ' is-on' : ''}" style="--cc:${c.color}" data-action="month-company" data-id="${c.id}">${logo(c, 18, 5)}${esc(c.name)}</button>`).join('')}
     </div>
 

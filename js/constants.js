@@ -1,5 +1,5 @@
 /* Tipos de evento, status, paleta e dicas */
-import { TYPE_DEFS, ARCHETYPES } from '../functions/catalog.js';
+import { TYPE_DEFS, ARCHETYPES, ARCH_THEME, profStyle } from '../functions/catalog.js';
 
 export const TYPES = {
   feed: {
@@ -65,8 +65,10 @@ for (const [id, d] of Object.entries(TYPE_DEFS)) {
   TYPES[id] = { label: d.label, icon: d.icon, color: d.color, kind: d.kind, dur: d.dur, onSite: !!d.onSite, client: d.kind !== 'work' || !!d.onSite, best: [], tip: KIND_TIP[d.kind] || KIND_TIP.other, placeholder: `Ex.: ${d.label}`, ask: d.ask, verb: d.verb, words: d.words };
 }
 export const TYPE_ORDER = ['feed', 'story', 'reels', 'carrossel', 'captacao', 'reuniao', 'producao', 'outro'];
+/* ícone original de cada tipo (a profissão pode trocar: dentista → dente, veterinário → pata…) */
+const BASE_ICON = Object.fromEntries(Object.entries(TYPES).map(([k, t]) => [k, t.icon]));
 /* Perfil de trabalho ativo (muda com a profissão da conta) */
-export const WORK = { arch: 'marketing', profession: '', entity: ARCHETYPES.marketing.entity, clientLike: true, tips: ARCHETYPES.marketing.tips };
+export const WORK = { arch: 'marketing', profession: '', entity: ARCHETYPES.marketing.entity, clientLike: true, tips: ARCHETYPES.marketing.tips, badge: 'building', theme: null };
 export function applyArch(arch, profession = '') {
   const a = ARCHETYPES[arch] || ARCHETYPES.generico;
   WORK.arch = ARCHETYPES[arch] ? arch : 'generico';
@@ -75,6 +77,11 @@ export function applyArch(arch, profession = '') {
   WORK.clientLike = !!a.clientLike;
   WORK.tips = a.tips;
   TYPE_ORDER.splice(0, TYPE_ORDER.length, ...a.types);
+  // ícones com a cara da profissão
+  const st = profStyle(profession);
+  for (const [k, ic] of Object.entries(BASE_ICON)) TYPES[k].icon = (st.types && st.types[k]) || ic;
+  WORK.badge = st.icon || a.entity.icon;
+  WORK.theme = ARCH_THEME[WORK.arch] || null;
   return WORK;
 }
 /* Cor do tipo (tipos novos usam a cor do catálogo) */
@@ -82,6 +89,12 @@ export const typeStyle = (id) => (TYPES[id] && !['feed', 'carrossel', 'reels', '
 export const isMarketing = () => WORK.arch === 'marketing';
 /* Como chamar o grupo de pessoas da agenda: a dupla Henrique + Matheus ou a equipe (agenda compartilhada) */
 export const crew = () => (WORK.arch === 'marketing' && WORK.main ? 'dupla' : 'equipe');
+/* gênero do nome do grupo (Nova empresa / Novo local / Todas as turmas…) */
+const FEM = ['Empresa', 'Turma', 'Obra', 'Unidade', 'Plataforma', 'Área', 'Matéria'];
+export const entFem = () => FEM.includes(WORK.entity.one);
+export const novo = () => (entFem() ? 'Nova' : 'Novo');
+export const nenhum = () => (entFem() ? 'Nenhuma' : 'Nenhum');
+export const todos = () => (entFem() ? 'Todas' : 'Todos');
 export const ent = (plural = false, lower = false) => { const t = plural ? WORK.entity.many : WORK.entity.one; return lower ? t.toLowerCase() : t; };
 export const isPost = (type) => TYPES[type]?.kind === 'post';
 export const durationOf = (ev) => ev.duration || TYPES[ev.type]?.dur || 30;

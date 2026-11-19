@@ -44,6 +44,7 @@ export function statusOf(b, me, now = Date.now()) {
   const extra = addon ? { addon } : {};
   if (b.lifetime) return { plan: 'lifetime', active: true, ...extra };
   if (b.subActive && (!b.paidUntil || b.paidUntil > now - 3 * 864e5)) return { plan: 'monthly', active: true, paidUntil: b.paidUntil || null, cancelAt: b.cancelAt || null, ...extra };
+  if (b.pending && now - b.pending.at < 4 * 864e5) extra.pending = b.pending.plan;
   if (b.trialEndsAt && b.trialEndsAt > now) return { plan: 'trial', active: true, trialEndsAt: b.trialEndsAt, ...extra };
   if (b.trialDenied) return { plan: 'blocked', active: false, reason: b.trialDenied, ...extra };
   return { plan: 'expired', active: false, trialEndsAt: b.trialEndsAt || null, ...extra };
@@ -138,10 +139,10 @@ const form = (obj, prefix = '', out = new URLSearchParams()) => {
   }
   return out;
 };
-async function stripe(env, path, params, fetchImpl = fetch) {
+async function stripe(env, path, params, fetchImpl = fetch, method = 'POST') {
   if (!env.STRIPE_SECRET_KEY) throw Object.assign(new Error('O pagamento ainda não foi configurado (falta a chave da Stripe no servidor).'), { status: 412 });
   const r = await fetchImpl(`https://api.stripe.com/v1/${path}`, {
-    method: 'POST',
+    method,
     headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, 'Content-Type': 'application/x-www-form-urlencoded' },
     body: form(params).toString(),
   });
@@ -150,12 +151,23 @@ async function stripe(env, path, params, fetchImpl = fetch) {
   return j;
 }
 
+/* Endereço do app para a volta do pagamento: só o site oficial ou um endereço autorizado (evita redirecionar para sites de fora) */
+export function siteBase(env, returnUrl = '') {
+  const official = (env.SITE_URL || 'https://icarlxs-code.github.io/Calend-rio-/').replace(/\/?$/, '/');
+  let u;
+  try { u = new URL(returnUrl); } catch { return official; }
+  const allowed = (env.ALLOWED_ORIGINS || '').split(',').map((x) => x.trim()).filter(Boolean);
+  const local = env.ALLOW_EMULATOR_TOKENS === '1' && /^(localhost|127\.0\.0\.1)$/.test(u.hostname);
+  if (!local && !allowed.includes(u.origin) && !official.startsWith(u.origin)) return official;
+  return `${u.origin}${u.pathname.replace(/[^/]*$/, '')}`;
+}
+
 /* Cria a página de pagamento da Stripe e devolve o endereço */
 export async function createCheckout(env, me, { plan, returnUrl }, fetchImpl = fetch) {
   const p = PLANS[plan];
   if (!p) throw Object.assign(new Error('Plano inválido.'), { status: 400 });
   if (me.ws === 'main') throw Object.assign(new Error('A sua conta já é liberada.'), { status: 400 });
-  const back = /^https:\/\/|^http:\/\/(localhost|127\.0\.0\.1)/.test(returnUrl || '') ? returnUrl.split('#')[0] : 'https://icarlxs-code.github.io/Calend-rio-/';
+  const back = siteBase(env, returnUrl);
   const b = (await getBill(env, me.ws)) || {};
   if (p.addon) {
     if (!basePaid(b)) throw Object.assign(new Error('A agenda compartilhada é um complemento: primeiro assine o plano Mensal ou o Vitalício.'), { status: 409 });
@@ -167,7 +179,8 @@ export async function createCheckout(env, me, { plan, returnUrl }, fetchImpl = f
   const params = {
     mode: p.mode,
     client_reference_id: me.ws,
-    success_url: `${back}#/pago`,
+    // volta da Stripe: página oficial "Pagamento recebido" (funciona em qualquer navegador, inclusive no iPhone)
+    success_url: `${back}pago/?p=${plan}`,
     cancel_url: `${back}#/planos`,
     locale: 'pt-BR',
     allow_promotion_codes: 'true',
@@ -207,12 +220,15 @@ export async function verifyStripe(env, payload, header, now = Date.now()) {
 export async function handleStripeEvent(env, ev) {
   const o = ev?.data?.object || {};
   const now = Date.now();
-  if (ev.type === 'checkout.session.completed') {
+  if (ev.type === 'checkout.session.completed' || ev.type === 'checkout.session.async_payment_succeeded' || ev.type === 'checkout.session.async_payment_failed') {
     const uid = o.client_reference_id || o.metadata?.uid;
     if (!uid) return;
     const b = (await getBill(env, uid)) || { uid };
     b.customer = o.customer || b.customer;
-    if (o.mode === 'payment' && o.payment_status === 'paid') { b.lifetime = true; b.lifetimeAt = now; }
+    // vitalício: cartão confirma na hora; Pix/boleto confirmam depois (async_payment_succeeded)
+    if (o.mode === 'payment' && o.payment_status === 'paid') { b.lifetime = true; b.lifetimeAt = now; b.lifetimePI = o.payment_intent || b.lifetimePI || null; b.pending = null; }
+    else if (o.mode === 'payment' && ev.type === 'checkout.session.completed') b.pending = { plan: o.metadata?.plan || 'vitalicio', at: now };
+    if (ev.type === 'checkout.session.async_payment_failed') b.pending = null;
     if (o.mode === 'subscription' && isAddon(o.metadata?.plan)) b.addon = { plan: o.metadata.plan, subscription: o.subscription, subActive: true, paidUntil: now + 32 * 864e5, since: now };
     else if (o.mode === 'subscription') { b.subActive = true; b.subscription = o.subscription; b.paidUntil = now + 32 * 864e5; }
     b.updatedAt = now;
@@ -241,6 +257,14 @@ export async function handleStripeEvent(env, ev) {
     await putBill(env, uid, b);
     return;
   }
+  // reembolso total do vitalício (ex.: arrependimento em 7 dias): encerra o acesso vitalício
+  if (ev.type === 'charge.refunded' && o.refunded) {
+    const uid = o.metadata?.uid || (o.customer && (await env.CAL.get(`cust:${o.customer}`)));
+    if (!uid) return;
+    const b = await getBill(env, uid);
+    if (b && b.lifetime && (!b.lifetimePI || b.lifetimePI === o.payment_intent)) { b.lifetime = false; b.refundedAt = now; b.updatedAt = now; await putBill(env, uid, b); }
+    return;
+  }
   if (ev.type === 'invoice.paid' && o.customer) {
     const uid = await env.CAL.get(`cust:${o.customer}`);
     if (!uid) return;
@@ -264,4 +288,24 @@ export async function billingAll(env) {
     out[u.ws] = statusOf(b, { ws: u.ws });
   }));
   return out;
+}
+
+/* Excluir conta (LGPD): cancela as assinaturas na Stripe e tira os dados pessoais do registro de cobrança.
+   Fica só o mínimo exigido pela lei fiscal (identificadores do pagamento), sem e-mail. */
+export async function closeBilling(env, me, fetchImpl = fetch, now = Date.now()) {
+  if (me.ws === 'main') return { canceled: 0 };
+  const b = await getBill(env, me.ws);
+  if (!b) return { canceled: 0 };
+  let canceled = 0;
+  for (const sub of [b.subActive && b.subscription, b.addon && b.addon.subActive && b.addon.subscription].filter(Boolean)) {
+    try { await stripe(env, `subscriptions/${sub}`, {}, fetchImpl, 'DELETE'); canceled++; } catch (e) { console.log('cancelar assinatura', sub, e.message); }
+  }
+  const keep = { uid: b.uid, customer: b.customer || null, lifetime: !!b.lifetime, lifetimeAt: b.lifetimeAt || null, subscription: b.subscription || null, deletedAt: now, trialEndsAt: b.trialEndsAt || null, trialDenied: b.trialDenied || null };
+  if (b.addon) keep.addon = { plan: b.addon.plan, subscription: b.addon.subscription || null, subActive: false };
+  await putBill(env, me.ws, keep);
+  // a equipe do dono acaba: convidados perdem o acesso
+  const team = await env.CAL.get(`team:${me.ws}`, 'json');
+  if (team) await Promise.all([...(team.members || []).map((m) => env.CAL.delete(`member:${m.uid}`)), env.CAL.delete(`team:${me.ws}`)]);
+  await env.CAL.delete(`member:${me.ws}`);
+  return { canceled };
 }

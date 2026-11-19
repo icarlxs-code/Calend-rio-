@@ -19,4 +19,6 @@ binding = "CAL"
 [vars]
 PROJECT_ID = "calendario-48fdb"
 ALLOWED_ORIGINS = "https://icarlxs-code.github.io"
+# endereço oficial do app (volta do pagamento). Ao comprar o domínio: "https://lembra.com.br/" e acrescente o domínio em ALLOWED_ORIGINS
+SITE_URL = "https://icarlxs-code.github.io/Calend-rio-/"
 TEAM = '[{"id":"henrique","name":"Henrique","email":"icarlxs@gmail.com"},{"id":"matheus","name":"Matheus","email":"contatopedrazzi1@gmail.com"}]'

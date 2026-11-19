@@ -2,7 +2,7 @@
 import { store } from '../store.js';
 import { CONFIG } from '../../config.js';
 import { ui } from '../ui.js';
-import { TYPES, TYPE_ORDER, STATUS, STATUS_ORDER, DURATIONS, REMINDERS, REPEATS, durationOf, typeStyle, WORK, ent, isMarketing } from '../constants.js';
+import { TYPES, TYPE_ORDER, STATUS, STATUS_ORDER, DURATIONS, REMINDERS, REPEATS, durationOf, typeStyle, WORK, ent, isMarketing, novo } from '../constants.js';
 import { esc, todayKey, addDays, fmtDayLong, fmtDuration, fmtTime, uid, rgba, fromKey, relDay, toMin, fromMin, dayLabel } from '../utils.js';
 import { icon } from '../icons.js';
 import {
@@ -195,7 +195,7 @@ function editorHtml(d, editing, rep) {
       <label class="flabel">${ent()}${isMarketing() ? '' : ' <em class="tag">opcional</em>'}</label>
       <div class="cogrid">
         ${companies.map((c) => `<button type="button" class="cobtn${d.companyId === c.id ? ' is-on' : ''}" style="--cc:${c.color}" data-company="${c.id}">${logo(c, 26, 7)}<span>${esc(c.name)}</span></button>`).join('')}
-        <button type="button" class="cobtn cobtn--add" data-newco>${icon('plus', 18)}<span>Novo(a) ${ent(false, true)}</span></button>
+        <button type="button" class="cobtn cobtn--add" data-newco>${icon('plus', 18)}<span>${novo()} ${ent(false, true)}</span></button>
       </div>
     </div>
 
@@ -482,7 +482,7 @@ function lanes(d, issues) {
   const range = d.time ? spanOf(d) : null;
   const ticks = [8, 10, 12, 14, 16, 18, 20, 22];
   return `<div class="lanes">
-    <div class="lanes__head"><strong>Agenda dos dois em ${esc(dayLabel(d.date))}</strong></div>
+    <div class="lanes__head"><strong>${store.team.length > 1 ? `Agenda ${store.team.length === 2 ? 'dos dois' : 'de todos'}` : 'Sua agenda'} em ${esc(dayLabel(d.date))}</strong></div>
     ${store.team.map((m) => {
       const evs = store.eventsOn(d.date, { person: m.id }).filter((e) => e.id !== d.id && e.time);
       const mine = (d.assignees || []).includes(m.id);

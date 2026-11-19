@@ -127,10 +127,19 @@ const LATE_DIRETO = [
 const hashStr = (s) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
 /* Lista de cobranças de um evento atrasado: [{ late, at, title, body }].
    persona (da ficha): de quanto em quanto tempo cobrar, até quando e em que tom. */
+/* compromisso longo (plantão, turno, serviço, aula dupla…): começou ≠ atrasou */
+export const isLong = (ev) => (Number(ev.duration) || (TYPE_DEFS[ev.type] || TYPE_DEFS.outro).dur || 30) >= 180;
 export function lateReminders(ev, startMs, company = '', persona = null, opts = {}) {
   const post = isPostType(ev.type);
   const def = TYPE_DEFS[ev.type] || TYPE_DEFS.outro;
   const base = post ? startMs : startMs + (Number(ev.duration) || def.dur || 30) * 60e3; // post: no horário; o resto: quando termina
+  // plantão/turno longo: não faz sentido cobrar "atraso" depois que já aconteceu; só um lembrete gentil de marcar como feito
+  if (!post && isLong(ev)) {
+    const at = base + 15 * 60e3;
+    const brHour = new Date(at - 3 * 3600e3).getUTCHours();
+    if (brHour >= 23 || brHour < 7) return [];
+    return [{ late: 15, at, title: `✓ Terminou: ${TYPE_LABEL[ev.type] || 'Tarefa'}${company ? ' · ' + company : ''}`, body: `${ev.title ? ev.title + '. ' : ''}Toque e marque como feito para fechar o dia. Bom descanso!` }];
+  }
   const what = `${TYPE_LABEL[ev.type] || 'Tarefa'}${company ? ' · ' + company : ''}`;
   const verbo = def.verb || 'fazer';
   const every = persona?.lateEvery || LATE_EVERY;
@@ -172,6 +181,10 @@ export function reminderMessage(ev, offset, company = '') {
   }
   // na hora exata: pergunta se já foi feito
   if (offset === 0) {
+    // plantão/turno: começa agora — a pergunta é se chegou, e o "feito" é no fim
+    if (isLong(ev) && !isPostType(ev.type)) {
+      return { title: `${ASK(ev.type)} ${what}`, body: `Começa agora, às ${at}${title ? ' — ' + title : ''}${place}. Bom trabalho! Quando terminar, marque como feito ✓` };
+    }
     return {
       title: `${ASK(ev.type)} ${what}`,
       body: `Deu ${at}${title ? ' — ' + title : ''}. Se já resolveu, toque e marque como feito ✓`,

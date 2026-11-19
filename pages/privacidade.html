@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Política de Privacidade · {{APP}}</title><meta name="theme-color" content="#F4F4F6">
+<meta name="description" content="Como o {{APP}} trata os seus dados pessoais, de acordo com a LGPD (Lei 13.709/2018).">
+<link rel="icon" href="../icons/favicon-64.png">
+<style>{{STYLE}}</style></head>
+<body><main>
+<div class="top"><img src="../media/lembra-logo.jpg" alt=""><b>{{APP}}</b></div>
+<h1>Política de Privacidade</h1>
+<p class="small">Versão {{TERMS_VERSION}} · em vigor desde {{DATE}}. Feita de acordo com a Lei Geral de Proteção de Dados (LGPD, Lei nº 13.709/2018).</p>
+
+<div class="card">
+<p><b>Resumo em 30 segundos:</b> usamos seus dados só para fazer o {{APP}} funcionar para você — agenda, lembretes e mensagens no seu ritmo. Não vendemos dados. Não vemos sua senha nem seu cartão. Seu modo Pessoal é só seu. Você pode baixar ou apagar tudo quando quiser, direto no app (Ajustes → Privacidade e dados).</p>
+</div>
+
+<h2>1. Quem cuida dos seus dados</h2>
+<p>O controlador dos dados é <b>{{OWNER}}</b>, responsável pelo aplicativo {{APP}}. Encarregado de proteção de dados (DPO) e canal de atendimento ao titular: <a href="mailto:{{CONTACT}}">{{CONTACT}}</a>.</p>
+
+<h2>2. Quais dados usamos</h2>
+<ul>
+<li><b>Conta:</b> nome, e-mail e senha. A senha é guardada pelo serviço de login do Google (Firebase Authentication), de forma criptografada — nós não temos acesso a ela.</li>
+<li><b>Ficha de cadastro:</b> nome completo, apelido, data de nascimento, CPF, celular (opcional), profissão, cargo e local de trabalho (opcionais), rotina (horários de trabalho, de acordar, almoçar e dormir), forma de tratamento, dificuldades que você escolher marcar, preferências de mensagens e objetivo.</li>
+<li><b>O que você cadastra:</b> compromissos, empresas/grupos, bilhetes, logos e fotos de perfil, agenda pessoal, listas e aniversários.</li>
+<li><b>Uso do app:</b> quantas vezes abriu, dias de uso, tipo de aparelho, se instalou na tela inicial, se ativou as notificações e quantidades (por exemplo, número de compromissos) — nunca o conteúdo do seu modo Pessoal.</li>
+<li><b>Notificações:</b> o endereço técnico de notificação do seu aparelho (fornecido pela Apple ou pelo Google).</li>
+<li><b>Proteção do teste grátis:</b> uma versão embaralhada e irreversível (hash) do CPF, do identificador do aparelho e do endereço de internet (IP). Com ela só conseguimos saber se o teste já foi usado — não dá para voltar ao número original.</li>
+<li><b>Pagamentos:</b> processados pela Stripe. Recebemos apenas a situação da assinatura e identificadores do pagamento. <b>Nunca</b> recebemos o número do seu cartão.</li>
+<li><b>Registros técnicos de erro:</b> mensagens de erro do app (sem o conteúdo da sua agenda), para corrigir falhas.</li>
+</ul>
+
+<h2>3. Dados sensíveis</h2>
+<p>Algumas opções da ficha podem revelar informação de saúde (por exemplo, “ansiedade e estresse” ou “durmo mal”) ou convicção religiosa (receber versículos bíblicos). Elas são <b>opcionais</b> e só são usadas, com o seu <b>consentimento específico</b> dado na ficha, para ajustar o ritmo e o tipo das mensagens. Você pode desmarcá-las a qualquer momento em Ajustes → Sua ficha.</p>
+
+<h2>4. Para que usamos e com qual base legal</h2>
+<ul>
+<li><b>Prestar o serviço</b> (agenda, sincronização entre aparelhos, lembretes, agenda compartilhada, assistente): execução de contrato (art. 7º, V).</li>
+<li><b>Personalizar</b> lembretes e mensagens a partir da ficha e da sua profissão: consentimento (art. 7º, I, e art. 11, I, para os dados sensíveis).</li>
+<li><b>Segurança e prevenção a fraude</b> (um teste grátis por pessoa, proteção da conta, registros de erro): legítimo interesse e prevenção à fraude (art. 7º, IX, e art. 11, II, “g”).</li>
+<li><b>Cobrança e obrigações fiscais:</b> execução de contrato e cumprimento de obrigação legal (art. 7º, II e V).</li>
+<li><b>Melhorar o app</b> com estatísticas agregadas de uso: legítimo interesse (art. 7º, IX).</li>
+</ul>
+
+<h2>5. Com quem os dados são compartilhados</h2>
+<p>Não vendemos nem alugamos dados. Usamos fornecedores (operadores) que tratam dados apenas para executar o serviço:</p>
+<ul>
+<li><b>Google Firebase</b> — login e banco de dados da sua conta.</li>
+<li><b>Cloudflare</b> — servidor de notificações, lembretes e o assistente de inteligência artificial (que recebe só o necessário para responder: títulos e horários da agenda).</li>
+<li><b>Stripe</b> — pagamentos.</li>
+<li><b>Apple e Google</b> — entrega das notificações no celular.</li>
+<li><b>Pessoas que você escolher:</b> na agenda compartilhada, quem você convidar vê a sua agenda de <b>trabalho</b> (nunca o modo Pessoal). No link de cronograma para cliente, só o que você marcar como visível.</li>
+</ul>
+<p>Alguns desses fornecedores podem armazenar dados fora do Brasil. Nesses casos, a transferência internacional segue o art. 33 da LGPD, com fornecedores que adotam cláusulas contratuais e padrões de segurança compatíveis.</p>
+
+<h2>6. Por quanto tempo guardamos</h2>
+<p>Enquanto a sua conta existir. Se você excluir a conta, apagamos seus dados da agenda, da ficha e do modo Pessoal na hora, e os registros técnicos em até 30 dias. Registros de pagamento podem ser mantidos pelo prazo exigido pela lei fiscal (até 5 anos).</p>
+
+<h2>7. Como protegemos</h2>
+<ul>
+<li>Toda comunicação é criptografada (HTTPS).</li>
+<li>Regras de acesso no banco de dados: cada conta só lê e altera os próprios dados. Ninguém entra na agenda de outra pessoa sem um convite pessoal, de uso único, que expira em 7 dias.</li>
+<li>CPF, aparelho e IP só ficam no servidor em forma embaralhada.</li>
+<li>O painel administrativo mostra apenas números e informações de conta, nunca o conteúdo do modo Pessoal.</li>
+</ul>
+
+<h2>8. Seus direitos (art. 18 da LGPD)</h2>
+<p>Você pode, a qualquer momento: confirmar se tratamos seus dados; acessar e <b>baixar</b> seus dados; corrigir dados; pedir anonimização, bloqueio ou <b>eliminação</b>; pedir a portabilidade; saber com quem compartilhamos; e <b>revogar o consentimento</b>.</p>
+<p>Direto no app: <b>Ajustes → Privacidade e dados</b> (baixar meus dados, corrigir a ficha, excluir minha conta). Ou pelo e-mail <a href="mailto:{{CONTACT}}">{{CONTACT}}</a>. Respondemos em até 15 dias. Você também pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD).</p>
+
+<h2>9. Crianças e adolescentes</h2>
+<p>O {{APP}} é feito para adultos. Menores de 18 anos só podem usar com autorização e acompanhamento dos pais ou responsáveis, e não é permitido o cadastro de menores de 13 anos.</p>
+
+<h2>10. Armazenamento no aparelho</h2>
+<p>O app guarda no seu aparelho preferências e uma cópia temporária para funcionar sem internet. Não usamos cookies de publicidade nem rastreadores de terceiros.</p>
+
+<h2>11. Mudanças nesta política</h2>
+<p>Se mudarmos algo importante, avisamos no app antes de valer. A versão e a data ficam no topo desta página.</p>
+
+<p class="small">Veja também os <a href="../termos/">Termos de Uso</a>.</p>
+</main></body></html>

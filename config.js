@@ -8,6 +8,17 @@ export const CONFIG = {
   // dono do app: vê o painel com todas as contas (Ajustes → Painel do dono)
   adminEmail: 'icarlxs@gmail.com',
 
+  // Endereço oficial do app (links de convite, volta do pagamento, termos e privacidade).
+  // Quando comprar o domínio, troque aqui por 'https://lembra.com.br/' e rode npm run build.
+  siteUrl: 'https://icarlxs-code.github.io/Calend-rio-/',
+  // LGPD: quem responde pelos dados (aparece nos Termos e na Política de Privacidade).
+  // Se abrir empresa, coloque a razão social e o CNPJ, ex.: 'Lembra Tecnologia LTDA (CNPJ 00.000.000/0001-00)'.
+  legalName: 'Lembra',
+  supportEmail: 'icarlxs@gmail.com',
+  // versão dos Termos/Privacidade: ao mudar, o app pede o aceite de novo
+  termsVersion: '1.0',
+  termsDate: '19/11/2026',
+
   // Endereço do servidor gratuito de avisos (Cloudflare Workers). Preenchido depois de publicar.
   pushServer: 'https://calend-rio.icarlxs.workers.dev',
 

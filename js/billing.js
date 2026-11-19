@@ -117,13 +117,27 @@ export function openPlans({ blocking = false } = {}) {
 }
 
 /* O que a pessoa foi pagar (para saber o que conferir na volta da Stripe) */
-export const markBuying = (plan) => { try { localStorage.setItem('lembra.buying', plan); } catch { /* ok */ } };
-const buying = () => { try { return localStorage.getItem('lembra.buying') || ''; } catch { return ''; } };
+export const markBuying = (plan) => { try { localStorage.setItem('lembra.buying', JSON.stringify({ plan, at: Date.now() })); } catch { /* ok */ } };
+/* compra em andamento (vale por 2 horas: depois disso a pessoa desistiu) */
+export const buying = () => {
+  try { const j = JSON.parse(localStorage.getItem('lembra.buying') || 'null'); return j && Date.now() - j.at < 2 * 3600e3 ? j.plan : ''; } catch { return ''; }
+};
+export const clearBuying = () => { try { localStorage.removeItem('lembra.buying'); } catch { /* ok */ } };
 
 /* Voltou da Stripe: confere até liberar (o aviso da Stripe chega em segundos) */
-export async function confirmPayment() {
+export async function confirmPayment({ quiet = false } = {}) {
   const what = buying();
-  try { localStorage.removeItem('lembra.buying'); } catch { /* ok */ }
+  // voltou ao app sem ter certeza se pagou: confere em silêncio; só aparece se confirmou
+  if (quiet) {
+    for (let i = 0; i < 4; i++) {
+      const st = await checkBilling();
+      const done = what === 'dupla' || what === 'equipe' ? st.addon && st.addon.active : st.plan === 'lifetime' || st.plan === 'monthly';
+      if (done || st.pending) return confirmPayment();
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+    return false;
+  }
+  clearBuying();
   if (what === 'dupla' || what === 'equipe') return confirmAddon(what);
   document.querySelector('.paywall')?.remove();
   const w = document.createElement('div');
@@ -132,6 +146,12 @@ export async function confirmPayment() {
   document.body.appendChild(w);
   for (let i = 0; i < 20; i++) {
     const st = await checkBilling();
+    // Pix ou boleto: a Stripe confirma depois (Pix em minutos, boleto em até 3 dias úteis)
+    if (st.pending && st.plan !== 'lifetime') {
+      w.querySelector('.paywall__inner').innerHTML = `<img class="paywall__logo" src="media/lembra-logo.jpg" alt="" width="96" height="96"><h1>Pagamento em processamento</h1><p>Pagou com Pix ou boleto? Assim que o banco confirmar (Pix em alguns minutos, boleto em até 3 dias úteis), tudo é liberado sozinho. Você recebe o recibo por e-mail.</p><button class="btn btn--primary btn--block" data-go>Entendi</button>`;
+      w.querySelector('[data-go]').onclick = () => { w.remove(); if (!st.active) openPlans({ blocking: true }); };
+      return false;
+    }
     if (st.plan === 'lifetime' || st.plan === 'monthly') {
       w.querySelector('.paywall__inner').innerHTML = `<img class="paywall__logo" src="media/lembra-logo.jpg" alt="" width="96" height="96"><h1>Pagamento confirmado! 🎉</h1><p>${st.plan === 'lifetime' ? 'Seu Lembra é vitalício. Obrigado!' : 'Sua assinatura mensal está ativa. Obrigado!'}</p><button class="btn btn--primary btn--block" data-go>Começar a usar</button>`;
       w.querySelector('[data-go]').onclick = () => { w.remove(); window.__calRender && window.__calRender(); };

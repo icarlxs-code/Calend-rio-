@@ -26,6 +26,25 @@ export const JOURNEYS = [
   { id: 'flexivel', label: 'Flexível / autônomo', hint: 'faço meus horários', max: 8 },
   { id: 'estudo', label: 'Estudo', hint: 'aulas e provas', max: 6 },
 ];
+/* como a pessoa lembra das coisas hoje (quem guarda tudo na cabeça precisa de mais ajuda) */
+export const METHODS = [
+  { id: 'cabeca', label: 'Na cabeça', w: 10 },
+  { id: 'outros', label: 'Alguém me lembra', w: 8 },
+  { id: 'papel', label: 'Papel ou caderno', w: 4 },
+  { id: 'celular', label: 'Alarme ou agenda do celular', w: 0 },
+];
+/* quantos compromissos num dia normal (limite de sobrecarga e peso no índice) */
+export const VOLUMES = [
+  { id: '1-3', label: '1 a 3', max: 4, w: 0 },
+  { id: '4-6', label: '4 a 6', max: 7, w: 3 },
+  { id: '7-10', label: '7 a 10', max: 11, w: 6 },
+  { id: '10+', label: 'Mais de 10', max: 15, w: 9 },
+];
+export const PRONOUNS = [
+  { id: 'f', label: 'Ela' },
+  { id: 'm', label: 'Ele' },
+  { id: 'n', label: 'Prefiro não dizer' },
+];
 export const GOALS = [
   { id: 'lembrar', label: 'Nunca mais esquecer compromissos' },
   { id: 'produtivo', label: 'Ser mais produtivo(a)' },
@@ -81,7 +100,10 @@ export function computePersona(f) {
   const diffs = new Set(f.difficulties || []);
   const forget = Math.min(5, Math.max(1, Number(f.forget) || 3));
   const weights = DIFFICULTIES.filter((d) => diffs.has(d.id)).reduce((a, d) => a + d.w, 0);
-  const index = Math.max(0, Math.min(100, Math.round((forget - 1) * 15 + weights)));
+  const method = METHODS.find((m) => m.id === f.method) || null;
+  const volume = VOLUMES.find((v) => v.id === f.volume) || null;
+  const extra = (method ? method.w : 0) + (volume ? volume.w : 0);
+  const index = Math.max(0, Math.min(100, Math.round((forget - 1) * 15 + weights + extra)));
   const step = LADDER.find((l) => index <= l.upTo) || LADDER[LADDER.length - 1];
   const offsets = new Set(step.offsets);
   const lead = Number(f.lead);
@@ -102,16 +124,17 @@ export function computePersona(f) {
     `Por isso, cada compromisso terá ${offs.length} aviso${offs.length > 1 ? 's' : ''} antes (${offs.map(fmtOff).join(', ')}) e uma pergunta na hora exata.`,
     `Se atrasar, o Lembra cobra a cada ${lateEvery} minutos por até ${hm(lateMax)}, no tom “${TONES.find((t) => t.id === tone).label}”.`,
     `Mensagens do dia só entre ${f.wake || '6h30'} e ${f.sleep || '22h30'} (seu horário de acordar e dormir), ${freq === 'alta' ? 'com mais frequência' : freq === 'calma' ? 'com calma, sem excesso' : 'em ritmo equilibrado'}${water ? ', com lembrete de água' : ''}${meals ? ` e de comer perto das ${lunch.replace(':00', 'h')}` : ''}.`,
-    `Jornada “${journey.label}”: o Lembra avisa quando passar de ${journey.max} compromissos no dia.`,
+    `Jornada “${journey.label}”: o Lembra avisa quando passar de ${volume ? volume.max : journey.max} compromissos no dia.`,
   ];
+  if (method && method.w) why.splice(1, 0, `Hoje você lembra das coisas ${method.id === 'cabeca' ? 'de cabeça' : method.id === 'outros' ? 'porque alguém te lembra' : 'no papel'}: a partir de agora o Lembra assume esse trabalho por você.`);
   return {
     index, offsets: offs, lateEvery, lateMax, tone,
     routine: {
       workStart: f.workStart || '08:00', workEnd: f.workEnd || '18:00',
       lunchStart: lunch, lunchEnd: `${String(Math.floor((toMin(lunch) + 60) / 60) % 24).padStart(2, '0')}:${String((toMin(lunch) + 60) % 60).padStart(2, '0')}`,
-      daysOff: [0, 1, 2, 3, 4, 5, 6].filter((d) => !workDays.includes(d)), travelMin: 30, maxTasks: journey.max,
+      daysOff: [0, 1, 2, 3, 4, 5, 6].filter((d) => !workDays.includes(d)), travelMin: 30, maxTasks: volume ? volume.max : journey.max,
     },
-    nudges: { nudges: true, water, meals, faith: !!f.faith, freq, wake, sleep, lunch, tone },
+    nudges: { nudges: true, water, meals, faith: !!f.faith, freq, wake, sleep, lunch, tone, pronoun: ['f', 'm', 'n'].includes(f.pronoun) ? f.pronoun : 'n' },
     why,
   };
 }

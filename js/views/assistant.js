@@ -150,7 +150,7 @@ export function openAssistant() {
     <div class="page page--sheet">
       <div class="assist-hero">
         <span class="assist-hero__ic">${icon('sparkle', 22)}</span>
-        <div><strong>Analisando a agenda de vocês</strong><p>Funciona sozinho, sem internet. Confere conflitos, tempo livre e os melhores horários sempre que algo muda.</p></div>
+        <div><strong>Analisando ${store.team.length > 1 ? 'a agenda de vocês' : 'a sua agenda'}</strong><p>Funciona sozinho, sem internet. Confere conflitos, tempo livre e os melhores horários sempre que algo muda.</p></div>
       </div>
 
       ${chatHtml()}
@@ -229,7 +229,7 @@ export function openAssistant() {
         if (!inAppChat) {
           askClaude(q);
           chat.push({ role: 'user', text: q });
-          chat.push({ role: 'assistant', text: 'Abri sua pergunta no **app do Claude**, com o seu login, já com a agenda de vocês. É só tocar em enviar lá. A agenda também foi copiada: se a mensagem aparecer vazia, segure no campo e toque em **Colar**.' });
+          chat.push({ role: 'assistant', text: 'Abri sua pergunta no **app do Claude**, com o seu login, já com a ' + (store.team.length > 1 ? 'agenda de vocês' : 'sua agenda') + '. É só tocar em enviar lá. A agenda também foi copiada: se a mensagem aparecer vazia, segure no campo e toque em **Colar**.' });
           saveChat();
           redrawChat(a);
           return;

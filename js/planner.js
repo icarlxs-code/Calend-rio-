@@ -1,7 +1,7 @@
 /* Assistente de agenda (roda no próprio app, sem internet e sem chave):
    conflitos, horários livres, tempo livre de cada um e correções automáticas. */
 import { store } from './store.js';
-import { TYPES, isPost, durationOf } from './constants.js';
+import { TYPES, isPost, durationOf, isMarketing } from './constants.js';
 import { toMin, fromMin, nowMin, todayKey, fromKey, fmtTime, fmtDuration, WEEKDAYS } from './utils.js';
 
 export const DEFAULT_ROUTINE = {
@@ -89,15 +89,18 @@ export function validateDraft(d, { isNew = false } = {}) {
 
     // 4) Expediente e almoço (tempo livre)
     const ws = toMin(r.workStart), we = toMin(r.workEnd);
-    if (isLong(d) && (range[0] < ws || range[1] > we)) {
-      out.push({ level: 'warn', code: 'hours', title: 'Fora do expediente', text: `O horário de trabalho de vocês é das ${fmtTime(r.workStart)} às ${fmtTime(r.workEnd)}. Preservar o tempo livre evita esgotamento.` });
+    const voces = store.team.length > 1 ? 'de vocês' : 'seu';
+    // plantão/turno longo define o próprio horário (pode ser à noite e passar da meia-noite)
+    const shift = durationOf(d) >= 180 && !isPost(d.type);
+    if (isLong(d) && !shift && (range[0] < ws || range[1] > we)) {
+      out.push({ level: 'warn', code: 'hours', title: 'Fora do expediente', text: `O horário de trabalho ${store.team.length > 1 ? 'de vocês' : 'combinado'} é das ${fmtTime(r.workStart)} às ${fmtTime(r.workEnd)}. Preservar o tempo livre evita esgotamento.` });
     } else if (isPost(d.type) && (range[0] < ws || range[0] >= we)) {
       out.push({ level: 'info', code: 'hours', title: 'Post fora do expediente', text: 'Deixe programado no Meta Business Suite para ninguém precisar parar o descanso para postar.' });
     }
-    if (isLong(d) && overlaps(range, [toMin(r.lunchStart), toMin(r.lunchEnd)])) {
-      out.push({ level: 'warn', code: 'lunch', title: 'Invade o almoço', text: `O almoço de vocês é das ${fmtTime(r.lunchStart)} às ${fmtTime(r.lunchEnd)}.` });
+    if (isLong(d) && !shift && overlaps(range, [toMin(r.lunchStart), toMin(r.lunchEnd)])) {
+      out.push({ level: 'warn', code: 'lunch', title: 'Invade o almoço', text: `O ${voces === 'seu' ? 'seu almoço' : 'almoço de vocês'} é das ${fmtTime(r.lunchStart)} às ${fmtTime(r.lunchEnd)}.` });
     }
-    if (range[1] > 1440) out.push({ level: 'warn', code: 'midnight', title: 'Passa da meia-noite', text: 'Confira a duração.' });
+    if (range[1] > 1440 && !shift) out.push({ level: 'warn', code: 'midnight', title: 'Passa da meia-noite', text: 'Confira a duração.' });
 
     // 5) Horário que já passou
     if (isNew && (d.date < todayKey() || (d.date === todayKey() && range[0] < nowMin() - 5))) {
@@ -253,7 +256,7 @@ export function dayBrief(date, person = 'all') {
   const people = person === 'all' ? store.team : store.team.filter((m) => m.id === person);
   const lines = [];
   const evs = store.eventsOn(date, { person });
-  if (!evs.length) return [`Nenhum compromisso${person === 'all' ? '' : ' para ' + nameOf(person)}. Bom dia para planejar a pauta ou adiantar edições.`];
+  if (!evs.length) return [`Nenhum compromisso${person === 'all' ? '' : ' para ' + nameOf(person)}. ${isMarketing() ? ' Bom dia para planejar a pauta ou adiantar edições.' : ' Bom dia para se organizar e adiantar o que puder.'}`];
   people.forEach((m) => {
     const mine = store.eventsOn(date, { person: m.id });
     const ft = freeTime(m.id, date);

@@ -331,7 +331,7 @@ export function personalProfile() {
   const p = personal.prefs;
   return {
     date: t,
-    prefs: { nudges: p.nudges, water: p.water, meals: p.meals, faith: p.faith, freq: p.freq, wake: p.wake, sleep: p.sleep, lunch: p.lunch, tone: p.tone },
+    prefs: { nudges: p.nudges, water: p.water, meals: p.meals, faith: p.faith, freq: p.freq, wake: p.wake, sleep: p.sleep, lunch: p.lunch, tone: p.tone, pronoun: p.pronoun || store.profile?.pronoun },
     work: store.profile?.profession ? { profession: store.profile.profession, goal: GOAL_TEXT[store.profile.goal] || '' } : null,
     today: occurrences(t, t).map(ev),
     tomorrow: occurrences(addDays(t, 1), addDays(t, 1)).map(ev),

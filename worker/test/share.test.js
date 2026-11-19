@@ -84,3 +84,48 @@ test('sem plano base pago, o complemento não vale (mesmo assinado)', async () =
   const r = await syncTeam(env, user(OWNER), [{ uid: GUEST, name: 'Bia' }]);
   assert.equal(r.active, false); assert.equal(r.members, 0);
 });
+
+test('excluir conta: cancela as assinaturas na Stripe, tira o e-mail e desfaz a equipe', async () => {
+  const { closeBilling } = await import('../src/billing.js');
+  const env = mkEnv();
+  await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { client_reference_id: OWNER, mode: 'subscription', subscription: 'sub_base', customer: 'cus_9', metadata: { uid: OWNER, plan: 'mensal' } } } });
+  await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { client_reference_id: OWNER, mode: 'subscription', subscription: 'sub_add', customer: 'cus_9', metadata: { uid: OWNER, plan: 'dupla' } } } });
+  env.kv[`bill:${OWNER}`] = JSON.stringify({ ...JSON.parse(env.kv[`bill:${OWNER}`]), email: 'dono@teste.local' });
+  await syncTeam(env, user(OWNER), [{ uid: GUEST, name: 'Bia' }]);
+  const calls = [];
+  const r = await closeBilling(env, user(OWNER), async (url, opt) => { calls.push([opt.method, url]); return { ok: true, json: async () => ({}) }; });
+  assert.equal(r.canceled, 2);
+  assert.deepEqual(calls.map((c) => c[0]), ['DELETE', 'DELETE']);
+  assert.ok(calls.some((c) => c[1].endsWith('/subscriptions/sub_base')) && calls.some((c) => c[1].endsWith('/subscriptions/sub_add')));
+  assert.ok(!env.kv[`bill:${OWNER}`].includes('dono@teste.local'), 'sem e-mail depois de excluir');
+  assert.equal(env.kv[`team:${OWNER}`], undefined);
+  assert.equal(await sharedOf(env, GUEST), null);
+});
+
+test('volta do pagamento só para o site oficial; Pix/boleto confirmam depois; reembolso tira o vitalício', async () => {
+  const { siteBase, statusOf } = await import('../src/billing.js');
+  const env = mkEnv({ SITE_URL: 'https://lembra.test/', ALLOWED_ORIGINS: 'https://lembra.test' });
+  assert.equal(siteBase(env, 'https://lembra.test/app/index.html#/planos'), 'https://lembra.test/app/');
+  assert.equal(siteBase(env, 'https://site-malicioso.test/roubo'), 'https://lembra.test/', 'não manda para site de fora');
+  assert.equal(siteBase(env, 'lixo'), 'https://lembra.test/');
+  const calls = [];
+  await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { client_reference_id: OWNER, mode: 'payment', payment_status: 'paid', customer: 'cus_x', payment_intent: 'pi_card', metadata: { uid: OWNER, plan: 'vitalicio' } } } });
+  await createCheckout(env, user(GUEST), { plan: 'mensal', returnUrl: 'https://lembra.test/' }, fakeFetch(calls));
+  assert.equal(calls[0].get('success_url'), 'https://lembra.test/pago/?p=mensal');
+  assert.equal(calls[0].get('cancel_url'), 'https://lembra.test/#/planos');
+  // Pix: a sessão termina sem pagamento confirmado; confirma depois
+  await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { client_reference_id: GUEST, mode: 'payment', payment_status: 'unpaid', customer: 'cus_g', metadata: { uid: GUEST, plan: 'vitalicio' } } } });
+  let b = JSON.parse(env.kv[`bill:${GUEST}`]);
+  assert.equal(statusOf(b, user(GUEST)).pending, 'vitalicio');
+  assert.equal(statusOf(b, user(GUEST)).active, false);
+  await handleStripeEvent(env, { type: 'checkout.session.async_payment_succeeded', data: { object: { client_reference_id: GUEST, mode: 'payment', payment_status: 'paid', customer: 'cus_g', payment_intent: 'pi_pix', metadata: { uid: GUEST, plan: 'vitalicio' } } } });
+  b = JSON.parse(env.kv[`bill:${GUEST}`]);
+  assert.equal(statusOf(b, user(GUEST)).plan, 'lifetime');
+  // reembolso total (arrependimento): perde o vitalício
+  await handleStripeEvent(env, { type: 'charge.refunded', data: { object: { refunded: true, customer: 'cus_g', payment_intent: 'pi_pix', metadata: {} } } });
+  b = JSON.parse(env.kv[`bill:${GUEST}`]);
+  assert.notEqual(statusOf(b, user(GUEST)).plan, 'lifetime');
+  // reembolso de outro pagamento não mexe
+  await handleStripeEvent(env, { type: 'charge.refunded', data: { object: { refunded: true, customer: 'cus_x', payment_intent: 'pi_outro', metadata: { uid: OWNER } } } });
+  assert.equal(statusOf(JSON.parse(env.kv[`bill:${OWNER}`]), user(OWNER)).plan, 'lifetime');
+});

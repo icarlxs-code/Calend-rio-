@@ -46,7 +46,7 @@ test('checkout: monta a assinatura de R$ 9,90 e o vitalício de R$ 150', async (
   assert.equal(b1.get('line_items[0][price_data][currency]'), 'brl');
   assert.equal(b1.get('line_items[0][price_data][recurring][interval]'), 'month');
   assert.equal(b1.get('client_reference_id'), 'A');
-  assert.equal(b1.get('success_url'), 'https://icarlxs-code.github.io/Calend-rio-/#/pago');
+  assert.equal(b1.get('success_url'), 'https://icarlxs-code.github.io/Calend-rio-/pago/?p=mensal'); // página oficial de pagamento recebido
   await createCheckout(env, user('A'), { plan: 'vitalicio', returnUrl: '' }, fakeFetch);
   assert.equal(calls[1].body.get('mode'), 'payment');
   assert.equal(calls[1].body.get('line_items[0][price_data][unit_amount]'), '15000');

@@ -21,9 +21,11 @@ import { decodeSnapshot } from './share.js';
 import { sanitizePayload } from './sanitize.js';
 import { maybeOnboard } from './views/onboarding.js';
 import { showInstallGuide } from './install.js';
-import { checkBilling, trialBanner, openPlans, confirmPayment, openPortal } from './billing.js';
-import { captureInvite, maybeAcceptInvite, startTeam, openShare } from './equipe.js';
+import { checkBilling, trialBanner, openPlans, confirmPayment, openPortal, buying, clearBuying } from './billing.js';
+import { captureInvite, maybeAcceptInvite, startTeam, openShare, pendingInvite } from './equipe.js';
 import { personaOf } from './notifier.js';
+import { applyProfTheme, applyThemePref, setThemePref } from './theme.js';
+import { startErrorLog } from './errlog.js';
 import { computePersona } from './persona.js';
 import { reportStats, loadStatsDays, reportSoon } from './stats.js';
 import { ensureSeedCompanies, ensureMatheusLogo, ensureNotifyOwners } from './seed-companies.js';
@@ -59,14 +61,16 @@ function shell() {
 /* Cor da barra de status do iPhone (hora/bateria) acompanha o app */
 const SPACE_BAR = { work: ['#F4F4F6', '#000000'], personal: ['#F7F3FA', '#0E0A13'] };
 function setBarColor(light, dark = light) {
+  // tema escolhido à mão (Claro/Escuro) vale para as duas situações do celular
+  const forced = document.documentElement.dataset.theme;
   document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
     const media = m.getAttribute('media') || '';
-    m.setAttribute('content', /dark/.test(media) ? dark : light);
+    m.setAttribute('content', forced === 'dark' ? dark : forced === 'light' ? light : /dark/.test(media) ? dark : light);
   });
 }
 /* Pessoal parece outro app: título, ícone e cor da barra do iPhone próprios */
 function applySpaceMeta(personalMode) {
-  const [l, d] = SPACE_BAR[personalMode ? 'personal' : 'work'];
+  const [l, d] = personalMode ? SPACE_BAR.personal : [WORK.theme?.bg || SPACE_BAR.work[0], SPACE_BAR.work[1]];
   if (document.documentElement.classList.contains('intro-done')) setBarColor(l, d); // durante a abertura fica preta
   const set = (sel, attr, val) => { const el = document.querySelector(sel); if (el) el.setAttribute(attr, val); };
   set('link[rel="manifest"]', 'href', personalMode ? 'pessoal.webmanifest' : 'manifest.webmanifest');
@@ -103,7 +107,7 @@ function switchSpace(space, from) {
     if (view) { view.classList.add('is-entering'); setTimeout(() => view.classList.remove('is-entering'), 600); }
     setBarColor(veilBar); // continua na cor da transição enquanto ela está na tela
   }, 680);
-  setTimeout(() => { veil.classList.add('is-out'); const [l, d] = SPACE_BAR[space]; setBarColor(l, d); }, 900);
+  setTimeout(() => { veil.classList.add('is-out'); const [l, d] = space === 'personal' ? SPACE_BAR.personal : [WORK.theme?.bg || SPACE_BAR.work[0], SPACE_BAR.work[1]]; setBarColor(l, d); }, 900);
   setTimeout(() => veil.remove(), 1350);
 }
 window.__calRender = () => render();
@@ -120,6 +124,8 @@ function syncWork() {
   workSig = sig;
   applyArch(arch, prof);
   WORK.main = store.workspace === 'main';
+  applyProfTheme();
+  applySpaceMeta(ui.space === 'personal');
   return true;
 }
 function render() {
@@ -182,6 +188,8 @@ const actions = {
   guide: async () => (await import('./views/guide.js')).openGuide(),
   ficha: async () => (await import('./views/ficha.js')).editFicha(),
   share: () => openShare(),
+  privacy: async () => (await import('./privacy.js')).openPrivacy(),
+  theme: (b) => { setThemePref(b.dataset.v); applySpaceMeta(ui.space === 'personal'); render(); },
   admin: async () => (await import('./views/admin.js')).openAdmin(),
   'set-person': (b) => {
     ui.person = b.dataset.p;
@@ -204,6 +212,7 @@ const actions = {
     const days = [...strip.children].map((c) => c.dataset.k);
     const i = Math.max(0, Math.min(days.length - 7, days.indexOf(strip.dataset.left) + Number(b.dataset.n)));
     strip.dataset.left = days[i];
+    strip.dataset.touch = String(Date.now());
     strip.scrollTo({ left: i * cellW(strip), behavior: 'smooth' });
   },
   month: (b) => {
@@ -354,8 +363,19 @@ function bindStrip(view) {
   const label = view.querySelector('[data-striplabel]');
   const M = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   let t = null, raf = 0;
+  // só reage à rolagem que a PESSOA fez (dedo, mouse, setas). Rolagens causadas pelo navegador
+  // (tela redesenhada, janela aberta por cima, print da tela) não podem mudar o mês.
+  const touched = () => { strip.dataset.touch = String(Date.now()); };
+  ['touchstart', 'pointerdown', 'wheel', 'mousedown'].forEach((ev) => strip.addEventListener(ev, touched, { passive: true }));
   strip.addEventListener('scroll', () => {
     if (!ready) return;
+    if (Date.now() - Number(strip.dataset.touch || 0) > 2500) {
+      // não foi a pessoa: volta para onde estava
+      const want = days.indexOf(strip.dataset.left);
+      const w = cellW(strip);
+      if (want >= 0 && w >= 10 && Math.abs(strip.scrollLeft - want * w) > w / 2) { strip.style.scrollBehavior = 'auto'; strip.scrollLeft = want * w; }
+      return;
+    }
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(() => {
       const i = Math.round(strip.scrollLeft / cellW(strip));
@@ -528,12 +548,11 @@ function openDeepLink(hash = location.hash, tries = 0) {
 /* ---------- login (modo nuvem) ---------- */
 const LOGIN_ERRORS = {
   'auth/email-already-in-use': 'Este e-mail já tem conta. Toque em “Entrar” e use a sua senha.',
-  'auth/weak-password': 'Senha fraca: use pelo menos 6 caracteres.',
+  'auth/weak-password': 'Senha fraca: use pelo menos 8 caracteres, com letras e números.',
   'auth/invalid-email': 'E-mail inválido. Confira se digitou certo.',
   'auth/invalid-credential': 'E-mail ou senha incorretos. Confira a senha (toque no olho para ver o que digitou).',
   'auth/wrong-password': 'Senha incorreta.',
   'auth/user-not-found': 'Não existe conta com este e-mail. Toque em “Criar conta”.',
-  'auth/invalid-email': 'E-mail inválido.',
   'auth/too-many-requests': 'Muitas tentativas seguidas. Espere alguns minutos ou use "Esqueci minha senha".',
   'auth/network-request-failed': 'Sem conexão com a internet. Verifique o Wi-Fi/4G e tente de novo.',
   'auth/user-disabled': 'Este usuário foi desativado no Firebase.',
@@ -541,12 +560,29 @@ const LOGIN_ERRORS = {
   'auth/api-key-not-valid': 'Configuração do Firebase inválida (apiKey).',
 };
 let loginEmail = '';
+let loginName = '', loginPass = ''; // não perde o que foi digitado quando aparece um aviso
 let loginNotice = '';
 let signupMode = false;
 let pendingProfile = null;
+let loginConsent = false;
+/* endereço oficial (páginas de termos e privacidade) */
+const siteBase = () => (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) || !CONFIG.siteUrl ? location.pathname.replace(/[^/]*$/, '') : CONFIG.siteUrl.replace(/\/?$/, '/'));
 
-const invitedBy = () => { try { const i = JSON.parse(localStorage.getItem('lembra.invite') || 'null'); return i ? i.name || 'Uma pessoa' : ''; } catch { return ''; } };
+/* Convite recebido pelo link: mostra quem convidou já na tela de login */
+let inviteInfo = null;
+const invitedBy = () => (pendingInvite() ? (inviteInfo && inviteInfo.ownerName) || 'Uma pessoa' : '');
+async function loadInviteInfo() {
+  const p = pendingInvite();
+  if (!p || !CONFIG.firebase) return;
+  try {
+    const { fetchInvite } = await import('./cloud.js');
+    inviteInfo = await fetchInvite(CONFIG.firebase, p.token);
+  } catch (e) { console.warn('convite', e); }
+  const box = document.querySelector('.login__invite b');
+  if (box && inviteInfo?.ownerName) box.textContent = inviteInfo.ownerName;
+}
 function showLogin(errMsg = '') {
+  try { if (sessionStorage.getItem('lembra.deleted')) { sessionStorage.removeItem('lembra.deleted'); loginNotice = 'Sua conta foi excluída e seus dados foram apagados. Obrigado por ter usado o Lembra.'; } } catch { /* ok */ }
   // convidado chegando pelo link: o mais comum é ainda não ter conta
   if (invitedBy() && !showLogin.seen) { showLogin.seen = true; signupMode = true; }
   const msg = errMsg || loginNotice;
@@ -556,12 +592,15 @@ function showLogin(errMsg = '') {
     <p>${signupMode ? 'Crie sua conta: sua agenda de trabalho e a pessoal, só suas.' : 'Agenda de trabalho e pessoal'}</p>
     ${invitedBy() ? `<div class="login__invite">${icon('users', 18)}<span><b>${esc(invitedBy())}</b> convidou você para a agenda de trabalho compartilhada. ${signupMode ? 'Crie sua conta' : 'Entre ou crie sua conta'} para participar — você não paga nada.</span></div>` : ''}
     <form class="form" data-login novalidate>
-      ${signupMode ? `<div class="fgroup"><label class="flabel" for="l-name">Seu nome</label><input id="l-name" class="input" name="name" autocomplete="name" maxlength="40" placeholder="Como quer ser chamado"></div>` : ''}
+      ${signupMode ? `<div class="fgroup"><label class="flabel" for="l-name">Seu nome</label><input id="l-name" class="input" name="name" autocomplete="name" maxlength="40" placeholder="Como quer ser chamado" value="${esc(loginName)}"></div>` : ''}
       <div class="fgroup"><label class="flabel" for="l-email">E-mail</label><input id="l-email" class="input" type="email" name="email" value="${esc(loginEmail)}" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email"></div>
       <div class="fgroup"><label class="flabel" for="l-pass">Senha</label>
-        <div class="input-eye"><input id="l-pass" class="input" type="password" name="pass" autocomplete="${signupMode ? 'new-password' : 'current-password'}" placeholder="${signupMode ? 'mínimo 6 caracteres' : ''}" autocapitalize="none" autocorrect="off" spellcheck="false">
+        <div class="input-eye"><input id="l-pass" class="input" type="password" name="pass" autocomplete="${signupMode ? 'new-password' : 'current-password'}" placeholder="${signupMode ? '8+ caracteres, letras e números' : ''}" value="${esc(loginPass)}" autocapitalize="none" autocorrect="off" spellcheck="false">
         <button type="button" class="iconbtn iconbtn--sm" data-eye aria-label="Mostrar senha">${icon('eye', 18)}</button></div>
       </div>
+      ${signupMode ? `<p class="login__hint">Mínimo de 8 caracteres, com letras e números.</p>
+      <label class="consent"><input type="checkbox" name="consent" ${loginConsent ? 'checked' : ''}><span class="consent__dot" aria-hidden="true">${icon('check', 14)}</span>
+        <span>Li e concordo com os <a href="${siteBase()}termos/" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="${siteBase()}privacidade/" target="_blank" rel="noopener">Política de Privacidade</a> (LGPD).</span></label>` : ''}
       ${msg ? `<p class="login__err">${esc(msg)}</p>` : ''}
       <button class="btn btn--primary btn--block" type="submit" data-go>${signupMode ? 'Criar minha conta' : 'Entrar'}</button>
       ${signupMode ? '' : '<button class="btn-text btn-text--sm" type="button" data-reset>Esqueci minha senha</button>'}
@@ -578,21 +617,27 @@ function showLogin(errMsg = '') {
     const email = f.email.value.trim().toLowerCase();
     const pass = f.pass.value;
     loginEmail = email;
+    loginPass = pass;
+    if (signupMode) loginName = (f.name.value || '').trim();
     loginNotice = '';
     if (!email || !pass) return showLogin('Preencha o e-mail e a senha.');
     const name = signupMode ? (f.name.value || '').trim() : '';
+    if (signupMode) loginConsent = !!f.consent?.checked;
     if (signupMode && !name) return showLogin('Escreva seu nome.');
-    if (signupMode && pass.length < 6) return showLogin('A senha precisa ter pelo menos 6 caracteres.');
+    // senha forte: 8+ caracteres com letras e números (dificulta invasão por tentativa)
+    if (signupMode && (pass.length < 8 || !/[A-Za-zÀ-ÿ]/.test(pass) || !/\d/.test(pass))) return showLogin('Crie uma senha com pelo menos 8 caracteres, misturando letras e números.');
+    if (signupMode && !loginConsent) return showLogin('Para criar a conta, aceite os Termos de Uso e a Política de Privacidade.');
     const go = f.querySelector('[data-go]');
     go.disabled = true;
     go.textContent = signupMode ? 'Criando…' : 'Entrando…';
     try {
-      if (signupMode) pendingProfile = { name };
+      if (signupMode) pendingProfile = { name, consentAt: Date.now(), termsVersion: CONFIG.termsVersion || '1.0' };
       await Promise.race([
         signupMode ? cloudApi.signUp(email, pass, name) : cloudApi.signIn(email, pass),
         new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), 20000)),
       ]);
       // deu certo: a tela muda sozinha quando o Firebase confirmar o login
+      loginPass = '';
       go.textContent = 'Abrindo…';
     } catch (err) {
       const code = err && err.code;
@@ -633,8 +678,18 @@ function loading(msg = 'Carregando…') {
 }
 
 async function startBilling() {
+  // voltou para o app depois de pagar (no iPhone o pagamento abre numa janela à parte): confere sozinho
+  let checking = false;
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState !== 'visible' || !buying() || checking) return;
+    checking = true;
+    try { await confirmPayment({ quiet: true }); } finally { checking = false; }
+  });
+  // desistiu na página da Stripe (voltou por "cancelar")
+  if (/^#\/planos/.test(location.hash)) clearBuying();
   const fromStripe = /^#\/pago/.test(location.hash);
   if (fromStripe) { history.replaceState(null, '', location.pathname + location.search); return confirmPayment(); }
+  if (buying()) confirmPayment({ quiet: true });
   const st = await checkBilling();
   render();
   // agenda compartilhada do dono: liga/desliga conforme o complemento pago
@@ -735,6 +790,8 @@ function startApp() {
   import('./views/ficha.js')
     .then((m) => m.ensureFicha())
     .catch((e) => console.warn('ficha', e))
+    // LGPD: concordância com os Termos e a Privacidade (contas antigas ou termos atualizados)
+    .then(() => import('./privacy.js').then((m) => m.ensureTermsAccepted()).catch((e) => console.warn('termos', e)))
     .then(() => {
       ensurePersona();
       if (store.sharedLost) toast(store.sharedLost === 'removido' ? 'Você não faz mais parte daquela agenda compartilhada. Voltou para a sua agenda.' : `A agenda compartilhada de ${store.sharedLost} não está ativa agora. Voltou para a sua agenda.`, { ms: 6000 });
@@ -843,8 +900,10 @@ function watchConflicts() {
 
 /* ---------- rotas ---------- */
 async function boot() {
+  startErrorLog();
   // link de convite para a agenda compartilhada: guarda para depois do login
   captureInvite();
+  loadInviteInfo();
   const hash = location.hash || '';
   const fb = CONFIG.firebase;
 

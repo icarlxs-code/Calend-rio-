@@ -107,8 +107,22 @@ function insightsHtml(users) {
   </div>`;
 }
 
+/* Erros vindos dos aparelhos (sem conteúdo da agenda): para achar e corrigir bugs */
+function errorsHtml(errors) {
+  if (errors === null) return '';
+  return `<section class="block">
+    <h2 class="block__title">${icon('alert', 16)} Erros do app ${errors.length ? `<small>(${errors.length})</small>` : ''}</h2>
+    ${errors.length ? `<div class="aerrs">${errors.slice(0, 40).map((e) => `<div class="aerr">
+        <div class="aerr__top"><b>${esc(e.msg)}</b><span>${e.count}×</span></div>
+        <small>${esc(e.where || '—')} · ${esc(e.dev || '')} · versão ${esc(e.ver || '?')} · ${(e.users || []).length} pessoa${(e.users || []).length === 1 ? '' : 's'} · último ${esc(ago(e.last))}</small>
+      </div>`).join('')}</div>
+      <button class="btn btn--soft btn--sm" data-clear-errors>Limpar a lista (depois de corrigir)</button>`
+      : `<p class="fhelp">Nenhum erro registrado. 🎉 Quando algo der errado no celular de alguém, aparece aqui.</p>`}
+  </section>`;
+}
+
 export async function openAdmin() {
-  let users = null, err = null, openUid = null, q = '', plans = {};
+  let users = null, err = null, openUid = null, q = '', plans = {}, errors = null;
   const html = () => {
     if (err) return `${sheetHead('Painel do dono')}<div class="page page--sheet"><div class="empty"><h3>Não consegui carregar</h3><p>${esc(err)}</p></div></div>`;
     if (!users) return `${sheetHead('Painel do dono')}<div class="page page--sheet"><p class="fhelp">Carregando contas…</p></div>`;
@@ -121,6 +135,9 @@ export async function openAdmin() {
     const addons = Object.values(plans).filter((p) => p.addon && p.addon.active);
     // receita recorrente por mês: mensais + complementos de agenda compartilhada (o vitalício entra uma vez só)
     const mrr = Object.values(plans).filter((p) => p.plan === 'monthly').length * 9.9 + addons.reduce((a, p) => a + (p.addon.plan === 'equipe' ? 14.9 : 6.9), 0);
+    // conversão: quem pagou ÷ quem já passou pelo teste (contas próprias)
+    const tried = Object.values(plans).filter((p) => p.plan !== 'none' && p.plan !== 'team').length;
+    const conv = tried ? Math.round((paying.length / tried) * 100) : 0;
     return `${sheetHead('Painel do dono', { right: '<button class="btn-text" data-reload>Atualizar</button>' })}
     <div class="page page--sheet">
       <div class="akpis">
@@ -138,7 +155,10 @@ export async function openAdmin() {
         <div><b>${addons.length}</b><small>agendas compartilhadas</small></div>
         <div><b>${users.filter((u) => u.workspace === 'compartilhada').length}</b><small>convidados</small></div>
         <div><b>R$ ${mrr.toFixed(2).replace('.', ',')}</b><small>por mês</small></div>
+        <div><b>R$ ${(Object.values(plans).filter((p) => p.plan === 'lifetime').length * 150).toLocaleString('pt-BR')}</b><small>vitalícios (total)</small></div>
+        <div><b>${conv}%</b><small>conversão</small></div>
       </div>
+      ${errorsHtml(errors)}
       ${insightsHtml(users)}
       <input class="input" type="search" placeholder="Buscar por nome, e-mail ou profissão" data-q value="${esc(q)}">
       <div class="accts">${list.map((u) => card(u, u.uid === openUid)).join('') || '<p class="fhelp">Nenhuma conta encontrada.</p>'}</div>
@@ -152,6 +172,8 @@ export async function openAdmin() {
       a.el.querySelectorAll('[data-toggle]').forEach((b) => (b.onclick = () => { openUid = openUid === b.dataset.toggle ? null : b.dataset.toggle; a.set(html()); }));
       const r = a.el.querySelector('[data-reload]');
       if (r) r.onclick = () => load();
+      const ce = a.el.querySelector('[data-clear-errors]');
+      if (ce) ce.onclick = async () => { try { const { api } = await import('../avisos.js'); errors = (await api('/admin/errors', { clear: true })).errors || []; a.set(html()); } catch { toast('Não consegui limpar agora.'); } };
       const s = a.el.querySelector('[data-q]');
       if (s) s.oninput = () => { q = s.value.trim().toLowerCase(); const pos = s.selectionStart; a.set(html()); const n = a.el.querySelector('[data-q]'); n.focus(); n.setSelectionRange(pos, pos); };
     },
@@ -160,6 +182,7 @@ export async function openAdmin() {
     try {
       users = await store.backendApi.listStats(); err = null;
       try { const { api } = await import('../avisos.js'); plans = (await api('/billing/all', {})).byWs || {}; } catch { plans = {}; }
+      try { const { api } = await import('../avisos.js'); errors = (await api('/admin/errors', {})).errors || []; } catch { errors = null; }
     }
     catch (e) { err = /permission/i.test(String(e.code || e.message)) ? 'Falta atualizar as regras do Firebase (bloco “stats”).' : 'Verifique a internet e toque em Atualizar.'; }
     api.set(html());

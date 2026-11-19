@@ -47,11 +47,25 @@ export async function connect(config) {
     signUp: async (email, pass, name) => {
       const cred = await authApi.createUserWithEmailAndPassword(auth, email, pass);
       if (name) await authApi.updateProfile(cred.user, { displayName: name }).catch(() => {});
+      // confirma que o e-mail é da pessoa (protege a recuperação de senha)
+      authApi.sendEmailVerification(cred.user).catch(() => {});
       return cred;
     },
     backend,
   };
 }
+/* ---------- conta (LGPD) ---------- */
+export const account = {
+  emailVerified: () => !!auth?.currentUser?.emailVerified,
+  resendVerification: () => authApi.sendEmailVerification(auth.currentUser),
+  reload: () => auth.currentUser.reload(),
+  /* confirma a senha antes de ações sensíveis (excluir a conta) */
+  async reauth(password) {
+    const u = auth.currentUser;
+    await authApi.reauthenticateWithCredential(u, authApi.EmailAuthProvider.credential(u.email, password));
+  },
+  deleteUser: () => authApi.deleteUser(auth.currentUser),
+};
 
 const clean = (obj) => JSON.parse(JSON.stringify(obj)); // remove undefined
 /* Espaço de dados: a dupla Henrique+Matheus usa a raiz (como sempre);
@@ -89,25 +103,53 @@ const backend = {
   setTeam(owner, data) {
     return fs.setDoc(fs.doc(db, 'teams', owner), clean(data), { merge: true });
   },
-  async getInvite(owner) {
-    const s = await fs.getDoc(fs.doc(db, 'teams', owner, 'private', 'invite'));
+  /* Convites: invites/{token} (uso único, expira) */
+  async getInvite(token) {
+    const s = await fs.getDoc(fs.doc(db, 'invites', token));
     return s.exists() ? s.data() : null;
   },
-  setInvite(owner, code) {
-    return fs.setDoc(fs.doc(db, 'teams', owner, 'private', 'invite'), { code, at: Date.now() });
+  createInvite(token, data) {
+    return fs.setDoc(fs.doc(db, 'invites', token), clean(data));
+  },
+  deleteInvite(token) {
+    return fs.deleteDoc(fs.doc(db, 'invites', token));
+  },
+  async listInvites(owner) {
+    const snap = await fs.getDocs(fs.query(fs.collection(db, 'invites'), fs.where('owner', '==', owner)));
+    return snap.docs.map((d) => ({ ...d.data(), id: d.id })).sort((a, b) => b.createdAt - a.createdAt);
   },
   watchTeam(owner, cb) {
     return fs.onSnapshot(fs.doc(db, 'teams', owner), (s) => cb(s.exists() ? s.data() : null), () => cb(null));
   },
-  /* Convidado entra: cria o pedido com o código do convite e se acrescenta na equipe, juntos.
-     As regras do Firebase conferem o código, se a agenda está ativa e se ainda há vaga. */
-  async joinTeam(owner, code, person) {
+  /* Convidado entra, tudo de uma vez: gasta o convite (uso único), registra a entrada e se acrescenta na equipe.
+     As regras do Firebase conferem o convite, a validade, se a agenda está ativa e se ainda há vaga. */
+  async joinTeam(owner, token, person) {
     const me = auth.currentUser.uid;
-    try { const t = await this.getTeam(owner); if (t && (t.members || []).includes(me)) return; } catch { /* ainda não é da equipe: não pode ler */ }
+    const now = Date.now();
     const batch = fs.writeBatch(db);
-    batch.set(fs.doc(db, 'teams', owner, 'joins', me), { code, ...clean(person), at: Date.now() });
+    batch.update(fs.doc(db, 'invites', token), { used: true, usedBy: me, usedAt: now });
+    batch.set(fs.doc(db, 'teams', owner, 'joins', me), { token, ...clean(person), at: now });
     batch.update(fs.doc(db, 'teams', owner), { members: fs.arrayUnion(me), [`names.${me}`]: clean(person) });
     await batch.commit();
+  },
+  /* ---------- excluir conta (LGPD) ---------- */
+  async deleteTeam(owner) {
+    const joins = await fs.getDocs(fs.collection(db, 'teams', owner, 'joins')).catch(() => null);
+    if (joins) await Promise.all(joins.docs.map((d) => fs.deleteDoc(d.ref).catch(() => {})));
+    await fs.deleteDoc(fs.doc(db, 'teams', owner)).catch(() => {});
+  },
+  async deletePersonal() {
+    const u = auth.currentUser;
+    const snap = await fs.getDocs(fs.collection(db, 'pessoal', u.uid, 'itens'));
+    for (let i = 0; i < snap.docs.length; i += 400) {
+      const batch = fs.writeBatch(db);
+      snap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+  },
+  async deleteOwnDocs(uid) {
+    await fs.deleteDoc(fs.doc(db, 'stats', uid)).catch(() => {});
+    await fs.deleteDoc(fs.doc(db, 'users', uid));
   },
   /* Sai da equipe (o próprio convidado) ou tira alguém (o dono) */
   async leaveTeam(owner, uid) {
@@ -185,6 +227,17 @@ const backend = {
     return fs.deleteDoc(fs.doc(db, 'public', token));
   },
 };
+
+/* Convite antes do login: só o nome de quem convidou (quem tem o link lê; ninguém lista) */
+export async function fetchInvite(config, token) {
+  if (useEmulator()) config = { ...config, projectId: 'demo-calendario' };
+  const f = fsMod;
+  const app = appMod.getApps().find((a) => a.name === 'convite') || appMod.initializeApp(config, 'convite');
+  const d = f.getFirestore(app);
+  if (useEmulator() && !d._emu) { f.connectFirestoreEmulator(d, '127.0.0.1', 8085); d._emu = true; }
+  const snap = await f.getDoc(f.doc(d, 'invites', token));
+  return snap.exists() ? snap.data() : null;
+}
 
 /* Leitura pública (tela do cliente) — não exige login */
 export async function fetchPublic(config, token) {

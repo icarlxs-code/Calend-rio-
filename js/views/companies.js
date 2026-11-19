@@ -1,13 +1,15 @@
 /* Empresas: lista, página da empresa, cadastro e link do cliente */
 import { nicheOf } from '../coach.js';
 import { store } from '../store.js';
-import { TYPES, PALETTE, isPost, WORK, ent, isMarketing } from '../constants.js';
+import { TYPES, PALETTE, isPost, WORK, ent, isMarketing, novo, nenhum, entFem } from '../constants.js';
 import { esc, todayKey, addDays, startOfWeek, fmtDayShort, relDay, dayLabel, rgba, textOn, resizeImage, uid, monthKey, fmtMonth } from '../utils.js';
 import { icon } from '../icons.js';
 import { openSheet, sheetHead, logo, eventCard, emptyState, toast, confirmDialog } from '../components.js';
 import { buildClientPayload, encodeSnapshot, liveLink, snapshotLink } from '../share.js';
 
 /* ======================== LISTA ======================== */
+/* exemplo de nome em cada área */
+const EXAMPLE = { Empresa: 'Pura Vida', Local: 'Hospital Santa Clara', Turma: '9º ano B', Obra: 'Residencial Aurora', Cliente: 'Maria Silva', Setor: 'Linha de produção 2', Unidade: '3º Batalhão', Projeto: 'Novo site', Plataforma: 'iFood', 'Área': 'Talhão 3', 'Matéria': 'Matemática' };
 export function renderCompanies() {
   const list = store.companiesSorted();
   const t = todayKey();
@@ -17,11 +19,11 @@ export function renderCompanies() {
   <header class="hdr">
     <div class="hdr__row">
       <div class="hdr__titles"><p class="hdr__eyebrow">${list.length} ${list.length === 1 ? ent(false, true) : ent(true, true)}</p><h1>${ent(true)}</h1></div>
-      <div class="hdr__actions"><button class="btn btn--primary btn--sm" data-action="new-company">${icon('plus', 16)} Nova</button></div>
+      <div class="hdr__actions"><button class="btn btn--primary btn--sm" data-action="new-company">${icon('plus', 16)} ${novo()}</button></div>
     </div>
   </header>
   <div class="page">
-    ${!list.length ? emptyState(`Nenhum(a) ${ent(false, true)} ainda`, `Cadastre ${WORK.entity.hint} com nome, cor e foto. Assim cada compromisso fica organizado no lugar certo.`,
+    ${!list.length ? emptyState(`${nenhum()} ${ent(false, true)} ainda`, `Cadastre ${WORK.entity.hint} com nome, cor e foto. Assim cada compromisso fica organizado no lugar certo.`,
       `<button class="btn btn--primary" data-action="new-company">${icon('plus', 18)} Cadastrar ${ent(false, true)}</button>`) : ''}
     <div class="colist">
       ${list.map((c) => {
@@ -134,7 +136,7 @@ export function openCompanyEditor(id = null, onSaved = null) {
     : { id: uid('c_'), name: '', color: PALETTE.find((p) => !used.includes(p)) || PALETTE[0], logo: null, instagram: '', address: '', contact: '', notes: '', shareToken: null };
 
   const html = () => `
-    ${sheetHead(existing ? `Editar ${ent(false, true)}` : `Novo(a) ${ent(false, true)}`, {
+    ${sheetHead(existing ? `Editar ${ent(false, true)}` : `${novo()} ${ent(false, true)}`, {
       left: `<button class="btn-text" data-close>Cancelar</button>`,
       right: `<button class="btn btn--primary btn--sm" data-save>Salvar</button>`,
     })}
@@ -148,7 +150,7 @@ export function openCompanyEditor(id = null, onSaved = null) {
       </div>
       <div class="fgroup">
         <label class="flabel" for="c-name">Nome (${esc(WORK.entity.hint)})</label>
-        <input id="c-name" class="input" name="name" value="${esc(d.name)}" placeholder="Ex.: Pura Vida" autocomplete="off" maxlength="60">
+        <input id="c-name" class="input" name="name" value="${esc(d.name)}" placeholder="Ex.: ${esc(EXAMPLE[WORK.entity.one] || 'Pura Vida')}" autocomplete="off" maxlength="60">
       </div>
       <div class="fgroup">
         <label class="flabel">Cor no calendário</label>
@@ -161,13 +163,13 @@ export function openCompanyEditor(id = null, onSaved = null) {
         <label class="flabel" for="c-ig">Instagram</label>
         <div class="input-prefix"><span>@</span><input id="c-ig" class="input" name="instagram" value="${esc(d.instagram || '')}" placeholder="usuario" autocomplete="off" autocapitalize="none"></div>
       </div>
-      <div class="fgroup">
+      <div class="fgroup"${store.team.length > 1 ? '' : ' hidden'}>
         <label class="flabel">Notificações daqui vão para</label>
-        <div class="seg seg--notify">${[['', 'Os dois'], ...store.team.map((m) => [m.id, m.name])].map(([v, l]) => `<button type="button" class="seg__btn${(d.notifyOnly || '') === v ? ' is-on' : ''}" data-only="${v}">${esc(l)}</button>`).join('')}</div>
-        <p class="fhelp">Avisos, lembretes, “Já postou?”, cobranças de atraso e dicas desta empresa chegam só para quem estiver marcado.</p>
+        <div class="seg seg--notify">${[['', store.team.length === 2 ? 'Os dois' : 'Todos'], ...store.team.map((m) => [m.id, m.name])].map(([v, l]) => `<button type="button" class="seg__btn${(d.notifyOnly || '') === v ? ' is-on' : ''}" data-only="${v}">${esc(l)}</button>`).join('')}</div>
+        <p class="fhelp">${isMarketing() ? 'Avisos, lembretes, “Já postou?”, cobranças de atraso e dicas desta empresa' : `Avisos, lembretes e cobranças de atraso ${entFem() ? 'desta' : 'deste'} ${esc(ent(false, true))}`} chegam só para quem estiver marcado.</p>
       </div>
-      <div class="fgroup">
-        <label class="flabel" for="c-niche">${isMarketing() ? 'O que a empresa faz (para as dicas)' : 'Observação (para as dicas)'}</label>
+      <div class="fgroup"${isMarketing() ? '' : ' hidden'}>
+        <label class="flabel" for="c-niche">O que a empresa faz (para as dicas)</label>
         <input id="c-niche" class="input" name="niche" value="${esc(d.niche || nicheOf(d))}" placeholder="Ex.: hamburgueria artesanal, loja de roupas femininas" autocomplete="off" maxlength="160">
       </div>
       <div class="fgroup">
@@ -176,11 +178,11 @@ export function openCompanyEditor(id = null, onSaved = null) {
       </div>
       <div class="fgroup">
         <label class="flabel" for="c-contact">Contato</label>
-        <input id="c-contact" class="input" name="contact" value="${esc(d.contact || '')}" placeholder="Nome e WhatsApp do responsável" autocomplete="off">
+        <input id="c-contact" class="input" name="contact" value="${esc(d.contact || '')}" placeholder="${isMarketing() ? 'Nome e WhatsApp do responsável' : 'Telefone, responsável, horário…'}" autocomplete="off">
       </div>
       <div class="fgroup">
-        <label class="flabel" for="c-notes">Observações internas</label>
-        <textarea id="c-notes" class="input" name="notes" rows="3" placeholder="Tom de voz, o que evitar, preferências…">${esc(d.notes || '')}</textarea>
+        <label class="flabel" for="c-notes">${isMarketing() ? 'Observações internas' : 'Observações'}</label>
+        <textarea id="c-notes" class="input" name="notes" rows="3" placeholder="${isMarketing() ? 'Tom de voz, o que evitar, preferências…' : 'Tudo o que você precisa lembrar sobre esse lugar…'}">${esc(d.notes || '')}</textarea>
       </div>
       ${existing ? `<button type="button" class="btn btn--danger-soft btn--block" data-delete>${icon('trash', 18)} Excluir ${ent(false, true)}</button>` : ''}
       <div class="form__spacer"></div>
