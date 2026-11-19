@@ -880,3 +880,5 @@ html:not(.intro-done) .tabbar { opacity: 0; }
   border-bottom: 0.5px solid var(--line); font-size: 13px; font-weight: 700; color: var(--text-2);
 }
 .client-preview .client__hero { padding-top: 34px; }
+.intro { background: #F3F3F3 url("../media/intro-poster.jpg") center / cover no-repeat; }
+.intro img { width: 100%; height: 100%; object-fit: cover; display: block; }

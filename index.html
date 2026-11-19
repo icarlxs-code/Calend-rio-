@@ -16,6 +16,7 @@
   <link rel="icon" href="icons/favicon-64.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="preload" href="media/intro-poster.jpg" as="image">
+  <link rel="preload" href="media/intro.webp" as="image">
   <link rel="stylesheet" href="css/app.css">
   <!--PRELOAD-->
   <link rel="modulepreload" href="dist/a-34VXYJK7.js">
@@ -33,56 +34,54 @@
   <!--/PRELOAD-->
 </head>
 <body>
-  <div id="intro" class="intro" aria-hidden="true">
-    <video id="intro-video" src="media/intro.mp4" poster="media/intro-poster.jpg" muted autoplay playsinline webkit-playsinline preload="auto" disablepictureinpicture></video>
-  </div>
+  <div id="intro" class="intro" aria-hidden="true"></div>
   <script>
-/* Abertura com vídeo (sem som). Aparece ao abrir o app e ao voltar para ele
-   depois de um tempo fora. Termina com uma transição suave para a agenda. */
+/* Abertura animada (sem som). É uma animação de imagem, não vídeo: toca sempre,
+   inclusive no Modo Pouca Energia do iPhone, e fica guardada no celular (abre sem internet).
+   Aparece ao abrir o app e ao voltar para ele depois de um tempo fora. */
 (function () {
   var intro = document.getElementById('intro');
-  var video = document.getElementById('intro-video');
   var root = document.documentElement;
-  if (!intro || !video) return;
-  var AWAY_MS = 30000; // tempo fora do app para repetir a abertura
-  var leaving = false, timer = null, hiddenAt = 0;
+  if (!intro) return;
+  var SRC = 'media/intro.webp';
+  var DURATION = 3000;  // duração da animação (ms)
+  var AWAY_MS = 30000;  // tempo fora do app para repetir a abertura
+  var leaving = false, timers = [], hiddenAt = 0, n = 0;
   var isClient = function () { return /^#\/(c|v)\//.test(location.hash); };
+  var clear = function () { timers.forEach(clearTimeout); timers = []; };
 
   function finish() {
     if (leaving) return;
     leaving = true;
-    clearTimeout(timer);
+    clear();
     intro.classList.add('is-leaving');
     root.classList.add('intro-done');
-    setTimeout(function () {
+    timers.push(setTimeout(function () {
       intro.classList.add('is-gone');
-      try { video.pause(); } catch (e) { /* ok */ }
-    }, 800);
+      intro.innerHTML = '';
+    }, 800));
   }
 
   function play() {
+    clear();
     leaving = false;
     intro.classList.remove('is-gone', 'is-leaving');
     root.classList.remove('intro-done');
-    try { video.currentTime = 0; } catch (e) { /* ok */ }
-    clearTimeout(timer);
-    timer = setTimeout(finish, 4500); // segurança: nunca prende a pessoa na abertura
-    var p = video.play();
-    if (p && p.catch) {
-      p.catch(function () {
-        // Modo Pouca Energia do iPhone bloqueia vídeo automático: mostra a imagem e segue
-        clearTimeout(timer);
-        timer = setTimeout(finish, 1100);
-      });
-    }
+    // imagem nova a cada abertura: a animação recomeça do início
+    var img = new Image();
+    img.alt = '';
+    img.decoding = 'async';
+    img.onload = function () {
+      intro.innerHTML = '';
+      intro.appendChild(img);
+      clear();
+      timers.push(setTimeout(finish, DURATION - 300)); // emenda a transição antes do último quadro
+    };
+    img.onerror = function () { clear(); timers.push(setTimeout(finish, 500)); };
+    img.src = SRC + '?p=' + (++n) + '-' + Date.now();
+    timers.push(setTimeout(finish, DURATION + 1500)); // segurança: nunca prende a pessoa na abertura
   }
 
-  // começa a transição um pouco antes do fim, para emendar sem "pulo"
-  video.addEventListener('timeupdate', function () {
-    if (video.duration && video.currentTime >= video.duration - 0.35) finish();
-  });
-  video.addEventListener('ended', finish);
-  video.addEventListener('error', function () { setTimeout(finish, 600); });
   intro.addEventListener('click', finish); // toque para pular
 
   if (isClient()) {

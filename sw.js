@@ -1,7 +1,7 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
 const CACHE = /*CACHE*/'cal-34vxyjk7'/*CACHE*/;
 const SHELL = [
-  './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster.jpg',
+  './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster.jpg', 'media/intro.webp',
   'media/logos/pura-vida.jpg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
   /*FILES*/ 'dist/a-34VXYJK7.js', 'dist/c-JBFK46OY.js', 'dist/c-FJTSIK4O.js', 'dist/c-EJYUXBR7.js', 'dist/c-4OPZHBQG.js', 'dist/c-TYCTILQS.js', 'dist/c-QNJTKFWY.js', 'dist/c-SIJUFJQD.js', 'dist/c-3GA6RSWB.js', 'dist/c-43VYY7Q5.js', 'dist/c-W6W2IM5K.js', 'dist/c-VHNSBD2M.js',
 ];
@@ -19,6 +19,11 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   // vídeo: o iPhone pede em pedaços (Range); deixa o navegador cuidar direto
   if (url.pathname.endsWith('.mp4')) return;
+  // abertura animada: sempre do celular (instantâneo e sem internet)
+  if (url.pathname.endsWith('/media/intro.webp')) {
+    e.respondWith(caches.match('media/intro.webp', { ignoreSearch: true }).then((r) => r || fetch('media/intro.webp')));
+    return;
+  }
   // demais arquivos: rede primeiro (para receber atualizações); cache se estiver offline
   // "no-cache": sempre confere com o servidor se há versão nova (evita ficar preso numa versão antiga)
   const req = e.request.mode === 'navigate' ? e.request.url : e.request;
