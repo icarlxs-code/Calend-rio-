@@ -7,7 +7,7 @@ export const CONFIG = {
   agencyName: 'Henrique & Matheus',
 
   // Endereço do servidor gratuito de avisos (Cloudflare Workers). Preenchido depois de publicar.
-  pushServer: '',
+  pushServer: 'https://calend-rio.icarlxs.workers.dev',
 
   // Equipe. O "email" só é usado quando a sincronização na nuvem
   // (Firebase) estiver ligada — é o login de cada um.
