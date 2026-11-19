@@ -1157,3 +1157,7 @@ html, body { overflow-x: hidden; max-width: 100%; }
 .brow__st.is-ok { color: var(--ok); }
 .brow__st.is-late { color: var(--danger); }
 .brow__next { color: var(--text-3); font-size: 13px; }
+/* o topo da transição tem a mesma cor da barra do iPhone (emenda invisível) */
+.spaceveil--personal { background: linear-gradient(180deg, #C88AE8 0%, #A06BFF 45%, #5B6BFF 100%); }
+.spaceveil--work { background: linear-gradient(180deg, #1E1E25 0%, #0E0E12 100%); }
+.spaceveil { top: calc(-1 * env(safe-area-inset-top, 0px)); }

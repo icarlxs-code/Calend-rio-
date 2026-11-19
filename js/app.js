@@ -50,8 +50,18 @@ function shell() {
       ${tabBtn('ajustes', 'settings', 'Ajustes')}`}
     </nav>`;
 }
+/* Cor da barra de status do iPhone (hora/bateria) acompanha o app */
+const SPACE_BAR = { work: ['#F4F4F6', '#000000'], personal: ['#F7F3FA', '#0E0A13'] };
+function setBarColor(light, dark = light) {
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
+    const media = m.getAttribute('media') || '';
+    m.setAttribute('content', /dark/.test(media) ? dark : light);
+  });
+}
 /* Pessoal parece outro app: título, ícone e cor da barra do iPhone próprios */
 function applySpaceMeta(personalMode) {
+  const [l, d] = SPACE_BAR[personalMode ? 'personal' : 'work'];
+  setBarColor(l, d);
   const set = (sel, attr, val) => { const el = document.querySelector(sel); if (el) el.setAttribute(attr, val); };
   set('link[rel="manifest"]', 'href', personalMode ? 'pessoal.webmanifest' : 'manifest.webmanifest');
   set('link[rel="apple-touch-icon"]', 'href', personalMode ? 'icons/pessoal-180.png' : 'icons/icon-180.png');
@@ -72,6 +82,9 @@ function switchSpace(space, from) {
     ? `<div><span class="spaceveil__badge">${icon('heart', 40)}</span><strong>Pessoal</strong><small>${me ? esc(me.name) + ' · ' : ''}só você vê</small></div>`
     : `<div><span class="spaceveil__badge">${icon('briefcase', 40)}</span><strong>Trabalho</strong><small>Agenda da dupla</small></div>`;
   document.body.appendChild(veil);
+  // a barra do topo (hora/bateria) entra na mesma cor da transição, quando o círculo chega lá em cima
+  const veilBar = space === 'personal' ? '#C88AE8' : '#1E1E25';
+  setTimeout(() => setBarColor(veilBar), 260);
   if (navigator.vibrate) navigator.vibrate(8);
   requestAnimationFrame(() => requestAnimationFrame(() => veil.classList.add('is-in')));
   setTimeout(() => {
@@ -82,8 +95,9 @@ function switchSpace(space, from) {
     window.scrollTo(0, 0);
     const view = document.getElementById('view');
     if (view) { view.classList.add('is-entering'); setTimeout(() => view.classList.remove('is-entering'), 600); }
+    setBarColor(veilBar); // continua na cor da transição enquanto ela está na tela
   }, 680);
-  setTimeout(() => veil.classList.add('is-out'), 900);
+  setTimeout(() => { veil.classList.add('is-out'); const [l, d] = SPACE_BAR[space]; setBarColor(l, d); }, 900);
   setTimeout(() => veil.remove(), 1350);
 }
 window.__calRender = () => render();
