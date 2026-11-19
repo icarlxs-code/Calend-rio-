@@ -21,7 +21,7 @@ const getSubs = async (env) => (await env.CAL.get('subs', 'json')) || {};
 const getSchedule = async (env) => (await env.CAL.get('schedule', 'json')) || { items: [], sent: {} };
 
 /* Manda para todos os aparelhos de uma pessoa, respeitando as preferências do aparelho */
-async function sendToMember(env, member, msg, pref) {
+async function sendToMember(env, member, msg, pref, statuses = []) {
   const [subs, vapid] = await Promise.all([getSubs(env), getVapid(env)]);
   let sent = 0, changed = false;
   await Promise.all(Object.entries(subs).map(async ([id, d]) => {
@@ -30,12 +30,14 @@ async function sendToMember(env, member, msg, pref) {
     try {
       const status = await sendPush(d.subscription, msg, vapid, { subject: SUBJECT });
       console.log(`envio para ${member}: ${status} — ${msg.title}`);
+      statuses.push(status);
       if (status === 404 || status === 410) {
         delete subs[id];
         changed = true;
       } else if (status < 300) sent++;
     } catch (e) {
       console.log('falha no envio', member, e.message);
+      statuses.push('erro: ' + e.message);
     }
   }));
   if (changed) await env.CAL.put('subs', JSON.stringify(subs));
@@ -72,7 +74,7 @@ const cors = (env, req) => {
   };
 };
 const reply = (env, req, data, status = 200) =>
-  new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...cors(env, req) } });
+  new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors(env, req) } });
 
 const clean = (s, n) => String(s || '').slice(0, n);
 const MEMBERS = (env) => JSON.parse(env.TEAM || '[]').map((m) => m.id);
@@ -127,8 +129,10 @@ async function handle(req, env) {
   }
 
   if (url.pathname === '/test') {
-    const sent = await sendToMember(env, me.id, { title: 'Notificações ativadas ✓', body: 'É assim que os lembretes e os avisos do parceiro vão chegar.', tag: 'teste', url: './' });
-    return reply(env, req, { ok: true, sent });
+    const statuses = [];
+    const sent = await sendToMember(env, me.id, { title: 'Notificações ativadas ✓', body: 'É assim que os lembretes e os avisos do parceiro vão chegar.', tag: 'teste', url: './' }, null, statuses);
+    const subs = await getSubs(env);
+    return reply(env, req, { ok: true, sent, devices: Object.values(subs).filter((d) => d.member === me.id).length, statuses });
   }
 
   if (url.pathname === '/ask') {

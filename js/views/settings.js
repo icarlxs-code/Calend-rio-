@@ -117,9 +117,9 @@ function notifySection() {
   } else if (perm !== 'granted') {
     state = 'warn'; text = 'Desativadas neste celular.'; btn = `<button class="btn btn--primary btn--sm" data-action="notify-enable">Ativar</button>`;
   } else if (cloud && device) {
-    state = 'ok'; text = 'Ativadas. Os lembretes e os avisos do parceiro chegam mesmo com o app fechado.';
+    state = 'ok'; text = 'Ativadas. Os lembretes e os avisos do parceiro chegam mesmo com o app fechado.'; btn = `<button class="btn btn--soft btn--sm" data-action="notify-enable">Recadastrar</button>`;
   } else if (cloud) {
-    state = 'warn'; text = 'Permissão concedida, mas o servidor de notificações ainda não foi publicado (veja o README).'; btn = `<button class="btn btn--soft btn--sm" data-action="notify-enable">Tentar</button>`;
+    state = 'warn'; text = 'Permissão concedida, mas este celular ainda não foi cadastrado no servidor. Toque em Cadastrar.'; btn = `<button class="btn btn--primary btn--sm" data-action="notify-enable">Cadastrar</button>`;
   } else {
     state = 'warn'; text = 'Ativadas só com o app aberto. Para receber com o app fechado e no celular do parceiro, ligue a nuvem e o servidor (README).';
   }
@@ -160,17 +160,26 @@ function routineSection() {
 
 export const settingsActions = {
   async notifyEnable() {
-    const r = await push.enable().catch(() => ({ ok: false, reason: 'error' }));
+    const r = await push.enable().catch((e) => ({ ok: false, reason: 'error', message: e.message }));
     if (r.ok) toast(r.local ? 'Ativado (com o app aberto)' : 'Notificações ativadas');
     else if (r.reason === 'install') toast('Instale o app na Tela de Início primeiro');
     else if (r.reason === 'denied') toast('Bloqueado: libere em Ajustes do iPhone → Notificações');
     else if (r.reason === 'server') toast('Servidor de notificações ainda não publicado');
-    else toast('Não foi possível ativar');
+    else toast(`Não foi possível ativar${r.message ? ': ' + r.message : ''}`, { ms: 8000 });
     store.emit();
   },
   async notifyTest() {
-    const where = await push.sendTest().catch(() => null);
-    toast(where === 'server' ? 'Enviando… deve chegar em alguns segundos' : where ? 'Notificação enviada' : 'Não foi possível enviar');
+    let r;
+    try {
+      r = await push.sendTest();
+    } catch (e) {
+      return toast(`Falhou: ${e.message}`, { ms: 8000 });
+    }
+    if (r.kind === 'not-registered') return toast('Este celular ainda não está cadastrado. Toque em "Ativar" acima.', { ms: 7000 });
+    if (r.kind === 'local') return toast('Notificação local mostrada (servidor não configurado)');
+    if (r.sent > 0) return toast('Enviada! Deve chegar em alguns segundos. Bloqueie a tela para ver.', { ms: 7000 });
+    if (!r.devices) return toast('O servidor não tem este celular cadastrado. Toque em "Ativar" de novo.', { ms: 7000 });
+    toast(`A Apple não aceitou o envio (${(r.statuses || []).join(', ') || 'sem resposta'}). Toque em "Ativar" de novo.`, { ms: 9000 });
   },
   async notifyPrefs(form) {
     await push.setPrefs({ reminders: form.reminders.checked, partner: form.partner.checked, daily: form.daily.checked });

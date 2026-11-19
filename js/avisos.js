@@ -110,15 +110,18 @@ export async function setPrefs(prefs) {
 
 /* Pede ao servidor uma notificação de teste para este aparelho */
 export async function sendTest() {
-  if (store.mode === 'cloud' && server() && localStorage.getItem(LS_DEVICE)) {
+  if (store.mode === 'cloud' && server()) {
+    if (!localStorage.getItem(LS_DEVICE)) return { kind: 'not-registered' };
     const r = await api('/test');
-    return r.sent ? 'server' : 'none';
+    return { kind: 'server', ...r };
   }
   // sem servidor: mostra uma notificação local, só para conferir a aparência
   const reg = await navigator.serviceWorker.ready;
   await reg.showNotification('Notificações ativadas ✓', { body: 'É assim que os lembretes vão chegar.', icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag: 'teste' });
-  return 'local';
+  return { kind: 'local' };
 }
+
+export const deviceRegistered = () => !!localStorage.getItem(LS_DEVICE);
 
 /* Número no ícone do app = tarefas pendentes de hoje */
 export function updateBadge(count) {
