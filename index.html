@@ -15,10 +15,9 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/favicon-64.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
-  <link rel="preload" href="media/intro-poster.jpg" as="image">
   <link rel="stylesheet" href="css/app.css">
   <!--PRELOAD-->
-  <link rel="modulepreload" href="dist/a-VLURH4LG.js">
+  <link rel="modulepreload" href="dist/a-TV65PAIQ.js">
   <link rel="modulepreload" href="dist/c-IY6FCE6X.js">
   <link rel="modulepreload" href="dist/c-7IL2T3Z2.js">
   <link rel="modulepreload" href="dist/c-AB7TZIE6.js">
@@ -51,9 +50,9 @@
   var canvas = document.getElementById('intro-canvas');
   var root = document.documentElement;
   if (!intro || !canvas) return;
-  var FRAMES = 168, FPS = 60, AHEAD = 8;
+  var FRAMES = 67, FPS = 24, AHEAD = 6;
   var URLS = [];
-  for (var i = 1; i <= FRAMES; i++) URLS.push('media/intro4/f' + ('00' + i).slice(-3) + '.webp');
+  for (var i = 1; i <= FRAMES; i++) URLS.push('media/intro5/f' + ('00' + i).slice(-3) + '.webp');
   var AWAY_MS = 30000; // tempo fora do app para repetir a abertura
   var leaving = false, timers = [], hiddenAt = 0, run = 0, blobs = null, loading = null;
   // ícone "Pessoal" da Tela de Início (?modo=pessoal) ou último modo usado: abre direto no Pessoal
@@ -110,7 +109,7 @@
       if (myRun !== run) return;
       if (start === null) start = now;
       var idx = Math.min(FRAMES - 1, Math.floor(((now - start) / 1000) * FPS));
-      if (((now - start) / 1000) * FPS >= FRAMES - Math.round(FPS * 0.3)) finish(); // emenda a transição no fim
+      if (((now - start) / 1000) * FPS >= FRAMES + Math.round(FPS * 0.5)) finish(); // mostra a logo completa por meio segundo e some
       // desenha cada quadro uma única vez (a tela atualiza mais rápido que a animação)
       if (idx !== last) {
         last = idx;
@@ -124,7 +123,7 @@
         for (var j = 0; j < idx; j++) if (queue[j]) { queue[j].then(function (b) { if (b.close) b.close(); }).catch(function () {}); queue[j] = null; }
         for (var a = idx + 1; a <= idx + AHEAD && a < FRAMES; a++) if (!queue[a]) queue[a] = decode(a);
       }
-      if (((now - start) / 1000) * FPS < FRAMES + 2) requestAnimationFrame(step);
+      if (((now - start) / 1000) * FPS < FRAMES + FPS) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
   }
@@ -201,7 +200,7 @@
         lastErr = t && t !== window && (t.src || t.href) ? 'não carregou ' + String(t.src || t.href).split('/').slice(-2).join('/') : (e.message || '') + ' ' + String(e.filename || '').split('/').pop();
       }, true);
       window.addEventListener('unhandledrejection', function (e) { lastErr = String(e.reason && (e.reason.message || e.reason)); });
-      var APP = /*APP*/'./dist/a-VLURH4LG.js'/*APP*/;
+      var APP = /*APP*/'./dist/a-TV65PAIQ.js'/*APP*/;
       import(APP).catch(function (e) { fail(String(e && (e.message || e))); });
       setTimeout(function () { fail(''); }, 20000);
       // Atualiza sozinho: ao VOLTAR para o app, confere se há versão nova e recarrega UMA vez por versão.

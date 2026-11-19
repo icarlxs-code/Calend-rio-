@@ -1,10 +1,10 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-vlurh4lg'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-tv65paiq'/*CACHE*/;
 const SHELL = [
-  './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster.jpg',
-  ...Array.from({ length: 168 }, (_, i) => `media/intro4/f${String(i + 1).padStart(3, '0')}.webp`),
-  'media/logos/pura-vida.jpg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/a-VLURH4LG.js', 'dist/c-IY6FCE6X.js', 'dist/c-7IL2T3Z2.js', 'dist/c-AB7TZIE6.js', 'dist/c-RZZCBQEG.js', 'dist/c-QTXSQ3OU.js', 'dist/c-NMWKTJKE.js', 'dist/c-G4KESOLV.js', 'dist/c-MG7DV5A4.js', 'dist/c-FG3EU3CO.js', 'dist/c-EXX2MQ62.js', 'dist/c-RGFQ4KJ7.js', 'dist/c-RXMPZOAJ.js', 'dist/c-AKZEKLBI.js', 'dist/c-YEARXB46.js', 'dist/c-3GA6RSWB.js', 'dist/c-TWCTTFP7.js', 'dist/c-UCBOIM2G.js', 'dist/c-VHNSBD2M.js',
+  './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster5.jpg',
+  ...Array.from({ length: 67 }, (_, i) => `media/intro5/f${String(i + 1).padStart(3, '0')}.webp`),
+  'media/logos/pura-vida.jpg', 'media/lembra-logo.jpg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
+  /*FILES*/ 'dist/a-TV65PAIQ.js', 'dist/c-IY6FCE6X.js', 'dist/c-7IL2T3Z2.js', 'dist/c-AB7TZIE6.js', 'dist/c-RZZCBQEG.js', 'dist/c-QTXSQ3OU.js', 'dist/c-NMWKTJKE.js', 'dist/c-G4KESOLV.js', 'dist/c-MG7DV5A4.js', 'dist/c-FG3EU3CO.js', 'dist/c-EXX2MQ62.js', 'dist/c-RGFQ4KJ7.js', 'dist/c-RXMPZOAJ.js', 'dist/c-AKZEKLBI.js', 'dist/c-YEARXB46.js', 'dist/c-3GA6RSWB.js', 'dist/c-TWCTTFP7.js', 'dist/c-UCBOIM2G.js', 'dist/c-VHNSBD2M.js',
 ];
 
 self.addEventListener('install', (e) => {
@@ -21,7 +21,7 @@ self.addEventListener('fetch', (e) => {
   // vídeo: o iPhone pede em pedaços (Range); deixa o navegador cuidar direto
   if (url.pathname.endsWith('.mp4')) return;
   // abertura animada: quadros sempre do celular (instantâneo e sem internet)
-  if (url.pathname.includes('/media/intro4/')) {
+  if (url.pathname.includes('/media/intro5/')) {
     e.respondWith(caches.match(e.request, { ignoreSearch: true }).then((r) => r || fetch(e.request).then((res) => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); }
       return res;

@@ -522,8 +522,7 @@ function showLogin(errMsg = '') {
   const msg = errMsg || loginNotice;
   root.innerHTML = `
   <div class="login">
-    <img src="icons/icon-192.png" alt="" width="84" height="84">
-    <h1>${esc(CONFIG.appName)}</h1>
+    <img class="login__logo" src="media/lembra-logo.jpg" alt="${esc(CONFIG.appName)}" width="150" height="150">
     <p>${signupMode ? 'Crie sua conta: sua agenda de trabalho e a pessoal, só suas.' : 'Agenda de trabalho e pessoal'}</p>
     <form class="form" data-login novalidate>
       ${signupMode ? `<div class="fgroup"><label class="flabel" for="l-name">Seu nome</label><input id="l-name" class="input" name="name" autocomplete="name" maxlength="40" placeholder="Como quer ser chamado"></div>` : ''}
