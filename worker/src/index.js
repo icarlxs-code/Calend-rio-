@@ -168,7 +168,7 @@ async function handle(req, env) {
   const url = new URL(req.url);
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors(env, req) });
   if (url.pathname === '/vapid') return reply(env, req, { publicKey: (await getVapid(env)).publicKey });
-  if (url.pathname === '/' || url.pathname === '/health') return reply(env, req, { ok: true, servico: 'Calendário', chat: !!(env.ANTHROPIC_API_KEY || env.AI) });
+  if (url.pathname === '/' || url.pathname === '/health') return reply(env, req, { ok: true, servico: 'Lembra', chat: !!(env.ANTHROPIC_API_KEY || env.AI) });
   // Abre o lembrete direto na tela "Adicionar ao Calendário" do iPhone (sem menu de apps)
   if (url.pathname === '/ics' && req.method === 'POST') {
     const form = await req.formData().catch(() => null);

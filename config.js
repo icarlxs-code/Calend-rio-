@@ -3,7 +3,7 @@
    ============================================================ */
 export const CONFIG = {
   // Nome que aparece no topo do app e na tela do cliente
-  appName: 'Calendário',
+  appName: 'Lembra',
   agencyName: 'Henrique & Matheus',
   // dono do app: vê o painel com todas as contas (Ajustes → Painel do dono)
   adminEmail: 'icarlxs@gmail.com',

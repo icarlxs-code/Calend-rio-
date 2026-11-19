@@ -1,10 +1,10 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-smo2etqb'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-vlurh4lg'/*CACHE*/;
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster.jpg',
   ...Array.from({ length: 168 }, (_, i) => `media/intro4/f${String(i + 1).padStart(3, '0')}.webp`),
   'media/logos/pura-vida.jpg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/a-SMO2ETQB.js', 'dist/c-IY6FCE6X.js', 'dist/c-XEYDEGPJ.js', 'dist/c-VDOPT46G.js', 'dist/c-2OAWH7BP.js', 'dist/c-WMXEYSS2.js', 'dist/c-FNXLLGHD.js', 'dist/c-WMXV6Q7F.js', 'dist/c-PC3QKTVN.js', 'dist/c-WNFVDOSC.js', 'dist/c-CJWIQOCP.js', 'dist/c-HHRSX5DG.js', 'dist/c-RXMPZOAJ.js', 'dist/c-AKZEKLBI.js', 'dist/c-YEARXB46.js', 'dist/c-3GA6RSWB.js', 'dist/c-MUEIMC3K.js', 'dist/c-DYRDP77P.js', 'dist/c-VHNSBD2M.js',
+  /*FILES*/ 'dist/a-VLURH4LG.js', 'dist/c-IY6FCE6X.js', 'dist/c-7IL2T3Z2.js', 'dist/c-AB7TZIE6.js', 'dist/c-RZZCBQEG.js', 'dist/c-QTXSQ3OU.js', 'dist/c-NMWKTJKE.js', 'dist/c-G4KESOLV.js', 'dist/c-MG7DV5A4.js', 'dist/c-FG3EU3CO.js', 'dist/c-EXX2MQ62.js', 'dist/c-RGFQ4KJ7.js', 'dist/c-RXMPZOAJ.js', 'dist/c-AKZEKLBI.js', 'dist/c-YEARXB46.js', 'dist/c-3GA6RSWB.js', 'dist/c-TWCTTFP7.js', 'dist/c-UCBOIM2G.js', 'dist/c-VHNSBD2M.js',
 ];
 
 self.addEventListener('install', (e) => {
@@ -50,10 +50,10 @@ self.addEventListener('push', (e) => {
   try {
     d = e.data ? e.data.json() : {};
   } catch {
-    d = { title: 'Calendário', body: e.data ? e.data.text() : '' };
+    d = { title: 'Lembra', body: e.data ? e.data.text() : '' };
   }
   const jobs = [
-    self.registration.showNotification(d.title || 'Calendário', {
+    self.registration.showNotification(d.title || 'Lembra', {
       body: d.body || '',
       icon: 'icons/icon-192.png',
       badge: 'icons/icon-192.png',

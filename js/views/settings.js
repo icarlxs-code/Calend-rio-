@@ -20,7 +20,7 @@ export function renderSettings() {
   if (cloud) setTimeout(() => { fillDevices(); fillUsage(); }, 0);
   return `
   <header class="hdr">
-    <div class="hdr__row"><div class="hdr__titles"><p class="hdr__eyebrow">${esc(CONFIG.appName)} · ${esc(CONFIG.agencyName)}</p><h1>Ajustes</h1></div></div>
+    <div class="hdr__row"><div class="hdr__titles"><p class="hdr__eyebrow">${esc(CONFIG.appName)}${store.solo ? '' : ' · ' + esc(CONFIG.agencyName)}</p><h1>Ajustes</h1></div></div>
   </header>
   <div class="page">
     <button class="pbig pbig--toPersonal" data-action="space" data-space="personal">${icon('heart', 22)}<div><strong>Abrir o modo Pessoal</strong><small>Aniversários, compromissos, listas — só você vê</small></div>${icon('right', 18)}</button>
@@ -103,7 +103,7 @@ export function renderSettings() {
       </div>
       <p class="fhelp">${store.state.companies.length} empresas · ${store.state.events.length} eventos · ${store.state.notes.length} bilhetes</p>
     </section>
-    <p class="about">${esc(CONFIG.appName)} — agenda de conteúdo · v1.0</p>
+    <p class="about">${esc(CONFIG.appName)} — sua agenda de trabalho e pessoal</p>
   </div>`;
 }
 

@@ -67,8 +67,8 @@ function applySpaceMeta(personalMode) {
   const set = (sel, attr, val) => { const el = document.querySelector(sel); if (el) el.setAttribute(attr, val); };
   set('link[rel="manifest"]', 'href', personalMode ? 'pessoal.webmanifest' : 'manifest.webmanifest');
   set('link[rel="apple-touch-icon"]', 'href', personalMode ? 'icons/pessoal-180.png' : 'icons/icon-180.png');
-  set('meta[name="apple-mobile-web-app-title"]', 'content', personalMode ? 'Pessoal' : 'Calendário');
-  document.title = personalMode ? 'Pessoal · Calendário' : 'Calendário · Agenda de conteúdo';
+  set('meta[name="apple-mobile-web-app-title"]', 'content', personalMode ? 'Pessoal' : 'Lembra');
+  document.title = personalMode ? 'Pessoal · Lembra' : 'Lembra · Sua agenda';
 }
 /* Troca entre Trabalho e Pessoal com uma transição de "outro app" */
 function switchSpace(space, from) {

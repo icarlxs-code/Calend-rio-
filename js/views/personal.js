@@ -176,7 +176,7 @@ function renderPSettings() {
     <button class="pbig" data-action="space" data-space="work">${icon('briefcase', 22)}<div><strong>Ir para o Trabalho</strong><small>${store.team.length > 1 ? 'Agenda da dupla, empresas e clientes' : 'Suas empresas e clientes'}</small></div>${icon('right', 18)}</button>
 
     ${section(`${icon('bell', 16)} Avisos no celular`, `
-      <div class="pnotice ${ok ? 'is-ok' : 'is-warn'}">${ok ? '✅ Ligados neste celular.' : install ? '⚠️ No iPhone, abra o app pelo ícone da Tela de Início para receber avisos.' : perm === 'denied' ? '⚠️ Bloqueados. Ajustes do iPhone → Notificações → Calendário.' : '⚠️ Ainda não ligados neste celular.'}
+      <div class="pnotice ${ok ? 'is-ok' : 'is-warn'}">${ok ? '✅ Ligados neste celular.' : install ? '⚠️ No iPhone, abra o app pelo ícone da Tela de Início para receber avisos.' : perm === 'denied' ? '⚠️ Bloqueados. Ajustes do iPhone → Notificações → Lembra.' : '⚠️ Ainda não ligados neste celular.'}
         ${!ok && !install && perm !== 'denied' ? '<button class="btn btn--primary btn--sm" data-action="notify-enable">Ativar</button>' : ''}${install ? '<button class="btn btn--primary btn--sm" data-action="install-guide">Como instalar</button>' : ''}</div>
       <form class="list" data-form="pprefs" onsubmit="return false">
         <label class="list__row"><span><b>Lembretes</b><small>1h, 30 e 20 min antes, na hora e um “já fez?” depois</small></span><input type="checkbox" class="switch" name="reminders" ${prefs.reminders ? 'checked' : ''}></label>

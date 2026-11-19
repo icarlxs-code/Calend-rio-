@@ -65,7 +65,7 @@ export function showInstallGuide({ force = false } = {}) {
     <section class="iguide__card" role="dialog" aria-label="Instalar o app">
       <div class="iguide__head">
         <img src="icons/icon-192.png" alt="" width="56" height="56">
-        <div><strong>Instale o Calendário</strong><small>Fica como um app de verdade no seu celular</small></div>
+        <div><strong>Instale o Lembra</strong><small>Fica como um app de verdade no seu celular</small></div>
       </div>
       <ul class="iguide__why">
         <li>${icon('bell', 15)} Recebe as notificações${pf.startsWith('ios') ? ' (no iPhone só funciona instalado)' : ''}</li>
