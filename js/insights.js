@@ -111,7 +111,7 @@ export function dayInsights(date, person = 'all') {
     const ft = freeTime(p, date);
     const count = store.eventsOn(date, { person: p }).length;
     if (!ft.dayOff && ft.minutes != null && count && ft.longest < 45) {
-      list.push({ level: 'info', kind: 'rest', icon: 'clock', title: `${nameOf(p)} está sem pausa`, text: `O maior intervalo livre do dia é de ${fmtDuration(ft.longest)}. Programem posts com antecedência para abrir espaço.` });
+      list.push({ level: 'info', kind: 'rest', icon: 'clock', title: `${nameOf(p)} está sem pausa`, text: ft.longest > 0 ? `O maior intervalo livre do dia é de ${fmtDuration(ft.longest)}. Programem posts com antecedência para abrir espaço.` : 'Não sobra nenhum intervalo livre no expediente. Programem posts com antecedência para abrir espaço.' });
     }
     if (ft.dayOff && count) {
       list.push({ level: 'info', kind: 'rest', icon: 'clock', title: `${nameOf(p)}: dia de folga`, text: `Há ${count} tarefa${count > 1 ? 's' : ''} marcada${count > 1 ? 's' : ''} na folga. Posts podem ficar programados para ninguém trabalhar.` });

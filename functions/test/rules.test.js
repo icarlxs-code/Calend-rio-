@@ -11,18 +11,18 @@ test('fuso de São Paulo', () => {
   assert.deepEqual(virada, { date: '2026-11-18', minutes: 23 * 60 + 30 });
 });
 
-test('lembrete de 2h antes do Reels', () => {
-  const due = dueReminders([ev()], { date: '2026-11-18', minutes: 16 * 60 });
+test('lembrete 1h antes do Reels', () => {
+  const due = dueReminders([ev()], { date: '2026-11-18', minutes: 17 * 60 });
   assert.equal(due.length, 1);
-  assert.equal(due[0].offset, 120);
-  const m = reminderMessage(due[0].ev, 120, 'Pura Vida');
-  assert.equal(m.title, 'Daqui a 2h: Reels · Pura Vida');
+  assert.equal(due[0].offset, 60);
+  const m = reminderMessage(due[0].ev, 60, 'Pura Vida');
+  assert.equal(m.title, 'Daqui a 1h: Reels · Pura Vida');
   assert.match(m.body, /^18h — postar o Reels/);
 });
 
 test('janela tolera atraso de alguns minutos, mas não repete depois', () => {
-  assert.equal(dueReminders([ev()], { date: '2026-11-18', minutes: 16 * 60 + 3 }).length, 1);
-  assert.equal(dueReminders([ev()], { date: '2026-11-18', minutes: 16 * 60 + 5 }).length, 0);
+  assert.equal(dueReminders([ev()], { date: '2026-11-18', minutes: 17 * 60 + 3 }).length, 1);
+  assert.equal(dueReminders([ev()], { date: '2026-11-18', minutes: 17 * 60 + 5 }).length, 0);
 });
 
 test('captação: aviso na véspera, mesmo virando o dia', () => {
@@ -36,12 +36,12 @@ test('cobrança 30 min depois só se ainda estiver "a fazer"', () => {
   const now = { date: '2026-11-18', minutes: 18 * 60 + 30 };
   assert.equal(dueReminders([ev()], now)[0].offset, -30);
   assert.equal(dueReminders([ev({ status: 'pronto' })], now).length, 0);
-  assert.equal(dueReminders([ev({ status: 'feito' })], { date: '2026-11-18', minutes: 16 * 60 }).length, 0);
+  assert.equal(dueReminders([ev({ status: 'feito' })], { date: '2026-11-18', minutes: 17 * 60 }).length, 0);
   assert.match(reminderMessage(ev(), -30, 'Pura Vida').title, /^Já postou\?/);
 });
 
 test('sem horário não gera lembrete', () => {
-  assert.equal(dueReminders([ev({ time: '' })], { date: '2026-11-18', minutes: 16 * 60 }).length, 0);
+  assert.equal(dueReminders([ev({ time: '' })], { date: '2026-11-18', minutes: 17 * 60 }).length, 0);
 });
 
 test('lembrete personalizado de 1 dia antes é incluído', () => {

@@ -262,17 +262,27 @@ function checkReminders() {
 }
 
 /* Abre o lugar certo quando a pessoa toca numa notificação (#/e/ID ou #/d/DATA) */
-function openDeepLink(hash = location.hash) {
+function openDeepLink(hash = location.hash, tries = 0) {
   const m = /^#\/(e|d)\/([\w-]+)/.exec(hash || '');
   if (!m) return false;
+  window.PautaIntro && window.PautaIntro.finish(); // veio de uma notificação: vai direto ao ponto
+  // app abrindo do zero: espera os dados chegarem (até ~10 s) antes de procurar o evento
+  if (m[1] === 'e' && !store.event(m[2]) && tries < 20) {
+    setTimeout(() => openDeepLink(hash, tries + 1), 500);
+    return true;
+  }
   history.replaceState(null, '', location.pathname + location.search);
   if (m[1] === 'e' && store.event(m[2])) {
+    // fecha o que estiver aberto e mostra o evento certo
+    document.querySelectorAll('.sheet-wrap.is-open [data-close]').forEach((b) => b.closest('.sheet-wrap') && b.click());
     ui.date = store.event(m[2]).date;
     setTab('hoje');
     openEventDetail(m[2]);
   } else if (m[1] === 'd' && /^\d{4}-\d{2}-\d{2}$/.test(m[2])) {
     ui.date = m[2];
     setTab('hoje');
+  } else if (m[1] === 'e') {
+    toast('Esse compromisso não existe mais (foi removido).');
   }
   return true;
 }

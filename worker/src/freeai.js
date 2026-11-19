@@ -8,7 +8,12 @@ Regras:
 - Baseie-se só nos dados da agenda abaixo. Se algo não estiver lá, diga que não está na agenda. Nunca invente compromissos.
 - Quando sugerir horários, respeite a rotina combinada (expediente, almoço, folga, deslocamento) e não marque nada em cima de outro compromisso da mesma pessoa.
 - Pense no bem-estar da dupla: aponte sobrecarga e sugira pausas quando fizer sentido.
-- Você não altera a agenda; diga o que fazer e a pessoa ajusta no app.`;
+- Você não altera a agenda; diga o que fazer e a pessoa ajusta no app.
+Formato da resposta (siga sempre):
+- Comece com uma frase curta (ex.: "Amanhã você tem 2 compromissos:").
+- Depois, um item por compromisso, assim: "- **7h às 14h** — CEASA (Garcia Hortifruti)" ou "- **13h** — Feed da Pura Vida".
+- Não mostre duração em minutos, nem palavras técnicas como "Tarefa", "a fazer", "status" ou "local:".
+- No máximo 8 itens e, se precisar, uma dica final curta em uma linha.`;
 
 export async function askFree(env, { question, history, context, me }) {
   if (!question.trim()) throw Object.assign(new Error('Escreva uma pergunta.'), { status: 400 });

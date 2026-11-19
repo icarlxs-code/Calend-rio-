@@ -883,3 +883,8 @@ html:not(.intro-done) .tabbar { opacity: 0; }
 .intro { background: #000 url("../media/intro-poster.jpg") center / cover no-repeat; }
 .intro img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .intro canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.tipsbar { display: flex; align-items: center; gap: 10px; width: 100%; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); font-size: 15px; font-weight: 700; color: var(--text-2); text-align: left; }
+.tipsbar > span { flex: 1; display: flex; align-items: center; gap: 8px; }
+.tipsbar em { font-style: normal; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--text-3); }
+.tipsbar em.tipsbar__warn { background: var(--warn-soft); color: var(--warn); }
+.tipsbar.is-open { border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }

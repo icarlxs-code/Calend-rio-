@@ -130,13 +130,15 @@ export function renderToday() {
   }
 
   // Dicas e alertas
-  const visibleTips = ui.showAllTips ? insights : insights.filter((i, idx) => i.level === 'warn' || idx < 2);
-  const hiddenCount = insights.length - visibleTips.length;
+  const warnCount = insights.filter((i) => i.level === 'warn').length;
+  // dicas e alertas ficam recolhidos: só aparecem se a pessoa quiser ver
   const tips = `<section class="block">
-    <h2 class="block__title">${icon('bulb', 16)} Dicas e alertas</h2>
-    <div class="tips">${visibleTips.map(tipCard).join('')}</div>
-    ${hiddenCount > 0 ? `<button class="btn-text btn-text--sm" data-action="toggle-tips">Ver mais ${hiddenCount} dica${hiddenCount > 1 ? 's' : ''}</button>`
-      : ui.showAllTips && insights.length > 2 ? `<button class="btn-text btn-text--sm" data-action="toggle-tips">Mostrar menos</button>` : ''}
+    <button class="tipsbar${ui.showAllTips ? ' is-open' : ''}" data-action="toggle-tips">
+      <span>${icon('bulb', 17)} Dicas e alertas</span>
+      ${warnCount ? `<em class="tipsbar__warn">${warnCount} ${warnCount === 1 ? 'alerta' : 'alertas'}</em>` : `<em>${insights.length}</em>`}
+      ${icon(ui.showAllTips ? 'down' : 'right', 16, 'muted')}
+    </button>
+    ${ui.showAllTips ? `<div class="tips">${insights.map(tipCard).join('')}</div>` : ''}
   </section>`;
 
   // Linha do tempo

@@ -37,10 +37,10 @@ export function nowIn(tz = TZ, date = new Date()) {
 export function reminderOffsets(ev) {
   const custom = Number.isFinite(ev.reminder) ? ev.reminder : 30;
   let list;
-  if (isPostType(ev.type)) list = [120, 30, 0, -30];
-  else if (ev.type === 'captacao') list = [1440, 120, 45, -30];
+  if (isPostType(ev.type)) list = [60, 30, 0, -30];
+  else if (ev.type === 'captacao') list = [1440, 60, 30, -30];
   else if (ev.type === 'reuniao') list = [1440, 60, 15];
-  else list = [30, 0];
+  else list = [60, 30, 0];
   if (custom >= 0 && !list.includes(custom)) list.push(custom);
   if (custom < 0) list = list.filter((o) => o < 0); // "Sem lembrete": só a cobrança
   return [...new Set(list)].sort((a, b) => b - a);

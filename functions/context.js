@@ -25,10 +25,18 @@ export function buildContext({ events, companies, routine, notes, team, me, now 
       lines.push(`\n${weekday(e.date)} ${e.date.split('-').reverse().join('/')}:`);
       last = e.date;
     }
-    const dur = e.duration ? ` (${e.duration} min)` : '';
     const who = (e.assignees || []).map(name).join(' e ') || 'sem responsável';
-    lines.push(`- ${e.time ? hm(e.time) : 'sem horário'}${dur} · ${TYPE_LABEL[e.type] || e.type} · ${co.get(e.companyId) || '?'} · "${e.title || ''}" · ${who} · ${STATUS[e.status] || e.status}` +
-      `${e.location ? ' · local: ' + e.location : ''}${e.description ? ' · legenda: ' + e.description.slice(0, 160) : ''}${e.internalNote ? ' · nota interna: ' + e.internalNote.slice(0, 160) : ''}`);
+    let when = 'sem horário';
+    if (e.time) {
+      when = hm(e.time);
+      if (e.duration) {
+        const [h, m] = e.time.split(':').map(Number);
+        const end = h * 60 + m + e.duration;
+        when += ` às ${hm(`${String(Math.floor(end / 60) % 24).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`)}`;
+      }
+    }
+    const extra = [e.location && `local ${e.location}`, e.description && `legenda: ${e.description.slice(0, 140)}`, e.internalNote && `obs: ${e.internalNote.slice(0, 140)}`].filter(Boolean).join('; ');
+    lines.push(`- ${when} — ${TYPE_LABEL[e.type] || e.type}: ${e.title || 'sem título'} — empresa ${co.get(e.companyId) || '?'} — responsável ${who}${e.status === 'feito' ? ' (já feito)' : ''}${extra ? ' — ' + extra : ''}`);
   });
   if (!evs.length) lines.push('(nenhum compromisso)');
   const recentNotes = (notes || []).filter((n) => n.date >= addDaysKey(now.date, -2)).slice(-10);

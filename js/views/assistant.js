@@ -13,7 +13,8 @@ import { askClaude, PRESETS } from '../claude-link.js';
 const LS_CHAT = 'cal.chat';
 let chat = (() => {
   try {
-    return JSON.parse(localStorage.getItem(LS_CHAT) || '[]').slice(-30);
+    // mensagens de erro antigas não ficam na conversa
+    return JSON.parse(localStorage.getItem(LS_CHAT) || '[]').filter((m) => !m.error && !/chave do Claude/.test(m.text || '')).slice(-30);
   } catch {
     return [];
   }
