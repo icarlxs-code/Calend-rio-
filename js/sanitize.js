@@ -45,6 +45,7 @@ export function sanitizeItem(col, x) {
       color: safeColor(x.color),
       logo: safeLogo(x.logo),
       instagram: str(x.instagram, 60).replace(/[^\w.]/g, ''),
+      niche: str(x.niche, 160),
       address: str(x.address, 300),
       contact: str(x.contact, 300),
       notes: str(x.notes),

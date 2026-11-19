@@ -1,4 +1,5 @@
 /* Empresas: lista, página da empresa, cadastro e link do cliente */
+import { nicheOf } from '../coach.js';
 import { store } from '../store.js';
 import { TYPES, PALETTE, isPost } from '../constants.js';
 import { esc, todayKey, addDays, startOfWeek, fmtDayShort, relDay, dayLabel, rgba, textOn, resizeImage, uid, monthKey, fmtMonth } from '../utils.js';
@@ -161,6 +162,10 @@ export function openCompanyEditor(id = null, onSaved = null) {
         <div class="input-prefix"><span>@</span><input id="c-ig" class="input" name="instagram" value="${esc(d.instagram || '')}" placeholder="usuario" autocomplete="off" autocapitalize="none"></div>
       </div>
       <div class="fgroup">
+        <label class="flabel" for="c-niche">O que a empresa faz (para as dicas)</label>
+        <input id="c-niche" class="input" name="niche" value="${esc(d.niche || nicheOf(d))}" placeholder="Ex.: hamburgueria artesanal, loja de roupas femininas" autocomplete="off" maxlength="160">
+      </div>
+      <div class="fgroup">
         <label class="flabel" for="c-addr">Endereço (para captações)</label>
         <input id="c-addr" class="input" name="address" value="${esc(d.address || '')}" placeholder="Rua, número – bairro" autocomplete="off">
       </div>
@@ -182,6 +187,7 @@ export function openCompanyEditor(id = null, onSaved = null) {
     const read = () => {
       d.name = form.name.value.trim();
       d.instagram = form.instagram.value.trim().replace(/^@/, '');
+      d.niche = form.niche.value.trim();
       d.address = form.address.value.trim();
       d.contact = form.contact.value.trim();
       d.notes = form.notes.value.trim();

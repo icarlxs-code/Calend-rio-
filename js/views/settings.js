@@ -1,4 +1,5 @@
 /* Ajustes: perfil, lembretes, sincronização, backup */
+import { coachTest } from '../coach.js';
 import { store } from '../store.js';
 import { CONFIG } from '../../config.js';
 import { TYPES, BEST_TIMES_TABLE } from '../constants.js';
@@ -134,10 +135,12 @@ function notifySection() {
     <form class="list notif-prefs" data-notify-form onsubmit="return false">
       <label class="list__row"><span><b>Lembretes dos meus posts</b><small>2h e 30 min antes, na hora e cobrança se atrasar</small></span><input type="checkbox" class="switch" name="reminders" ${prefs.reminders ? 'checked' : ''}></label>
       <label class="list__row"><span><b>Avisos do parceiro</b><small>quando marcar, mudar ou concluir algo</small></span><input type="checkbox" class="switch" name="partner" ${prefs.partner ? 'checked' : ''}></label>
+      <label class="list__row"><span><b>Dicas e motivação</b><small>a cada 1h30–2h30 (8h30 às 21h30): ideias de conteúdo, trends e cobranças por empresa</small></span><input type="checkbox" class="switch" name="coach" ${prefs.coach ? 'checked' : ''}></label>
       <label class="list__row"><span><b>Resumo do dia</b><small>às 8h (hoje) e às 20h (amanhã)</small></span><input type="checkbox" class="switch" name="daily" ${prefs.daily ? 'checked' : ''}></label>
     </form>
     ${cloud ? `<div class="list" data-devices><div class="list__row"><span><small>Conferindo celulares cadastrados…</small></span></div></div>` : ''}
     ${perm === 'granted' ? `<button class="btn btn--soft btn--block" data-action="notify-test">${icon('bell', 16)} Enviar notificação de teste</button>` : ''}
+    ${perm === 'granted' && cloud ? `<button class="btn btn--soft btn--block" data-action="coach-test">✨ Receber uma dica agora</button>` : ''}
     <button class="btn-text btn-text--sm" data-action="onboarding-again">Ver a apresentação de novo</button>
   </section>`;
 }
@@ -182,6 +185,12 @@ export const settingsActions = {
     else toast(`Não foi possível ativar${r.message ? ': ' + r.message : ''}`, { ms: 8000 });
     store.emit();
   },
+  async coachTest() {
+    try {
+      await coachTest();
+      toast('Pronto! Uma dica chega em até 1 minuto (se for entre 8h30 e 21h30).', { ms: 5000 });
+    } catch { toast('Não deu para pedir a dica agora. Verifique a conexão.'); }
+  },
   async notifyTest() {
     let r;
     try {
@@ -196,7 +205,7 @@ export const settingsActions = {
     toast(`A Apple não aceitou o envio (${(r.statuses || []).join(', ') || 'sem resposta'}). Toque em "Ativar" de novo.`, { ms: 9000 });
   },
   async notifyPrefs(form) {
-    await push.setPrefs({ reminders: form.reminders.checked, partner: form.partner.checked, daily: form.daily.checked });
+    await push.setPrefs({ reminders: form.reminders.checked, partner: form.partner.checked, daily: form.daily.checked, coach: form.coach.checked });
     toast('Preferências salvas');
   },
   onboardingAgain() {

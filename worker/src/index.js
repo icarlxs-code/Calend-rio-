@@ -6,6 +6,7 @@
    Dados guardados no KV "CAL": chaves VAPID, aparelhos e lista de lembretes. */
 import { generateVapid, sendPush } from './webpush.js';
 import { verifyIdToken } from './auth.js';
+import { runCoach } from './coach.js';
 
 const SUBJECT = 'mailto:avisos@calendario.app';
 
@@ -162,6 +163,23 @@ async function handle(req, env) {
     return reply(env, req, { ok: true, sent, devices: Object.values(subs).filter((d) => d.member === me.id).length, statuses });
   }
 
+  if (url.pathname === '/coach') {
+    const companies = (Array.isArray(body.companies) ? body.companies : []).slice(0, 40).map((c) => ({
+      name: clean(c.name, 80), niche: clean(c.niche, 160), lastPost: clean(c.lastPost, 10), nextPost: clean(c.nextPost, 10),
+      daysSincePost: typeof c.daysSincePost === 'number' ? c.daysSincePost : null,
+    }));
+    const st = (await env.CAL.get('coach', 'json')) || { next: {}, recent: {} };
+    st.ctx = { companies, updatedAt: Date.now() };
+    await env.CAL.put('coach', JSON.stringify(st));
+    return reply(env, req, { ok: true });
+  }
+  if (url.pathname === '/coach-test') {
+    const st = (await env.CAL.get('coach', 'json')) || { next: {}, recent: {} };
+    st.next = { ...st.next, [me.id]: 0 };
+    await env.CAL.put('coach', JSON.stringify(st));
+    return reply(env, req, { ok: true });
+  }
+
   if (url.pathname === '/personal') {
     const items = (Array.isArray(body.items) ? body.items : []).slice(0, 300)
       .filter((it) => it && typeof it.at === 'number')
@@ -195,6 +213,6 @@ async function handle(req, env) {
 
 export default {
   fetch: (req, env) => handle(req, env).catch((e) => reply(env, req, { error: 'erro interno: ' + e.message }, 500)),
-  scheduled: (_event, env, ctx) => ctx.waitUntil(Promise.all([runSchedule(env), runPersonal(env)])),
+  scheduled: (_event, env, ctx) => ctx.waitUntil(Promise.all([runSchedule(env), runPersonal(env), runCoach(env, sendToMember, JSON.parse(env.TEAM || '[]')).catch((e) => console.log('coach', e.message))])),
 };
 export { runSchedule, handle };

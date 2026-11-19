@@ -1,4 +1,5 @@
 /* Inicialização, navegação e ações globais */
+import { syncCoach } from './coach.js';
 import { renderPersonal, bindPersonal, personalActions, openPersonalEditor } from './views/personal.js';
 import { personal, startPersonal } from './personal.js';
 import { CONFIG } from '../config.js';
@@ -188,6 +189,7 @@ const actions = {
   ics: (b) => settingsActions.ics(b),
   'notify-enable': () => settingsActions.notifyEnable(),
   'notify-test': () => settingsActions.notifyTest(),
+  'coach-test': () => settingsActions.coachTest(),
   'onboarding-again': () => settingsActions.onboardingAgain(),
   export: () => settingsActions.export(),
   logout: async () => {
@@ -444,6 +446,8 @@ function startApp() {
     };
     store.on(syncSchedule);
     syncSchedule();
+    store.on(syncCoach);
+    syncCoach();
     setInterval(syncSchedule, 15 * 60e3);
   }
   // dados cadastrados antes do login (guardados só neste aparelho): oferece levar para a nuvem

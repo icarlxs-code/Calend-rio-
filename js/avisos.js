@@ -22,7 +22,7 @@ export const needsInstall = () => isIOS() && !isStandalone();
 
 export const getPrefs = () => {
   try {
-    return { reminders: true, partner: true, daily: true, ...JSON.parse(localStorage.getItem(LS_PREFS) || '{}') };
+    return { reminders: true, partner: true, daily: true, coach: true, ...JSON.parse(localStorage.getItem(LS_PREFS) || '{}') };
   } catch {
     return { reminders: true, partner: true, daily: true };
   }
