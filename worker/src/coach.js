@@ -98,14 +98,20 @@ export async function runCoach(env, sendToMember, team) {
   const now = Date.now(), br = brNow(now);
   const mins = br.h * 60 + br.m;
   if (mins < 8 * 60 + 30 || mins > 21 * 60 + 30) return 0;
-  const st = (await env.CAL.get('coach', 'json')) || { ctx: null, next: {}, recent: {} };
+  const [st0, force] = await Promise.all([env.CAL.get('coach', 'json'), env.CAL.get('coach-force', 'json')]);
+  const st = { next: {}, recent: {}, forced: {}, ...(st0 || {}) };
+  for (const m of team) if (force && force[m.id] > (st.forced[m.id] || 0)) { st.next[m.id] = 0; st.forced[m.id] = force[m.id]; }
   const due = team.filter((m) => (st.next[m.id] || 0) <= now);
   if (!due.length) return 0;
-  const ctx = st.ctx || { companies: [] };
+  // a parte que o app manda (empresas) fica em outra chave; o formato antigo ainda é aceito
+  const ctx = (await env.CAL.get('coach-ctx', 'json')) || st.ctx || { companies: [] };
   ctx.today = `${br.date} (${['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][br.wd]})`;
   const dates = upcomingDates(br.date);
   const trends = await getTrends(env);
   let sent = 0;
+  // grava o próximo horário antes de enviar: nunca manda duas vezes seguidas
+  for (const m of due) st.next[m.id] = now + (90 + Math.random() * 60) * 60e3;
+  await env.CAL.put('coach', JSON.stringify(st));
   for (const m of due) {
     const kind = mins < 9 * 60 + 30 ? 'motivacao' : pick(KINDS);
     const co = chooseCompany(ctx.companies || []);
@@ -114,7 +120,6 @@ export async function runCoach(env, sendToMember, team) {
       || fallback(co ? kind : 'motivacao', co, m.name, dates);
     sent += await sendToMember(env, m.id, { title: msg.title, body: msg.body, tag: 'coach', url: './' }, 'coach');
     st.recent[m.id] = [...recent, msg.body].slice(-6);
-    st.next[m.id] = now + (90 + Math.random() * 60) * 60e3; // próxima entre 1h30 e 2h30
   }
   await env.CAL.put('coach', JSON.stringify(st));
   return sent;

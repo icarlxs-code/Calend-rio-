@@ -7,6 +7,7 @@
 import { generateVapid, sendPush } from './webpush.js';
 import { verifyIdToken } from './auth.js';
 import { runCoach } from './coach.js';
+import { runPersonalCoach } from './pcoach.js';
 
 const SUBJECT = 'mailto:avisos@calendario.app';
 
@@ -19,7 +20,14 @@ async function getVapid(env) {
   return v;
 }
 const getSubs = async (env) => (await env.CAL.get('subs', 'json')) || {};
-const getSchedule = async (env) => (await env.CAL.get('schedule', 'json')) || { items: [], sent: {} };
+const getSchedule = async (env) => (await env.CAL.get('schedule', 'json')) || { items: [] };
+/* "Já enviados" ficam em chaves próprias, escritas só pelo relógio do servidor:
+   assim o app atualizando a lista nunca apaga o registro (evita aviso repetido). */
+async function getSent(env, key, legacy) {
+  const s = await env.CAL.get(key, 'json');
+  return s || (legacy && legacy.sent) || {};
+}
+const prune = (sent, now) => { for (const [k, t] of Object.entries(sent)) if (t < now - 3 * 86400e3) delete sent[k]; return sent; };
 
 /* Manda para todos os aparelhos de uma pessoa, respeitando as preferências do aparelho */
 async function sendToMember(env, member, msg, pref, statuses = []) {
@@ -49,34 +57,37 @@ async function sendToMember(env, member, msg, pref, statuses = []) {
 async function runSchedule(env) {
   const now = Date.now();
   const sch = await getSchedule(env);
-  const due = sch.items.filter((it) => it.at <= now && it.at > now - 15 * 60e3 && !sch.sent[it.id]);
+  const due0 = (sch.items || []).filter((it) => it.at <= now && it.at > now - 15 * 60e3);
+  if (!due0.length) return 0;
+  const sent = await getSent(env, 'schedule-sent', sch);
+  const due = due0.filter((it) => !sent[it.id]);
   if (!due.length) return 0;
-  for (const it of due) {
-    sch.sent[it.id] = now;
-    await sendToMember(env, it.member, { title: it.title, body: it.body, tag: it.tag, url: it.url, badge: it.badge }, it.kind);
-  }
-  // limpa registros de envio com mais de 3 dias
-  for (const [k, t] of Object.entries(sch.sent)) if (t < now - 3 * 86400e3) delete sch.sent[k];
-  await env.CAL.put('schedule', JSON.stringify(sch));
+  for (const it of due) sent[it.id] = now;
+  // grava antes de enviar: se o envio demorar, o minuto seguinte não manda de novo
+  await env.CAL.put('schedule-sent', JSON.stringify(prune(sent, now)));
+  for (const it of due) await sendToMember(env, it.member, { title: it.title, body: it.body, tag: it.tag, url: it.url, badge: it.badge }, it.kind);
   return due.length;
 }
 
 /* Lembretes da agenda pessoal: cada lista vai só para o celular do dono */
-const getPersonal = async (env) => (await env.CAL.get('personal', 'json')) || { byMember: {}, sent: {} };
 async function runPersonal(env) {
   const now = Date.now();
-  const p = await getPersonal(env);
-  const due = [];
-  for (const [member, list] of Object.entries(p.byMember)) {
-    for (const it of list) if (it.at <= now && it.at > now - 15 * 60e3 && !p.sent[it.id]) due.push([member, it]);
-  }
+  const team = MEMBERS(env);
+  const lists = await Promise.all(team.map((m) => env.CAL.get(`pitems:${m}`, 'json')));
+  let legacy = null;
+  if (lists.some((l) => !l)) legacy = await env.CAL.get('personal', 'json'); // formato antigo
+  const due0 = [];
+  team.forEach((m, i) => {
+    const list = lists[i] || legacy?.byMember?.[m] || [];
+    for (const it of list) if (it.at <= now && it.at > now - 15 * 60e3) due0.push([m, it]);
+  });
+  if (!due0.length) return 0;
+  const sent = await getSent(env, 'personal-sent', legacy);
+  const due = due0.filter(([, it]) => !sent[it.id]);
   if (!due.length) return 0;
-  for (const [member, it] of due) {
-    p.sent[it.id] = now;
-    await sendToMember(env, member, { title: it.title, body: it.body, tag: it.tag, url: it.url });
-  }
-  for (const [k, t] of Object.entries(p.sent)) if (t < now - 3 * 86400e3) delete p.sent[k];
-  await env.CAL.put('personal', JSON.stringify(p));
+  for (const [, it] of due) sent[it.id] = now;
+  await env.CAL.put('personal-sent', JSON.stringify(prune(sent, now)));
+  for (const [member, it] of due) await sendToMember(env, member, { title: it.title, body: it.body, tag: it.tag, url: it.url });
   return due.length;
 }
 
@@ -98,6 +109,24 @@ const reply = (env, req, data, status = 200) =>
 
 const clean = (s, n) => String(s || '').slice(0, n);
 const MEMBERS = (env) => JSON.parse(env.TEAM || '[]').map((m) => m.id);
+/* Resumo da agenda pessoal usado pelas mensagens de ânimo (só títulos, datas e categorias) */
+function cleanProfile(p, me) {
+  const arr = (a, n) => (Array.isArray(a) ? a.slice(0, n) : []);
+  const ev = (x) => ({ title: clean(x?.title, 80), cat: clean(x?.cat, 20), time: /^\d{2}:\d{2}$/.test(x?.time || '') ? x.time : null, done: !!x?.done });
+  const day = (d) => (/^\d{4}-\d{2}-\d{2}$/.test(d || '') ? d : null);
+  const byCat = (o) => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {}).slice(0, 12).map(([k, v]) => [clean(k, 20), day(v)]).filter(([, v]) => v));
+  const P = p.prefs || {};
+  return {
+    name: me.name,
+    date: day(p.date),
+    prefs: { nudges: P.nudges !== false, water: P.water !== false, meals: P.meals !== false, faith: P.faith !== false, freq: ['alta', 'normal', 'calma'].includes(P.freq) ? P.freq : 'normal' },
+    today: arr(p.today, 20).map(ev), tomorrow: arr(p.tomorrow, 20).map(ev), overdue: arr(p.overdue, 10).map(ev),
+    lastByCat: byCat(p.lastByCat), nextByCat: byCat(p.nextByCat),
+    birthdays: arr(p.birthdays, 10).map((b) => ({ name: clean(b?.name, 60), inDays: Number.isFinite(b?.inDays) ? b.inDays : 99 })),
+    lists: arr(p.lists, 10).map((l) => ({ name: clean(l?.name, 60), open: Number.isFinite(l?.open) ? l.open : 0 })),
+    updatedAt: Date.now(),
+  };
+}
 
 async function handle(req, env) {
   const url = new URL(req.url);
@@ -129,7 +158,7 @@ async function handle(req, env) {
     subs[id] = {
       member: me.id,
       subscription: { endpoint: s.endpoint, keys: { p256dh: clean(s.keys.p256dh, 200), auth: clean(s.keys.auth, 100) } },
-      prefs: { reminders: body.prefs?.reminders !== false, partner: body.prefs?.partner !== false, daily: body.prefs?.daily !== false },
+      prefs: { reminders: body.prefs?.reminders !== false, partner: body.prefs?.partner !== false, daily: body.prefs?.daily !== false, coach: body.prefs?.coach !== false },
       updatedAt: Date.now(),
     };
     await env.CAL.put('subs', JSON.stringify(subs));
@@ -151,8 +180,7 @@ async function handle(req, env) {
       .filter((it) => it && MEMBERS(env).includes(it.member) && Number.isFinite(it.at) && it.at > now - 15 * 60e3 && it.at < now + 8 * 86400e3)
       .slice(0, 1500)
       .map((it) => ({ id: clean(it.id, 120), at: it.at, member: it.member, title: clean(it.title, 120), body: clean(it.body, 300), tag: clean(it.tag, 80), url: clean(it.url, 200), kind: ['reminders', 'daily'].includes(it.kind) ? it.kind : 'reminders', badge: Number.isFinite(it.badge) ? it.badge : undefined }));
-    const sch = await getSchedule(env);
-    await env.CAL.put('schedule', JSON.stringify({ items, sent: sch.sent, updatedAt: now, by: me.id }));
+    await env.CAL.put('schedule', JSON.stringify({ items, updatedAt: now, by: me.id }));
     return reply(env, req, { ok: true, count: items.length });
   }
 
@@ -168,15 +196,14 @@ async function handle(req, env) {
       name: clean(c.name, 80), niche: clean(c.niche, 160), lastPost: clean(c.lastPost, 10), nextPost: clean(c.nextPost, 10),
       daysSincePost: typeof c.daysSincePost === 'number' ? c.daysSincePost : null,
     }));
-    const st = (await env.CAL.get('coach', 'json')) || { next: {}, recent: {} };
-    st.ctx = { companies, updatedAt: Date.now() };
-    await env.CAL.put('coach', JSON.stringify(st));
+    await env.CAL.put('coach-ctx', JSON.stringify({ companies, updatedAt: Date.now() }));
     return reply(env, req, { ok: true });
   }
-  if (url.pathname === '/coach-test') {
-    const st = (await env.CAL.get('coach', 'json')) || { next: {}, recent: {} };
-    st.next = { ...st.next, [me.id]: 0 };
-    await env.CAL.put('coach', JSON.stringify(st));
+  if (url.pathname === '/coach-test' || url.pathname === '/pnudge-test') {
+    const key = url.pathname === '/coach-test' ? 'coach-force' : 'pnudge-force';
+    const f = (await env.CAL.get(key, 'json')) || {};
+    f[me.id] = Date.now();
+    await env.CAL.put(key, JSON.stringify(f));
     return reply(env, req, { ok: true });
   }
 
@@ -184,9 +211,8 @@ async function handle(req, env) {
     const items = (Array.isArray(body.items) ? body.items : []).slice(0, 300)
       .filter((it) => it && typeof it.at === 'number')
       .map((it) => ({ id: clean(it.id, 120), at: it.at, title: clean(it.title, 80), body: clean(it.body, 200), tag: clean(it.tag, 80), url: clean(it.url, 120) }));
-    const p = await getPersonal(env);
-    p.byMember[me.id] = items;
-    await env.CAL.put('personal', JSON.stringify(p));
+    await env.CAL.put(`pitems:${me.id}`, JSON.stringify(items));
+    if (body.profile && typeof body.profile === 'object') await env.CAL.put(`pprofile:${me.id}`, JSON.stringify(cleanProfile(body.profile, me)));
     return reply(env, req, { ok: true, count: items.length });
   }
 
@@ -213,6 +239,15 @@ async function handle(req, env) {
 
 export default {
   fetch: (req, env) => handle(req, env).catch((e) => reply(env, req, { error: 'erro interno: ' + e.message }, 500)),
-  scheduled: (_event, env, ctx) => ctx.waitUntil(Promise.all([runSchedule(env), runPersonal(env), runCoach(env, sendToMember, JSON.parse(env.TEAM || '[]')).catch((e) => console.log('coach', e.message))])),
+  scheduled: (_event, env, ctx) => {
+    const team = JSON.parse(env.TEAM || '[]');
+    const safe = (name, p) => p.catch((e) => console.log(name, e.message));
+    ctx.waitUntil(Promise.all([
+      safe('lembretes', runSchedule(env)),
+      safe('pessoal', runPersonal(env)),
+      safe('coach', runCoach(env, sendToMember, team)),
+      safe('amigo', runPersonalCoach(env, sendToMember, team)),
+    ]));
+  },
 };
-export { runSchedule, handle };
+export { runSchedule, runPersonal, handle, sendToMember };

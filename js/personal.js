@@ -6,23 +6,35 @@ import { todayKey, addDays, fromKey, pad, uid } from './utils.js';
 import { server, api } from './avisos.js';
 
 export const CATS = {
-  lembrete: { label: 'Lembrete', emoji: '📝', color: '#8E8E93', words: [] },
-  aniversario: { label: 'Aniversário', emoji: '🎂', color: '#FF2D55', words: ['aniversário', 'aniversario', 'niver', 'aniver'] },
-  compromisso: { label: 'Compromisso', emoji: '📍', color: '#007AFF', words: ['ir ao', 'ir na', 'ir no', 'ir para', 'ir pra', 'reunião', 'encontro', 'evento', 'festa', 'casamento', 'igreja', 'culto', 'missa'] },
-  buscar: { label: 'Buscar / levar', emoji: '🚗', color: '#FF9500', words: ['buscar', 'levar', 'pegar ', 'carona'] },
-  beleza: { label: 'Cabelo / beleza', emoji: '💈', color: '#AF52DE', words: ['cabelo', 'barba', 'barbeiro', 'unha', 'manicure', 'sobrancelha', 'salão'] },
-  saude: { label: 'Saúde', emoji: '🩺', color: '#34C759', words: ['médico', 'medico', 'dentista', 'exame', 'consulta', 'remédio', 'remedio', 'academia', 'treino', 'vacina'] },
-  pagar: { label: 'Pagar conta', emoji: '💸', color: '#30B0C7', words: ['pagar', 'conta de', 'boleto', 'fatura', 'aluguel', 'pix'] },
-  compras: { label: 'Compras', emoji: '🛒', color: '#5856D6', words: ['comprar', 'mercado', 'farmácia', 'farmacia'] },
+  lembrete: { label: 'Lembrete', emoji: '📝', ic: 'note', g: ['#8E9AAF', '#5B6478'], color: '#6B7489', words: [] },
+  aniversario: { label: 'Aniversário', emoji: '🎂', ic: 'cake', g: ['#FF7A9C', '#E8326A'], color: '#F0457A', words: ['aniversário', 'aniversario', 'niver', 'aniver'] },
+  compromisso: { label: 'Compromisso', emoji: '📍', ic: 'mappin', g: ['#5AA8FF', '#2F6BFF'], color: '#2F7BFF', words: ['ir ao', 'ir na', 'ir no', 'ir para', 'ir pra', 'reunião', 'encontro', 'evento', 'festa', 'casamento', 'igreja', 'culto', 'missa'] },
+  buscar: { label: 'Buscar / levar', emoji: '🚗', ic: 'car', g: ['#FFB547', '#FF7A1A'], color: '#FF8A1F', words: ['buscar', 'levar', 'pegar ', 'carona'] },
+  beleza: { label: 'Cabelo / beleza', emoji: '💈', ic: 'sparkles', g: ['#C78BFF', '#8A4DFF'], color: '#9B5CFF', words: ['cabelo', 'barba', 'barbeiro', 'unha', 'manicure', 'sobrancelha', 'salão'] },
+  saude: { label: 'Saúde', emoji: '🩺', ic: 'pulse', g: ['#4BD88B', '#16A35A'], color: '#1FB566', words: ['médico', 'medico', 'dentista', 'exame', 'consulta', 'remédio', 'remedio', 'academia', 'treino', 'vacina'] },
+  pagar: { label: 'Pagar conta', emoji: '💸', ic: 'card', g: ['#3FD0E0', '#0E8FB0'], color: '#14A3C2', words: ['pagar', 'conta de', 'boleto', 'fatura', 'aluguel', 'pix'] },
+  compras: { label: 'Compras', emoji: '🛒', ic: 'cart', g: ['#8B8CFF', '#5146E5'], color: '#5E5CF0', words: ['comprar', 'mercado', 'farmácia', 'farmacia'] },
 };
 export const REPEATS = { none: 'Não repete', daily: 'Todo dia', weekly: 'Toda semana', monthly: 'Todo mês', yearly: 'Todo ano' };
+export const LIST_ICONS = {
+  cart: { g: ['#8B8CFF', '#5146E5'] },
+  listcheck: { g: ['#4BD88B', '#16A35A'] },
+  bulb: { g: ['#FFD25A', '#F59E0B'] },
+  gift: { g: ['#FF7A9C', '#E8326A'] },
+  note: { g: ['#8E9AAF', '#5B6478'] },
+  pulse: { g: ['#3FD0E0', '#0E8FB0'] },
+  sparkles: { g: ['#C78BFF', '#8A4DFF'] },
+  mappin: { g: ['#5AA8FF', '#2F6BFF'] },
+};
 export const LIST_PRESETS = [
-  { emoji: '🛒', name: 'Mercado' },
-  { emoji: '✅', name: 'Coisas para fazer' },
-  { emoji: '💡', name: 'Ideias' },
-  { emoji: '🎁', name: 'Presentes' },
+  { ic: 'cart', name: 'Mercado' },
+  { ic: 'listcheck', name: 'Coisas para fazer' },
+  { ic: 'bulb', name: 'Ideias' },
+  { ic: 'gift', name: 'Presentes' },
 ];
-const DEFAULT_PREFS = { reminders: true, morning: true, night: true };
+const OLD_EMOJI = { '🛒': 'cart', '✅': 'listcheck', '💡': 'bulb', '🎁': 'gift', '📝': 'note' };
+export const listIcon = (l) => (l && LIST_ICONS[l.ic] ? l.ic : OLD_EMOJI[l?.emoji] || 'note');
+const DEFAULT_PREFS = { reminders: true, morning: true, night: true, nudges: true, water: true, meals: true, faith: true, freq: 'normal' };
 
 const LS = 'cal.pessoal.v1';
 let items = [], started = false;
@@ -46,12 +58,22 @@ export function startPersonal() {
   started = true;
   const c = cloud();
   if (c) {
-    c.subscribePersonal((list) => { items = list; personal.ready = true; emit(); }, (err) => store.onError && store.onError(err));
+    c.subscribePersonal((list) => { items = list; personal.ready = true; personal.error = null; emit(); }, (err) => {
+      console.error('pessoal', err);
+      personal.error = /permission/i.test(String(err?.code || err?.message)) ? 'rules' : 'net';
+      personal.ready = true;
+      emit();
+    });
   } else {
     try { items = JSON.parse(localStorage.getItem(LS) || '[]'); } catch { items = []; }
     personal.ready = true;
     emit();
   }
+}
+function writeFailed(e) {
+  console.error('pessoal: falha ao salvar', e);
+  if (/permission/i.test(String(e?.code || e?.message))) { personal.error = 'rules'; emit(); }
+  else if (store.onError) store.onError(e);
 }
 const saveLocal = () => { try { localStorage.setItem(LS, JSON.stringify(items)); } catch { /* cheio */ } };
 
@@ -62,20 +84,20 @@ export function savePersonal(it) {
   const i = items.findIndex((x) => x.id === it.id);
   items = i >= 0 ? items.map((x) => (x.id === it.id ? it : x)) : [...items, it];
   const c = cloud();
-  if (c) c.writePersonal(it).catch((e) => store.onError && store.onError(e)); else saveLocal();
+  if (c) c.writePersonal(it).catch(writeFailed); else saveLocal();
   emit();
   return it;
 }
 export function removePersonal(id) {
   items = items.filter((x) => x.id !== id);
   const c = cloud();
-  if (c) c.delPersonal(id).catch((e) => store.onError && store.onError(e)); else saveLocal();
+  if (c) c.delPersonal(id).catch(writeFailed); else saveLocal();
   emit();
 }
 export const savePrefs = (p) => savePersonal({ ...personal.prefs, ...p, id: 'prefs', kind: 'prefs' });
 
 /* ---------- listas (mercado, coisas para fazer...) ---------- */
-export const newList = (name, emoji = '📝') => savePersonal({ kind: 'list', name, emoji, entries: [] });
+export const newList = (name, ic = 'note') => savePersonal({ kind: 'list', name, ic: LIST_ICONS[ic] ? ic : 'note', entries: [] });
 export function addEntry(list, text) {
   const t = text.trim();
   if (!t) return list;
@@ -149,6 +171,7 @@ export function parseQuick(raw) {
   take(/\s(depois de amanhã|depois de amanha)\s/, () => (date = addDays(t, 2)));
   take(/\s(amanhã|amanha)\s/, () => (date = addDays(t, 1)));
   take(/\shoje\s/, () => (date = t));
+  take(/\s(?:ontem)\s/, () => (date = addDays(t, -1)));
   take(/\s(?:dia\s)?(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\s/, (m) => {
     const y = m[3] ? (m[3].length === 2 ? '20' + m[3] : m[3]) : t.slice(0, 4);
     let k = `${y}-${pad(+m[2])}-${pad(+m[1])}`;
@@ -289,20 +312,46 @@ export function buildPersonalSchedule(now = Date.now()) {
     const list = occ.filter((o) => o.date === d && !o.done);
     if (!list.length) continue;
     const body = list.slice(0, 4).map(short).join(' · ') + (list.length > 4 ? ` · +${list.length - 4}` : '');
-    if (prefs.morning) add(at(d, '08:00'), `Bom dia! Hoje você tem ${list.length} ${list.length > 1 ? 'coisas' : 'coisa'} ☀️`, body, `pm-${d}-${list.length}`, 'p-manha', './#/p/hoje');
+    if (prefs.morning) add(at(d, '08:00'), `Seu dia hoje: ${list.length} ${list.length > 1 ? 'coisas' : 'coisa'} 📋`, body, `pm-${d}-${list.length}`, 'p-manha', './#/p/hoje');
     if (prefs.night) add(at(addDays(d, -1), '21:00'), `Amanhã: ${list.length} ${list.length > 1 ? 'coisas' : 'coisa'} na agenda 🌙`, body, `pn-${d}-${list.length}`, 'p-noite', './#/p/hoje');
   }
   return out.sort((a, b) => a.at - b.at).slice(0, 300);
 }
+/* Resumo da agenda pessoal para as mensagens de ânimo do servidor */
+export function personalProfile() {
+  const t = todayKey();
+  const ev = (o) => ({ title: o.item.title, cat: o.item.cat, time: o.item.time || null, done: o.done });
+  const lastByCat = {}, nextByCat = {};
+  for (const it of personal.events) {
+    if ((it.repeat || 'none') !== 'none' || !it.date) continue;
+    if (it.date <= t && (it.done || it.date < t)) { if (!lastByCat[it.cat] || it.date > lastByCat[it.cat]) lastByCat[it.cat] = it.date; }
+    if (it.date >= t && !it.done) { if (!nextByCat[it.cat] || it.date < nextByCat[it.cat]) nextByCat[it.cat] = it.date; }
+  }
+  const p = personal.prefs;
+  return {
+    date: t,
+    prefs: { nudges: p.nudges, water: p.water, meals: p.meals, faith: p.faith, freq: p.freq },
+    today: occurrences(t, t).map(ev),
+    tomorrow: occurrences(addDays(t, 1), addDays(t, 1)).map(ev),
+    overdue: overdue().slice(0, 10).map((it) => ({ title: it.title, cat: it.cat, time: it.time || null, done: false })),
+    lastByCat, nextByCat,
+    birthdays: birthdays().slice(0, 10).map((b) => ({ name: b.item.title.replace(/^anivers[aá]rio (d[aoe] )?/i, ''), inDays: Math.round((Date.parse(b.next) - Date.parse(t)) / 864e5) })),
+    lists: personal.lists.map((l) => ({ name: l.name, open: (l.entries || []).filter((e) => !e.done).length })),
+  };
+}
+
 let timer = null, lastSig = '';
 export function syncPersonalSchedule() {
   if (store.mode !== 'cloud' || !server() || !personal.ready) return;
   clearTimeout(timer);
   timer = setTimeout(() => {
     const list = buildPersonalSchedule();
-    const sig = JSON.stringify(list);
+    const profile = personalProfile();
+    const sig = JSON.stringify([list, profile]);
     if (sig === lastSig) return;
-    api('/personal', { items: list }).then(() => (lastSig = sig)).catch(() => {});
+    api('/personal', { items: list, profile }).then(() => (lastSig = sig)).catch(() => {});
   }, 2500);
 }
-setInterval(() => { lastSig = ''; syncPersonalSchedule(); }, 6 * 3600e3); // renova a janela de 35 dias
+// renova a lista e o resumo do dia de tempos em tempos (e quando a pessoa volta ao app)
+setInterval(() => { lastSig = ''; syncPersonalSchedule(); }, 3 * 3600e3);
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (!document.hidden) syncPersonalSchedule(); });

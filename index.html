@@ -18,16 +18,16 @@
   <link rel="preload" href="media/intro-poster.jpg" as="image">
   <link rel="stylesheet" href="css/app.css">
   <!--PRELOAD-->
-  <link rel="modulepreload" href="dist/a-RRB6LVQH.js">
+  <link rel="modulepreload" href="dist/a-ZCKITBL4.js">
   <link rel="modulepreload" href="dist/c-FQHFFL2B.js">
   <link rel="modulepreload" href="dist/c-PBEL6IR7.js">
-  <link rel="modulepreload" href="dist/c-RXG44YSJ.js">
-  <link rel="modulepreload" href="dist/c-FG4DVISF.js">
+  <link rel="modulepreload" href="dist/c-DNTUIMLQ.js">
+  <link rel="modulepreload" href="dist/c-AGCANZ6H.js">
   <link rel="modulepreload" href="dist/c-EG2IIMYB.js">
   <link rel="modulepreload" href="dist/c-NMZR3K7N.js">
-  <link rel="modulepreload" href="dist/c-2FTTPW72.js">
-  <link rel="modulepreload" href="dist/c-PTZLGXSD.js">
-  <link rel="modulepreload" href="dist/c-HNECSR5J.js">
+  <link rel="modulepreload" href="dist/c-3ZGAM64U.js">
+  <link rel="modulepreload" href="dist/c-HAJEGYJ4.js">
+  <link rel="modulepreload" href="dist/c-DA3WSDQL.js">
   <link rel="modulepreload" href="dist/c-DOOMBXLW.js">
   <link rel="modulepreload" href="dist/c-3GA6RSWB.js">
   <link rel="modulepreload" href="dist/c-3ZIQX7NE.js">
@@ -197,18 +197,29 @@
         lastErr = t && t !== window && (t.src || t.href) ? 'não carregou ' + String(t.src || t.href).split('/').slice(-2).join('/') : (e.message || '') + ' ' + String(e.filename || '').split('/').pop();
       }, true);
       window.addEventListener('unhandledrejection', function (e) { lastErr = String(e.reason && (e.reason.message || e.reason)); });
-      var APP = /*APP*/'./dist/a-RRB6LVQH.js'/*APP*/;
+      var APP = /*APP*/'./dist/a-ZCKITBL4.js'/*APP*/;
       import(APP).catch(function (e) { fail(String(e && (e.message || e))); });
       setTimeout(function () { fail(''); }, 20000);
-      // Atualiza sozinho: ao voltar para o app, confere se há versão nova e recarrega
+      // Atualiza sozinho: ao VOLTAR para o app, confere se há versão nova e recarrega UMA vez por versão.
+      // Nunca recarrega enquanto a pessoa está usando (digitando, com tela aberta) e nunca em sequência.
+      var lastCheck = 0;
       function checkUpdate() {
+        if (Date.now() - lastCheck < 60000) return;
+        lastCheck = Date.now();
         fetch('index.html?v=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (t) {
           var m = /\/\*APP\*\/'([^']+)'/.exec(t);
-          if (m && m[1] !== APP && !document.querySelector('.sheet-wrap.is-open')) location.reload();
+          if (!m || m[1] === APP) return;
+          var tried = '';
+          try { tried = sessionStorage.getItem('cal.updTried') || ''; } catch (e) {}
+          if (tried === m[1]) return; // já tentou esta versão: não insiste (evita ficar recarregando)
+          var busy = document.querySelector('.sheet-wrap') || (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName));
+          if (busy) return;
+          try { sessionStorage.setItem('cal.updTried', m[1]); } catch (e) {}
+          // endereço novo: o iPhone não reaproveita a página antiga guardada
+          location.replace(location.pathname + '?u=' + encodeURIComponent(m[1].replace(/\W/g, '')) + location.hash);
         }).catch(function () {});
       }
-      document.addEventListener('visibilitychange', function () { if (!document.hidden) checkUpdate(); });
-      setTimeout(checkUpdate, 4000);
+      document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(checkUpdate, 1500); });
     })();
   </script>
 </body>

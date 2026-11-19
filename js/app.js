@@ -57,23 +57,32 @@ function applySpaceMeta(personalMode) {
   document.title = personalMode ? 'Pessoal · Calendário' : 'Calendário · Agenda de conteúdo';
 }
 /* Troca entre Trabalho e Pessoal com uma transição de "outro app" */
-function switchSpace(space) {
-  if (ui.space === space) return;
+function switchSpace(space, from) {
+  if (ui.space === space || document.querySelector('.spaceveil')) return;
   document.querySelectorAll('.sheet-wrap.is-open [data-close]').forEach((b) => b.click());
   const veil = document.createElement('div');
   veil.className = `spaceveil spaceveil--${space}`;
-  veil.innerHTML = space === 'personal' ? `<div>${icon('heart', 44)}<strong>Pessoal</strong><small>Só você vê</small></div>` : `<div>${icon('briefcase', 44)}<strong>Trabalho</strong><small>Agenda da dupla</small></div>`;
+  // o círculo nasce do botão tocado
+  const r = from && from.getBoundingClientRect ? from.getBoundingClientRect() : null;
+  if (r) { veil.style.setProperty('--x', `${r.left + r.width / 2}px`); veil.style.setProperty('--y', `${r.top + r.height / 2}px`); }
+  const me = store.member(store.me);
+  veil.innerHTML = space === 'personal'
+    ? `<div><span class="spaceveil__badge">${icon('heart', 40)}</span><strong>Pessoal</strong><small>${me ? esc(me.name) + ' · ' : ''}só você vê</small></div>`
+    : `<div><span class="spaceveil__badge">${icon('briefcase', 40)}</span><strong>Trabalho</strong><small>Agenda da dupla</small></div>`;
   document.body.appendChild(veil);
-  requestAnimationFrame(() => veil.classList.add('is-in'));
+  if (navigator.vibrate) navigator.vibrate(8);
+  requestAnimationFrame(() => requestAnimationFrame(() => veil.classList.add('is-in')));
   setTimeout(() => {
     ui.space = space;
     saveUi();
     shell();
     render();
     window.scrollTo(0, 0);
-    veil.classList.add('is-out');
-    setTimeout(() => veil.remove(), 450);
-  }, 380);
+    const view = document.getElementById('view');
+    if (view) { view.classList.add('is-entering'); setTimeout(() => view.classList.remove('is-entering'), 600); }
+  }, 680);
+  setTimeout(() => veil.classList.add('is-out'), 900);
+  setTimeout(() => veil.remove(), 1350);
 }
 window.__calRender = () => render();
 const tabBtn = (id, ic, label) => `<button class="tabbar__btn" data-action="tab" data-tab="${id}">${icon(ic, 24)}<span>${label}</span></button>`;
@@ -120,7 +129,7 @@ function setTab(tab) {
 /* ---------- ações (delegação de cliques) ---------- */
 const actions = {
   tab: (b) => setTab(b.dataset.tab),
-  space: (b) => switchSpace(b.dataset.space),
+  space: (b) => switchSpace(b.dataset.space, b),
   'set-person': (b) => {
     ui.person = b.dataset.p;
     saveUi();

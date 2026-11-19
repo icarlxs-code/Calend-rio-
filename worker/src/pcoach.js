@@ -1,0 +1,240 @@
+/* "Amigo" do modo Pessoal: ao longo do dia (7h30 às 22h15) manda para cada pessoa
+   mensagens de ânimo, versículos, água, hora de comer e lembretes do que ela anotou.
+   Cada pessoa recebe só sobre a própria agenda pessoal. */
+import { brNow } from './coach.js';
+
+export const VERSES = [
+  ['Tudo posso naquele que me fortalece.', 'Filipenses 4:13'],
+  ['Seja forte e corajoso! Não se apavore nem desanime, pois o Senhor, o seu Deus, estará com você por onde você andar.', 'Josué 1:9'],
+  ['Porque sou eu que conheço os planos que tenho para vocês, diz o Senhor, planos de fazê-los prosperar e não de causar dano, planos de dar a vocês esperança e um futuro.', 'Jeremias 29:11'],
+  ['O Senhor é o meu pastor; de nada terei falta.', 'Salmos 23:1'],
+  ['Não tema, pois estou com você; não tenha medo, pois sou o seu Deus. Eu o fortalecerei e o ajudarei.', 'Isaías 41:10'],
+  ['Venham a mim, todos os que estão cansados e sobrecarregados, e eu darei descanso a vocês.', 'Mateus 11:28'],
+  ['Confie no Senhor de todo o seu coração e não se apoie em seu próprio entendimento.', 'Provérbios 3:5'],
+  ['Sabemos que Deus age em todas as coisas para o bem daqueles que o amam.', 'Romanos 8:28'],
+  ['Deus é o nosso refúgio e a nossa fortaleza, auxílio sempre presente na adversidade.', 'Salmos 46:1'],
+  ['Pois Deus não nos deu espírito de covardia, mas de poder, de amor e de equilíbrio.', '2 Timóteo 1:7'],
+  ['Entregue o seu caminho ao Senhor; confie nele, e ele agirá.', 'Salmos 37:5'],
+  ['Aqueles que esperam no Senhor renovam as suas forças. Voam alto como águias; correm e não ficam exaustos.', 'Isaías 40:31'],
+  ['Lancem sobre ele toda a sua ansiedade, porque ele tem cuidado de vocês.', '1 Pedro 5:7'],
+  ['Este é o dia em que o Senhor agiu; alegremo-nos e exultemos neste dia.', 'Salmos 118:24'],
+  ['As misericórdias do Senhor renovam-se cada manhã. Grande é a tua fidelidade.', 'Lamentações 3:22-23'],
+  ['Eu te louvo porque me fizeste de modo especial e admirável.', 'Salmos 139:14'],
+  ['Deixo com vocês a paz; a minha paz dou a vocês.', 'João 14:27'],
+  ['O choro pode persistir uma noite, mas de manhã irrompe a alegria.', 'Salmos 30:5'],
+  ['Consagre ao Senhor tudo o que você faz, e os seus planos serão bem-sucedidos.', 'Provérbios 16:3'],
+  ['O Senhor te abençoe e te guarde.', 'Números 6:24'],
+  ['Sejam fortes e corajosos. O Senhor, o seu Deus, vai com vocês; nunca os deixará, nunca os abandonará.', 'Deuteronômio 31:6'],
+  ['Tudo o que fizerem, façam de todo o coração, como para o Senhor.', 'Colossenses 3:23'],
+  ['Alegrem-se sempre no Senhor. Novamente direi: alegrem-se!', 'Filipenses 4:4'],
+  ['A alegria do Senhor os fortalecerá.', 'Neemias 8:10'],
+];
+const NIGHT_VERSES = [
+  ['Em paz me deito e logo pego no sono, porque só tu, Senhor, me fazes viver em segurança.', 'Salmos 4:8'],
+  ['Venham a mim, todos os que estão cansados e sobrecarregados, e eu darei descanso a vocês.', 'Mateus 11:28'],
+  ['Lancem sobre ele toda a sua ansiedade, porque ele tem cuidado de vocês.', '1 Pedro 5:7'],
+  ['Deixo com vocês a paz; a minha paz dou a vocês.', 'João 14:27'],
+  ['O choro pode persistir uma noite, mas de manhã irrompe a alegria.', 'Salmos 30:5'],
+];
+
+const T = {
+  morning: [
+    'Bom dia, {n}! Hoje é um novo começo. Você é capaz de muito mais do que imagina ☀️',
+    'Bom dia, {n}! Levanta, toma uma água e vai com tudo. Hoje vai dar certo ☀️',
+    'Bom dia! Deus está contigo hoje, {n}. Um passo de cada vez ☀️',
+    'Acordou? Bora, {n}! Que hoje seja leve e produtivo ☀️',
+  ],
+  water: [
+    'Já bebeu água hoje, {n}? Vai lá, um copo agora 💧',
+    'Pausa rápida: bebe um copo d’água. Seu corpo agradece 💧',
+    'Ei, {n}! Hidratação em dia? Vai beber água 💧',
+    'Lembrete de amigo: água! Cabeça boa começa com corpo hidratado 💧',
+    'Tá bebendo água direitinho? Bora mais um copo 💧',
+    'Só passando pra lembrar: água, {n}! 💧',
+  ],
+  lunch: [
+    'Já tá dando a hora do almoço, {n}. Vai almoçar, hein! Não pula refeição 🍽️',
+    'Hora de comer! Para um pouquinho e almoça com calma 🍽️',
+    'Almoçou já? Saco vazio não para em pé 😄 Vai comer 🍽️',
+  ],
+  dinner: [
+    'Já jantou, {n}? Come alguma coisa boa e descansa 🍽️',
+    'Hora de jantar! Você merece uma pausa depois do dia de hoje 🍽️',
+  ],
+  night: [
+    'Você foi bem hoje, {n}. Descansa, que amanhã tem mais 🌙',
+    'Hora de desacelerar. Deixa o celular de lado e descansa 🌙',
+    'Orgulho de você por mais um dia vencido, {n}. Boa noite 🌙',
+  ],
+  motivation: [
+    'Você é melhor do que imagina, {n}. Nunca esquece disso 💜',
+    'Confia no seu processo. O que é seu está guardado 🙏',
+    'Você tem potencial demais, {n}. Bora usar um pouco dele agora 💪',
+    'Respira. Você dá conta. Sempre deu 💜',
+    'Pequenas vitórias também contam. Comemora cada uma 🎉',
+    'Feito é melhor que perfeito. Bora fazer acontecer 💪',
+    'Você é lindo por dentro e por fora, {n}. Se valoriza 💜',
+    'Deus está contigo em cada detalhe do seu dia 🙏',
+    'Quem planta constância colhe resultado. Continua 🌱',
+    'Não se compara com ninguém. Seu tempo é seu 💜',
+    'Você já venceu coisa muito mais difícil que isso, {n} 💪',
+    'Seja gentil com você hoje. Você está fazendo o seu melhor 💜',
+    'Sorri um pouco, {n}. Você tem muitos motivos 😊',
+    'Acredita em você como eu acredito 💜',
+    'O dia não acabou. Ainda dá tempo de fazer algo incrível ✨',
+  ],
+  selfcare: [
+    'Dá uma alongada rápida e arruma a postura, {n} 🧘',
+    'Faz uma pausa de 5 minutinhos. Respira fundo 3 vezes 🌿',
+    'Já tomou um ar hoje? Dá uma volta rapidinha 🌿',
+    'Descansa os olhos da tela um pouco, {n} 👀',
+  ],
+};
+const pick = (a, seed) => a[Math.abs(seed) % a.length];
+const fill = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
+const verseText = ([t, ref]) => `“${t}” — ${ref}`;
+const hm = (t) => (t ? t.replace(/^0/, '').replace(':00', 'h').replace(':', 'h') : '');
+
+/* Mensagens a partir da agenda pessoal (cabelo, contas atrasadas, listas, aniversários...) */
+export function agendaMessages(p, br, st) {
+  const out = [];
+  const n = p.name || '';
+  const nowMin = br.h * 60 + br.m;
+  for (const it of p.today || []) {
+    if (it.done || !it.time) continue;
+    const [h, m] = it.time.split(':').map(Number);
+    const diff = h * 60 + m - nowMin;
+    if (diff > 90 && diff < 480) out.push({ key: `up-${it.title}`, title: 'Mais tarde 📅', body: `Hoje às ${hm(it.time)} tem ${it.title}. Já tá se organizando, ${n}?` });
+  }
+  if ((p.today || []).some((it) => !it.done && !it.time)) {
+    const it = p.today.find((x) => !x.done && !x.time);
+    out.push({ key: `td-${it.title}`, title: 'Não esquece hoje 📝', body: `Você anotou “${it.title}” pra hoje. Já fez? Se fez, marca como feito 😉` });
+  }
+  for (const it of (p.overdue || []).slice(0, 2)) out.push({ key: `od-${it.title}`, title: 'Ficou pra trás 👀', body: `Ainda tá pendente: ${it.title}. Bora resolver hoje? Você consegue 💪` });
+  const lb = p.lastByCat || {}, nb = p.nextByCat || {};
+  if (!nb.beleza) {
+    const days = lb.beleza ? Math.round((Date.parse(br.date) - Date.parse(lb.beleza)) / 864e5) : null;
+    if (days === null) out.push({ key: 'hair', title: 'Cuidar de você 💈', body: `Já pensou em agendar um corte de cabelo, ${n}? Cuidar da aparência levanta a autoestima. Você merece 💜`, every: 5 });
+    else if (days >= 21) out.push({ key: 'hair', title: 'E o cabelo? 💈', body: `Faz ${days} dias desde o último corte. Precisa agendar? Anota aqui no app que eu te lembro 😉`, every: 4 });
+  }
+  for (const b of (p.birthdays || []).filter((x) => x.inDays >= 1 && x.inDays <= 5)) {
+    out.push({ key: `bd-${b.name}`, title: 'Aniversário chegando 🎁', body: `${b.name} faz aniversário ${b.inDays === 1 ? 'amanhã' : `em ${b.inDays} dias`}. Já pensou no presente ou numa mensagem bonita?`, every: 2 });
+  }
+  for (const l of (p.lists || []).filter((x) => x.open >= 3).slice(0, 2)) {
+    out.push({ key: `ls-${l.name}`, title: `Lista ${l.name} 📋`, body: `Sua lista “${l.name}” tem ${l.open} itens pendentes. Bora resolver alguns hoje?`, every: 2 });
+  }
+  if ((p.tomorrow || []).length && br.h >= 17) {
+    const t = p.tomorrow[0];
+    out.push({ key: `tm-${t.title}`, title: 'Amanhã 📅', body: `Amanhã tem ${t.title}${t.time ? ' às ' + hm(t.time) : ''}. Já deixa tudo encaminhado pra não correr 😉` });
+  }
+  // não repete o mesmo assunto antes do prazo ("every" em dias; padrão: 1 vez por dia)
+  return out.filter((m) => {
+    const last = st.asked?.[m.key];
+    return !last || Date.parse(br.date) - Date.parse(last) >= (m.every || 1) * 864e5;
+  });
+}
+
+const INTERVAL = { alta: [85, 100], normal: [90, 150], calma: [180, 240] };
+const ANCHORS = [
+  { key: 'morning', from: 7 * 60 + 30, to: 9 * 60 },
+  { key: 'lunch', from: 11 * 60 + 40, to: 12 * 60 + 40, pref: 'meals' },
+  { key: 'dinner', from: 19 * 60 + 15, to: 20 * 60 + 15, pref: 'meals' },
+  { key: 'night', from: 21 * 60 + 40, to: 22 * 60 + 15 },
+];
+
+/* Escolhe a próxima mensagem de uma pessoa. Retorna { msg, state } ou null. Função pura (testável). */
+export function nextNudge(p, st, now, rand = Math.random) {
+  const br = brNow(now);
+  const mins = br.h * 60 + br.m;
+  const prefs = { nudges: true, water: true, meals: true, faith: true, freq: 'normal', ...(p.prefs || {}) };
+  if (!prefs.nudges) return null;
+  st = { next: 0, day: '', done: {}, water: 0, verses: 0, recent: [], asked: {}, ...st };
+  if (st.day !== br.date) st = { ...st, day: br.date, done: {}, water: 0, verses: 0 };
+  if (mins < 7 * 60 + 30 || mins > 22 * 60 + 15) return null;
+  const seed = Math.floor(rand() * 1e6);
+  const n = p.name || '';
+  const V = { n };
+  let msg = null;
+
+  // 1) momentos fixos do dia
+  const anchor = ANCHORS.find((a) => mins >= a.from && mins <= a.to && !st.done[a.key] && (!a.pref || prefs[a.pref]));
+  if (anchor) {
+    st.done = { ...st.done, [anchor.key]: true };
+    if (anchor.key === 'morning') {
+      const count = (p.today || []).filter((x) => !x.done).length;
+      const base = fill(pick(T.morning, seed), V);
+      msg = { title: `Bom dia, ${n} ☀️`, body: prefs.faith ? `${base}\n${verseText(pick(VERSES, seed + br.wd))}` : base };
+      if (count) msg.body += `\nHoje você tem ${count} ${count > 1 ? 'coisas' : 'coisa'} anotada${count > 1 ? 's' : ''}.`;
+      if (prefs.faith) st.verses++;
+    } else if (anchor.key === 'night') {
+      const base = fill(pick(T.night, seed), V);
+      msg = { title: 'Boa noite 🌙', body: prefs.faith ? `${base}\n${verseText(pick(NIGHT_VERSES, seed))}` : base };
+    } else {
+      msg = { title: anchor.key === 'lunch' ? 'Hora do almoço 🍽️' : 'Hora de jantar 🍽️', body: fill(pick(T[anchor.key], seed), V) };
+    }
+  } else {
+    if (now < (st.next || 0)) return null;
+    // não manda logo antes de um momento fixo
+    if (ANCHORS.some((a) => !st.done[a.key] && a.from - mins > 0 && a.from - mins < 25)) return null;
+    // 2) mensagens ao longo do dia: agenda > água > fé > ânimo > autocuidado
+    const agenda = agendaMessages(p, br, st).filter((m) => !st.recent.includes(m.body));
+    const options = [];
+    if (agenda.length) options.push(['agenda', 4]);
+    if (prefs.water && st.water < 5) options.push(['water', 3]);
+    if (prefs.faith && st.verses < 3) options.push(['verse', 2]);
+    options.push(['motivation', 3]);
+    if (mins > 10 * 60 && mins < 18 * 60) options.push(['selfcare', 1]);
+    const total = options.reduce((a, [, w]) => a + w, 0);
+    let r = rand() * total, kind = options[0][0];
+    for (const [k, w] of options) { if ((r -= w) <= 0) { kind = k; break; } }
+    if (kind === 'agenda') {
+      const m = agenda[seed % agenda.length];
+      st.asked = { ...st.asked, [m.key]: br.date };
+      msg = { title: m.title, body: m.body };
+    } else if (kind === 'water') {
+      st.water++;
+      msg = { title: 'Água 💧', body: fill(pick(T.water, seed), V) };
+    } else if (kind === 'verse') {
+      st.verses++;
+      msg = { title: 'Palavra pra você 📖', body: verseText(pick(VERSES, seed)) };
+    } else {
+      const pool = T[kind].filter((s) => !st.recent.includes(fill(s, V)));
+      msg = { title: kind === 'selfcare' ? 'Pausa 🌿' : 'Pra você 💜', body: fill(pick(pool.length ? pool : T[kind], seed), V) };
+    }
+  }
+  const [a, b] = INTERVAL[prefs.freq] || INTERVAL.normal;
+  st.next = now + (a + rand() * (b - a)) * 60e3;
+  st.recent = [...(st.recent || []), msg.body].slice(-12);
+  return { msg: { ...msg, tag: 'p-amigo', url: './#/p/hoje' }, state: st };
+}
+
+/* Roda a cada minuto (cron) */
+export async function runPersonalCoach(env, sendToMember, team) {
+  const now = Date.now();
+  const br = brNow(now);
+  const mins = br.h * 60 + br.m;
+  if (mins < 7 * 60 + 30 || mins > 22 * 60 + 15) return 0;
+  const [state, force] = await Promise.all([env.CAL.get('pcoach', 'json'), env.CAL.get('pnudge-force', 'json')]);
+  const all = state || {};
+  let sent = 0, changed = false;
+  for (const m of team) {
+    const st = { ...(all[m.id] || {}) };
+    if (force && force[m.id] && force[m.id] > (st.forcedAt || 0)) { st.next = 0; st.forcedAt = force[m.id]; changed = true; }
+    if ((st.next || 0) > now && !ANCHORS.some((a) => mins >= a.from && mins <= a.to && !(st.day === br.date && st.done?.[a.key]))) continue;
+    const prof = await env.CAL.get(`pprofile:${m.id}`, 'json');
+    if (!prof) continue; // a pessoa ainda não abriu o app novo
+    // resumo de outro dia (a pessoa não abriu o app hoje): ajusta "hoje" e "amanhã"
+    let p = { ...prof, name: prof.name || m.name };
+    if (prof.date && prof.date !== br.date) {
+      const yesterday = new Date(Date.parse(br.date) - 864e5).toISOString().slice(0, 10);
+      p = { ...p, today: prof.date === yesterday ? prof.tomorrow || [] : [], tomorrow: [] };
+    }
+    const r = nextNudge(p, st, now);
+    if (!r) { all[m.id] = st; continue; }
+    all[m.id] = r.state;
+    changed = true;
+    sent += await sendToMember(env, m.id, r.msg);
+  }
+  if (changed) await env.CAL.put('pcoach', JSON.stringify(all));
+  return sent;
+}
