@@ -272,27 +272,74 @@ document.addEventListener('submit', async (ev) => {
 });
 
 /* ---------- gestos: deslizar semana/mês ---------- */
+/* Arrastar para o lado troca a semana / o mês, acompanhando o dedo (ou o mouse/touchpad) */
+let swipeEnterDir = 0;
 function bindSwipes() {
   document.querySelectorAll('[data-swipe]').forEach((el) => {
-    let x0 = null, y0 = null;
-    el.addEventListener('touchstart', (e) => {
-      x0 = e.touches[0].clientX;
-      y0 = e.touches[0].clientY;
-    }, { passive: true });
-    el.addEventListener('touchend', (e) => {
+    if (el.dataset.swipe === 'pmonth') return; // o Pessoal cuida do dele
+    // animação de entrada depois da troca
+    if (swipeEnterDir) {
+      el.style.transition = 'none';
+      el.style.transform = `translateX(${swipeEnterDir * 40}%)`;
+      el.style.opacity = '0';
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        el.style.transition = 'transform .32s cubic-bezier(.2,.8,.2,1), opacity .25s ease';
+        el.style.transform = '';
+        el.style.opacity = '';
+      }));
+    }
+    let x0 = null, y0 = null, dx = 0, locked = null, moved = false;
+    const go = (dir) => {
+      el.style.transition = 'transform .2s ease-in, opacity .2s ease-in';
+      el.style.transform = `translateX(${-dir * 45}%)`;
+      el.style.opacity = '0';
+      setTimeout(() => {
+        if (el.dataset.swipe === 'week') ui.date = addDays(ui.date, 7 * dir);
+        else { ui.month = addMonths(ui.month, dir); ui.monthSel = `${ui.month}-01`; }
+        swipeEnterDir = dir;
+        render();
+        swipeEnterDir = 0;
+      }, 180);
+    };
+    const start = (x, y) => { x0 = x; y0 = y; dx = 0; locked = null; moved = false; el.style.transition = 'none'; };
+    const move = (x, y, ev) => {
       if (x0 == null) return;
-      const dx = e.changedTouches[0].clientX - x0;
-      const dy = e.changedTouches[0].clientY - y0;
+      dx = x - x0;
+      const dy = y - y0;
+      if (!locked && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) locked = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if (locked !== 'x') return;
+      moved = true;
+      if (ev && ev.cancelable) ev.preventDefault();
+      el.style.transform = `translateX(${dx * 0.9}px)`;
+      el.style.opacity = String(Math.max(0.35, 1 - Math.abs(dx) / 500));
+    };
+    const end = () => {
+      if (x0 == null) return;
       x0 = null;
-      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-      const dir = dx < 0 ? 1 : -1;
-      if (el.dataset.swipe === 'week') ui.date = addDays(ui.date, 7 * dir);
-      else {
-        ui.month = addMonths(ui.month, dir);
-        ui.monthSel = `${ui.month}-01`;
-      }
-      render();
-    });
+      if (locked === 'x' && Math.abs(dx) > 50) return go(dx < 0 ? 1 : -1);
+      el.style.transition = 'transform .25s cubic-bezier(.2,.8,.2,1), opacity .2s';
+      el.style.transform = '';
+      el.style.opacity = '';
+    };
+    el.addEventListener('touchstart', (e) => start(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+    el.addEventListener('touchmove', (e) => move(e.touches[0].clientX, e.touches[0].clientY, e), { passive: false });
+    el.addEventListener('touchend', end);
+    // mouse (computador): arrastar com o botão apertado
+    el.addEventListener('mousedown', (e) => { if (e.button === 0) start(e.clientX, e.clientY); });
+    el.addEventListener('mousemove', (e) => { if (x0 != null) move(e.clientX, e.clientY, e); });
+    el.addEventListener('mouseup', end);
+    el.addEventListener('mouseleave', end);
+    // um arrasto não vira toque no dia
+    el.addEventListener('click', (e) => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+    // touchpad: rolagem lateral com dois dedos
+    let wheelAcc = 0, wheelT = 0;
+    el.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      if (Date.now() - wheelT < 450) return;
+      wheelAcc += e.deltaX;
+      if (Math.abs(wheelAcc) > 60) { wheelT = Date.now(); go(wheelAcc > 0 ? 1 : -1); wheelAcc = 0; }
+    }, { passive: false });
   });
 }
 
