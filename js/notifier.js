@@ -37,19 +37,21 @@ const whenText = (e) => {
 export function onEventChange(before, after) {
   if (!active()) return;
   const ev = after || before;
+  const what = `${TYPE_NAME[ev.type] || 'Tarefa'}${coName(ev.companyId) ? ' · ' + coName(ev.companyId) : ''}`;
+  const who = (ev.assignees || []).map(nameOf).join(' e ') || 'sem responsável';
+  // qualquer mudança vira aviso (as pequenas, como legenda ou título, também)
+  const generic = (actor) => ({ title: `${actor} alterou: ${what}`, body: `${whenText(ev)}${ev.title ? ' · ' + ev.title : ''} · ${who}` });
   const others = store.team.map((m) => m.id).filter((id) => id !== store.me);
   const jobs = others.map((r) => {
-    const msg = changeMessage(before, after, { actor: nameOf(store.me), company: coName(ev.companyId), recipient: r, now: nowSP() });
-    return msg ? notify([r], msg, `ev-${ev.id}`, `./#/e/${ev.id}`).then((d) => ({ r, d })) : null;
-  }).filter(Boolean);
-  // o próprio celular também recebe quando um compromisso é criado ou muda de horário
-  const created = !before && after;
-  const moved = before && after && (before.date !== after.date || before.time !== after.time);
-  if (after && (created || moved)) {
-    const what = `${TYPE_NAME[after.type] || 'Tarefa'}${coName(after.companyId) ? ' · ' + coName(after.companyId) : ''}`;
-    const who = (after.assignees || []).map(nameOf).join(' e ') || 'sem responsável';
-    notify([store.me], { title: created ? `Novo na agenda: ${what}` : `Horário alterado: ${what}`, body: `${whenText(after)}${after.title ? ' · ' + after.title : ''} · ${who}` }, `ev-${after.id}`, `./#/e/${after.id}`, true);
-  }
+    const msg = changeMessage(before, after, { actor: nameOf(store.me), company: coName(ev.companyId), recipient: r, now: nowSP() }) || generic(nameOf(store.me));
+    return notify([r], msg, `ev-${ev.id}`, `./#/e/${ev.id}`).then((d) => ({ r, d }));
+  });
+  // o próprio celular também recebe tudo
+  let mine;
+  if (!before && after) mine = { title: `Novo na agenda: ${what}`, body: `${whenText(after)}${after.title ? ' · ' + after.title : ''} · ${who}` };
+  else if (before && after && (before.date !== after.date || before.time !== after.time)) mine = { title: `Horário alterado: ${what}`, body: `${whenText(before)} → ${whenText(after)} · ${who}` };
+  else mine = changeMessage(before, after, { actor: 'Você', company: coName(ev.companyId), recipient: null, now: nowSP() }) || generic('Você');
+  notify([store.me], mine, `ev-${ev.id}`, after ? `./#/e/${ev.id}` : './', true);
   if (jobs.length && onResult) {
     Promise.all(jobs).then((list) => {
       const missing = list.filter((x) => x.d && !x.d.error && x.d.results && !x.d.results[x.r]).map((x) => nameOf(x.r));
@@ -78,7 +80,7 @@ export function onActivity(a) {
   } else if (a.kind === 'import') {
     msg = { title: `${actor} importou a agenda`, body: `${a.count || 0} itens atualizados.` };
   }
-  notify(others, msg, `act-${a.id || Date.now()}`);
+  notify(store.team.map((m) => m.id), msg, `act-${a.id || Date.now()}`, './', true);
   syncSchedule();
 }
 
@@ -95,10 +97,10 @@ export function buildSchedule(now = Date.now()) {
       const at = at0 - offset * 60e3;
       if (at < now - 10 * 60e3 || at > now + 4 * 86400e3) return;
       const msg = reminderMessage(ev, offset, coName(ev.companyId));
-      const who = ev.assignees?.length ? ev.assignees : store.team.map((m) => m.id);
-      who.forEach((member) => items.push({
+      const resp = (ev.assignees || []).map(nameOf).join(' e ');
+      store.team.map((m) => m.id).forEach((member) => items.push({
         id: `r_${ev.id}_${offset}_${ev.date}${ev.time.replace(':', '')}_${member}`,
-        at, member, title: msg.title, body: msg.body, tag: `rem-${ev.id}`, url: `./#/e/${ev.id}`, kind: 'reminders', badge: pendingOn(member, ev.date),
+        at, member, title: msg.title, body: resp && !(ev.assignees.length === 1 && ev.assignees[0] === member) ? `${msg.body} · ${resp}` : msg.body, tag: `rem-${ev.id}`, url: `./#/e/${ev.id}`, kind: 'reminders', badge: pendingOn(member, ev.date),
       }));
     });
   });
