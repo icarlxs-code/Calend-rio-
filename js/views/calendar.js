@@ -4,7 +4,7 @@ import { ui } from '../ui.js';
 import { TYPES, isPost, durationOf } from '../constants.js';
 import {
   esc, todayKey, addDays, startOfWeek, fromKey, toKey, fmtDayLong, fmtDayShort, relDay, fmtMonth,
-  WD_LETTER, WD_SHORT, dayLabel, fmtDuration, MONTHS_SHORT, toMin, nowMin, fmtTime, fmtCountdown, greeting, rgba, textOn,
+  WD_LETTER, WD_SHORT, dayLabel, fmtDuration, MONTHS_SHORT, MONTHS, toMin, nowMin, fmtTime, fmtCountdown, greeting, rgba, textOn,
 } from '../utils.js';
 import { icon } from '../icons.js';
 import { avatar, avatars, logo, eventCard, emptyState, typeBadge, whoText, timeRange } from '../components.js';
@@ -38,14 +38,11 @@ export function renderToday() {
   const me = store.member(store.me);
 
   // Semana
-  const ws = startOfWeek(date);
-  const week = Array.from({ length: 7 }, (_, i) => addDays(ws, i));
-  const weekLabel = (() => {
-    const a = fromKey(week[0]), b = fromKey(week[6]);
-    return a.getMonth() === b.getMonth()
-      ? `${a.getDate()}–${b.getDate()} de ${MONTHS_SHORT[b.getMonth()]}`
-      : `${a.getDate()} ${MONTHS_SHORT[a.getMonth()]} – ${b.getDate()} ${MONTHS_SHORT[b.getMonth()]}`;
-  })();
+  // faixa contínua de dias (rola sem parar e vira o mês sozinha); a janela anda junto com a rolagem
+  const center = ui.stripCenter || date;
+  const stripFrom = addDays(startOfWeek(center), -42);
+  const week = Array.from({ length: 126 }, (_, i) => addDays(stripFrom, i));
+  const weekLabel = (() => { const d = fromKey(center); const m = MONTHS[d.getMonth()]; return `${m.charAt(0).toUpperCase() + m.slice(1)} de ${d.getFullYear()}`; })();
 
   const header = `
   <header class="hdr">
@@ -65,15 +62,15 @@ export function renderToday() {
     <div class="week">
       <div class="week__bar">
         <button class="iconbtn iconbtn--sm" data-action="week" data-n="-7" aria-label="Semana anterior">${icon('left', 18)}</button>
-        <span>${esc(weekLabel)}</span>
+        <span data-striplabel>${esc(weekLabel)}</span>
         <button class="iconbtn iconbtn--sm" data-action="week" data-n="7" aria-label="Próxima semana">${icon('right', 18)}</button>
       </div>
-      <div class="week__days" data-swipe="week">
+      <div class="week__days daystrip" data-strip data-sel="${date}">
         ${week.map((k) => {
           const d = fromKey(k);
           const de = store.eventsOn(k, { person: ui.person });
           const pending = de.filter((e) => e.status !== 'feito').length;
-          return `<button class="wday${k === date ? ' is-sel' : ''}${k === today ? ' is-today' : ''}" data-action="set-date" data-k="${k}">
+          return `<button class="wday${k === date ? ' is-sel' : ''}${k === today ? ' is-today' : ''}${k.slice(8) === '01' ? ' is-first' : ''}" data-action="set-date" data-k="${k}">
             <span class="wday__l">${WD_SHORT[d.getDay()]}</span>
             <span class="wday__n">${d.getDate()}</span>
             <span class="wday__dots">${companyDots(de, 3)}${!de.length ? '<i class="none"></i>' : ''}</span>

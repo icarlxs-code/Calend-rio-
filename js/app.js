@@ -100,6 +100,10 @@ function render() {
   const pIn = view.querySelector('[data-form="pquick"] input');
   const draftP = pIn ? pIn.value : '';
   const hadP = pIn && document.activeElement === pIn;
+  // lembra até onde a faixa de dias estava rolada, para não pular ao atualizar a tela
+  const oldStrip = view.querySelector('[data-strip]');
+  if (oldStrip && !ui.stripReset) ui.stripLeft = stripLeftDay(oldStrip);
+  ui.stripReset = false;
   const personalMode = ui.space === 'personal';
   const html = personalMode ? renderPersonalSpace() : ui.tab === 'mes' ? renderMonth() : ui.tab === 'empresas' ? renderCompanies() : ui.tab === 'ajustes' ? renderSettings() : renderToday();
   view.innerHTML = html;
@@ -109,6 +113,7 @@ function render() {
   if (ni && draftNote) ni.value = draftNote;
   if (ni && hadFocus) ni.focus({ preventScroll: true });
   bindSwipes();
+  bindStrip(view);
   if (personalMode) {
     const pq = view.querySelector('[data-form="pquick"] input');
     bindPersonal(view);
@@ -143,11 +148,17 @@ const actions = {
   },
   'go-today': () => {
     ui.date = todayKey();
+    ui.stripCenter = null; ui.stripLeft = null; ui.stripReset = true;
     render();
   },
   week: (b) => {
-    ui.date = addDays(ui.date, Number(b.dataset.n));
-    render();
+    // setas: anda uma semana na faixa (sem mudar o dia escolhido)
+    const strip = document.querySelector('[data-strip]');
+    if (!strip) return;
+    const days = [...strip.children].map((c) => c.dataset.k);
+    const i = Math.max(0, Math.min(days.length - 7, days.indexOf(strip.dataset.left) + Number(b.dataset.n)));
+    strip.dataset.left = days[i];
+    strip.scrollTo({ left: i * cellW(strip), behavior: 'smooth' });
   },
   month: (b) => {
     ui.month = addMonths(ui.month, Number(b.dataset.n));
@@ -272,6 +283,71 @@ document.addEventListener('submit', async (ev) => {
 });
 
 /* ---------- gestos: deslizar semana/mês ---------- */
+/* ---------- faixa contínua de dias (rola sem parar, vira o mês sozinha) ---------- */
+const cellW = (strip) => (strip.firstElementChild ? strip.firstElementChild.getBoundingClientRect().width : 1) || 1;
+function stripLeftDay(strip) {
+  return strip.dataset.left || null; // posição guardada (não lê no meio de uma animação)
+}
+function bindStrip(view) {
+  const strip = view.querySelector('[data-strip]');
+  if (!strip) return;
+  const days = [...strip.children].map((c) => c.dataset.k);
+  let idx = ui.stripLeft ? days.indexOf(ui.stripLeft) : -1;
+  if (idx < 0) idx = Math.max(0, days.indexOf(strip.dataset.sel) - 3);
+  strip.dataset.left = days[idx];
+  let ready = false;
+  // posiciona só quando a tela já tem largura (mede de novo a cada vez)
+  const place = (tries = 0) => {
+    const w = cellW(strip);
+    if (w < 10 && tries < 60) return requestAnimationFrame(() => place(tries + 1));
+    strip.style.scrollBehavior = 'auto';
+    strip.scrollLeft = idx * w;
+    requestAnimationFrame(() => (ready = true));
+  };
+  place();
+  const label = view.querySelector('[data-striplabel]');
+  const M = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  let t = null, raf = 0;
+  strip.addEventListener('scroll', () => {
+    if (!ready) return;
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => {
+      const i = Math.round(strip.scrollLeft / cellW(strip));
+      if (days[i]) strip.dataset.left = days[i];
+      const mid = days[Math.min(days.length - 1, i + 3)];
+      if (label && mid) label.textContent = `${M[+mid.slice(5, 7) - 1]} de ${mid.slice(0, 4)}`;
+    });
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const i = Math.round(strip.scrollLeft / cellW(strip));
+      // perto das pontas: anda a janela de dias e continua de onde estava (rolagem infinita)
+      if (i < 14 || i > days.length - 7 - 14) {
+        ui.stripCenter = days[Math.min(days.length - 1, i + 3)];
+        ui.stripLeft = days[i];
+        ui.stripReset = true; // usa o stripLeft acima, não o lido da tela
+        render();
+      }
+    }, 160);
+  }, { passive: true });
+  strip.addEventListener('mousedown', (e) => { if (e.button === 0) { drag = { strip, x0: e.clientX, s0: strip.scrollLeft, moved: false, w: cellW(strip) }; strip.style.scrollSnapType = 'none'; } });
+  strip.addEventListener('click', (e) => { if (dragMoved) { e.stopPropagation(); e.preventDefault(); dragMoved = false; } }, true);
+}
+let drag = null, dragMoved = false;
+window.addEventListener('mousemove', (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x0;
+  if (Math.abs(dx) > 5) drag.moved = true;
+  drag.strip.scrollLeft = drag.s0 - dx;
+});
+window.addEventListener('mouseup', () => {
+  if (!drag) return;
+  const { strip, w, moved } = drag;
+  drag = null;
+  dragMoved = moved;
+  strip.style.scrollSnapType = '';
+  strip.scrollTo({ left: Math.round(strip.scrollLeft / w) * w, behavior: 'smooth' });
+});
+
 /* Arrastar para o lado troca a semana / o mês, acompanhando o dedo (ou o mouse/touchpad) */
 let swipeEnterDir = 0;
 function bindSwipes() {

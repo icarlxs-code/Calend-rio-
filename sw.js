@@ -1,10 +1,10 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-5xlsunn5'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-et6pkr35'/*CACHE*/;
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster.jpg',
   ...Array.from({ length: 168 }, (_, i) => `media/intro4/f${String(i + 1).padStart(3, '0')}.webp`),
   'media/logos/pura-vida.jpg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/a-5XLSUNN5.js', 'dist/c-IY6FCE6X.js', 'dist/c-QTXL7KQO.js', 'dist/c-FRJPVIVK.js', 'dist/c-VHZVWXHN.js', 'dist/c-IBJAEIDB.js', 'dist/c-RXMPZOAJ.js', 'dist/c-3ZGAM64U.js', 'dist/c-HAJEGYJ4.js', 'dist/c-DA3WSDQL.js', 'dist/c-DOOMBXLW.js', 'dist/c-3GA6RSWB.js', 'dist/c-3ZIQX7NE.js', 'dist/c-LUBY74EX.js', 'dist/c-VHNSBD2M.js',
+  /*FILES*/ 'dist/a-ET6PKR35.js', 'dist/c-IY6FCE6X.js', 'dist/c-MLHGTH2V.js', 'dist/c-UXJVM56T.js', 'dist/c-HEMAYSY4.js', 'dist/c-65MZAPVT.js', 'dist/c-RXMPZOAJ.js', 'dist/c-JEHUTABW.js', 'dist/c-44KHUBPC.js', 'dist/c-DA3WSDQL.js', 'dist/c-YEARXB46.js', 'dist/c-3GA6RSWB.js', 'dist/c-3ZIQX7NE.js', 'dist/c-LUBY74EX.js', 'dist/c-VHNSBD2M.js',
 ];
 
 self.addEventListener('install', (e) => {

@@ -1121,3 +1121,10 @@ html:not(.intro-done) .tabbar { opacity: 0; }
 .block__sub { font-size: 13px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; margin-top: 6px; }
 .seg--notify { display: grid; grid-template-columns: repeat(3, 1fr); }
 [data-swipe] { will-change: transform; user-select: none; -webkit-user-select: none; touch-action: pan-y; }
+/* faixa contínua de dias */
+.daystrip { display: flex; grid-template-columns: none; gap: 0; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; overscroll-behavior-x: contain; padding: 4px 0 6px; cursor: grab; }
+.daystrip::-webkit-scrollbar { display: none; }
+.daystrip .wday { flex: 0 0 calc(100% / 7); scroll-snap-align: start; }
+.daystrip .wday.is-first { position: relative; }
+.daystrip .wday.is-first::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 1.5px; border-radius: 2px; background: var(--line-2); }
+
