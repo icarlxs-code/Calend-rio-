@@ -1,11 +1,19 @@
-/* Notificações no celular (Web Push).
+/* Notificações no celular (Web Push) pelo servidor gratuito (Cloudflare Workers).
    No iPhone, só funcionam com o app instalado na Tela de Início (iOS 16.4 ou mais novo). */
 import { store } from './store.js';
 import { isStandalone } from './utils.js';
+import { CONFIG } from '../config.js';
 
 const LS_DEVICE = 'pauta.device';
 const LS_PREFS = 'pauta.notifyPrefs';
 
+export const server = () => {
+  // só para testes no computador do desenvolvedor
+  try {
+    if (['localhost', '127.0.0.1'].includes(location.hostname) && localStorage.getItem('cal.pushServer')) return localStorage.getItem('cal.pushServer');
+  } catch { /* ok */ }
+  return (CONFIG.pushServer || '').replace(/\/+$/, '');
+};
 export const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 export const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 export const permission = () => ('Notification' in window ? Notification.permission : 'unsupported');
@@ -30,17 +38,30 @@ const hashId = async (text) => {
   return 'd_' + Array.from(new Uint8Array(buf).slice(0, 16), (b) => b.toString(16).padStart(2, '0')).join('');
 };
 
-/* Estado para a tela: o que já está funcionando neste aparelho */
+/* Chamada autenticada ao servidor (manda o login do Firebase para provar quem é) */
+export async function api(path, body) {
+  if (!server()) throw Object.assign(new Error('Servidor de avisos não configurado.'), { code: 'no-server' });
+  const token = await store.idToken();
+  if (!token) throw Object.assign(new Error('Faça login para usar.'), { code: 'no-login' });
+  const res = await fetch(server() + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body || {}),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(data.error || `Erro ${res.status}`), { status: res.status });
+  return data;
+}
+
+/* Estado para a tela */
 export async function status() {
-  if (!pushSupported()) return { state: needsInstall() ? 'install' : 'unsupported' };
   if (needsInstall()) return { state: 'install' };
+  if (!pushSupported()) return { state: 'unsupported' };
   const perm = permission();
   if (perm === 'denied') return { state: 'denied' };
   if (perm !== 'granted') return { state: 'ask' };
-  if (store.mode !== 'cloud') return { state: 'local' };
-  const reg = await navigator.serviceWorker.ready;
-  const sub = await reg.pushManager.getSubscription();
-  return { state: sub && localStorage.getItem(LS_DEVICE) ? 'on' : 'ask' };
+  if (store.mode !== 'cloud' || !server()) return { state: 'local' };
+  return { state: localStorage.getItem(LS_DEVICE) ? 'on' : 'ask' };
 }
 
 /* Pede a permissão (precisa vir de um toque do usuário) e cadastra o aparelho */
@@ -49,16 +70,20 @@ export async function enable() {
   if (!pushSupported()) return { ok: false, reason: 'unsupported' };
   const perm = await Notification.requestPermission();
   if (perm !== 'granted') return { ok: false, reason: 'denied' };
-  if (store.mode !== 'cloud') return { ok: true, local: true };
+  if (store.mode !== 'cloud' || !server()) return { ok: true, local: true };
   return register();
 }
 
-/* Cadastra (ou atualiza) este aparelho na nuvem */
+/* Cadastra (ou atualiza) este aparelho no servidor */
 export async function register() {
-  if (store.mode !== 'cloud' || permission() !== 'granted' || !store.me) return { ok: false, reason: 'not-ready' };
-  const meta = await store.readDoc('meta/push');
-  const key = meta?.vapidPublicKey;
-  if (!key) return { ok: false, reason: 'server' }; // servidor de notificações ainda não publicado
+  if (store.mode !== 'cloud' || !server() || permission() !== 'granted' || !store.me) return { ok: false, reason: 'not-ready' };
+  let key;
+  try {
+    key = (await (await fetch(server() + '/vapid')).json()).publicKey;
+  } catch {
+    return { ok: false, reason: 'server' };
+  }
+  if (!key) return { ok: false, reason: 'server' };
   const reg = await navigator.serviceWorker.ready;
   let sub = await reg.pushManager.getSubscription();
   // se a chave do servidor mudou, refaz a inscrição
@@ -73,29 +98,21 @@ export async function register() {
   if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(key) });
   const json = sub.toJSON();
   const id = await hashId(json.endpoint);
-  store.writeRaw('devices', {
-    id,
-    member: store.me,
-    subscription: { endpoint: json.endpoint, keys: json.keys },
-    prefs: getPrefs(),
-    device: isIOS() ? 'iPhone' : navigator.platform || 'navegador',
-    updatedAt: Date.now(),
-  });
+  await api('/subscribe', { id, subscription: { endpoint: json.endpoint, keys: json.keys }, prefs: getPrefs() });
   localStorage.setItem(LS_DEVICE, id);
   return { ok: true, id };
 }
 
 export async function setPrefs(prefs) {
   localStorage.setItem(LS_PREFS, JSON.stringify(prefs));
-  if (store.mode === 'cloud' && permission() === 'granted') await register();
+  if (store.mode === 'cloud' && permission() === 'granted') await register().catch(() => {});
 }
 
 /* Pede ao servidor uma notificação de teste para este aparelho */
 export async function sendTest() {
-  const id = localStorage.getItem(LS_DEVICE);
-  if (store.mode === 'cloud' && id) {
-    store.writeRaw('pings', { id: 'p_' + Date.now().toString(36), device: id, member: store.me, at: Date.now() });
-    return 'server';
+  if (store.mode === 'cloud' && server() && localStorage.getItem(LS_DEVICE)) {
+    const r = await api('/test');
+    return r.sent ? 'server' : 'none';
   }
   // sem servidor: mostra uma notificação local, só para conferir a aparência
   const reg = await navigator.serviceWorker.ready;

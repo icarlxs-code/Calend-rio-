@@ -3,3 +3,5 @@ functions/.env
 functions/.env.local
 prep.txt
 *-debug.log
+.wrangler/
+worker/deploy.txt

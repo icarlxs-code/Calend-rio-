@@ -1,0 +1,13 @@
+# Servidor gratuito do Calendário (Cloudflare Workers)
+# O id do KV e as variáveis da equipe são preenchidos pelo GitHub Actions na publicação.
+name = "calendario-avisos"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[triggers]
+crons = ["* * * * *"]
+
+[[kv_namespaces]]
+binding = "CAL"
+id = "KV_ID"

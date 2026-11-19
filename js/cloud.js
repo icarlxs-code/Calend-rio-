@@ -51,6 +51,7 @@ export async function connect(config) {
 const clean = (obj) => JSON.parse(JSON.stringify(obj)); // remove undefined
 
 const backend = {
+  idToken: () => (auth.currentUser ? auth.currentUser.getIdToken() : null),
   /* Pergunta ao assistente (Claude) no servidor */
   async ask(question, history) {
     const call = fnMod.httpsCallable(functions, 'perguntar', { timeout: 70000 });

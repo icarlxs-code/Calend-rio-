@@ -1,9 +1,9 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-l3kulxxw'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-lgjpvdvi'/*CACHE*/;
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster.jpg',
   'media/logos/pura-vida.jpg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/a-L3KULXXW.js', 'dist/c-K6MNJDD7.js', 'dist/c-4NN64EFS.js', 'dist/c-5JWPJPNQ.js', 'dist/c-UCGQCTUQ.js', 'dist/c-3R3XRY43.js', 'dist/c-2EU3FN6S.js', 'dist/c-SIJUFJQD.js', 'dist/c-3GA6RSWB.js', 'dist/c-MGTOXM5K.js', 'dist/c-2FOMEGLL.js', 'dist/c-VHNSBD2M.js',
+  /*FILES*/ 'dist/a-LGJPVDVI.js', 'dist/c-K6MNJDD7.js', 'dist/c-Z6ZRGG6E.js', 'dist/c-KOYFDA3K.js', 'dist/c-UCGQCTUQ.js', 'dist/c-WL7DLTOV.js', 'dist/c-IWYZRHVK.js', 'dist/c-SIJUFJQD.js', 'dist/c-3GA6RSWB.js', 'dist/c-7LTZNVRP.js', 'dist/c-NHRZZJOA.js', 'dist/c-VHNSBD2M.js',
 ];
 
 self.addEventListener('install', (e) => {

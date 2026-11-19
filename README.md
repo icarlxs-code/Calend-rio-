@@ -101,20 +101,22 @@ Cada pessoa liga ou desliga cada tipo em **Ajustes → Notificações**.
 
 **Limites do iPhone:** só funciona com o app **instalado na Tela de Início** (iOS 16.4 ou mais novo), e o app pede **apenas a permissão de notificações**. Apps da Tela de Início não podem pedir acesso a Atalhos, Ajustes ou outras áreas do iPhone (isso é exclusivo de apps da App Store).
 
-Para os avisos chegarem **com o app fechado** e no **celular do parceiro**, é preciso um pequeno servidor sempre ligado. Ele já está pronto em `functions/` e é publicado sozinho pelo GitHub. Precisa fazer **uma vez**:
+Para os avisos chegarem **com o app fechado** e no **celular do parceiro na hora**, é preciso um servidor sempre ligado. O app usa o **Cloudflare Workers, plano gratuito, sem cartão de crédito**. O servidor está pronto em `worker/` e o GitHub publica sozinho. Faça **uma vez**:
 
-1. Fazer o passo 3 (Firebase com login dos dois).
-2. No Firebase, mudar o plano para **Blaze** (engrenagem → Uso e faturamento). O Google exige cartão, mas o uso da dupla fica dentro da cota gratuita (na prática, R$ 0). Dica: crie um alerta de orçamento de R$ 5.
-3. **Configurações do projeto → Contas de serviço → Gerar nova chave privada**. Vai baixar um arquivo `.json`.
-4. No Google Cloud (console.cloud.google.com → IAM), encontre a conta `firebase-adminsdk-…` e adicione o papel **Proprietário**. Esse papel é necessário para ela publicar o servidor.
+1. Crie uma conta grátis em **dash.cloudflare.com/sign-up** (só e-mail e senha) e confirme o e-mail.
+2. No painel, abra **Workers e Pages** uma vez e escolha um subdomínio `*.workers.dev`, se ele pedir.
+3. Copie o **Account ID**: em **Workers e Pages**, ele aparece na lateral direita (ou na URL do painel).
+4. Crie um token: **Meu perfil → Tokens de API → Criar token → modelo "Editar Cloudflare Workers" → Continuar → Criar token**. Copie o token.
 5. No GitHub: **Settings → Secrets and variables → Actions → New repository secret**:
-   - nome `FIREBASE_SERVICE_ACCOUNT`
-   - valor: todo o conteúdo do arquivo `.json`
-   - **Nunca** compartilhe esse arquivo nem coloque o conteúdo dele no código.
-6. Em **Actions → Publicar servidor de notificações → Run workflow**. Na primeira vez pode falhar dizendo que as permissões ainda estão sendo ativadas. Espere 5 minutos e rode de novo.
-7. No iPhone: **Ajustes → Notificações → Ativar** e depois **Enviar notificação de teste**.
+   - `CLOUDFLARE_ACCOUNT_ID` = o Account ID
+   - `CLOUDFLARE_API_TOKEN` = o token
+6. **Actions → Publicar servidor gratuito (avisos) → Run workflow**. No fim aparece o endereço do servidor (`https://calendario-avisos.….workers.dev`).
+7. Coloque esse endereço em `config.js` → `pushServer` e rode `npm run build` (ou peça ao Claude Code).
+8. No iPhone: **Ajustes → Notificações → Ativar** e **Enviar notificação de teste**.
 
-> Se o Firestore foi criado numa região diferente de `southamerica-east1`, crie em **Settings → Secrets and variables → Actions → Variables** a variável `FUNCTIONS_REGION` com a região usada.
+Limites do plano grátis (sobra muito para a dupla): 100 mil pedidos por dia e lembretes conferidos a cada minuto.
+
+> Alternativa: o servidor em `functions/` (Firebase Functions) faz o mesmo, mas exige o plano Blaze (com cartão).
 
 Sem o servidor, o app ainda avisa **enquanto estiver aberto**, e os lembretes podem ir para o **Calendário do iPhone** (Ajustes → Lembretes no Calendário), que avisa mesmo com o app fechado.
 
@@ -124,10 +126,10 @@ No **Assistente** (✨) há uma conversa: vocês perguntam e o Claude responde a
 
 O login normal do Claude só vale no app/site do próprio Claude; para responder **dentro** do app é preciso uma chave da API (paga por uso, à parte de qualquer assinatura do Claude). A chave fica **só no servidor**, nunca no app, e só vocês dois logados conseguem usar.
 
-1. Fazer a seção 4 (servidor publicado).
-2. Em **console.anthropic.com**: criar conta, adicionar créditos (Billing) e criar uma chave em **API Keys**.
+1. Fazer a seção 4 (servidor gratuito publicado).
+2. Em **console.anthropic.com**: criar conta, adicionar créditos (Billing) e criar uma chave em **API Keys**. A API é paga por uso (o Haiku 5.5 é o modelo mais barato).
 3. No GitHub: **Settings → Secrets and variables → Actions → New repository secret**, nome `ANTHROPIC_API_KEY`, valor: a chave.
-4. **Actions → Publicar servidor (notificações e assistente) → Run workflow**.
+4. **Actions → Publicar servidor gratuito (avisos) → Run workflow**.
 
 Sem a chave, o botão **Abrir no app do Claude** continua funcionando com o login normal.
 
@@ -157,7 +159,8 @@ js/claude-link.js     “Perguntar ao Claude” (login normal)
 js/avisos.js          notificações no celular
 js/intro.js           abertura com vídeo
 js/views/onboarding.js boas-vindas e pedido de notificações
-functions/            servidor de notificações (Firebase Functions)
+worker/               servidor gratuito: avisos em tempo real, lembretes e chat (Cloudflare Workers)
+functions/            alternativa do servidor em Firebase Functions (exige plano Blaze)
 functions/reminder-rules.js regras dos lembretes (usadas pelo app e pelo servidor)
 .github/workflows/    publicação automática do servidor
 js/sanitize.js        validação de dados importados e links

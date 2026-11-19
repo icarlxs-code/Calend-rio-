@@ -41,6 +41,8 @@ const ERR = {
 };
 function errText(e) {
   if (e?.code === 'local') return 'O assistente precisa da sincronização na nuvem ligada.';
+  if (e?.code === 'no-server') return 'O assistente ainda não foi ligado no servidor. Falta publicar o servidor gratuito (veja o README).';
+  if (e?.status) return e.message;
   if (e?.code in ERR) return ERR[e.code] || e.message;
   if (e?.code === 'functions/not-found' || e?.code === 'functions/internal' && !/assistente|Claude/.test(e.message || '')) {
     return 'O assistente ainda não foi ligado no servidor. Falta publicar o servidor com a chave do Claude (veja o README, seção 5).';

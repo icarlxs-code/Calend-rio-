@@ -17,6 +17,9 @@ import { decodeSnapshot } from './share.js';
 import { sanitizePayload } from './sanitize.js';
 import { maybeOnboard } from './views/onboarding.js';
 import { ensureSeedCompanies } from './seed-companies.js';
+import { onEventChange, onActivity, syncSchedule } from './notifier.js';
+import { buildContext } from '../functions/context.js';
+import { routine } from './planner.js';
 import * as push from './avisos.js';
 import { dueReminders, reminderMessage } from '../functions/reminder-rules.js';
 
@@ -386,6 +389,22 @@ function startApp() {
       render();
     }
   });
+  // servidor gratuito de avisos: aviso ao parceiro na hora + lembretes no horário + chat
+  if (store.mode === 'cloud' && push.server()) {
+    store.hooks.eventChange = onEventChange;
+    store.hooks.activity = onActivity;
+    store.hooks.ask = async (question, history) => {
+      const d = new Date();
+      const context = buildContext({
+        events: store.state.events, companies: store.state.companies, routine: routine(), notes: store.state.notes,
+        team: store.team, me: store.me, now: { date: todayKey(), minutes: d.getHours() * 60 + d.getMinutes() },
+      });
+      return (await push.api('/ask', { question, history, context })).answer;
+    };
+    store.on(syncSchedule);
+    syncSchedule();
+    setInterval(syncSchedule, 15 * 60e3);
+  }
   // empresas pré-cadastradas (uma única vez)
   ensureSeedCompanies().catch((e) => console.warn('pré-cadastro', e));
   // boas-vindas / permissão de notificações (depois da abertura)

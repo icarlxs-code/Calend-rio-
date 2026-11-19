@@ -21,6 +21,7 @@ const readLocal = () => {
 
 export const store = {
   state: { companies: [], events: [], notes: [], settings: [] },
+  hooks: { eventChange: null, activity: null },
   mode: 'local',
   me: null,
   demo: false,
@@ -66,6 +67,8 @@ export const store = {
 
   /* ---------- escrita ---------- */
   async upsert(col, item) {
+    const before = col === 'events' ? this.state.events.find((x) => x.id === item.id) : null;
+    const prev = before ? { ...before } : null;
     item.updatedAt = Date.now();
     if (this.me) item.updatedBy = this.me;
     if (!item.createdAt) item.createdAt = item.updatedAt;
@@ -74,6 +77,7 @@ export const store = {
     persist(() => backend.write(col, item));
     touch(col, item);
     this.emit();
+    if (col === 'events' && this.hooks.eventChange) this.hooks.eventChange(prev, { ...item });
     return item;
   },
   async upsertMany(col, items, { activity = null } = {}) {
@@ -110,7 +114,11 @@ export const store = {
   },
 
   /* Assistente (Claude) — só com a nuvem ligada */
+  async idToken() {
+    return this.mode === 'cloud' && backend.idToken ? backend.idToken() : null;
+  },
   async askAssistant(question, history = []) {
+    if (this.hooks.ask) return this.hooks.ask(question, history);
     if (this.mode !== 'cloud' || !backend.ask) {
       const e = new Error('O assistente precisa da sincronização na nuvem.');
       e.code = 'local';
@@ -221,7 +229,9 @@ const compactEvent = (e) => ({ id: e.id, type: e.type, companyId: e.companyId ||
 function logActivity(a) {
   if (store.mode !== 'cloud' || !backend.write) return;
   const item = { id: uid('a_'), by: store.me || '', at: Date.now(), ...a };
-  persist(() => backend.write('activity', item));
+  // com o servidor gratuito ligado, o próprio app avisa o parceiro na hora
+  if (store.hooks.activity) store.hooks.activity(item);
+  else persist(() => backend.write('activity', item));
 }
 
 /* aplica no estado em memória */

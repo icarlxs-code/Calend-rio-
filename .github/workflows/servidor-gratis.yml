@@ -1,0 +1,69 @@
+# Publica o servidor GRATUITO do Calendário no Cloudflare Workers (sem cartão):
+# avisos em tempo real para o parceiro, lembretes no horário e chat com o Claude.
+# Precisa dos segredos CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID (veja o README).
+name: Publicar servidor gratuito (avisos)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'worker/**'
+      - 'config.js'
+      - '.github/workflows/servidor-gratis.yml'
+
+concurrency:
+  group: cloudflare-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Conferir configuração
+        id: check
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$TOKEN" ] || [ -z "$ACCOUNT" ]; then
+            echo "::notice::Faltam os segredos CLOUDFLARE_API_TOKEN e/ou CLOUDFLARE_ACCOUNT_ID (veja o README). Nada a publicar."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Testar o servidor
+        if: steps.check.outputs.skip != '1'
+        run: |
+          cd functions && npm ci && cd ../worker && npm ci && npm test
+
+      - name: Preparar (armazenamento e equipe)
+        if: steps.check.outputs.skip != '1'
+        id: prep
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: 'false'
+        run: node worker/deploy-prep.mjs
+
+      - name: Publicar
+        if: steps.check.outputs.skip != '1'
+        working-directory: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WRANGLER_SEND_METRICS: 'false'
+          TEAM: ${{ steps.prep.outputs.team }}
+          PROJECT: ${{ steps.prep.outputs.project }}
+          ORIGIN: ${{ steps.prep.outputs.origin }}
+        run: |
+          npx wrangler deploy --var "TEAM:$TEAM" --var "PROJECT_ID:$PROJECT" --var "ALLOWED_ORIGINS:$ORIGIN" | tee deploy.txt
+          if [ -n "$ANTHROPIC_API_KEY" ]; then printf '%s' "$ANTHROPIC_API_KEY" | npx wrangler secret put ANTHROPIC_API_KEY; fi
+          URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.txt | head -1)
+          echo "::notice title=Endereço do servidor::$URL"
+          echo "SERVIDOR_URL=$URL"
