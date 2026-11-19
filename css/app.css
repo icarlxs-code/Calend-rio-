@@ -1168,3 +1168,14 @@ html, body { overflow-x: hidden; max-width: 100%; }
 body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: var(--bar); z-index: 150; pointer-events: none; }
 .spaceveil { z-index: 300; }
 body.is-client::before { display: none; }
+.profpic { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px 0; }
+.profpic__img { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; color: #fff; font-size: 38px; font-weight: 800; box-shadow: var(--shadow); }
+.profpic__img img { width: 100%; height: 100%; object-fit: cover; }
+.login__switch { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 14px; color: var(--text-3); margin-top: 6px; }
+/* coração do Pessoal pulsando devagar, para chamar atenção */
+@keyframes heartPulse { 0%, 100% { transform: scale(1); } 12% { transform: scale(1.18); } 24% { transform: scale(1); } 36% { transform: scale(1.12); } 48% { transform: scale(1); } }
+.iconbtn--personal .ic { animation: heartPulse 2.6s ease-in-out infinite; transform-origin: center; }
+.iconbtn--personal { position: relative; }
+.iconbtn--personal::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: 0 0 0 0 rgba(255, 79, 123, 0.35); animation: heartRing 2.6s ease-out infinite; pointer-events: none; }
+@keyframes heartRing { 0% { box-shadow: 0 0 0 0 rgba(255, 79, 123, 0.35); } 60%, 100% { box-shadow: 0 0 0 10px rgba(255, 79, 123, 0); } }
+@media (prefers-reduced-motion: reduce) { .iconbtn--personal .ic, .iconbtn--personal::after { animation: none; } }

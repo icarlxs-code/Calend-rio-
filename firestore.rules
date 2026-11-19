@@ -33,7 +33,16 @@ service cloud.firestore {
     match /public/{token} {
       allow get: if true;
       allow list: if false;
-      allow write: if isTeam();
+      allow create: if isTeam() || (request.auth != null && request.resource.data.ownerUid == request.auth.uid);
+      allow update, delete: if isTeam() || (request.auth != null && resource.data.ownerUid == request.auth.uid);
+    }
+
+    // Contas próprias (amigos que criam login): cada uma só acessa o próprio espaço e o próprio perfil
+    match /ws/{uid}/{rest=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
     // /private (chaves do servidor) e /sent (controle de envios):

@@ -171,8 +171,9 @@ function renderPSettings() {
     <div class="pprofile">
       ${me ? avatar(me.id, 56) : ''}
       <div><strong>${esc(me?.name || 'Você')}</strong><small>${esc(store.user?.email || '')}</small></div>
+      ${store.solo ? `<button class="btn btn--soft btn--sm" data-action="edit-profile" style="margin-left:auto">Editar</button>` : ''}
     </div>
-    <button class="pbig" data-action="space" data-space="work">${icon('briefcase', 22)}<div><strong>Ir para o Trabalho</strong><small>Agenda da dupla, empresas e clientes</small></div>${icon('right', 18)}</button>
+    <button class="pbig" data-action="space" data-space="work">${icon('briefcase', 22)}<div><strong>Ir para o Trabalho</strong><small>${store.team.length > 1 ? 'Agenda da dupla, empresas e clientes' : 'Suas empresas e clientes'}</small></div>${icon('right', 18)}</button>
 
     ${section(`${icon('bell', 16)} Avisos no celular`, `
       <div class="pnotice ${ok ? 'is-ok' : 'is-warn'}">${ok ? '✅ Ligados neste celular.' : install ? '⚠️ No iPhone, abra o app pelo ícone da Tela de Início para receber avisos.' : perm === 'denied' ? '⚠️ Bloqueados. Ajustes do iPhone → Notificações → Calendário.' : '⚠️ Ainda não ligados neste celular.'}

@@ -44,13 +44,31 @@ export async function connect(config) {
     signIn: (email, pass) => authApi.signInWithEmailAndPassword(auth, email, pass),
     resetPassword: (email) => authApi.sendPasswordResetEmail(auth, email),
     signOut: () => authApi.signOut(auth),
+    signUp: async (email, pass, name) => {
+      const cred = await authApi.createUserWithEmailAndPassword(auth, email, pass);
+      if (name) await authApi.updateProfile(cred.user, { displayName: name }).catch(() => {});
+      return cred;
+    },
     backend,
   };
 }
 
 const clean = (obj) => JSON.parse(JSON.stringify(obj)); // remove undefined
+/* Espaço de dados: a dupla Henrique+Matheus usa a raiz (como sempre);
+   cada conta nova tem o próprio espaço em ws/{uid}, que só ela acessa. */
+let base = [];
+const col = (name) => fs.collection(db, ...base, name);
+const ref = (name, id) => fs.doc(db, ...base, name, id);
 
 const backend = {
+  setWorkspace(uid) { base = uid ? ['ws', uid] : []; },
+  async getProfile(uid) {
+    const s = await fs.getDoc(fs.doc(db, 'users', uid));
+    return s.exists() ? s.data() : null;
+  },
+  saveProfile(uid, data) {
+    return fs.setDoc(fs.doc(db, 'users', uid), clean(data), { merge: true });
+  },
   idToken: () => (auth.currentUser ? auth.currentUser.getIdToken() : null),
   /* Pergunta ao assistente (Claude) no servidor */
   async ask(question, history) {
@@ -61,17 +79,17 @@ const backend = {
   async subscribe(cols, onData, onErr) {
     await Promise.all(
       cols.map(
-        (col) =>
+        (c) =>
           new Promise((resolve) => {
             let first = true;
             fs.onSnapshot(
-              fs.collection(db, col),
+              col(c),
               (snap) => {
-                onData(col, snap.docs.map((d) => ({ ...d.data(), id: d.id })));
+                onData(c, snap.docs.map((d) => ({ ...d.data(), id: d.id })));
                 if (first) { first = false; resolve(); }
               },
               (err) => {
-                console.error('Firestore', col, err);
+                console.error('Firestore', c, err);
                 onErr && onErr(err);
                 if (first) { first = false; resolve(); }
               },
@@ -92,23 +110,23 @@ const backend = {
   delPersonal(id) {
     return fs.deleteDoc(fs.doc(db, 'pessoal', auth.currentUser.uid, 'itens', id));
   },
-  write(col, item) {
-    return fs.setDoc(fs.doc(db, col, item.id), clean(item));
+  write(name, item) {
+    return fs.setDoc(ref(name, item.id), clean(item));
   },
   async writeMany(ops) {
     for (let i = 0; i < ops.length; i += 400) {
       const batch = fs.writeBatch(db);
-      ops.slice(i, i + 400).forEach(({ col, item }) => batch.set(fs.doc(db, col, item.id), clean(item)));
+      ops.slice(i, i + 400).forEach(({ col: name, item }) => batch.set(ref(name, item.id), clean(item)));
       await batch.commit();
     }
   },
-  del(col, id) {
-    return fs.deleteDoc(fs.doc(db, col, id));
+  del(name, id) {
+    return fs.deleteDoc(ref(name, id));
   },
-  async delMany(col, ids) {
+  async delMany(name, ids) {
     for (let i = 0; i < ids.length; i += 400) {
       const batch = fs.writeBatch(db);
-      ids.slice(i, i + 400).forEach((id) => batch.delete(fs.doc(db, col, id)));
+      ids.slice(i, i + 400).forEach((id) => batch.delete(ref(name, id)));
       await batch.commit();
     }
   },

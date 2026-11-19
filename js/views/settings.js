@@ -28,6 +28,7 @@ export function renderSettings() {
       <h2 class="block__title">${icon('user', 16)} Quem está usando este celular?</h2>
       ${cloud
         ? `<div class="card card--row">${me ? avatar(me.id, 40) : icon('user', 24)}<div><strong>${esc(me?.name || store.user?.email || '')}</strong><small>${esc(store.user?.email || '')}</small></div>
+            ${store.solo ? `<button class="btn btn--soft btn--sm" data-action="edit-profile">Editar</button>` : ''}
             <button class="btn btn--soft btn--sm" data-action="logout">${icon('logout', 16)} Sair</button></div>`
         : `<div class="whogrid">${store.team.map((m) => `<button class="whobtn${store.me === m.id ? ' is-on' : ''}" style="--mc:${m.color}" data-action="set-me" data-p="${m.id}">${avatar(m.id, 34)}<span>${esc(m.name)}</span><i class="whobtn__check">${icon('check', 14)}</i></button>`).join('')}</div>
            <p class="fhelp">Usado para saudação, “Criado por” e nos lembretes.</p>`}
@@ -54,7 +55,7 @@ export function renderSettings() {
         <div class="btnrow">
           <button class="btn btn--primary btn--sm" data-action="ics" data-who="me" data-days="7">${icon('download', 16)} Minha semana</button>
           <button class="btn btn--soft btn--sm" data-action="ics" data-who="me" data-days="30">Meus 30 dias</button>
-          <button class="btn btn--soft btn--sm" data-action="ics" data-who="all" data-days="7">Semana da dupla</button>
+          ${store.team.length > 1 ? `<button class="btn btn--soft btn--sm" data-action="ics" data-who="all" data-days="7">Semana da dupla</button>` : ''}
         </div>
         <p class="fhelp">No iPhone, toque em “Calendário” ou abra o arquivo baixado e escolha “Adicionar tudo”. Se mudar algo depois, exporte de novo.</p>
       </div>
@@ -136,7 +137,7 @@ function notifySection() {
     </div>
     <form class="list notif-prefs" data-notify-form onsubmit="return false">
       <label class="list__row"><span><b>Lembretes dos meus posts</b><small>2h e 30 min antes, na hora e cobrança se atrasar</small></span><input type="checkbox" class="switch" name="reminders" ${prefs.reminders ? 'checked' : ''}></label>
-      <label class="list__row"><span><b>Avisos do parceiro</b><small>quando marcar, mudar ou concluir algo</small></span><input type="checkbox" class="switch" name="partner" ${prefs.partner ? 'checked' : ''}></label>
+      <label class="list__row"${store.team.length < 2 ? ' hidden' : ''}><span><b>Avisos do parceiro</b><small>quando marcar, mudar ou concluir algo</small></span><input type="checkbox" class="switch" name="partner" ${prefs.partner ? 'checked' : ''}></label>
       <label class="list__row"><span><b>Dicas e motivação</b><small>a cada 1h30–2h30 (8h30 às 21h30): ideias de conteúdo, trends e cobranças por empresa</small></span><input type="checkbox" class="switch" name="coach" ${prefs.coach ? 'checked' : ''}></label>
       <label class="list__row"><span><b>Resumo do dia</b><small>às 8h (hoje) e às 20h (amanhã)</small></span><input type="checkbox" class="switch" name="daily" ${prefs.daily ? 'checked' : ''}></label>
     </form>

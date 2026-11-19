@@ -36,6 +36,10 @@ export async function verifyIdToken(token, env) {
   const email = String(claims.email || '').toLowerCase();
   const team = JSON.parse(env.TEAM || '[]');
   const member = team.find((m) => m.email === email);
-  if (!member) throw new Error('fora da equipe');
-  return member;
+  if (member) return { ...member, ws: 'main' };
+  // conta própria (qualquer pessoa com login no app): espaço só dela
+  const uid = String(claims.user_id || claims.sub || '');
+  if (!uid) throw new Error('login sem usuário');
+  const raw = String(claims.name || email.split('@')[0] || 'Você').trim().slice(0, 40);
+  return { id: 'u' + uid.replace(/[^A-Za-z0-9]/g, '').slice(0, 24), name: raw.charAt(0).toUpperCase() + raw.slice(1), email, ws: uid, solo: true };
 }

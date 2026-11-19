@@ -57,7 +57,10 @@ async function sendToMember(env, member, msg, pref, statuses = []) {
 async function runSchedule(env) {
   const now = Date.now();
   const sch = await getSchedule(env);
-  const due0 = (sch.items || []).filter((it) => it.at <= now && it.at > now - 15 * 60e3);
+  const reg = (await env.CAL.get('users', 'json')) || {};
+  const others = await Promise.all([...new Set(Object.values(reg).map((u) => u.ws))].map((ws) => env.CAL.get(`schedule:${ws}`, 'json')));
+  const allItems = [...(sch.items || []), ...others.flatMap((o) => (o && o.items) || [])];
+  const due0 = allItems.filter((it) => it.at <= now && it.at > now - 15 * 60e3);
   if (!due0.length) return 0;
   const sent = await getSent(env, 'schedule-sent', sch);
   const due = due0.filter((it) => !sent[it.id]);
@@ -72,7 +75,7 @@ async function runSchedule(env) {
 /* Lembretes da agenda pessoal: cada lista vai só para o celular do dono */
 async function runPersonal(env) {
   const now = Date.now();
-  const team = MEMBERS(env);
+  const team = (await everyone(env)).map((m) => m.id);
   const lists = await Promise.all(team.map((m) => env.CAL.get(`pitems:${m}`, 'json')));
   let legacy = null;
   if (lists.some((l) => !l)) legacy = await env.CAL.get('personal', 'json'); // formato antigo
@@ -109,6 +112,24 @@ const reply = (env, req, data, status = 200) =>
 
 const clean = (s, n) => String(s || '').slice(0, n);
 const MEMBERS = (env) => JSON.parse(env.TEAM || '[]').map((m) => m.id);
+/* Com quem a pessoa divide a agenda: a dupla entre si; conta própria, só ela mesma */
+const membersOf = (me, env) => (me.ws === 'main' ? MEMBERS(env) : [me.id]);
+const scheduleKey = (me) => (me.ws === 'main' ? 'schedule' : `schedule:${me.ws}`);
+/* Contas próprias conhecidas pelo servidor (para os lembretes e mensagens rodarem para elas também) */
+async function registerUser(env, me) {
+  if (me.ws === 'main') return;
+  const reg = (await env.CAL.get('users', 'json')) || {};
+  const cur = reg[me.id];
+  if (cur && cur.name === me.name && cur.ws === me.ws) return; // já conhecido: não gasta gravação
+  reg[me.id] = { name: me.name, ws: me.ws, at: Date.now() };
+  await env.CAL.put('users', JSON.stringify(reg));
+}
+/* Todas as pessoas para o relógio: a dupla + contas próprias */
+export async function everyone(env) {
+  const team = JSON.parse(env.TEAM || '[]').map((m) => ({ ...m, ws: 'main', ctxKey: 'coach-ctx' }));
+  const reg = (await env.CAL.get('users', 'json')) || {};
+  return [...team, ...Object.entries(reg).map(([id, u]) => ({ id, name: u.name, ws: u.ws, ctxKey: `coach-ctx:${u.ws}` }))];
+}
 /* Separa o texto da resposta das ações (<acoes>[...]</acoes>) que o app executa após confirmação */
 export function splitActions(raw) {
   let text = String(raw || '');
@@ -177,11 +198,12 @@ async function handle(req, env) {
       updatedAt: Date.now(),
     };
     await env.CAL.put('subs', JSON.stringify(subs));
+    await registerUser(env, me);
     return reply(env, req, { ok: true, id });
   }
 
   if (url.pathname === '/notify') {
-    const to = (Array.isArray(body.to) ? body.to : []).filter((m) => MEMBERS(env).includes(m) && (m !== me.id || body.includeSelf === true));
+    const to = (Array.isArray(body.to) ? body.to : []).filter((m) => membersOf(me, env).includes(m) && (m !== me.id || body.includeSelf === true));
     const msg = { title: clean(body.title, 120), body: clean(body.body, 300), tag: clean(body.tag, 80), url: clean(body.url, 200) || './' };
     if (!msg.title) return reply(env, req, { error: 'sem texto' }, 400);
     const counts = await Promise.all(to.map((m) => sendToMember(env, m, msg, 'partner')));
@@ -192,10 +214,11 @@ async function handle(req, env) {
   if (url.pathname === '/schedule') {
     const now = Date.now();
     const items = (Array.isArray(body.items) ? body.items : [])
-      .filter((it) => it && MEMBERS(env).includes(it.member) && Number.isFinite(it.at) && it.at > now - 15 * 60e3 && it.at < now + 8 * 86400e3)
+      .filter((it) => it && membersOf(me, env).includes(it.member) && Number.isFinite(it.at) && it.at > now - 15 * 60e3 && it.at < now + 8 * 86400e3)
       .slice(0, 1500)
       .map((it) => ({ id: clean(it.id, 120), at: it.at, member: it.member, title: clean(it.title, 120), body: clean(it.body, 300), tag: clean(it.tag, 80), url: clean(it.url, 200), kind: ['reminders', 'daily'].includes(it.kind) ? it.kind : 'reminders', badge: Number.isFinite(it.badge) ? it.badge : undefined }));
-    await env.CAL.put('schedule', JSON.stringify({ items, updatedAt: now, by: me.id }));
+    await env.CAL.put(scheduleKey(me), JSON.stringify({ items, updatedAt: now, by: me.id }));
+    await registerUser(env, me);
     return reply(env, req, { ok: true, count: items.length });
   }
 
@@ -211,7 +234,8 @@ async function handle(req, env) {
       onlyFor: /^[a-z]{1,20}$/.test(c.onlyFor || '') ? c.onlyFor : null, name: clean(c.name, 80), niche: clean(c.niche, 160), lastPost: clean(c.lastPost, 10), nextPost: clean(c.nextPost, 10),
       daysSincePost: typeof c.daysSincePost === 'number' ? c.daysSincePost : null,
     }));
-    await env.CAL.put('coach-ctx', JSON.stringify({ companies, updatedAt: Date.now() }));
+    await env.CAL.put(me.ws === 'main' ? 'coach-ctx' : `coach-ctx:${me.ws}`, JSON.stringify({ companies, updatedAt: Date.now() }));
+    await registerUser(env, me);
     return reply(env, req, { ok: true });
   }
   if (url.pathname === '/coach-test' || url.pathname === '/pnudge-test') {
@@ -228,6 +252,7 @@ async function handle(req, env) {
       .map((it) => ({ id: clean(it.id, 120), at: it.at, title: clean(it.title, 80), body: clean(it.body, 200), tag: clean(it.tag, 80), url: clean(it.url, 120) }));
     await env.CAL.put(`pitems:${me.id}`, JSON.stringify(items));
     if (body.profile && typeof body.profile === 'object') await env.CAL.put(`pprofile:${me.id}`, JSON.stringify(cleanProfile(body.profile, me)));
+    await registerUser(env, me);
     return reply(env, req, { ok: true, count: items.length });
   }
 
@@ -267,7 +292,8 @@ async function handle(req, env) {
   if (url.pathname === '/devices') {
     const subs = Object.values(await getSubs(env));
     const counts = {};
-    for (const d of subs) counts[d.member] = (counts[d.member] || 0) + 1;
+    const mine = membersOf(me, env);
+    for (const d of subs) if (mine.includes(d.member)) counts[d.member] = (counts[d.member] || 0) + 1;
     return reply(env, req, { ok: true, counts });
   }
 
@@ -289,14 +315,13 @@ async function handle(req, env) {
 export default {
   fetch: (req, env) => handle(req, env).catch((e) => reply(env, req, { error: 'erro interno: ' + e.message }, 500)),
   scheduled: (_event, env, ctx) => {
-    const team = JSON.parse(env.TEAM || '[]');
     const safe = (name, p) => p.catch((e) => console.log(name, e.message));
-    ctx.waitUntil(Promise.all([
+    ctx.waitUntil(everyone(env).then((team) => Promise.all([
       safe('lembretes', runSchedule(env)),
       safe('pessoal', runPersonal(env)),
       safe('coach', runCoach(env, sendToMember, team)),
       safe('amigo', runPersonalCoach(env, sendToMember, team)),
-    ]));
+    ])));
   },
 };
 export { runSchedule, runPersonal, handle, sendToMember };

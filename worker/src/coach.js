@@ -104,8 +104,14 @@ export async function runCoach(env, sendToMember, team) {
   const due = team.filter((m) => (st.next[m.id] || 0) <= now);
   if (!due.length) return 0;
   // a parte que o app manda (empresas) fica em outra chave; o formato antigo ainda é aceito
-  const ctx = (await env.CAL.get('coach-ctx', 'json')) || st.ctx || { companies: [] };
-  ctx.today = `${br.date} (${['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][br.wd]})`;
+  // cada espaço tem as próprias empresas (a dupla: 'coach-ctx'; contas próprias: 'coach-ctx:{uid}')
+  const today = `${br.date} (${['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][br.wd]})`;
+  const ctxCache = {};
+  const ctxOf = async (m) => {
+    const key = m.ctxKey || 'coach-ctx';
+    if (!ctxCache[key]) ctxCache[key] = { ...((await env.CAL.get(key, 'json')) || (key === 'coach-ctx' && st.ctx) || { companies: [] }), today };
+    return ctxCache[key];
+  };
   const dates = upcomingDates(br.date);
   const trends = await getTrends(env);
   let sent = 0;
@@ -114,6 +120,7 @@ export async function runCoach(env, sendToMember, team) {
   await env.CAL.put('coach', JSON.stringify(st));
   for (const m of due) {
     const kind = mins < 9 * 60 + 30 ? 'motivacao' : pick(KINDS);
+    const ctx = await ctxOf(m);
     const co = chooseCompany((ctx.companies || []).filter((c) => !c.onlyFor || c.onlyFor === m.id));
     const recent = (st.recent[m.id] || []).slice(-5);
     const msg = (co || kind === 'motivacao' ? await aiMessage(env, co ? kind : 'motivacao', co, m.name, ctx, trends, dates, recent) : null)

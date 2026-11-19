@@ -13,6 +13,7 @@ import { dayBrief, dayBriefRows, freeTime } from '../planner.js';
 
 /* ---------- elementos compartilhados ---------- */
 export function personSwitch() {
+  if (store.team.length < 2) return ''; // conta própria: sem seletor de pessoa
   const opts = [{ id: 'all', name: 'Todos' }, ...store.team];
   return `<div class="seg" role="tablist">
     ${opts.map((o) => `<button class="seg__btn${ui.person === o.id ? ' is-on' : ''}" data-action="set-person" data-p="${o.id}">
@@ -99,7 +100,7 @@ export function renderToday() {
     : '';
 
   // Equipe no dia (onde cada um estará)
-  const team = ui.person === 'all' ? `<section class="block">
+  const team = ui.person === 'all' && store.team.length > 1 ? `<section class="block">
       <h2 class="block__title">${icon('route', 16)} Onde cada um vai estar</h2>
       <div class="team">${store.team.map((m) => teamCol(m, date)).join('')}</div>
     </section>` : '';
@@ -179,7 +180,7 @@ export function renderToday() {
           ${store.canEdit('notes', n) ? `<button class="note__del" data-action="del-note" data-id="${n.id}" aria-label="Apagar bilhete">${icon('x', 14)}</button>` : ''}</footer>
       </div>`).join('')}
       <form class="note-add" data-form="note">
-        <input name="text" placeholder="Escreva um bilhete para a dupla…" autocomplete="off" maxlength="280">
+        <input name="text" placeholder="${store.team.length > 1 ? 'Escreva um bilhete para a dupla…' : 'Escreva um bilhete para você…'}" autocomplete="off" maxlength="280">
         <button class="iconbtn iconbtn--accent" aria-label="Adicionar bilhete">${icon('plus', 18)}</button>
       </form>
     </div>
@@ -206,7 +207,7 @@ export function renderToday() {
     </button>
     ${team}
     <section class="block">
-      <h2 class="block__title">${icon('clock', 16)} Agenda ${ui.person === 'all' ? 'da dupla' : 'de ' + esc(store.member(ui.person)?.name || '')}</h2>
+      <h2 class="block__title">${icon('clock', 16)} Agenda ${store.team.length < 2 ? 'do dia' : ui.person === 'all' ? 'da dupla' : 'de ' + esc(store.member(ui.person)?.name || '')}</h2>
       ${summary}
       ${timeline}
     </section>

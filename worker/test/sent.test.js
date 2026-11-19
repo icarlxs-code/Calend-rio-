@@ -21,3 +21,14 @@ test('lembrete pessoal: lê o formato novo e o antigo, e não repete', async () 
   assert.equal(await runPersonal(env), 2);
   assert.equal(await runPersonal(env), 0);
 });
+
+import { everyone } from '../src/index.js';
+test('contas próprias: lembretes do espaço delas também são enviados', async () => {
+  const now = Date.now();
+  const kv = { users: JSON.stringify({ uABC: { name: 'Amigo', ws: 'ABC' } }), 'schedule:ABC': JSON.stringify({ items: [{ id: 'x1', at: now - 1000, member: 'uABC', title: 't', body: 'b' }] }), subs: '{}', vapid: JSON.stringify({ publicKey: 'x', privateKey: 'y' }) };
+  const env = mkEnv(kv);
+  assert.equal(await runSchedule(env), 1);
+  const all = await everyone(env);
+  assert.deepEqual(all.map((m) => m.id), ['henrique', 'matheus', 'uABC']);
+  assert.equal(all[2].ctxKey, 'coach-ctx:ABC');
+});

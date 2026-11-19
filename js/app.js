@@ -80,7 +80,7 @@ function switchSpace(space, from) {
   const me = store.member(store.me);
   veil.innerHTML = space === 'personal'
     ? `<div><span class="spaceveil__badge">${icon('heart', 40)}</span><strong>Pessoal</strong><small>${me ? esc(me.name) + ' · ' : ''}só você vê</small></div>`
-    : `<div><span class="spaceveil__badge">${icon('briefcase', 40)}</span><strong>Trabalho</strong><small>Agenda da dupla</small></div>`;
+    : `<div><span class="spaceveil__badge">${icon('briefcase', 40)}</span><strong>Trabalho</strong><small>${store.team.length > 1 ? 'Agenda da dupla' : 'Suas empresas e clientes'}</small></div>`;
   document.body.appendChild(veil);
   // a barra do topo (hora/bateria) entra na mesma cor da transição, quando o círculo chega lá em cima
   const veilBar = space === 'personal' ? '#C88AE8' : '#1E1E25';
@@ -151,6 +151,7 @@ function setTab(tab) {
 const actions = {
   tab: (b) => setTab(b.dataset.tab),
   space: (b) => switchSpace(b.dataset.space, b),
+  'edit-profile': async () => (await import('./views/profile.js')).openProfile(),
   'set-person': (b) => {
     ui.person = b.dataset.p;
     saveUi();
@@ -495,9 +496,12 @@ function openDeepLink(hash = location.hash, tries = 0) {
 
 /* ---------- login (modo nuvem) ---------- */
 const LOGIN_ERRORS = {
+  'auth/email-already-in-use': 'Este e-mail já tem conta. Toque em “Entrar” e use a sua senha.',
+  'auth/weak-password': 'Senha fraca: use pelo menos 6 caracteres.',
+  'auth/invalid-email': 'E-mail inválido. Confira se digitou certo.',
   'auth/invalid-credential': 'E-mail ou senha incorretos. Confira a senha (toque no olho para ver o que digitou).',
   'auth/wrong-password': 'Senha incorreta.',
-  'auth/user-not-found': 'Este e-mail não está cadastrado no Firebase (Authentication → Usuários).',
+  'auth/user-not-found': 'Não existe conta com este e-mail. Toque em “Criar conta”.',
   'auth/invalid-email': 'E-mail inválido.',
   'auth/too-many-requests': 'Muitas tentativas seguidas. Espere alguns minutos ou use "Esqueci minha senha".',
   'auth/network-request-failed': 'Sem conexão com a internet. Verifique o Wi-Fi/4G e tente de novo.',
@@ -507,6 +511,8 @@ const LOGIN_ERRORS = {
 };
 let loginEmail = '';
 let loginNotice = '';
+let signupMode = false;
+let pendingProfile = null;
 
 function showLogin(errMsg = '') {
   const msg = errMsg || loginNotice;
@@ -514,16 +520,18 @@ function showLogin(errMsg = '') {
   <div class="login">
     <img src="icons/icon-192.png" alt="" width="84" height="84">
     <h1>${esc(CONFIG.appName)}</h1>
-    <p>Agenda de conteúdo · ${esc(CONFIG.agencyName)}</p>
+    <p>${signupMode ? 'Crie sua conta: sua agenda de trabalho e a pessoal, só suas.' : 'Agenda de trabalho e pessoal'}</p>
     <form class="form" data-login novalidate>
+      ${signupMode ? `<div class="fgroup"><label class="flabel" for="l-name">Seu nome</label><input id="l-name" class="input" name="name" autocomplete="name" maxlength="40" placeholder="Como quer ser chamado"></div>` : ''}
       <div class="fgroup"><label class="flabel" for="l-email">E-mail</label><input id="l-email" class="input" type="email" name="email" value="${esc(loginEmail)}" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email"></div>
       <div class="fgroup"><label class="flabel" for="l-pass">Senha</label>
-        <div class="input-eye"><input id="l-pass" class="input" type="password" name="pass" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false">
+        <div class="input-eye"><input id="l-pass" class="input" type="password" name="pass" autocomplete="${signupMode ? 'new-password' : 'current-password'}" placeholder="${signupMode ? 'mínimo 6 caracteres' : ''}" autocapitalize="none" autocorrect="off" spellcheck="false">
         <button type="button" class="iconbtn iconbtn--sm" data-eye aria-label="Mostrar senha">${icon('eye', 18)}</button></div>
       </div>
       ${msg ? `<p class="login__err">${esc(msg)}</p>` : ''}
-      <button class="btn btn--primary btn--block" type="submit" data-go>Entrar</button>
-      <button class="btn-text btn-text--sm" type="button" data-reset>Esqueci minha senha</button>
+      <button class="btn btn--primary btn--block" type="submit" data-go>${signupMode ? 'Criar minha conta' : 'Entrar'}</button>
+      ${signupMode ? '' : '<button class="btn-text btn-text--sm" type="button" data-reset>Esqueci minha senha</button>'}
+      <div class="login__switch">${signupMode ? 'Já tem conta?' : 'Ainda não tem conta?'} <button class="btn-text btn-text--sm" type="button" data-mode>${signupMode ? 'Entrar' : 'Criar conta'}</button></div>
     </form>
   </div>`;
   const f = root.querySelector('[data-login]');
@@ -537,12 +545,16 @@ function showLogin(errMsg = '') {
     loginEmail = email;
     loginNotice = '';
     if (!email || !pass) return showLogin('Preencha o e-mail e a senha.');
+    const name = signupMode ? (f.name.value || '').trim() : '';
+    if (signupMode && !name) return showLogin('Escreva seu nome.');
+    if (signupMode && pass.length < 6) return showLogin('A senha precisa ter pelo menos 6 caracteres.');
     const go = f.querySelector('[data-go]');
     go.disabled = true;
-    go.textContent = 'Entrando…';
+    go.textContent = signupMode ? 'Criando…' : 'Entrando…';
     try {
+      if (signupMode) pendingProfile = { name };
       await Promise.race([
-        cloudApi.signIn(email, pass),
+        signupMode ? cloudApi.signUp(email, pass, name) : cloudApi.signIn(email, pass),
         new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), 20000)),
       ]);
       // deu certo: a tela muda sozinha quando o Firebase confirmar o login
@@ -552,7 +564,9 @@ function showLogin(errMsg = '') {
       showLogin(code === 'timeout' ? 'O servidor demorou para responder. Verifique a internet e tente de novo.' : LOGIN_ERRORS[code] || `Não foi possível entrar (${code || err?.message || 'erro desconhecido'}).`);
     }
   };
-  root.querySelector('[data-reset]').onclick = async () => {
+  root.querySelector('[data-mode]').onclick = () => { signupMode = !signupMode; showLogin(); };
+  const rs = root.querySelector('[data-reset]');
+  if (rs) rs.onclick = async () => {
     const email = f.email.value.trim().toLowerCase();
     if (!email) return toast('Digite seu e-mail primeiro');
     try {
@@ -582,6 +596,8 @@ function loading(msg = 'Carregando…') {
 }
 
 function startApp() {
+  // pessoa escolhida no filtro precisa existir neste espaço (ex.: celular usado por outra conta antes)
+  if (ui.person !== 'all' && !store.member(ui.person)) ui.person = 'all';
   shell();
   render();
   store.on(rerenderAll);
@@ -640,8 +656,8 @@ function startApp() {
   }
   // dados cadastrados antes do login (guardados só neste aparelho): oferece levar para a nuvem
   if (store.mode === 'cloud') setTimeout(() => offerLocalMigration().catch((e) => console.warn('migração', e)), 2500);
-  // empresas pré-cadastradas (uma única vez)
-  ensureSeedCompanies()
+  // empresas pré-cadastradas e rotinas: só no espaço da dupla Henrique + Matheus
+  if (store.workspace === 'main') ensureSeedCompanies()
     .then(() => setTimeout(() => ensureMatheusLogo().catch(() => {}), 800))
     .then(() => setTimeout(() => { try { ensureNotifyOwners(); } catch (e) { console.warn(e); } }, 1000))
     .then(() => setTimeout(() => ensureMatheusJG().catch((e) => console.warn('pedido Matheus', e)), 1200))
@@ -773,17 +789,17 @@ async function boot() {
       return showLogin();
     }
     if (started) return;
-    const allowed = CONFIG.team.some((m) => m.email && m.email.toLowerCase() === (user.email || '').toLowerCase());
-    if (!allowed) {
-      loginNotice = `O e-mail ${user.email} não faz parte da equipe deste app.`;
-      await cloudApi.signOut();
-      return showLogin();
-    }
+    // qualquer conta entra: a dupla vê o espaço dela; contas novas, o próprio espaço (vazio no começo)
     started = true;
     try {
       localStorage.setItem('cal.team', '1');
     } catch { /* ok */ }
     loading('Entrando…');
+    // conta acabou de ser criada: guarda o nome no perfil
+    if (pendingProfile && cloudApi.backend.saveProfile) {
+      try { await cloudApi.backend.saveProfile(user.uid, pendingProfile); } catch (e) { console.warn('perfil', e); }
+      pendingProfile = null;
+    }
     // se a nuvem demorar, abre mesmo assim: os dados chegam assim que a conexão responder
     try {
       await Promise.race([initCloud(cloudApi.backend, user), new Promise((r) => setTimeout(r, 12000))]);

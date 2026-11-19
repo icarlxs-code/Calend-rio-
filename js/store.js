@@ -37,7 +37,9 @@ export const store = {
 
   /* ---------- leitura ---------- */
   team: CONFIG.team,
-  member: (id) => CONFIG.team.find((m) => m.id === id),
+  workspace: 'main', // 'main' = Henrique + Matheus; contas novas = espaço próprio
+  member(id) { return store.team.find((m) => m.id === id); },
+  get solo() { return this.workspace !== 'main'; },
   company(id) {
     return this.state.companies.find((c) => c.id === id);
   },
@@ -206,7 +208,7 @@ export const store = {
     if (this.mode !== 'cloud') return;
     const c = this.company(companyId);
     if (!c || !c.shareToken) return;
-    persist(() => backend.publish(c.shareToken, buildClientPayload(c, this.state.events)));
+    persist(() => backend.publish(c.shareToken, { ...buildClientPayload(c, this.state.events), ownerUid: this.user?.uid || null }));
   },
 
   /* ---------- backup ---------- */
@@ -347,15 +349,44 @@ export async function initCloud(cloud, user) {
   store.mode = 'cloud';
   store.user = user;
   const m = CONFIG.team.find((t) => t.email && t.email.toLowerCase() === (user.email || '').toLowerCase());
-  store.me = m ? m.id : null;
   backend = cloud;
   store.backendApi = cloud;
+  if (m) {
+    // a dupla de sempre: dados na raiz, equipe do config
+    store.workspace = 'main';
+    store.team = CONFIG.team;
+    store.me = m.id;
+    cloud.setWorkspace && cloud.setWorkspace(null);
+  } else {
+    // conta própria: espaço só dela, começa vazio
+    store.workspace = user.uid;
+    cloud.setWorkspace(user.uid);
+    let prof = null;
+    try { prof = await Promise.race([cloud.getProfile(user.uid), new Promise((r) => setTimeout(() => r(null), 6000))]); } catch { prof = null; }
+    store.profile = prof || {};
+    store.team = [soloMember(user, store.profile)];
+    store.me = store.team[0].id;
+  }
   store.ready = false;
   await cloud.subscribe(COLS, (col, items) => {
     store.state[col] = items.map((x) => sanitizeItem(col, x)).filter(Boolean);
     store.emit();
   }, (err) => store.onError && store.onError(err));
   store.ready = true;
+}
+
+/* Pessoa de uma conta própria (nome e foto do perfil) */
+export function soloMember(user, prof = {}) {
+  const name = (prof.name || user.displayName || (user.email || 'Você').split('@')[0]).trim().slice(0, 40);
+  return { id: 'u' + user.uid.replace(/[^A-Za-z0-9]/g, '').slice(0, 24), name: name.charAt(0).toUpperCase() + name.slice(1), email: (user.email || '').toLowerCase(), color: prof.color || '#7C5CFF', photo: prof.photo || null };
+}
+/* Salva nome/foto/cor do perfil (contas próprias) */
+export async function saveMyProfile(data) {
+  if (!store.solo || !backend.saveProfile) return;
+  store.profile = { ...(store.profile || {}), ...data };
+  store.team = [soloMember(store.user, store.profile)];
+  store.emit();
+  await backend.saveProfile(store.user.uid, store.profile);
 }
 
 /* ---------- dados de exemplo ---------- */
