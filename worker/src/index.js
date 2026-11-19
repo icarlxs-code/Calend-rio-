@@ -83,7 +83,7 @@ async function handle(req, env) {
   const url = new URL(req.url);
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors(env, req) });
   if (url.pathname === '/vapid') return reply(env, req, { publicKey: (await getVapid(env)).publicKey });
-  if (url.pathname === '/' || url.pathname === '/health') return reply(env, req, { ok: true, servico: 'Calendário', chat: !!env.ANTHROPIC_API_KEY });
+  if (url.pathname === '/' || url.pathname === '/health') return reply(env, req, { ok: true, servico: 'Calendário', chat: !!(env.ANTHROPIC_API_KEY || env.AI) });
   if (req.method !== 'POST') return reply(env, req, { error: 'método não permitido' }, 405);
 
   let me;
@@ -137,10 +137,11 @@ async function handle(req, env) {
   }
 
   if (url.pathname === '/ask') {
-    if (!env.ANTHROPIC_API_KEY) return reply(env, req, { error: 'A chave do Claude ainda não foi configurada no servidor.' }, 412);
-    const { askClaude } = await import('./claude.js');
+    if (!env.ANTHROPIC_API_KEY && !env.AI) return reply(env, req, { error: 'A IA do assistente ainda não foi ligada no servidor.' }, 412);
+    // com chave da Anthropic usa o Claude; sem chave, a IA grátis do Cloudflare
+    const ask = env.ANTHROPIC_API_KEY ? (await import('./claude.js')).askClaude : (await import('./freeai.js')).askFree;
     try {
-      const answer = await askClaude(env, { question: clean(body.question, 2000), history: body.history, context: clean(body.context, 60000), me });
+      const answer = await ask(env, { question: clean(body.question, 2000), history: body.history, context: clean(body.context, 60000), me });
       return reply(env, req, { answer });
     } catch (e) {
       return reply(env, req, { error: e.message || 'O Claude não respondeu. Tente de novo.' }, e.status || 502);

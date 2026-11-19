@@ -119,10 +119,29 @@ test('CORS para o site do app', async () => {
   assert.equal(r.headers.get('Access-Control-Allow-Origin'), 'https://icarlxs-code.github.io');
 });
 
+test('chat grátis (IA do Cloudflare) responde com a agenda', async () => {
+  let got;
+  const AI = { run: async (model, input) => { got = { model, input }; return { response: 'Amanhã: 13h Feed · Garcia Hortifruti' }; } };
+  const r = await handle(new Request('https://w.dev/ask', { method: 'POST', headers: { Authorization: `Bearer ${token('icarlxs@gmail.com')}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ question: 'O que tenho amanhã?', context: 'Agenda: 13h Feed Garcia' }) }), { ...env, AI });
+  const data = await r.json();
+  assert.equal(r.status, 200, JSON.stringify(data));
+  assert.equal(data.answer, 'Amanhã: 13h Feed · Garcia Hortifruti');
+  assert.match(got.model, /llama-3\.3-70b/);
+  assert.match(got.input.messages[0].content, /Quem pergunta: Henrique[\s\S]*13h Feed Garcia/);
+  const h = await handle(new Request('https://w.dev/health'), { ...env, AI });
+  assert.equal((await h.json()).chat, true);
+});
+
+test('chat grátis: se o modelo grande falhar, usa o menor', async () => {
+  const AI = { run: async (model) => { if (/70b/.test(model)) throw new Error('daily limit'); return { response: 'ok pequeno' }; } };
+  const r = await handle(new Request('https://w.dev/ask', { method: 'POST', headers: { Authorization: `Bearer ${token('icarlxs@gmail.com')}` }, body: JSON.stringify({ question: 'oi', context: 'x' }) }), { ...env, AI });
+  assert.equal((await r.json()).answer, 'ok pequeno');
+});
+
 test('chat sem chave avisa claramente', async () => {
   const r = await call('/ask', { as: 'icarlxs@gmail.com', body: { question: 'oi', context: 'x' } });
   assert.equal(r.status, 412);
-  assert.match(r.data.error, /chave do Claude/);
+  assert.match(r.data.error, /ainda não foi ligada/);
 });
 
 test('chat com chave: usa Haiku 5.5 com esforço baixo e manda a agenda', async () => {

@@ -62,7 +62,7 @@ function chatHtml() {
     <h2 class="block__title">${icon('sparkle', 16)} Pergunte ao assistente</h2>
     <div class="chat">
       ${chat.length ? chat.map((m) => `<div class="msg msg--${m.role}${m.error ? ' msg--err' : ''}">${md(m.text)}</div>`).join('')
-        : `<div class="msg msg--assistant">Pergunte o que quiser sobre a agenda, por exemplo “o que eu tenho amanhã?” ou “qual o melhor horário para um Reels da Pura Vida na sexta?”. A pergunta abre no app do Claude, com o seu login, já com a agenda inteira de vocês.</div>`}
+        : `<div class="msg msg--assistant">Oi! Eu vejo a agenda inteira de vocês: posts, captações, reuniões, empresas e a rotina. Pergunte o que quiser, por exemplo “o que eu tenho amanhã?” ou “qual o melhor horário para um Reels da Garcia na sexta?”.</div>`}
       ${thinking ? `<div class="msg msg--assistant msg--typing"><i></i><i></i><i></i></div>` : ''}
     </div>
     <div class="presets">${PRESETS.map((p, i) => `<button class="preset" data-preset="${i}">${esc(p.label)}</button>`).join('')}</div>

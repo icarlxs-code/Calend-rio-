@@ -9,6 +9,10 @@ workers_dev = true
 [triggers]
 crons = ["* * * * *"]
 
+# IA grátis do Cloudflare para o chat do assistente
+[ai]
+binding = "AI"
+
 [[kv_namespaces]]
 binding = "CAL"
 
