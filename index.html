@@ -191,6 +191,15 @@
       var APP = /*APP*/'./dist/a-5ZJVZZ2G.js'/*APP*/;
       import(APP).catch(function (e) { fail(String(e && (e.message || e))); });
       setTimeout(function () { fail(''); }, 20000);
+      // Atualiza sozinho: ao voltar para o app, confere se há versão nova e recarrega
+      function checkUpdate() {
+        fetch('index.html?v=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (t) {
+          var m = /\/\*APP\*\/'([^']+)'/.exec(t);
+          if (m && m[1] !== APP && !document.querySelector('.sheet-wrap.is-open')) location.reload();
+        }).catch(function () {});
+      }
+      document.addEventListener('visibilitychange', function () { if (!document.hidden) checkUpdate(); });
+      setTimeout(checkUpdate, 4000);
     })();
   </script>
 </body>
