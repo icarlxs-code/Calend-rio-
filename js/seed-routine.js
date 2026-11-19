@@ -1,6 +1,6 @@
 /* Rotina do Henrique com a Garcia Hortifruti (19 a 30/11/2026), registrada uma única vez.
    Segunda/quarta/sexta: gravação com o personagem Gelado (07h–14h), alternando as unidades.
-   Terça/quinta: CEASA 07h–14h · Sábado: CEASA 07h–12h · Domingo: planejamento 07h–14h. */
+   Terça/quinta/sábado: CEASA 07h–14h · Domingo: planejamento 07h–14h. */
 import { store } from './store.js';
 
 const SEED_ID = 'seed-garcia-nov-2026';
@@ -27,15 +27,21 @@ export function buildGarciaRoutine(from = '2026-11-19', to = '2026-11-30') {
     } else if (wd === 0) {
       out.push({ ...base, type: 'outro', duration: 420, reminder: 30, title: 'Planejamento da semana', location: '', internalNote: 'Planejamento — 07h às 14h.', visibleToClient: false });
     } else {
-      const sat = wd === 6;
-      out.push({ ...base, type: 'outro', duration: sat ? 300 : 420, reminder: 30, title: `CEASA (${WD[wd]})`, location: 'CEASA', internalNote: `CEASA — 07h às ${sat ? '12h' : '14h'}.`, visibleToClient: false });
+      out.push({ ...base, type: 'outro', duration: 420, reminder: 30, title: `CEASA (${WD[wd]})`, location: 'CEASA', internalNote: 'CEASA — 07h às 14h.', visibleToClient: false });
     }
   }
   return out;
 }
 
 let running = false;
+const FIX_ID = 'seed-garcia-nov-2026-ate14h';
 export async function ensureSeedRoutine() {
+  // correção: o horário com a Garcia vai até as 14h também aos sábados
+  if (store.ready && !store.state.settings.some((s) => s.id === FIX_ID) && store.state.settings.some((s) => s.id === SEED_ID)) {
+    const fix = store.state.events.filter((e) => e.seedRoutine && e.duration === 300).map((e) => ({ ...e, duration: 420, internalNote: 'CEASA — 07h às 14h.' }));
+    if (fix.length) await store.upsertMany('events', fix);
+    await store.upsert('settings', { id: FIX_ID, done: [] });
+  }
   if (running || !store.ready || store.state.settings.some((s) => s.id === SEED_ID)) return;
   if (!store.company(COMPANY)) return; // a empresa entra primeiro (pré-cadastro)
   running = true;
@@ -43,6 +49,7 @@ export async function ensureSeedRoutine() {
     const items = buildGarciaRoutine().filter((e) => !store.event(e.id));
     if (items.length) await store.upsertMany('events', items);
     await store.upsert('settings', { id: SEED_ID, done: [] });
+    await store.upsert('settings', { id: FIX_ID, done: [] });
   } finally {
     running = false;
   }
