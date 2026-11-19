@@ -83,24 +83,24 @@ const dur = (min) => {
 /* ---------- atrasado: cobrança a cada 10 minutos até marcar como feito ---------- */
 export const LATE_EVERY = 10, LATE_MAX = 180;
 const LATE = [
-  'Tá atrasado {m} min. Cada minuto parado é dinheiro saindo do seu bolso. Bora {fazer} agora! 💸',
-  'A {co} precisa de você. Enquanto isso não sai, o cliente perde alcance — e você perde valor.',
-  'Como você quer ser melhor se não cumpre nem o próprio horário? {Fazer} agora e prova pra você mesmo 💪',
-  'Cada minuto de atraso é 1% a menos do seu processo. Não deixa escapar.',
-  'Profissional de verdade entrega no horário. Você é profissional. {Fazer} agora.',
-  'O algoritmo não espera, campeão. {m} min de atraso já custaram alcance. Bora!',
-  'Disciplina é fazer o que precisa mesmo sem vontade. Abre e resolve isso agora.',
-  'Você não chegou até aqui pra perder pra preguiça. A {co} está esperando.',
-  'Combinado com cliente é compromisso. Cumpre agora: {fazer}!',
-  'Quem quer crescer cumpre horário. {m} minutos... ainda dá tempo de virar o jogo.',
-  'Seu eu do futuro vai agradecer se você resolver isso AGORA.',
-  'Menos desculpa, mais entrega. {Fazer} e marca como feito ✓',
-  'Já são {m} min. Para tudo e resolve isso — leva poucos minutos.',
-  'Cliente satisfeito = contrato renovado = dinheiro no bolso. {Fazer} já!',
-  'Você é melhor que esse atraso. Mostra isso agora.',
-  'Cada minuto que passa é menos dinheiro na sua conta. Vai!',
-  'Sonho grande com atitude pequena não combina. {Fazer} agora, sem enrolar.',
-  'Ninguém vai fazer por você. Levanta e resolve: a {co} conta contigo.',
+  'Você disse que ia {fazer} às {h}. Já são {m} de atraso. Você não consegue honrar nem o que você mesmo prometeu? Vai lá e {faz} agora.',
+  'Cada minuto que passa é menos dinheiro no seu bolso. Menos chance de conquistar aquilo que você tanto quer. {Faz} agora.',
+  'A {co} confiou em você. Enquanto você enrola, ela perde alcance — e você perde credibilidade.',
+  'Você quer ser grande, mas não cumpre nem o próprio horário? Grandes cumprem o que falam. {Faz} agora.',
+  'Lembra do porquê você começou? Não foi pra ficar devendo post. Levanta e resolve.',
+  'Quem você quer ser daqui a um ano não deixaria isso atrasar {m}. Prova que você é essa pessoa.',
+  'Ninguém vai fazer por você. Ninguém vai lembrar das suas desculpas. Só do que você entregou.',
+  'Você reclama de não crescer, mas deixa o trabalho parado? A resposta está nessa tarefa atrasada.',
+  'Disciplina dói menos que arrependimento. {Faz} agora e tira esse peso das costas.',
+  'Tem gente que daria tudo pra ter os clientes que você tem. E você está deixando eles esperando.',
+  'Cada atraso é um tijolo a menos no seu sonho. {m} de atraso. Para de cavar o buraco e {faz} agora.',
+  'Seu cliente paga você pra cumprir. Profissional não deixa pra depois. {Faz} já.',
+  'Você é melhor que isso, e você sabe. Mostra agora: abre e {faz}.',
+  'A preguiça está ganhando de você há {m}. Vai deixar ela vencer hoje?',
+  'Palavra dada é palavra cumprida. Você marcou {h}. Honra o seu compromisso.',
+  'O sucesso não aceita “depois eu faço”. Ele exige agora. {Faz}!',
+  'Se fosse o seu dinheiro atrasado, você aceitaria? A {co} também não. {Faz} agora.',
+  'Quem perde o horário perde o algoritmo, perde o cliente e perde o respeito. Não seja essa pessoa.',
 ];
 const hashStr = (s) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
 /* Lista de cobranças de um evento atrasado: [{ late, at, title, body }] */
@@ -108,16 +108,17 @@ export function lateReminders(ev, startMs, company = '') {
   const post = isPostType(ev.type);
   const base = post ? startMs : startMs + (Number(ev.duration) || 30) * 60e3; // post: no horário; o resto: quando termina
   const what = `${TYPE_LABEL[ev.type] || 'Tarefa'}${company ? ' · ' + company : ''}`;
-  const fazer = post ? 'postar' : 'fazer', Fazer = post ? 'Posta' : 'Faz';
+  const fazer = post ? 'postar' : 'fazer', faz = post ? 'posta' : 'faz', Faz = post ? 'Posta' : 'Faz';
+  const h = hm(ev.time);
   const out = [];
   const h0 = hashStr(ev.id);
   for (let m = LATE_EVERY, k = 0; m <= LATE_MAX; m += LATE_EVERY, k++) {
     const at = base + m * 60e3;
     const brHour = new Date(at - 3 * 3600e3).getUTCHours();
     if (brHour >= 23 || brHour < 7) break; // não cobra de madrugada
-    const text = LATE[(h0 + k) % LATE.length].replace(/\{m\}/g, m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, '0') : ''}` : String(m))
-      .replace(/\{co\}/g, company || 'empresa').replace(/\{fazer\}/g, fazer).replace(/\{Fazer\}/g, Fazer);
-    out.push({ late: m, at, title: `⏰ Atrasado ${m >= 60 ? Math.floor(m / 60) + 'h' + (m % 60 ? String(m % 60).padStart(2, '0') : '') : m + ' min'} · ${what}`, body: `${ev.title ? ev.title + ' — ' : ''}${text} Toque e marque como feito.` });
+    const text = LATE[k === 0 ? 0 : 1 + ((h0 + k) % (LATE.length - 1))].replace(/\{m\}/g, m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, '0') : ''}` : `${m} min`)
+      .replace(/\{co\}/g, company || 'empresa').replace(/\{fazer\}/g, fazer).replace(/\{faz\}/g, faz).replace(/\{Faz\}/g, Faz).replace(/\{h\}/g, h);
+    out.push({ late: m, at, title: `⏰ Atrasado ${m >= 60 ? Math.floor(m / 60) + 'h' + (m % 60 ? String(m % 60).padStart(2, '0') : '') : m + ' min'} · ${what}`, body: `${ev.title ? ev.title + '. ' : ''}${text}` });
   }
   return out;
 }

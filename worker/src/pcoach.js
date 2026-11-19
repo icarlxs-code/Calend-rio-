@@ -120,28 +120,28 @@ export function agendaMessages(p, br, st) {
     if (it.done || !it.time) continue;
     const [h, m] = it.time.split(':').map(Number);
     const diff = h * 60 + m - nowMin;
-    if (diff > 90 && diff < 480) out.push({ key: `up-${it.title}`, title: 'Mais tarde 📅', body: `Hoje às ${hm(it.time)} tem ${it.title}. Já tá se organizando, ${n}?` });
+    if (diff > 90 && diff < 480) out.push({ key: `up-${it.title}`, title: '📅 Mais tarde', body: `Hoje às ${hm(it.time)} tem ${it.title}. Já tá se organizando, ${n}?` });
   }
   if ((p.today || []).some((it) => !it.done && !it.time)) {
     const it = p.today.find((x) => !x.done && !x.time);
-    out.push({ key: `td-${it.title}`, title: 'Não esquece hoje 📝', body: `Você anotou “${it.title}” pra hoje. Já fez? Se fez, marca como feito 😉` });
+    out.push({ key: `td-${it.title}`, title: '📅 Não esquece hoje', body: `Você anotou “${it.title}” pra hoje. Já fez? Se fez, marca como feito 😉` });
   }
-  for (const it of (p.overdue || []).slice(0, 2)) out.push({ key: `od-${it.title}`, title: 'Ficou pra trás 👀', body: `Ainda tá pendente: ${it.title}. Bora resolver hoje? Você consegue 💪` });
+  for (const it of (p.overdue || []).slice(0, 2)) out.push({ key: `od-${it.title}`, title: '📅 Ficou pra trás', body: `Ainda tá pendente: ${it.title}. Bora resolver hoje? Você consegue 💪` });
   const lb = p.lastByCat || {}, nb = p.nextByCat || {};
   if (!nb.beleza) {
     const days = lb.beleza ? Math.round((Date.parse(br.date) - Date.parse(lb.beleza)) / 864e5) : null;
-    if (days === null) out.push({ key: 'hair', title: 'Cuidar de você 💈', body: `Já pensou em agendar um corte de cabelo, ${n}? Cuidar da aparência levanta a autoestima. Você merece 💜`, every: 5 });
-    else if (days >= 21) out.push({ key: 'hair', title: 'E o cabelo? 💈', body: `Faz ${days} dias desde o último corte. Precisa agendar? Anota aqui no app que eu te lembro 😉`, every: 4 });
+    if (days === null) out.push({ key: 'hair', title: '💈 Cuidar de você', body: `Já pensou em agendar um corte de cabelo, ${n}? Cuidar da aparência levanta a autoestima. Você merece 💜`, every: 5 });
+    else if (days >= 21) out.push({ key: 'hair', title: '💈 E o cabelo?', body: `Faz ${days} dias desde o último corte. Precisa agendar? Anota aqui no app que eu te lembro 😉`, every: 4 });
   }
   for (const b of (p.birthdays || []).filter((x) => x.inDays >= 1 && x.inDays <= 5)) {
-    out.push({ key: `bd-${b.name}`, title: 'Aniversário chegando 🎁', body: `${b.name} faz aniversário ${b.inDays === 1 ? 'amanhã' : `em ${b.inDays} dias`}. Já pensou no presente ou numa mensagem bonita?`, every: 2 });
+    out.push({ key: `bd-${b.name}`, title: '🎁 Aniversário chegando', body: `${b.name} faz aniversário ${b.inDays === 1 ? 'amanhã' : `em ${b.inDays} dias`}. Já pensou no presente ou numa mensagem bonita?`, every: 2 });
   }
   for (const l of (p.lists || []).filter((x) => x.open >= 3).slice(0, 2)) {
     out.push({ key: `ls-${l.name}`, title: `Lista ${l.name} 📋`, body: `Sua lista “${l.name}” tem ${l.open} itens pendentes. Bora resolver alguns hoje?`, every: 2 });
   }
   if ((p.tomorrow || []).length && br.h >= 17) {
     const t = p.tomorrow[0];
-    out.push({ key: `tm-${t.title}`, title: 'Amanhã 📅', body: `Amanhã tem ${t.title}${t.time ? ' às ' + hm(t.time) : ''}. Já deixa tudo encaminhado pra não correr 😉` });
+    out.push({ key: `tm-${t.title}`, title: '📅 Amanhã', body: `Amanhã tem ${t.title}${t.time ? ' às ' + hm(t.time) : ''}. Já deixa tudo encaminhado pra não correr 😉` });
   }
   // não repete o mesmo assunto antes do prazo ("every" em dias; padrão: 1 vez por dia)
   return out.filter((m) => {
@@ -150,7 +150,17 @@ export function agendaMessages(p, br, st) {
   });
 }
 
-const INTERVAL = { alta: [85, 100], normal: [90, 150], calma: [180, 240] };
+/* Intervalos aleatórios de verdade: às vezes várias numa hora, às vezes um silêncio longo.
+   Nunca menos de 25 min entre duas mensagens e nunca num ritmo fixo. */
+const SCALE = { alta: 0.75, normal: 1, calma: 1.8 };
+export function randomGap(freq, rand = Math.random) {
+  const r = rand();
+  const [a, b] = r < 0.35 ? [25, 45] : r < 0.75 ? [50, 110] : [120, 190];
+  return Math.max(25, Math.round((a + rand() * (b - a)) * (SCALE[freq] || 1)));
+}
+const MIN_GAP = 25 * 60e3;
+/* Títulos organizados por tipo */
+export const KIND_TITLE = { water: '💧 Água', verse: '📖 Versículo', motivation: '💜 Motivação', selfcare: '🌿 Pausa', lunch: '🍽️ Almoço', dinner: '🍽️ Jantar', night: '🌙 Boa noite' };
 const ANCHORS = [
   { key: 'morning', from: 7 * 60 + 20, to: 9 * 60 },
   { key: 'lunch', from: 11 * 60 + 40, to: 12 * 60 + 40, pref: 'meals' },
@@ -173,33 +183,35 @@ export function nextNudge(p, st, now, rand = Math.random) {
   let msg = null;
 
   // 1) momentos fixos do dia
-  const anchor = prefs.nudges ? ANCHORS.find((a) => mins >= a.from && mins <= a.to && !st.done[a.key] && (!a.pref || prefs[a.pref])) : null;
+  const anchor = prefs.nudges && now - (st.lastAny || 0) >= 20 * 60e3 ? ANCHORS.find((a) => mins >= a.from && mins <= a.to && !st.done[a.key] && (!a.pref || prefs[a.pref])) : null;
   // água: de hora em hora, das 8h às 21h30 (independente das outras mensagens)
-  const waterDue = prefs.water && mins >= 8 * 60 && mins <= 21 * 60 + 30 && now - (st.lastWater || 0) >= 60 * 60e3 && now - (st.lastAny || 0) >= 10 * 60e3;
+  const waterDue = prefs.water && mins >= 8 * 60 && mins <= 21 * 60 + 30 && now >= (st.nextWater || 0) && now - (st.lastAny || 0) >= (st.minGap || 25) * 60e3;
   let isWater = false;
   if (!anchor && waterDue) {
     isWater = true;
     st.water++;
     st.lastWater = now;
-    msg = { title: 'Água 💧', body: fill(pick(T.water, seed), V), kind: 'water' };
+    st.nextWater = now + (40 + Math.round(rand() * 60)) * 60e3; // próxima água entre 40 e 100 min
+    const wpool = T.water.filter((w) => !(st.recent || []).some((r) => r.includes(fill(w, V))));
+    msg = { title: KIND_TITLE.water, body: fill(pick(wpool.length ? wpool : T.water, seed), V), kind: 'water' };
   } else if (anchor) {
     st.done = { ...st.done, [anchor.key]: true };
     if (anchor.key === 'morning') {
       const count = (p.today || []).filter((x) => !x.done).length;
       const base = fill(pick(T.morning, seed), V);
       const v = prefs.faith ? pick(VERSES, seed + br.wd) : null;
-      msg = { title: `Bom dia, ${n} ☀️`, body: v ? `${base}\n${verseText(v)}` : base, kind: 'morning', verse: v };
+      msg = { title: `☀️ Bom dia, ${n}`, body: v ? `${base}\n${verseText(v)}` : base, kind: 'morning', verse: v };
       if (count) msg.body += `\nHoje você tem ${count} ${count > 1 ? 'coisas' : 'coisa'} anotada${count > 1 ? 's' : ''}.`;
       if (prefs.faith) st.verses++;
     } else if (anchor.key === 'night') {
       const base = fill(pick(T.night, seed), V);
       const v = prefs.faith ? pick(NIGHT_VERSES, seed) : null;
-      msg = { title: 'Boa noite 🌙', body: v ? `${base}\n${verseText(v)}` : base, kind: 'night', verse: v };
+      msg = { title: KIND_TITLE.night, body: v ? `${base}\n${verseText(v)}` : base, kind: 'night', verse: v };
     } else {
-      msg = { title: anchor.key === 'lunch' ? 'Hora do almoço 🍽️' : 'Hora de jantar 🍽️', body: fill(pick(T[anchor.key], seed), V), kind: anchor.key };
+      msg = { title: KIND_TITLE[anchor.key], body: fill(pick(T[anchor.key], seed), V), kind: anchor.key };
     }
   } else {
-    if (!prefs.nudges || now < (st.next || 0) || now - (st.lastAny || 0) < 15 * 60e3) return null;
+    if (!prefs.nudges || now < (st.next || 0) || now - (st.lastAny || 0) < (st.minGap || 25) * 60e3) return null;
     // não manda logo antes de um momento fixo
     if (ANCHORS.some((a) => !st.done[a.key] && a.from - mins > 0 && a.from - mins < 25)) return null;
     // 2) mensagens ao longo do dia: agenda > água > fé > ânimo > autocuidado
@@ -218,14 +230,14 @@ export function nextNudge(p, st, now, rand = Math.random) {
       msg = { title: m.title, body: m.body, kind: 'agenda', fact: m.body };
     } else if (kind === 'water') {
       st.water++;
-      msg = { title: 'Água 💧', body: fill(pick(T.water, seed), V), kind: 'water' };
+      msg = { title: KIND_TITLE.water, body: fill(pick(T.water, seed), V), kind: 'water' };
     } else if (kind === 'verse') {
       st.verses++;
       const v = pick(VERSES, seed);
-      msg = { title: 'Palavra pra você 📖', body: verseText(v), kind: 'verse', verse: v };
+      msg = { title: KIND_TITLE.verse, body: verseText(v), kind: 'verse', verse: v };
     } else {
       const pool = T[kind].filter((s) => !st.recent.includes(fill(s, V)));
-      msg = { title: kind === 'selfcare' ? 'Pausa 🌿' : 'Pra você 💜', body: fill(pick(pool.length ? pool : T[kind], seed), V), kind };
+      msg = { title: KIND_TITLE[kind] || KIND_TITLE.motivation, body: fill(pick(pool.length ? pool : T[kind], seed), V), kind };
     }
   }
   // variedade mesmo sem IA: às vezes um jeito diferente de começar e de terminar
@@ -234,9 +246,9 @@ export function nextNudge(p, st, now, rand = Math.random) {
     if (r1 < 0.45 && !/^(ei|opa|ô|psiu|fala|olha)\b/i.test(msg.body)) msg.body = `${pick(OPENERS, Math.floor(r1 * 1e6))} ${msg.body.charAt(0).toLowerCase()}${msg.body.slice(1)}`.replace(/\{n\}/g, n);
     if (r2 < 0.4) msg.body = `${msg.body} ${pick(CLOSERS, Math.floor(r2 * 1e6))}`.replace(/\{n\}/g, n);
   }
-  const [a, b] = INTERVAL[prefs.freq] || INTERVAL.normal;
-  if (!isWater) st.next = now + (a + rand() * (b - a)) * 60e3;
+  if (!isWater) st.next = now + randomGap(prefs.freq, rand) * 60e3;
   st.lastAny = now;
+  st.minGap = 25 + Math.round(rand() * 22); // folga mínima também varia (25 a 47 min)
   st.recent = [...(st.recent || []), msg.body].slice(-12);
   return { msg: { ...msg, tag: 'p-amigo', url: './#/p/hoje' }, state: st };
 }
@@ -292,7 +304,7 @@ export async function runPersonalCoach(env, sendToMember, team) {
   for (const m of team) {
     const st = { ...(all[m.id] || {}) };
     if (force && force[m.id] && force[m.id] > (st.forcedAt || 0)) { st.next = 0; st.forcedAt = force[m.id]; changed = true; }
-    const waterMaybe = mins >= 8 * 60 && mins <= 21 * 60 + 30 && now - (st.lastWater || 0) >= 60 * 60e3;
+    const waterMaybe = mins >= 8 * 60 && mins <= 21 * 60 + 30 && now >= (st.nextWater || 0);
     if ((st.next || 0) > now && !waterMaybe && !ANCHORS.some((a) => mins >= a.from && mins <= a.to && !(st.day === br.date && st.done?.[a.key]))) continue;
     const prof = await env.CAL.get(`pprofile:${m.id}`, 'json');
     if (!prof) continue; // a pessoa ainda não abriu o app novo
@@ -309,7 +321,7 @@ export async function runPersonalCoach(env, sendToMember, team) {
     const u = r.state.usage && r.state.usage.date === br.date ? r.state.usage : { date: br.date, sent: 0, ai: 0 };
     if (Math.random() < 0.7 && r.msg.kind !== 'water') {
       const h = await humanize(env, r.msg, p, st.recent, br).catch(() => null);
-      if (h) { out = { ...r.msg, ...h }; u.ai++; r.state.recent = [...(r.state.recent || []).slice(0, -1), h.body].slice(-12); }
+      if (h) { out = { ...r.msg, body: h.body }; /* título fica o do tipo */ u.ai++; r.state.recent = [...(r.state.recent || []).slice(0, -1), h.body].slice(-12); }
     }
     u.sent++;
     r.state.usage = u;

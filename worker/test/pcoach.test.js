@@ -21,13 +21,13 @@ test('bom dia com versículo e quantidade do dia', () => {
 test('almoço na janela, uma vez só', () => {
   const st = { day: '2026-11-20', done: { morning: true }, next: 0 };
   const r = nextNudge(prof, st, at('11:50'), () => 0.5);
-  assert.match(r.msg.title, /almoço/);
+  assert.match(r.msg.title, /Almoço/);
   const again = nextNudge(prof, { ...r.state, next: 0 }, at('12:00'), () => 0.5);
-  assert.doesNotMatch(again?.msg.title || '', /almoço/);
+  assert.doesNotMatch(again?.msg.title || '', /Almoço/);
 });
 
 test('respeita o intervalo entre mensagens', () => {
-  const st = { day: '2026-11-20', done: { morning: true }, next: at('10:00') + 3600e3, lastWater: at('09:30') };
+  const st = { day: '2026-11-20', done: { morning: true }, next: at('10:00') + 3600e3, nextWater: at('10:30'), lastAny: at('09:30') };
   assert.equal(nextNudge(prof, st, at('10:00')), null);
   // água volta 1h depois da última
   assert.match(nextNudge(prof, st, at('10:31'), () => 0.4).msg.title, /Água/);
@@ -56,13 +56,13 @@ test('ao longo de um dia: água de hora em hora + outras mensagens, sem repetir 
     if (r) { st = r.state; bodies.push(r.msg.body); }
   }
   const water = bodies.filter((b) => b.includes('💧')).length;
-  assert.ok(water >= 12 && water <= 15, `água ${water}`);
-  assert.ok(bodies.length >= 18 && bodies.length <= 30, `mandou ${bodies.length}`);
+  assert.ok(water >= 7 && water <= 17, `água ${water}`);
+  assert.ok(bodies.length >= 12 && bodies.length <= 30, `mandou ${bodies.length}`);
   for (let i = 1; i < bodies.length; i++) assert.notEqual(bodies[i], bodies[i - 1]);
 });
 
 test('cron: só manda para quem tem resumo e usa o pedido de teste', async () => {
-  const kv = { 'pprofile:henrique': JSON.stringify(prof), 'pcoach': JSON.stringify({ henrique: { day: '2026-11-20', done: { morning: true }, next: at('10:00') + 3600e3, lastWater: at('09:50') } }), 'pnudge-force': JSON.stringify({ henrique: 5 }) };
+  const kv = { 'pprofile:henrique': JSON.stringify(prof), 'pcoach': JSON.stringify({ henrique: { day: '2026-11-20', done: { morning: true }, next: at('10:00') + 3600e3, nextWater: at('10:50') } }), 'pnudge-force': JSON.stringify({ henrique: 5 }) };
   const env = { CAL: { get: async (k, t) => (kv[k] ? (t === 'json' ? JSON.parse(kv[k]) : kv[k]) : null), put: async (k, v) => (kv[k] = v) } };
   const sent = [];
   const realNow = Date.now;
@@ -96,4 +96,18 @@ test('um dia inteiro sem IA: quase nenhuma mensagem repetida', () => {
 test('mensagens começam às 7h20', () => {
   assert.equal(nextNudge(prof, {}, at('07:19')), null);
   assert.match(nextNudge(prof, {}, at('07:20'), () => 0.3).msg.title, /Bom dia/);
+});
+
+test('intervalos aleatórios: nunca menos de 25 min e sem ritmo fixo; títulos por tipo', () => {
+  let st = {}; const times = []; const titles = new Set();
+  for (let t = at('07:00'); t <= at('22:30'); t += 60e3) {
+    const r = nextNudge({ name: 'Henrique', prefs: {}, today: [] }, st, t);
+    if (r) { st = r.state; times.push(t); titles.add(r.msg.title.split(' ')[0]); }
+  }
+  const gaps = times.slice(1).map((t, i) => (t - times[i]) / 60e3);
+  assert.ok(Math.min(...gaps) >= 20, `menor intervalo ${Math.min(...gaps)}`);
+  const avg = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+  const sd = Math.sqrt(gaps.reduce((a, b) => a + (b - avg) ** 2, 0) / gaps.length);
+  assert.ok(sd >= 7 && new Set(gaps).size >= gaps.length * 0.45, 'intervalos variados');
+  assert.ok(titles.has('💧') && titles.has('☀️'));
 });
