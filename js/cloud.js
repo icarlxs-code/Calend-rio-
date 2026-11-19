@@ -80,6 +80,18 @@ const backend = {
       ),
     );
   },
+  /* Agenda pessoal: pessoal/{uid}/itens — só o dono acessa */
+  subscribePersonal(onData, onErr) {
+    const u = auth.currentUser;
+    if (!u) return () => {};
+    return fs.onSnapshot(fs.collection(db, 'pessoal', u.uid, 'itens'), (s) => onData(s.docs.map((d) => ({ ...d.data(), id: d.id }))), onErr);
+  },
+  writePersonal(item) {
+    return fs.setDoc(fs.doc(db, 'pessoal', auth.currentUser.uid, 'itens', item.id), clean(item));
+  },
+  delPersonal(id) {
+    return fs.deleteDoc(fs.doc(db, 'pessoal', auth.currentUser.uid, 'itens', id));
+  },
   write(col, item) {
     return fs.setDoc(fs.doc(db, col, item.id), clean(item));
   },

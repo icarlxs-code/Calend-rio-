@@ -1,4 +1,6 @@
 /* Inicialização, navegação e ações globais */
+import { renderPersonal, bindPersonal, personalActions, openPersonalEditor } from './views/personal.js';
+import { personal, startPersonal } from './personal.js';
 import { CONFIG } from '../config.js';
 import { store, initLocal, initCloud } from './store.js';
 import { ui, saveUi } from './ui.js';
@@ -38,6 +40,7 @@ function shell() {
       ${tabBtn('mes', 'calendar', 'Calendário')}
       <button class="tabbar__fab" data-action="new-event" aria-label="Novo evento">${icon('plus', 28)}</button>
       ${tabBtn('empresas', 'building', 'Empresas')}
+      ${tabBtn('pessoal', 'heart', 'Pessoal')}
       ${tabBtn('ajustes', 'settings', 'Ajustes')}
     </nav>`;
 }
@@ -51,7 +54,10 @@ function render() {
   const noteInput = view.querySelector('[data-form="note"] input');
   const draftNote = noteInput ? noteInput.value : '';
   const hadFocus = noteInput && document.activeElement === noteInput;
-  const html = ui.tab === 'mes' ? renderMonth() : ui.tab === 'empresas' ? renderCompanies() : ui.tab === 'ajustes' ? renderSettings() : renderToday();
+  const pIn = view.querySelector('[data-form="pquick"] input');
+  const draftP = pIn ? pIn.value : '';
+  const hadP = pIn && document.activeElement === pIn;
+  const html = ui.tab === 'mes' ? renderMonth() : ui.tab === 'empresas' ? renderCompanies() : ui.tab === 'ajustes' ? renderSettings() : ui.tab === 'pessoal' ? renderPersonal() : renderToday();
   view.innerHTML = html;
   document.querySelectorAll('.tabbar__btn').forEach((b) => b.classList.toggle('is-on', b.dataset.tab === ui.tab));
   window.scrollTo(0, scroll);
@@ -59,6 +65,12 @@ function render() {
   if (ni && draftNote) ni.value = draftNote;
   if (ni && hadFocus) ni.focus({ preventScroll: true });
   bindSwipes();
+  if (ui.tab === 'pessoal') {
+    const pq = view.querySelector('[data-form="pquick"] input');
+    bindPersonal(view);
+    if (pq && draftP) pq.value = draftP;
+    if (pq && hadP) pq.focus({ preventScroll: true });
+  }
 }
 function rerenderAll() {
   render();
@@ -146,7 +158,9 @@ const actions = {
     await store.upsert('events', { ...e, status });
     if (status === 'feito') toast(`${TYPES[e.type].label} concluído`, { action: 'Desfazer', onAction: () => store.upsert('events', { ...store.event(e.id), status: e.status }) });
   },
+  ...personalActions,
   'new-event': (b) => {
+    if (ui.tab === 'pessoal') return openPersonalEditor();
     if (!store.state.companies.length) {
       toast('Cadastre uma empresa primeiro');
       return openCompanyEditor(null, () => openEventEditor({}));
@@ -263,10 +277,17 @@ function checkReminders() {
 
 /* Abre o lugar certo quando a pessoa toca numa notificação (#/e/ID ou #/d/DATA) */
 function openDeepLink(hash = location.hash, tries = 0) {
-  const m = /^#\/(e|d)\/([\w-]+)/.exec(hash || '');
+  const m = /^#\/(e|d|p)\/([\w-]+)/.exec(hash || '');
   if (!m) return false;
   window.PautaIntro && window.PautaIntro.finish(); // veio de uma notificação: vai direto ao ponto
   // app abrindo do zero: espera os dados chegarem (até ~10 s) antes de procurar o evento
+  if (m[1] === 'p') {
+    if (!personal.item(m[2]) && tries < 20) { setTimeout(() => openDeepLink(hash, tries + 1), 500); return true; }
+    history.replaceState(null, '', location.pathname + location.search);
+    setTab('pessoal');
+    if (personal.item(m[2])) openPersonalEditor(m[2]);
+    return true;
+  }
   if (m[1] === 'e' && !store.event(m[2]) && tries < 20) {
     setTimeout(() => openDeepLink(hash, tries + 1), 500);
     return true;
@@ -379,6 +400,8 @@ function startApp() {
   shell();
   render();
   store.on(rerenderAll);
+  startPersonal();
+  personal.on(() => { if (ui.tab === 'pessoal') render(); });
   store.onDenied = (msg) => toast(msg, { ms: 5000 });
   store.onError = (err) => {
     const quota = err && /quota/i.test(String(err.name || err.message));
@@ -585,7 +608,7 @@ navigator.serviceWorker?.addEventListener('message', (ev) => {
 });
 
 window.addEventListener('hashchange', () => {
-  if (/^#\/(e|d)\//.test(location.hash)) return openDeepLink();
+  if (/^#\/(e|d|p)\//.test(location.hash)) return openDeepLink();
   if (/^#\/(c|v)\//.test(location.hash)) location.reload();
 });
 

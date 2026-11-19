@@ -349,6 +349,7 @@ export async function initCloud(cloud, user) {
   const m = CONFIG.team.find((t) => t.email && t.email.toLowerCase() === (user.email || '').toLowerCase());
   store.me = m ? m.id : null;
   backend = cloud;
+  store.backendApi = cloud;
   store.ready = false;
   await cloud.subscribe(COLS, (col, items) => {
     store.state[col] = items.map((x) => sanitizeItem(col, x)).filter(Boolean);

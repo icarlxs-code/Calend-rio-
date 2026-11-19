@@ -60,6 +60,25 @@ async function runSchedule(env) {
   return due.length;
 }
 
+/* Lembretes da agenda pessoal: cada lista vai só para o celular do dono */
+const getPersonal = async (env) => (await env.CAL.get('personal', 'json')) || { byMember: {}, sent: {} };
+async function runPersonal(env) {
+  const now = Date.now();
+  const p = await getPersonal(env);
+  const due = [];
+  for (const [member, list] of Object.entries(p.byMember)) {
+    for (const it of list) if (it.at <= now && it.at > now - 15 * 60e3 && !p.sent[it.id]) due.push([member, it]);
+  }
+  if (!due.length) return 0;
+  for (const [member, it] of due) {
+    p.sent[it.id] = now;
+    await sendToMember(env, member, { title: it.title, body: it.body, tag: it.tag, url: it.url });
+  }
+  for (const [k, t] of Object.entries(p.sent)) if (t < now - 3 * 86400e3) delete p.sent[k];
+  await env.CAL.put('personal', JSON.stringify(p));
+  return due.length;
+}
+
 /* ---------- HTTP ---------- */
 const cors = (env, req) => {
   const origin = req.headers.get('Origin') || '';
@@ -143,6 +162,16 @@ async function handle(req, env) {
     return reply(env, req, { ok: true, sent, devices: Object.values(subs).filter((d) => d.member === me.id).length, statuses });
   }
 
+  if (url.pathname === '/personal') {
+    const items = (Array.isArray(body.items) ? body.items : []).slice(0, 300)
+      .filter((it) => it && typeof it.at === 'number')
+      .map((it) => ({ id: clean(it.id, 120), at: it.at, title: clean(it.title, 80), body: clean(it.body, 200), tag: clean(it.tag, 80), url: clean(it.url, 120) }));
+    const p = await getPersonal(env);
+    p.byMember[me.id] = items;
+    await env.CAL.put('personal', JSON.stringify(p));
+    return reply(env, req, { ok: true, count: items.length });
+  }
+
   if (url.pathname === '/devices') {
     const subs = Object.values(await getSubs(env));
     const counts = {};
@@ -166,6 +195,6 @@ async function handle(req, env) {
 
 export default {
   fetch: (req, env) => handle(req, env).catch((e) => reply(env, req, { error: 'erro interno: ' + e.message }, 500)),
-  scheduled: (_event, env, ctx) => ctx.waitUntil(runSchedule(env)),
+  scheduled: (_event, env, ctx) => ctx.waitUntil(Promise.all([runSchedule(env), runPersonal(env)])),
 };
 export { runSchedule, handle };
