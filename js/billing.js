@@ -21,7 +21,8 @@ export async function checkBilling() {
   if (!store.solo || store.mode !== 'cloud' || !server()) return (store.billing = { plan: 'team', active: true });
   try {
     let st = await api('/billing/status', {});
-    if (st.plan === 'none') st = await api('/billing/trial', { deviceId: deviceId() });
+    // 1º acesso: começa o teste (um por aparelho, por rede e por CPF)
+    if (st.plan === 'none') st = await api('/billing/trial', { deviceId: deviceId(), cpf: store.profile?.cpf || '' });
     store.billing = st;
     saveLast(st);
   } catch (e) {
@@ -54,11 +55,11 @@ export function openPlans({ blocking = false } = {}) {
   document.querySelector('.paywall')?.remove();
   const b = store.billing || {};
   const title = !blocking ? 'Escolha seu plano'
-    : b.plan === 'blocked' ? 'O teste grátis já foi usado neste aparelho'
+    : b.plan === 'blocked' ? (b.reason === 'cpf' ? 'Este CPF já usou o teste grátis' : b.reason === 'rede' ? 'O teste grátis já foi usado nesta conexão' : 'O teste grátis já foi usado neste aparelho')
       : 'Seu teste grátis terminou';
   const sub = !blocking ? 'Continue usando tudo do Lembra, sem limites.'
-    : b.plan === 'blocked' ? 'Para usar o Lembra com esta conta, escolha um plano abaixo.'
-      : 'Gostou? Escolha um plano para continuar usando tudo: suas empresas, lembretes, assistente e o modo Pessoal.';
+    : b.plan === 'blocked' ? 'O teste grátis é um por pessoa. Para usar o Lembra com esta conta, escolha um plano abaixo.'
+      : 'Gostou? Escolha um plano para continuar usando tudo: sua agenda de trabalho, lembretes calculados para você, assistente e o modo Pessoal.';
   const w = document.createElement('div');
   w.className = 'paywall';
   w.innerHTML = `<div class="paywall__inner">
@@ -79,11 +80,12 @@ export function openPlans({ blocking = false } = {}) {
       </button>
     </div>
     <ul class="paywall__list">
-      <li>${icon('check', 15)} Agenda de trabalho com empresas, posts e captações</li>
+      <li>${icon('check', 15)} Agenda de trabalho com a cara da sua profissão</li>
       <li>${icon('check', 15)} Modo Pessoal: aniversários, compromissos e listas</li>
       <li>${icon('check', 15)} Notificações, lembretes e mensagens de ânimo</li>
       <li>${icon('check', 15)} Assistente que organiza a agenda por você</li>
     </ul>
+    <p class="paywall__addon">${icon('users', 14)} Quer dividir a agenda com sócio ou equipe? A <b>agenda compartilhada</b> é um complemento à parte, a partir de R$ 6,90/mês (não incluso no vitalício).</p>
     <p class="paywall__safe">${icon('lock', 13)} Pagamento seguro pela Stripe (cartão de crédito).</p>
     <p class="paywall__err" data-err hidden></p>
     <div class="paywall__foot">
@@ -100,6 +102,7 @@ export function openPlans({ blocking = false } = {}) {
     try {
       const r = await api('/billing/checkout', { plan: btn.dataset.plan, returnUrl: location.href });
       if (!r.url) throw new Error(r.error || 'sem endereço');
+      markBuying(btn.dataset.plan);
       location.href = r.url; // página de pagamento da Stripe
     } catch (e) {
       err.textContent = e.message || 'Não consegui abrir o pagamento agora. Tente de novo.';
@@ -113,8 +116,15 @@ export function openPlans({ blocking = false } = {}) {
   return w;
 }
 
+/* O que a pessoa foi pagar (para saber o que conferir na volta da Stripe) */
+export const markBuying = (plan) => { try { localStorage.setItem('lembra.buying', plan); } catch { /* ok */ } };
+const buying = () => { try { return localStorage.getItem('lembra.buying') || ''; } catch { return ''; } };
+
 /* Voltou da Stripe: confere até liberar (o aviso da Stripe chega em segundos) */
 export async function confirmPayment() {
+  const what = buying();
+  try { localStorage.removeItem('lembra.buying'); } catch { /* ok */ }
+  if (what === 'dupla' || what === 'equipe') return confirmAddon(what);
   document.querySelector('.paywall')?.remove();
   const w = document.createElement('div');
   w.className = 'paywall is-open';
@@ -140,4 +150,28 @@ export async function confirmPayment() {
 export async function openPortal() {
   const r = await api('/billing/portal', { returnUrl: location.href });
   if (r.url) location.href = r.url;
+}
+
+/* Voltou da Stripe depois de contratar a agenda compartilhada */
+async function confirmAddon(plan) {
+  const w = document.createElement('div');
+  w.className = 'paywall is-open';
+  w.innerHTML = `<div class="paywall__inner"><img class="paywall__logo" src="media/lembra-logo.jpg" alt="" width="96" height="96"><h1>Ativando a agenda compartilhada…</h1><p>Leva só alguns segundos.</p><div class="spinner"></div></div>`;
+  document.body.appendChild(w);
+  for (let i = 0; i < 20; i++) {
+    const st = await checkBilling();
+    if (st.addon && st.addon.active) {
+      const { startTeam, openShare } = await import('./equipe.js');
+      await startTeam();
+      w.querySelector('.paywall__inner').innerHTML = `<img class="paywall__logo" src="media/lembra-logo.jpg" alt="" width="96" height="96"><h1>Agenda compartilhada ativa! 🎉</h1><p>Plano ${plan === 'equipe' ? 'Equipe: você + até 4 pessoas' : 'Dupla: você + 1 pessoa'}. Agora mande o convite para quem vai participar.</p><button class="btn btn--primary btn--block" data-go>Convidar agora</button>`;
+      w.querySelector('[data-go]').onclick = () => { w.remove(); window.__calRender && window.__calRender(); openShare(); };
+      return true;
+    }
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+  w.remove();
+  const { openShare } = await import('./equipe.js');
+  openShare();
+  setTimeout(() => { const e = document.querySelector('[data-err]'); if (e) { e.textContent = 'Ainda não recebemos a confirmação da Stripe. Se você pagou, espere 1 minuto e abra esta tela de novo.'; e.hidden = false; } }, 400);
+  return false;
 }

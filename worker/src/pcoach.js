@@ -161,22 +161,43 @@ export function randomGap(freq, rand = Math.random) {
 const MIN_GAP = 25 * 60e3;
 /* Títulos organizados por tipo */
 export const KIND_TITLE = { water: '💧 Água', verse: '📖 Versículo', motivation: '💜 Motivação', selfcare: '🌿 Pausa', lunch: '🍽️ Almoço', dinner: '🍽️ Jantar', night: '🌙 Boa noite' };
-const ANCHORS = [
-  { key: 'morning', from: 7 * 60 + 20, to: 9 * 60 },
-  { key: 'lunch', from: 11 * 60 + 40, to: 12 * 60 + 40, pref: 'meals' },
-  { key: 'dinner', from: 19 * 60 + 15, to: 20 * 60 + 15, pref: 'meals' },
-  { key: 'night', from: 21 * 60 + 40, to: 22 * 60 + 15 },
-];
+/* Janela do dia de cada pessoa (da ficha): começa 30 min depois de acordar e termina 15 min antes de dormir.
+   Sem ficha: 7h20 às 22h15. Funciona também para quem trabalha à noite (janela que passa da meia-noite).
+   Tudo é medido em "minutos desde o começo da janela" (rel). */
+const hhmm = (s) => (/^\d{2}:\d{2}$/.test(s || '') ? Math.min(1439, +s.slice(0, 2) * 60 + +s.slice(3)) : null);
+export function dayWindow(prefs = {}) {
+  const wake = hhmm(prefs.wake), sleep = hhmm(prefs.sleep), lunch = hhmm(prefs.lunch);
+  const start = wake == null ? 7 * 60 + 20 : (wake + 30) % 1440;
+  const end = sleep == null ? 22 * 60 + 15 : (sleep - 15 + 1440) % 1440;
+  return { start, end, lunch: lunch == null ? 12 * 60 : lunch };
+}
+const relOf = (mins, w) => (mins - w.start + 1440) % 1440;
+const spanOf = (w) => ((w.end - w.start + 1440) % 1440) || 1440;
+export const inWindow = (mins, w) => relOf(mins, w) <= spanOf(w);
+/* Momentos fixos do dia, relativos à janela da pessoa */
+export function anchorsFor(w) {
+  const L = spanOf(w);
+  const r = (m) => relOf(m, w);
+  return [
+    { key: 'morning', from: 0, to: Math.min(100, L) },
+    { key: 'lunch', from: r(w.lunch) - 20, to: r(w.lunch) + 40, pref: 'meals' },
+    { key: 'dinner', from: r(19 * 60 + 15), to: r(19 * 60 + 15) + 60, pref: 'meals' },
+    { key: 'night', from: Math.max(0, L - 35), to: L },
+  ].filter((a) => a.from >= 0 && a.to <= L && a.from < a.to);
+}
 
 /* Escolhe a próxima mensagem de uma pessoa. Retorna { msg, state } ou null. Função pura (testável). */
 export function nextNudge(p, st, now, rand = Math.random) {
   const br = brNow(now);
-  const mins = br.h * 60 + br.m;
   const prefs = { nudges: true, water: true, meals: true, faith: true, freq: 'normal', ...(p.prefs || {}) };
   if (!prefs.nudges && !prefs.water) return null;
+  const w = dayWindow(prefs);
+  const L = spanOf(w);
+  const ANCHORS = anchorsFor(w);
+  const mins = relOf(br.h * 60 + br.m, w); // minutos desde o começo do dia da pessoa
   st = { next: 0, day: '', done: {}, water: 0, verses: 0, recent: [], asked: {}, ...st };
   if (st.day !== br.date) st = { ...st, day: br.date, done: {}, water: 0, verses: 0 };
-  if (mins < 7 * 60 + 20 || mins > 22 * 60 + 15) return null;
+  if (mins > L) return null;
   const seed = Math.floor(rand() * 1e6);
   const n = p.name || '';
   const V = { n };
@@ -185,7 +206,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
   // 1) momentos fixos do dia
   const anchor = prefs.nudges && now - (st.lastAny || 0) >= 20 * 60e3 ? ANCHORS.find((a) => mins >= a.from && mins <= a.to && !st.done[a.key] && (!a.pref || prefs[a.pref])) : null;
   // água: de hora em hora, das 8h às 21h30 (independente das outras mensagens)
-  const waterDue = prefs.water && mins >= 8 * 60 && mins <= 21 * 60 + 30 && now >= (st.nextWater || 0) && now - (st.lastAny || 0) >= (st.minGap || 25) * 60e3;
+  const waterDue = prefs.water && mins >= 40 && mins <= L - 45 && now >= (st.nextWater || 0) && now - (st.lastAny || 0) >= (st.minGap || 25) * 60e3;
   let isWater = false;
   if (!anchor && waterDue) {
     isWater = true;
@@ -220,7 +241,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
     if (agenda.length) options.push(['agenda', 4]);
     if (prefs.faith && st.verses < 3) options.push(['verse', 2]);
     options.push(['motivation', 3]);
-    if (mins > 10 * 60 && mins < 18 * 60) options.push(['selfcare', 1]);
+    if (mins > 160 && mins < L - 240) options.push(['selfcare', 1]);
     const total = options.reduce((a, [, w]) => a + w, 0);
     let r = rand() * total, kind = options[0][0];
     for (const [k, w] of options) { if ((r -= w) <= 0) { kind = k; break; } }
@@ -270,7 +291,10 @@ const KIND_TASK = {
 export async function humanize(env, msg, p, recent, br) {
   if (!env.AI || !msg.kind || !KIND_TASK[msg.kind]) return null;
   const today = (p.today || []).filter((x) => !x.done).map((x) => `${x.time ? x.time + ' ' : ''}${x.title}`).slice(0, 5).join('; ');
-  const sys = `Você escreve notificações de celular em português do Brasil para ${p.name}, como o melhor amigo dele(a) — alguém que se importa de verdade, conselheiro, que levanta a autoestima e a moral. Pode citar fé em Deus com naturalidade.
+  const tone = { carinhoso: 'Tom: carinhoso e acolhedor.', firme: 'Tom: amigo coach, firme e motivador, que puxa para cima.', direto: 'Tom: direto e objetivo, sem rodeios, mas gentil.' }[p.prefs?.tone] || '';
+  const work = p.work && p.work.profession ? `${p.name} trabalha como ${p.work.profession}${p.work.goal ? ` e o objetivo dele(a) é: ${p.work.goal}` : ''}. Quando fizer sentido, conecte a mensagem com a rotina dessa profissão (sem inventar fatos).` : '';
+  const sys = `Você escreve notificações de celular em português do Brasil para ${p.name}, como o melhor amigo dele(a) — alguém que se importa de verdade, conselheiro, que levanta a autoestima e a moral.${p.prefs?.faith === false ? ' Não fale de religião.' : ' Pode citar fé em Deus com naturalidade.'}
+${tone} ${work}
 Estilo: humano, caloroso, informal, como mensagem de WhatsApp de um amigo. Frases curtas. No máximo 1 ou 2 emojis. Nunca soe robótico, nunca use "lembrete:" seco, não use aspas, não repita frases prontas.
 Agora são ${String(br.h).padStart(2, '0')}h${String(br.m).padStart(2, '0')} (${['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][br.wd]}).
 ${today ? `Coisas de hoje na agenda pessoal: ${today}.` : 'Hoje a agenda pessoal está livre.'}
@@ -296,18 +320,26 @@ Responda SÓ com JSON: {"title":"até 38 caracteres, com 1 emoji","body":"até 1
 export async function runPersonalCoach(env, sendToMember, team) {
   const now = Date.now();
   const br = brNow(now);
-  const mins = br.h * 60 + br.m;
-  if (mins < 7 * 60 + 20 || mins > 22 * 60 + 15) return 0;
+  const clock = br.h * 60 + br.m;
   const [state, force] = await Promise.all([env.CAL.get('pcoach', 'json'), env.CAL.get('pnudge-force', 'json')]);
   const all = state || {};
   let sent = 0, changed = false;
   for (const m of team) {
     const st = { ...(all[m.id] || {}) };
     if (force && force[m.id] && force[m.id] > (st.forcedAt || 0)) { st.next = 0; st.forcedAt = force[m.id]; changed = true; }
-    const waterMaybe = mins >= 8 * 60 && mins <= 21 * 60 + 30 && now >= (st.nextWater || 0);
-    if ((st.next || 0) > now && !waterMaybe && !ANCHORS.some((a) => mins >= a.from && mins <= a.to && !(st.day === br.date && st.done?.[a.key]))) continue;
+    // janela do dia guardada no estado (relida da ficha a cada 3h): fora dela, nem lê nada
+    const fresh = st.win && now - (st.winAt || 0) < 3 * 3600e3;
+    if (fresh) {
+      const w = st.win, L = spanOf(w), mins = relOf(clock, w);
+      if (mins > L) continue;
+      const waterMaybe = mins >= 40 && mins <= L - 45 && now >= (st.nextWater || 0);
+      if ((st.next || 0) > now && !waterMaybe && !anchorsFor(w).some((a) => mins >= a.from && mins <= a.to && !(st.day === br.date && st.done?.[a.key]))) continue;
+    }
     const prof = await env.CAL.get(`pprofile:${m.id}`, 'json');
     if (!prof) continue; // a pessoa ainda não abriu o app novo
+    st.win = dayWindow(prof.prefs || {});
+    st.winAt = now;
+    if (!fresh) { all[m.id] = { ...(all[m.id] || {}), ...st }; changed = true; }
     // resumo de outro dia (a pessoa não abriu o app hoje): ajusta "hoje" e "amanhã"
     let p = { ...prof, name: prof.name || m.name };
     if (prof.date && prof.date !== br.date) {

@@ -2,7 +2,7 @@
    ("criar", "mover", "concluir", "excluir", "editar", "pessoal", "bilhete")
    em mudanças na agenda — sempre mostrando um resumo para a pessoa confirmar. */
 import { store } from './store.js';
-import { TYPES } from './constants.js';
+import { TYPES, TYPE_ORDER, isMarketing, ent } from './constants.js';
 import { uid, todayKey, addDays, fromKey, toMin, fromMin, fmtTime, dayLabel, fmtDayShort } from './utils.js';
 import { tidyTitle } from './tidy.js';
 import { savePersonal, removePersonal, personal, CATS, guessCat } from './personal.js';
@@ -17,11 +17,14 @@ const TYPE_WORDS = {
   story: ['story', 'stories', 'storie'], captacao: ['captacao', 'gravacao', 'gravar', 'filmagem', 'foto', 'fotos', 'captar'],
   reuniao: ['reuniao', 'call', 'encontro', 'conversa'], producao: ['producao', 'edicao', 'editar', 'roteiro', 'criacao'], outro: ['outro', 'tarefa'],
 };
+/* Tipo do compromisso: primeiro os da profissão da pessoa, depois qualquer um do catálogo */
+const wordsOf = (k) => [...(TYPE_WORDS[k] || []), ...(TYPES[k]?.words || []), norm(TYPES[k]?.label)].filter(Boolean);
 export function resolveType(t, title = '') {
   if (TYPES[t]) return t;
   const s = ' ' + norm(t + ' ' + title) + ' ';
-  for (const [k, ws] of Object.entries(TYPE_WORDS)) if (ws.some((w) => s.includes(' ' + w))) return k;
-  return 'outro';
+  const hit = (k) => wordsOf(k).some((w) => s.includes(' ' + norm(w)));
+  const mine = TYPE_ORDER.filter((k) => k !== 'outro');
+  return mine.find(hit) || (norm(t) && Object.keys(TYPES).find((k) => k !== 'outro' && hit(k))) || (TYPE_ORDER.includes('outro') ? 'outro' : TYPE_ORDER[TYPE_ORDER.length - 1] || 'outro');
 }
 export function resolveCompany(name) {
   const n = norm(name);
@@ -73,7 +76,9 @@ export function planAction(a) {
   const who = (ids) => ids.map((id) => store.member(id)?.name).join(' e ');
   if (kind === 'criar') {
     const co = resolveCompany(a.empresa);
-    if (!co) return { ok: false, text: `Não achei a empresa “${a.empresa || '?'}”. Confira o nome em Empresas.` };
+    // marketing: toda marcação é de uma empresa. Outras profissões: o grupo (Local, Turma, Obra…) é opcional
+    if (!co && isMarketing()) return { ok: false, text: `Não achei a empresa “${a.empresa || '?'}”. Confira o nome em Empresas.` };
+    const coWarn = !co && a.empresa ? `Não achei ${ent(false, true)} “${a.empresa}”: vou marcar sem ${ent(false, true)}.` : '';
     const dates = expandDates(a);
     if (!dates.length) return { ok: false, text: 'Faltou a data do compromisso.' };
     const type = resolveType(a.tipo, a.titulo);
@@ -87,15 +92,15 @@ export function planAction(a) {
     const span = dates.length === 1 ? dayLabel(dates[0]) : `${dates.length} dias, de ${fmtDayShort(dates[0])} a ${fmtDayShort(dates[dates.length - 1])}`;
     return {
       ok: true,
-      text: `Criar ${TYPES[type].label} “${title}” · ${co.name} — ${span}${start ? ` · ${fmtTime(start)}${dur ? ' às ' + fmtTime(fromMin(toMin(start) + dur)) : ''}` : ''} · ${who(people)}`,
-      warn: busy.length ? (dates.length === 1 ? 'Atenção: já tem outro compromisso nesse horário.' : `${busy.length === dates.length ? 'Todas as datas' : `${busy.length} das datas`} já têm algo nesse horário.`) : '',
+      text: `Criar ${TYPES[type].label} “${title}”${co ? ` · ${co.name}` : ''} — ${span}${start ? ` · ${fmtTime(start)}${dur ? ' às ' + fmtTime(fromMin(toMin(start) + dur)) : ''}` : ''} · ${who(people)}`,
+      warn: [coWarn, busy.length ? (dates.length === 1 ? 'Atenção: já tem outro compromisso nesse horário.' : `${busy.length === dates.length ? 'Todas as datas' : `${busy.length} das datas`} já têm algo nesse horário.`) : ''].filter(Boolean).join(' '),
       run: async () => {
         const seriesId = dates.length > 1 ? uid('s_') : null;
         const items = dates.map((date) => ({
-          id: uid('e_'), type, companyId: co.id, title, date, time: start, duration: dur || null, assignees: people,
+          id: uid('e_'), type, companyId: co ? co.id : null, title, date, time: start, duration: dur || null, assignees: people,
           platform: TYPES[type].kind === 'post' ? (a.rede || 'instagram') : null, status: 'pendente', reminder: 30, visibleToClient: TYPES[type].client !== false, description: String(a.descricao || '').slice(0, 2000), location: String(a.local || '').slice(0, 300), seriesId,
         }));
-        if (items.length > 1) await store.upsertMany('events', items, { activity: { kind: 'series', count: items.length, label: `${TYPES[type].label} ${title}`, sample: { companyId: co.id, date: dates[0] } } });
+        if (items.length > 1) await store.upsertMany('events', items, { activity: { kind: 'series', count: items.length, label: `${TYPES[type].label} ${title}`, sample: { companyId: co ? co.id : null, date: dates[0] } } });
         else await store.upsert('events', items[0]);
         return items.length;
       },
@@ -145,7 +150,7 @@ export function planAction(a) {
     const text = String(a.texto || '').slice(0, 280);
     if (!text) return { ok: false, text: 'Faltou o texto do bilhete.' };
     const date = isDate(a.data) ? a.data : todayKey();
-    return { ok: true, text: `Bilhete para a dupla (${dayLabel(date)}): “${text}”`, run: async () => { await store.upsert('notes', { id: uid('n_'), date, text, author: store.me }); return 1; } };
+    return { ok: true, text: `${store.team.length > 1 ? 'Bilhete para a equipe' : 'Bilhete'} (${dayLabel(date)}): “${text}”`, run: async () => { await store.upsert('notes', { id: uid('n_'), date, text, author: store.me }); return 1; } };
   }
   return { ok: false, text: `Ação desconhecida: ${a?.acao || '?'}` };
 }

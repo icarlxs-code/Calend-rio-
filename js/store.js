@@ -351,6 +351,10 @@ export async function initCloud(cloud, user) {
   const m = CONFIG.team.find((t) => t.email && t.email.toLowerCase() === (user.email || '').toLowerCase());
   backend = cloud;
   store.backendApi = cloud;
+  // ficha da pessoa (profissão, rotina, dificuldades…): todas as contas têm
+  let prof = null;
+  try { prof = await Promise.race([cloud.getProfile(user.uid), new Promise((r) => setTimeout(() => r(null), 6000))]); } catch { prof = null; }
+  store.profile = prof || {};
   if (m) {
     // a dupla de sempre: dados na raiz, equipe do config
     store.workspace = 'main';
@@ -361,11 +365,26 @@ export async function initCloud(cloud, user) {
     // conta própria: espaço só dela, começa vazio
     store.workspace = user.uid;
     cloud.setWorkspace(user.uid);
-    let prof = null;
-    try { prof = await Promise.race([cloud.getProfile(user.uid), new Promise((r) => setTimeout(() => r(null), 6000))]); } catch { prof = null; }
-    store.profile = prof || {};
     store.team = [soloMember(user, store.profile)];
     store.me = store.team[0].id;
+    store.shared = null;
+    // escolheu abrir a agenda compartilhada de alguém (convite): confere se ainda faz parte e se está ativa
+    let choice = null;
+    try { choice = localStorage.getItem(`lembra.ws.${user.uid}`); } catch { choice = null; }
+    if (choice && choice !== user.uid && cloud.getTeam) {
+      let t = null;
+      try { t = await Promise.race([cloud.getTeam(choice), new Promise((r) => setTimeout(() => r(null), 6000))]); } catch { t = null; }
+      if (t && t.active && (t.members || []).includes(user.uid)) {
+        const { teamPeople } = await import('./equipe.js');
+        store.workspace = choice;
+        cloud.setWorkspace(choice);
+        store.shared = { owner: choice, ownerName: t.ownerName || 'Equipe' };
+        store.team = teamPeople(t, choice, store.team[0]);
+      } else {
+        try { localStorage.removeItem(`lembra.ws.${user.uid}`); } catch { /* ok */ }
+        store.sharedLost = t && !t.active ? (t.ownerName || 'Equipe') : choice ? 'removido' : null;
+      }
+    }
   }
   store.ready = false;
   await cloud.subscribe(COLS, (col, items) => {
@@ -377,8 +396,16 @@ export async function initCloud(cloud, user) {
 
 /* Pessoa de uma conta própria (nome e foto do perfil) */
 export function soloMember(user, prof = {}) {
-  const name = (prof.name || user.displayName || (user.email || 'Você').split('@')[0]).trim().slice(0, 40);
+  const name = (prof.nickname || prof.name || user.displayName || (user.email || 'Você').split('@')[0]).trim().slice(0, 40);
   return { id: 'u' + user.uid.replace(/[^A-Za-z0-9]/g, '').slice(0, 24), name: name.charAt(0).toUpperCase() + name.slice(1), email: (user.email || '').toLowerCase(), color: prof.color || '#7C5CFF', photo: prof.photo || null };
+}
+/* Salva a ficha/perfil da conta (qualquer conta: users/{uid}) */
+export async function saveUserProfile(data) {
+  if (!store.user || !backend || !backend.saveProfile) throw new Error('sem nuvem');
+  store.profile = { ...(store.profile || {}), ...data };
+  if (store.solo) store.team = [soloMember(store.user, store.profile)];
+  store.emit();
+  await backend.saveProfile(store.user.uid, data);
 }
 /* Salva nome/foto/cor do perfil (contas próprias) */
 export async function saveMyProfile(data) {

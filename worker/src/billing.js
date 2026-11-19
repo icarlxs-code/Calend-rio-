@@ -1,5 +1,7 @@
 /* Cobrança do Lembra (Stripe) + teste grátis de 24h.
    - Planos: mensal R$ 9,90 (assinatura) e vitalício R$ 150 (pagamento único).
+   - Complemento mensal, à parte: Agenda compartilhada Dupla R$ 6,90 (+1 pessoa) ou Equipe R$ 14,90 (+4).
+     Exige o plano base pago; quem entra pelo convite fica coberto pelo plano do dono.
    - Teste: 24h a partir do 1º acesso. Um teste por aparelho e por rede (IP) — quem já testou
      não ganha outro criando conta nova.
    - A dupla Henrique + Matheus (equipe do app) não paga.
@@ -10,7 +12,11 @@ export const TRIAL_MS = 24 * 3600e3;
 export const PLANS = {
   mensal: { name: 'Lembra mensal', amount: 990, mode: 'subscription' },
   vitalicio: { name: 'Lembra vitalício', amount: 15000, mode: 'payment' },
+  // Agenda compartilhada: complemento mensal, à parte (não vem no mensal nem no vitalício)
+  dupla: { name: 'Lembra · Agenda compartilhada Dupla (você + 1 pessoa)', amount: 690, mode: 'subscription', addon: true, seats: 1 },
+  equipe: { name: 'Lembra · Agenda compartilhada Equipe (você + até 4 pessoas)', amount: 1490, mode: 'subscription', addon: true, seats: 4 },
 };
+const isAddon = (plan) => !!PLANS[plan]?.addon;
 const IP_WINDOW = 30 * 864e5; // a mesma rede só ganha um teste a cada 30 dias
 
 async function sha(text) {
@@ -20,43 +26,107 @@ async function sha(text) {
 const getBill = async (env, uid) => (await env.CAL.get(`bill:${uid}`, 'json')) || null;
 const putBill = (env, uid, b) => env.CAL.put(`bill:${uid}`, JSON.stringify(b));
 
+/* Complemento "Agenda compartilhada" (Dupla/Equipe): ativo enquanto a assinatura dele estiver em dia */
+export function addonOf(b, now = Date.now()) {
+  const a = b && b.addon;
+  if (!a || !PLANS[a.plan]) return null;
+  const active = !!a.subActive && (!a.paidUntil || a.paidUntil > now - 3 * 864e5);
+  return { plan: a.plan, seats: PLANS[a.plan].seats, active, paidUntil: a.paidUntil || null, cancelAt: a.cancelAt || null };
+}
+/* Plano base pago (mensal em dia ou vitalício): exigido para o complemento funcionar */
+export const basePaid = (b, now = Date.now()) => !!b && (!!b.lifetime || (!!b.subActive && (!b.paidUntil || b.paidUntil > now - 3 * 864e5)));
+
 /* Situação da conta: team | lifetime | monthly | trial | expired | blocked | none */
 export function statusOf(b, me, now = Date.now()) {
   if (me.ws === 'main') return { plan: 'team', active: true };
   if (!b) return { plan: 'none', active: false };
-  if (b.lifetime) return { plan: 'lifetime', active: true };
-  if (b.subActive && (!b.paidUntil || b.paidUntil > now - 3 * 864e5)) return { plan: 'monthly', active: true, paidUntil: b.paidUntil || null, cancelAt: b.cancelAt || null };
-  if (b.trialEndsAt && b.trialEndsAt > now) return { plan: 'trial', active: true, trialEndsAt: b.trialEndsAt };
-  if (b.trialDenied) return { plan: 'blocked', active: false, reason: b.trialDenied };
-  return { plan: 'expired', active: false, trialEndsAt: b.trialEndsAt || null };
+  const addon = addonOf(b, now);
+  const extra = addon ? { addon } : {};
+  if (b.lifetime) return { plan: 'lifetime', active: true, ...extra };
+  if (b.subActive && (!b.paidUntil || b.paidUntil > now - 3 * 864e5)) return { plan: 'monthly', active: true, paidUntil: b.paidUntil || null, cancelAt: b.cancelAt || null, ...extra };
+  if (b.trialEndsAt && b.trialEndsAt > now) return { plan: 'trial', active: true, trialEndsAt: b.trialEndsAt, ...extra };
+  if (b.trialDenied) return { plan: 'blocked', active: false, reason: b.trialDenied, ...extra };
+  return { plan: 'expired', active: false, trialEndsAt: b.trialEndsAt || null, ...extra };
+}
+
+/* ---------- Agenda compartilhada: quem está em qual equipe ----------
+   team:{ownerUid} = { ownerUid, ownerId, ownerName, members:[{uid,id,name}], seats }
+   member:{uid}    = ownerUid (a equipe em que a pessoa entrou) */
+export async function teamActive(env, team, now = Date.now()) {
+  if (!team || !team.ownerUid) return false;
+  const b = await getBill(env, team.ownerUid);
+  const a = addonOf(b, now);
+  return !!(a && a.active && basePaid(b, now));
+}
+/* O dono manda a lista de quem entrou; o servidor corta no número de vagas pagas */
+export async function syncTeam(env, me, members, now = Date.now(), ownerName = '') {
+  if (me.ws === 'main') throw Object.assign(new Error('A dupla já compartilha a agenda.'), { status: 400 });
+  const b = await getBill(env, me.ws);
+  const a = addonOf(b, now);
+  const active = !!(a && a.active && basePaid(b, now));
+  const seats = active ? a.seats : 0;
+  const prev = (await env.CAL.get(`team:${me.ws}`, 'json')) || { members: [] };
+  const list = (Array.isArray(members) ? members : [])
+    .filter((m) => m && /^[A-Za-z0-9]{6,64}$/.test(m.uid || '') && m.uid !== me.ws)
+    .slice(0, seats)
+    .map((m) => ({ uid: m.uid, id: 'u' + m.uid.slice(0, 24), name: String(m.name || 'Convidado').slice(0, 40) }));
+  const team = { ownerUid: me.ws, ownerId: me.id, ownerName: String(ownerName || me.name || 'Dono').slice(0, 40), members: list, seats, active, updatedAt: now };
+  await env.CAL.put(`team:${me.ws}`, JSON.stringify(team));
+  const gone = (prev.members || []).filter((m) => !list.some((x) => x.uid === m.uid));
+  await Promise.all([...list.map((m) => env.CAL.put(`member:${m.uid}`, me.ws)), ...gone.map((m) => env.CAL.delete(`member:${m.uid}`))]);
+  return { active, seats, plan: a ? a.plan : null, members: list.length };
+}
+/* Equipe ativa de uma pessoa convidada (ou null) */
+export async function sharedOf(env, uid, now = Date.now()) {
+  const owner = await env.CAL.get(`member:${uid}`);
+  if (!owner) return null;
+  const team = await env.CAL.get(`team:${owner}`, 'json');
+  if (!team || !(team.members || []).some((m) => m.uid === uid)) return null;
+  return (await teamActive(env, team, now)) ? team : null;
 }
 
 /* 1º acesso: começa o teste — se este aparelho/rede ainda não testou */
-export async function startTrial(env, me, { deviceId, ip, now = Date.now() }) {
+/* CPF válido (dígitos verificadores) — o servidor confere de novo, não confia no app */
+export function validCPF(raw) {
+  const c = String(raw || '').replace(/\D/g, '');
+  if (c.length !== 11 || /^(\d)\1{10}$/.test(c)) return false;
+  const dv = (len) => { let sum = 0; for (let i = 0; i < len; i++) sum += +c[i] * (len + 1 - i); const r = (sum * 10) % 11; return r === 10 ? 0 : r; };
+  return dv(9) === +c[9] && dv(10) === +c[10];
+}
+
+export async function startTrial(env, me, { deviceId, ip, cpf, now = Date.now() }) {
   if (me.ws === 'main') return statusOf(null, me, now);
   const uid = me.ws;
   let b = await getBill(env, uid);
   if (b && (b.trialEndsAt || b.trialDenied || b.lifetime || b.subActive)) return statusOf(b, me, now);
   const dev = deviceId ? await sha('dev:' + deviceId) : null;
   const net = ip ? await sha('ip:' + ip) : null;
-  const [usedDev, usedNet] = await Promise.all([dev ? env.CAL.get(`trial-dev:${dev}`, 'json') : null, net ? env.CAL.get(`trial-ip:${net}`, 'json') : null]);
+  // CPF: guardado só embaralhado (com o segredo do servidor), um teste por pessoa
+  const doc = validCPF(cpf) ? await sha(`cpf:${env.CPF_SALT || 'lembra'}:${String(cpf).replace(/\D/g, '')}`) : null;
+  const [usedDev, usedNet, usedDoc] = await Promise.all([dev ? env.CAL.get(`trial-dev:${dev}`, 'json') : null, net ? env.CAL.get(`trial-ip:${net}`, 'json') : null, doc ? env.CAL.get(`trial-cpf:${doc}`, 'json') : null]);
   const otherDev = usedDev && usedDev.uid !== uid;
   const otherNet = usedNet && usedNet.uid !== uid && now - usedNet.at < IP_WINDOW;
+  const otherDoc = usedDoc && usedDoc.uid !== uid;
   b = { ...(b || {}), uid, email: me.email, createdAt: now };
-  if (otherDev || otherNet) {
-    b.trialDenied = otherDev ? 'aparelho' : 'rede';
+  if (otherDoc || otherDev || otherNet) {
+    b.trialDenied = otherDoc ? 'cpf' : otherDev ? 'aparelho' : 'rede';
   } else {
     b.trialStartedAt = now;
     b.trialEndsAt = now + TRIAL_MS;
     const mark = JSON.stringify({ uid, at: now });
-    await Promise.all([dev && env.CAL.put(`trial-dev:${dev}`, mark), net && env.CAL.put(`trial-ip:${net}`, mark, { expirationTtl: IP_WINDOW / 1000 })].filter(Boolean));
+    await Promise.all([dev && env.CAL.put(`trial-dev:${dev}`, mark), net && env.CAL.put(`trial-ip:${net}`, mark, { expirationTtl: IP_WINDOW / 1000 }), doc && env.CAL.put(`trial-cpf:${doc}`, mark)].filter(Boolean));
   }
   await putBill(env, uid, b);
   return statusOf(b, me, now);
 }
 
 export async function billingStatus(env, me) {
-  return statusOf(me.ws === 'main' ? null : await getBill(env, me.ws), me);
+  const st = statusOf(me.ws === 'main' ? null : await getBill(env, me.ws), me);
+  if (me.ws === 'main' || st.plan === 'lifetime' || st.plan === 'monthly') return st;
+  // convidado de uma agenda compartilhada ativa: o plano do dono cobre
+  const team = await sharedOf(env, me.ws);
+  if (team) return { plan: 'shared', active: true, owner: team.ownerUid, ownerName: team.ownerName, ...(st.addon ? { addon: st.addon } : {}) };
+  return st;
 }
 
 /* ---------- Stripe ---------- */
@@ -87,6 +157,11 @@ export async function createCheckout(env, me, { plan, returnUrl }, fetchImpl = f
   if (me.ws === 'main') throw Object.assign(new Error('A sua conta já é liberada.'), { status: 400 });
   const back = /^https:\/\/|^http:\/\/(localhost|127\.0\.0\.1)/.test(returnUrl || '') ? returnUrl.split('#')[0] : 'https://icarlxs-code.github.io/Calend-rio-/';
   const b = (await getBill(env, me.ws)) || {};
+  if (p.addon) {
+    if (!basePaid(b)) throw Object.assign(new Error('A agenda compartilhada é um complemento: primeiro assine o plano Mensal ou o Vitalício.'), { status: 409 });
+    const cur = addonOf(b);
+    if (cur && cur.active) throw Object.assign(new Error(cur.plan === plan ? 'Você já tem esse plano ativo.' : 'Você já tem a agenda compartilhada. Para trocar de plano, cancele em “Gerenciar assinatura” e assine o outro.'), { status: 409 });
+  }
   const price = { currency: 'brl', unit_amount: p.amount, product_data: { name: p.name } };
   if (p.mode === 'subscription') price.recurring = { interval: 'month' };
   const params = {
@@ -100,7 +175,7 @@ export async function createCheckout(env, me, { plan, returnUrl }, fetchImpl = f
     metadata: { uid: me.ws, plan },
   };
   if (b.customer) params.customer = b.customer; else params.customer_email = me.email;
-  if (p.mode === 'subscription') params.subscription_data = { metadata: { uid: me.ws } };
+  if (p.mode === 'subscription') params.subscription_data = { metadata: { uid: me.ws, plan } };
   else params.payment_intent_data = { metadata: { uid: me.ws, plan } };
   const s = await stripe(env, 'checkout/sessions', params, fetchImpl);
   return { url: s.url };
@@ -138,7 +213,8 @@ export async function handleStripeEvent(env, ev) {
     const b = (await getBill(env, uid)) || { uid };
     b.customer = o.customer || b.customer;
     if (o.mode === 'payment' && o.payment_status === 'paid') { b.lifetime = true; b.lifetimeAt = now; }
-    if (o.mode === 'subscription') { b.subActive = true; b.subscription = o.subscription; b.paidUntil = now + 32 * 864e5; }
+    if (o.mode === 'subscription' && isAddon(o.metadata?.plan)) b.addon = { plan: o.metadata.plan, subscription: o.subscription, subActive: true, paidUntil: now + 32 * 864e5, since: now };
+    else if (o.mode === 'subscription') { b.subActive = true; b.subscription = o.subscription; b.paidUntil = now + 32 * 864e5; }
     b.updatedAt = now;
     if (b.customer) await env.CAL.put(`cust:${b.customer}`, uid);
     await putBill(env, uid, b);
@@ -149,10 +225,18 @@ export async function handleStripeEvent(env, ev) {
     if (!uid) return;
     const b = (await getBill(env, uid)) || { uid };
     b.customer = o.customer || b.customer;
-    b.subscription = o.id;
-    b.subActive = ev.type !== 'customer.subscription.deleted' && ['active', 'trialing', 'past_due'].includes(o.status);
-    if (o.current_period_end) b.paidUntil = o.current_period_end * 1000;
-    b.cancelAt = o.cancel_at ? o.cancel_at * 1000 : null;
+    const alive = ev.type !== 'customer.subscription.deleted' && ['active', 'trialing', 'past_due'].includes(o.status);
+    const end = o.current_period_end || o.items?.data?.[0]?.current_period_end;
+    // assinatura do complemento (agenda compartilhada) ou do plano base
+    if (isAddon(o.metadata?.plan) || (b.addon && b.addon.subscription === o.id)) {
+      b.addon = { ...(b.addon || {}), plan: isAddon(o.metadata?.plan) ? o.metadata.plan : b.addon.plan, subscription: o.id, subActive: alive, cancelAt: o.cancel_at ? o.cancel_at * 1000 : null };
+      if (end) b.addon.paidUntil = end * 1000;
+    } else {
+      b.subscription = o.id;
+      b.subActive = alive;
+      if (end) b.paidUntil = end * 1000;
+      b.cancelAt = o.cancel_at ? o.cancel_at * 1000 : null;
+    }
     b.updatedAt = now;
     await putBill(env, uid, b);
     return;
@@ -161,9 +245,12 @@ export async function handleStripeEvent(env, ev) {
     const uid = await env.CAL.get(`cust:${o.customer}`);
     if (!uid) return;
     const b = (await getBill(env, uid)) || { uid };
-    b.subActive = true;
     const end = o.lines?.data?.[0]?.period?.end;
-    b.paidUntil = end ? end * 1000 : now + 32 * 864e5;
+    const until = end ? end * 1000 : now + 32 * 864e5;
+    const subId = o.subscription || o.parent?.subscription_details?.subscription || null;
+    const plan = o.parent?.subscription_details?.metadata?.plan || o.subscription_details?.metadata?.plan || o.lines?.data?.[0]?.metadata?.plan;
+    if ((subId && b.addon && b.addon.subscription === subId) || isAddon(plan)) b.addon = { ...(b.addon || {}), ...(isAddon(plan) ? { plan } : {}), ...(subId ? { subscription: subId } : {}), subActive: true, paidUntil: until };
+    else { b.subActive = true; b.paidUntil = until; }
     await putBill(env, uid, b);
   }
 }

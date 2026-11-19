@@ -1,4 +1,5 @@
 /* Tipos de evento, status, paleta e dicas */
+import { TYPE_DEFS, ARCHETYPES } from '../functions/catalog.js';
 
 export const TYPES = {
   feed: {
@@ -51,7 +52,37 @@ export const TYPES = {
   },
 };
 
+/* Todos os tipos do catálogo (de todas as profissões) ficam válidos; o editor mostra só os do perfil atual */
+const KIND_TIP = {
+  meeting: 'Confirme o horário um dia antes e chegue com 10 minutos de folga.',
+  shoot: 'Reserve tempo de deslocamento antes e depois.',
+  work: 'Proteja esse bloco: sem outros compromissos por cima.',
+  other: 'Coisas rápidas: resolva assim que o Lembra avisar.',
+  post: 'Programe com antecedência para não depender do celular na hora.',
+};
+for (const [id, d] of Object.entries(TYPE_DEFS)) {
+  if (TYPES[id]) { TYPES[id] = { ...d, ...TYPES[id], color: d.color }; continue; }
+  TYPES[id] = { label: d.label, icon: d.icon, color: d.color, kind: d.kind, dur: d.dur, onSite: !!d.onSite, client: d.kind !== 'work' || !!d.onSite, best: [], tip: KIND_TIP[d.kind] || KIND_TIP.other, placeholder: `Ex.: ${d.label}`, ask: d.ask, verb: d.verb, words: d.words };
+}
 export const TYPE_ORDER = ['feed', 'story', 'reels', 'carrossel', 'captacao', 'reuniao', 'producao', 'outro'];
+/* Perfil de trabalho ativo (muda com a profissão da conta) */
+export const WORK = { arch: 'marketing', profession: '', entity: ARCHETYPES.marketing.entity, clientLike: true, tips: ARCHETYPES.marketing.tips };
+export function applyArch(arch, profession = '') {
+  const a = ARCHETYPES[arch] || ARCHETYPES.generico;
+  WORK.arch = ARCHETYPES[arch] ? arch : 'generico';
+  WORK.profession = profession || '';
+  WORK.entity = a.entity;
+  WORK.clientLike = !!a.clientLike;
+  WORK.tips = a.tips;
+  TYPE_ORDER.splice(0, TYPE_ORDER.length, ...a.types);
+  return WORK;
+}
+/* Cor do tipo (tipos novos usam a cor do catálogo) */
+export const typeStyle = (id) => (TYPES[id] && !['feed', 'carrossel', 'reels', 'story', 'captacao', 'reuniao', 'producao', 'outro'].includes(id) ? ` style="--tc:${TYPES[id].color}"` : '');
+export const isMarketing = () => WORK.arch === 'marketing';
+/* Como chamar o grupo de pessoas da agenda: a dupla Henrique + Matheus ou a equipe (agenda compartilhada) */
+export const crew = () => (WORK.arch === 'marketing' && WORK.main ? 'dupla' : 'equipe');
+export const ent = (plural = false, lower = false) => { const t = plural ? WORK.entity.many : WORK.entity.one; return lower ? t.toLowerCase() : t; };
 export const isPost = (type) => TYPES[type]?.kind === 'post';
 export const durationOf = (ev) => ev.duration || TYPES[ev.type]?.dur || 30;
 
@@ -75,7 +106,8 @@ export const PALETTE = [
   '#C026D3', '#DB2777', '#E11D48', '#EA580C', '#CA8A04', '#57534E',
 ];
 
-export const DURATIONS = [15, 30, 45, 60, 90, 120, 180, 240, 300, 480];
+/* durações oferecidas: as de sempre + a duração padrão de cada tipo do catálogo (aula 50 min, plantão 12h…) */
+export const DURATIONS = [10, 15, 20, 30, 45, 50, 60, 90, 100, 120, 180, 240, 300, 360, 480, 600, 720, 1440];
 export const REMINDERS = [
   { v: -1, label: 'Sem lembrete' },
   { v: 0, label: 'Na hora' },

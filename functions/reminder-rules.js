@@ -4,13 +4,14 @@
 
 export const TZ = 'America/Sao_Paulo';
 
-export const TYPE_LABEL = {
-  feed: 'Feed', carrossel: 'Carrossel', reels: 'Reels', story: 'Story',
-  captacao: 'Captação', reuniao: 'Reunião', producao: 'Edição', outro: 'Tarefa',
-};
-const POSTS = ['feed', 'carrossel', 'reels', 'story'];
-export const isPostType = (t) => POSTS.includes(t);
-const VERB = { feed: 'publicar o feed', carrossel: 'publicar o carrossel', reels: 'postar o Reels', story: 'postar o story', captacao: 'a captação', reuniao: 'a reunião', producao: 'a edição', outro: 'a tarefa' };
+import { TYPE_DEFS } from './catalog.js';
+
+/* Rótulos e verbos vêm do catálogo (todas as profissões) */
+export const TYPE_LABEL = Object.fromEntries(Object.entries(TYPE_DEFS).map(([k, d]) => [k, d.label]));
+TYPE_LABEL.outro = 'Tarefa';
+export const isPostType = (t) => TYPE_DEFS[t]?.kind === 'post';
+const VERB = Object.fromEntries(Object.entries(TYPE_DEFS).map(([k, d]) => [k, d.verb]));
+const ASK = (t) => TYPE_DEFS[t]?.ask || 'Já fez?';
 
 /* "13:00" -> "13h", "09:30" -> "9h30" */
 export const hm = (t) => (t ? t.replace(/^0/, '').replace(':00', 'h').replace(':', 'h') : '');
@@ -34,14 +35,15 @@ export function nowIn(tz = TZ, date = new Date()) {
 }
 
 /* Quando lembrar (minutos antes). Negativo = depois do horário (cobrança). */
-export function reminderOffsets(ev) {
+export function reminderOffsets(ev, persona = null) {
   const custom = Number.isFinite(ev.reminder) ? ev.reminder : 30;
+  const def = TYPE_DEFS[ev.type] || TYPE_DEFS.outro;
   let list;
-  // a cobrança depois do horário é feita por lateReminders (a cada 10 min)
-  if (isPostType(ev.type)) list = [60, 30, 0];
-  else if (ev.type === 'captacao') list = [1440, 60, 30];
-  else if (ev.type === 'reuniao') list = [1440, 60, 15];
-  else list = [60, 30, 0];
+  // a cobrança depois do horário é feita por lateReminders
+  if (persona && Array.isArray(persona.offsets) && persona.offsets.length) {
+    // ficha da pessoa: quantos avisos e com quanta antecedência + os avisos de véspera do tipo (plantão, prova…)
+    list = [...persona.offsets, ...def.offsets.filter((o) => o >= 1440), 0];
+  } else list = [...def.offsets];
   if (custom >= 0 && !list.includes(custom)) list.push(custom);
   if (custom < 0) list = list.filter((o) => o < 0); // "Sem lembrete": só a cobrança
   return [...new Set(list)].sort((a, b) => b - a);
@@ -82,43 +84,71 @@ const dur = (min) => {
 /* Texto da notificação de lembrete */
 /* ---------- atrasado: cobrança a cada 10 minutos até marcar como feito ---------- */
 export const LATE_EVERY = 10, LATE_MAX = 180;
-const LATE = [
+/* Tom firme (mexe com o ego) — servem para qualquer profissão */
+const LATE_FIRME = [
   'Você disse que ia {fazer} às {h}. Já são {m} de atraso. Você não consegue honrar nem o que você mesmo prometeu? Vai lá e {faz} agora.',
-  'Cada minuto que passa é menos dinheiro no seu bolso. Menos chance de conquistar aquilo que você tanto quer. {Faz} agora.',
-  'A {co} confiou em você. Enquanto você enrola, ela perde alcance — e você perde credibilidade.',
-  'Você quer ser grande, mas não cumpre nem o próprio horário? Grandes cumprem o que falam. {Faz} agora.',
-  'Lembra do porquê você começou? Não foi pra ficar devendo post. Levanta e resolve.',
+  'Cada minuto que passa é menos dinheiro no seu bolso. Menos chance de conquistar aquilo que você tanto quer. Resolve agora.',
+  'Você quer ser grande, mas não cumpre nem o próprio horário? Grandes cumprem o que falam. Vai agora.',
+  'Lembra do porquê você começou? Não foi pra ficar devendo. Levanta e resolve.',
   'Quem você quer ser daqui a um ano não deixaria isso atrasar {m}. Prova que você é essa pessoa.',
   'Ninguém vai fazer por você. Ninguém vai lembrar das suas desculpas. Só do que você entregou.',
-  'Você reclama de não crescer, mas deixa o trabalho parado? A resposta está nessa tarefa atrasada.',
-  'Disciplina dói menos que arrependimento. {Faz} agora e tira esse peso das costas.',
-  'Tem gente que daria tudo pra ter os clientes que você tem. E você está deixando eles esperando.',
-  'Cada atraso é um tijolo a menos no seu sonho. {m} de atraso. Para de cavar o buraco e {faz} agora.',
-  'Seu cliente paga você pra cumprir. Profissional não deixa pra depois. {Faz} já.',
-  'Você é melhor que isso, e você sabe. Mostra agora: abre e {faz}.',
+  'Você reclama de não crescer, mas deixa o compromisso parado? A resposta está nesse atraso.',
+  'Disciplina dói menos que arrependimento. Resolve agora e tira esse peso das costas.',
+  'Cada atraso é um tijolo a menos no seu sonho. {m} de atraso. Para de cavar o buraco.',
+  'Profissional de verdade cumpre o horário. Você é profissional. Mostra agora.',
+  'Você é melhor que isso, e você sabe. Mostra agora.',
   'A preguiça está ganhando de você há {m}. Vai deixar ela vencer hoje?',
   'Palavra dada é palavra cumprida. Você marcou {h}. Honra o seu compromisso.',
-  'O sucesso não aceita “depois eu faço”. Ele exige agora. {Faz}!',
-  'Se fosse o seu dinheiro atrasado, você aceitaria? A {co} também não. {Faz} agora.',
-  'Quem perde o horário perde o algoritmo, perde o cliente e perde o respeito. Não seja essa pessoa.',
+  'O sucesso não aceita “depois eu faço”. Ele exige agora.',
+];
+/* Para quem é cliente/empresa (marketing, vendas, serviços…) */
+const LATE_CLIENTE = [
+  'A {co} confiou em você. Enquanto você enrola, ela espera — e você perde credibilidade.',
+  'Tem gente que daria tudo pra ter os clientes que você tem. E você está deixando eles esperando.',
+  'Se fosse o seu dinheiro atrasado, você aceitaria? A {co} também não. Resolve agora.',
+];
+const LATE_POST = ['Quem perde o horário perde o algoritmo, perde o cliente e perde o respeito. Não seja essa pessoa.'];
+/* Tom carinhoso */
+const LATE_CARINHO = [
+  'Ei, passou do horário de {fazer} ({h}). Tudo bem? Quando der, resolve e marca como feito 💜',
+  'Ainda dá tempo! {m} de atraso não é o fim do mundo. Bora resolver?',
+  'Lembrete com carinho: isso ficou pendente desde as {h}. Você consegue 💪',
+  'Respira e faz só esse primeiro passo agora. O resto flui.',
+  'Tô aqui torcendo por você. Resolve e tira isso da cabeça 😉',
+  'Você já fez coisas muito mais difíceis hoje. Essa é rapidinha.',
+];
+/* Tom direto */
+const LATE_DIRETO = [
+  'Pendente desde {h} ({m}). Resolver agora.',
+  'Atrasado {m}. Marque como feito quando concluir.',
+  'Ainda não concluído: {fazer}. Prazo era {h}.',
+  'Compromisso das {h} em aberto há {m}.',
 ];
 const hashStr = (s) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
-/* Lista de cobranças de um evento atrasado: [{ late, at, title, body }] */
-export function lateReminders(ev, startMs, company = '') {
+/* Lista de cobranças de um evento atrasado: [{ late, at, title, body }].
+   persona (da ficha): de quanto em quanto tempo cobrar, até quando e em que tom. */
+export function lateReminders(ev, startMs, company = '', persona = null, opts = {}) {
   const post = isPostType(ev.type);
-  const base = post ? startMs : startMs + (Number(ev.duration) || 30) * 60e3; // post: no horário; o resto: quando termina
+  const def = TYPE_DEFS[ev.type] || TYPE_DEFS.outro;
+  const base = post ? startMs : startMs + (Number(ev.duration) || def.dur || 30) * 60e3; // post: no horário; o resto: quando termina
   const what = `${TYPE_LABEL[ev.type] || 'Tarefa'}${company ? ' · ' + company : ''}`;
-  const fazer = post ? 'postar' : 'fazer', faz = post ? 'posta' : 'faz', Faz = post ? 'Posta' : 'Faz';
+  const verbo = def.verb || 'fazer';
+  const every = persona?.lateEvery || LATE_EVERY;
+  const max = persona?.lateMax ?? LATE_MAX;
+  const tone = persona?.tone || 'firme';
+  const pool = tone === 'carinhoso' ? LATE_CARINHO : tone === 'direto' ? LATE_DIRETO
+    : [...LATE_FIRME, ...(opts.clientLike && company ? LATE_CLIENTE : []), ...(post ? LATE_POST : [])];
   const h = hm(ev.time);
   const out = [];
   const h0 = hashStr(ev.id);
-  for (let m = LATE_EVERY, k = 0; m <= LATE_MAX; m += LATE_EVERY, k++) {
+  for (let m = every, k = 0; m <= max; m += every, k++) {
     const at = base + m * 60e3;
     const brHour = new Date(at - 3 * 3600e3).getUTCHours();
     if (brHour >= 23 || brHour < 7) break; // não cobra de madrugada
-    const text = LATE[k === 0 ? 0 : 1 + ((h0 + k) % (LATE.length - 1))].replace(/\{m\}/g, m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, '0') : ''}` : `${m} min`)
-      .replace(/\{co\}/g, company || 'empresa').replace(/\{fazer\}/g, fazer).replace(/\{faz\}/g, faz).replace(/\{Faz\}/g, Faz).replace(/\{h\}/g, h);
-    out.push({ late: m, at, title: `⏰ Atrasado ${m >= 60 ? Math.floor(m / 60) + 'h' + (m % 60 ? String(m % 60).padStart(2, '0') : '') : m + ' min'} · ${what}`, body: `${ev.title ? ev.title + '. ' : ''}${text}` });
+    const mt = m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, '0') : ''}` : `${m} min`;
+    const text = pool[k === 0 ? 0 : 1 + ((h0 + k) % (pool.length - 1))].replace(/\{m\}/g, mt)
+      .replace(/\{co\}/g, company || 'empresa').replace(/\{fazer\}/g, verbo).replace(/\{faz\}/g, post ? 'posta' : 'faz').replace(/\{h\}/g, h);
+    out.push({ late: m, at, title: `⏰ Atrasado ${mt} · ${what}`, body: `${ev.title ? ev.title + '. ' : ''}${text}` });
   }
   return out;
 }
@@ -129,11 +159,12 @@ export function reminderMessage(ev, offset, company = '') {
   const at = hm(ev.time);
   const place = ev.location ? ` · ${ev.location}` : '';
   if (offset >= 1440) {
+    const days = Math.round(offset / 1440);
     return {
-      title: `Amanhã: ${what} às ${at}`,
+      title: `${days === 1 ? 'Amanhã' : `Em ${days} dias`}: ${what} às ${at}`,
       body: ev.type === 'captacao'
         ? `Hoje: carregue baterias, esvazie os cartões e confirme com o cliente.${place}`
-        : `${title}${place}`.trim() || 'Confirme o horário com o cliente.',
+        : `${title}${place}`.trim() || 'Já se organize para não pegar ninguém de surpresa.',
     };
   }
   if (offset > 0) {
@@ -142,8 +173,8 @@ export function reminderMessage(ev, offset, company = '') {
   // na hora exata: pergunta se já foi feito
   if (offset === 0) {
     return {
-      title: isPostType(ev.type) ? `Já postou? ${what}` : `Já fez? ${what}`,
-      body: `Deu ${at}${title ? ' — ' + title : ''}. Se já ${isPostType(ev.type) ? 'postou' : 'fez'}, toque e marque como feito ✓`,
+      title: `${ASK(ev.type)} ${what}`,
+      body: `Deu ${at}${title ? ' — ' + title : ''}. Se já resolveu, toque e marque como feito ✓`,
     };
   }
   return {

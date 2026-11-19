@@ -3,6 +3,7 @@
    - mantém no servidor a lista dos próximos lembretes (ele dispara no horário,
      mesmo com os celulares fechados) */
 import { store } from './store.js';
+import { WORK } from './constants.js';
 import { api, server } from './avisos.js';
 import { debounce, todayKey, addDays } from './utils.js';
 import { reminderOffsets, reminderMessage, lateReminders, changeMessage, dailyMessage, isPostType, TYPE_LABEL as TYPE_NAME } from '../functions/reminder-rules.js';
@@ -90,6 +91,9 @@ export function onActivity(a) {
   syncSchedule();
 }
 
+/* Personalização de cada pessoa (calculada pela ficha e guardada no espaço) */
+export const personaOf = (member) => store.state.settings.find((x) => x.id === `persona-${member}`) || null;
+
 /* ---------- lista de lembretes para o servidor ---------- */
 export function buildSchedule(now = Date.now()) {
   const items = [];
@@ -98,13 +102,16 @@ export function buildSchedule(now = Date.now()) {
   const pendingOn = (member, date) => store.eventsOn(date, { person: member }).filter((e) => e.status !== 'feito').length;
   evs.forEach((ev) => {
     const at0 = epoch(ev.date, ev.time);
-    reminderOffsets(ev).forEach((offset) => {
+    // lembretes de cada pessoa seguem a ficha dela (quantos avisos e quanto antes)
+    const memberOffsets = (member) => reminderOffsets(ev, personaOf(member));
+    const allOffsets = [...new Set(store.team.flatMap((m) => memberOffsets(m.id)))];
+    allOffsets.forEach((offset) => {
       if (offset < 0 && ev.status !== 'pendente') return;
       const at = at0 - offset * 60e3;
       if (at < now - 10 * 60e3 || at > now + 4 * 86400e3) return;
       const msg = reminderMessage(ev, offset, coName(ev.companyId));
       const resp = (ev.assignees || []).map(nameOf).join(' e ');
-      store.team.map((m) => m.id).filter((member) => allowedFor(member, ev.companyId) && (ev.notifyPartner !== false || member === ev.createdBy || (ev.assignees || []).includes(member))).forEach((member) => items.push({
+      store.team.map((m) => m.id).filter((member) => memberOffsets(member).includes(offset) && allowedFor(member, ev.companyId) && (ev.notifyPartner !== false || member === ev.createdBy || (ev.assignees || []).includes(member))).forEach((member) => items.push({
         id: `r_${ev.id}_${offset}_${ev.date}${ev.time.replace(':', '')}_${member}`,
         at, member, title: msg.title, body: resp && !(ev.assignees.length === 1 && ev.assignees[0] === member) ? `${msg.body} · ${resp}` : msg.body, tag: `rem-${ev.id}`, url: `./#/e/${ev.id}`, kind: 'reminders', badge: pendingOn(member, ev.date),
       }));
@@ -113,13 +120,13 @@ export function buildSchedule(now = Date.now()) {
     if (ev.status === 'pendente') {
       const owner = onlyFor(ev.companyId);
       const who = owner ? [owner] : (ev.assignees || []).length ? ev.assignees : [ev.createdBy || store.me].filter(Boolean);
-      lateReminders(ev, at0, coName(ev.companyId)).forEach((r) => {
+      who.forEach((member) => lateReminders(ev, at0, coName(ev.companyId), personaOf(member), { clientLike: WORK.clientLike }).forEach((r) => {
         if (r.at < now - 10 * 60e3 || r.at > now + 4 * 86400e3) return;
-        who.forEach((member) => items.push({
+        items.push({
           id: `l_${ev.id}_${r.late}_${ev.date}${ev.time.replace(':', '')}_${member}`,
           at: r.at, member, title: r.title, body: r.body, tag: `late-${ev.id}`, url: `./#/e/${ev.id}`, kind: 'reminders', badge: pendingOn(member, ev.date),
-        }));
-      });
+        });
+      }));
     }
   });
   // resumo do dia (8h) e da véspera (20h)

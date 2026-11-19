@@ -1,5 +1,5 @@
 /* Tela do CLIENTE: somente leitura, somente a empresa dele */
-import { TYPES, isPost, clientStatus, durationOf } from '../constants.js';
+import { TYPES, isPost, clientStatus, durationOf, typeStyle } from '../constants.js';
 import {
   esc, dayLabel, todayKey, addDays, fromKey, toKey, relDay, fmtDayShort, fmtDayLong, fmtMonth, monthKey, addMonths,
   WD_LETTER, fmtTime, toMin, fromMin, rgba, textOn, initials,
@@ -53,7 +53,7 @@ function card(e) {
   return `<article class="ccard ccard--${e.status}">
     <div class="ccard__time"><strong>${e.time ? fmtTime(e.time) : '—'}</strong>${showRange ? `<small>${fmtTime(fromMin(toMin(e.time) + durationOf(e)))}</small>` : ''}</div>
     <div class="ccard__body">
-      <div class="ccard__top"><span class="tbadge tbadge--${e.type}">${icon(t.icon, 13)}${t.label}</span><span class="cstatus cstatus--${e.status}">${e.status === 'feito' ? icon('check', 12) : ''}${status}</span></div>
+      <div class="ccard__top"><span class="tbadge tbadge--${e.type}"${typeStyle(e.type)}>${icon(t.icon, 13)}${t.label}</span><span class="cstatus cstatus--${e.status}">${e.status === 'feito' ? icon('check', 12) : ''}${status}</span></div>
       <h4>${esc(e.title || t.label)}</h4>
       ${e.description ? `<p>${esc(e.description)}</p>` : ''}
       ${e.location ? `<p class="ccard__loc">${icon('pin', 13)} ${esc(e.location)}</p>` : ''}

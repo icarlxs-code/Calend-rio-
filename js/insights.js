@@ -1,12 +1,12 @@
 /* Dicas e alertas do dia (usa o motor do assistente em planner.js) */
 import { store } from './store.js';
-import { TYPES, isPost, durationOf, GENERAL_TIPS } from './constants.js';
+import { TYPES, isPost, durationOf, GENERAL_TIPS, WORK } from './constants.js';
 import { toMin, fromMin, nowMin, todayKey, addDays, diffDays, fmtTime, fmtDuration } from './utils.js';
 import { spanOf, evLabel, fixesFor, routine, freeTime } from './planner.js';
 
 const overlaps = (a, b) => a && b && a[0] < b[1] && b[0] < a[1];
 const nameOf = (id) => store.member(id)?.name || id;
-const isOnSite = (e) => ['shoot', 'meeting'].includes(TYPES[e.type]?.kind);
+const isOnSite = (e) => !!TYPES[e.type]?.onSite || ['shoot', 'meeting'].includes(TYPES[e.type]?.kind);
 
 /* Conflitos de uma pessoa num dia */
 export function personConflicts(personId, date) {
@@ -135,8 +135,9 @@ export function dayInsights(date, person = 'all') {
     list.push({ level: 'ok', icon: 'check', title: 'Agenda sem conflitos', text: 'Ninguém está em dois lugares ao mesmo tempo.' });
   }
 
-  const idx = Math.abs(diffDays('2024-01-01', date)) % GENERAL_TIPS.length;
-  list.push({ level: 'tip', icon: 'bulb', title: 'Dica do dia', text: GENERAL_TIPS[idx] });
+  const tips = WORK.arch === 'marketing' ? GENERAL_TIPS : WORK.tips;
+  const idx = Math.abs(diffDays('2024-01-01', date)) % tips.length;
+  list.push({ level: 'tip', icon: 'bulb', title: 'Dica do dia', text: tips[idx] });
   return list;
 }
 

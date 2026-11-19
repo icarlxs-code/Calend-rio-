@@ -4,7 +4,7 @@ import { fmtLeft } from '../billing.js';
 import { usagePlaceholder, fillUsage } from '../usage.js';
 import { store } from '../store.js';
 import { CONFIG } from '../../config.js';
-import { TYPES, BEST_TIMES_TABLE } from '../constants.js';
+import { TYPES, BEST_TIMES_TABLE, isMarketing, WORK, crew } from '../constants.js';
 import { esc, todayKey, addDays, isStandalone } from '../utils.js';
 import { icon } from '../icons.js';
 import { avatar, toast, confirmDialog, chooseDialog } from '../components.js';
@@ -27,6 +27,8 @@ export function renderSettings() {
     <button class="pbig pbig--toPersonal" data-action="space" data-space="personal">${icon('heart', 22)}<div><strong>Abrir o modo Pessoal</strong><small>Aniversários, compromissos, listas — só você vê</small></div>${icon('right', 18)}</button>
     ${cloud && (store.user?.email || '').toLowerCase() === (CONFIG.adminEmail || '').toLowerCase() ? `<button class="pbig" data-action="admin">${icon('users', 22)}<div><strong>Painel do dono</strong><small>Quantas pessoas usam o app e os detalhes de cada conta</small></div>${icon('right', 18)}</button>` : ''}
     ${store.solo ? planSection() : ''}
+    ${cloud ? fichaCard() : ''}
+    ${cloud && store.solo ? `<button class="pbig pbig--share" data-action="share">${icon('share2', 22)}<div><strong>Agenda compartilhada</strong><small>${store.shared ? `Você está na agenda de ${esc(store.shared.ownerName)}` : store.billing?.addon?.active ? `Plano ${store.billing.addon.plan === 'equipe' ? 'Equipe' : 'Dupla'} ativo · convide e gerencie` : 'Divida a agenda de trabalho com sócio ou equipe · à parte'}</small></div>${icon('right', 18)}</button>` : ''}
     <button class="pbig" data-action="guide">${icon('sparkles', 22)}<div><strong>Como funciona o Lembra</strong><small>Para que serve o modo Trabalho e o modo Pessoal</small></div>${icon('right', 18)}</button>
     <section class="block">
       <h2 class="block__title">${icon('user', 16)} Quem está usando este celular?</h2>
@@ -59,7 +61,7 @@ export function renderSettings() {
         <div class="btnrow">
           <button class="btn btn--primary btn--sm" data-action="ics" data-who="me" data-days="7">${icon('download', 16)} Minha semana</button>
           <button class="btn btn--soft btn--sm" data-action="ics" data-who="me" data-days="30">Meus 30 dias</button>
-          ${store.team.length > 1 ? `<button class="btn btn--soft btn--sm" data-action="ics" data-who="all" data-days="7">Semana da dupla</button>` : ''}
+          ${store.team.length > 1 ? `<button class="btn btn--soft btn--sm" data-action="ics" data-who="all" data-days="7">Semana da ${crew()}</button>` : ''}
         </div>
         <p class="fhelp">No iPhone, toque em “Calendário” ou abra o arquivo baixado e escolha “Adicionar tudo”. Se mudar algo depois, exporte de novo.</p>
       </div>
@@ -70,7 +72,7 @@ export function renderSettings() {
       <div class="card card--row ${cloud ? 'card--ok' : 'card--warn'}">
         ${icon(cloud ? 'cloud' : 'phone', 22)}
         <div><strong>${cloud ? 'Sincronizado na nuvem' : 'Salvo só neste aparelho'}</strong>
-        <small>${cloud ? 'Henrique, Matheus e os links dos clientes veem tudo em tempo real.' : 'Para Henrique e Matheus verem a mesma agenda em celulares diferentes, ative a nuvem (gratuito). Veja o guia no README do projeto.'}</small></div>
+        <small>${cloud ? (store.solo ? 'Sua agenda fica salva na sua conta e aparece igual em qualquer celular em que você entrar.' : 'Henrique, Matheus e os links dos clientes veem tudo em tempo real.') : 'Para ver a mesma agenda em celulares diferentes, ative a nuvem (gratuito). Veja o guia no README do projeto.'}</small></div>
       </div>
     </section>
 
@@ -86,7 +88,7 @@ export function renderSettings() {
       </div>
     </section>` : ''}
 
-    <section class="block">
+    ${isMarketing() ? `<section class="block">
       <h2 class="block__title">${icon('bulb', 16)} Melhores horários (referência)</h2>
       <div class="card card--flush">
         <ul class="besttimes">
@@ -94,7 +96,7 @@ export function renderSettings() {
         </ul>
         <p class="fhelp pad">Médias de mercado. Confiram os Insights do Instagram de cada cliente e ajustem: cada público tem seu horário de pico.</p>
       </div>
-    </section>
+    </section>` : ''}
 
     <section class="block">
       <h2 class="block__title">${icon('download', 16)} Dados e backup</h2>
@@ -108,6 +110,13 @@ export function renderSettings() {
     </section>
     <p class="about">${esc(CONFIG.appName)} — sua agenda de trabalho e pessoal</p>
   </div>`;
+}
+
+/* Ficha da pessoa: profissão + índice calculado (abre para editar) */
+function fichaCard() {
+  const p = store.profile || {};
+  if (!p.onboardedAt) return `<button class="pbig pbig--ficha" data-action="ficha">${icon('idcard', 22)}<div><strong>Preencha sua ficha</strong><small>2 minutos: o Lembra se adapta à sua profissão e calcula seus lembretes</small></div>${icon('right', 18)}</button>`;
+  return `<button class="pbig pbig--ficha" data-action="ficha">${icon('idcard', 22)}<div><strong>Sua ficha</strong><small>${esc(p.profession || 'Profissão')} · índice de esquecimento ${Number(p.index) || 0}/100 · toque para ajustar</small></div>${icon('right', 18)}</button>`;
 }
 
 function notifySection() {
@@ -140,9 +149,9 @@ function notifySection() {
       ${btn}
     </div>
     <form class="list notif-prefs" data-notify-form onsubmit="return false">
-      <label class="list__row"><span><b>Lembretes dos meus posts</b><small>2h e 30 min antes, na hora e cobrança se atrasar</small></span><input type="checkbox" class="switch" name="reminders" ${prefs.reminders ? 'checked' : ''}></label>
+      <label class="list__row"><span><b>Lembretes dos meus compromissos</b><small>antes do horário (como calculado na sua ficha), na hora e cobrança se atrasar</small></span><input type="checkbox" class="switch" name="reminders" ${prefs.reminders ? 'checked' : ''}></label>
       <label class="list__row"${store.team.length < 2 ? ' hidden' : ''}><span><b>Avisos do parceiro</b><small>quando marcar, mudar ou concluir algo</small></span><input type="checkbox" class="switch" name="partner" ${prefs.partner ? 'checked' : ''}></label>
-      <label class="list__row"><span><b>Dicas e motivação</b><small>a cada 1h30–2h30 (8h30 às 21h30): ideias de conteúdo, trends e cobranças por empresa</small></span><input type="checkbox" class="switch" name="coach" ${prefs.coach ? 'checked' : ''}></label>
+      <label class="list__row"><span><b>Dicas do trabalho</b><small>${isMarketing() ? 'ideias de conteúdo, trends e cobranças por empresa' : 'dicas práticas da sua profissão e motivação'}, em horários variados</small></span><input type="checkbox" class="switch" name="coach" ${prefs.coach ? 'checked' : ''}></label>
       <label class="list__row"><span><b>Resumo do dia</b><small>às 8h (hoje) e às 20h (amanhã)</small></span><input type="checkbox" class="switch" name="daily" ${prefs.daily ? 'checked' : ''}></label>
     </form>
     ${cloud ? `<div class="list" data-devices><div class="list__row"><span><small>Conferindo celulares cadastrados…</small></span></div></div>` : ''}
@@ -168,15 +177,18 @@ function fillDevices() {
 
 function planSection() {
   const b = store.billing || {};
-  const label = { trial: 'Teste grátis', monthly: 'Mensal · R$ 9,90/mês', lifetime: 'Vitalício', expired: 'Teste encerrado', blocked: 'Sem plano', unknown: 'Verificando…' }[b.plan] || '—';
+  const label = { trial: 'Teste grátis', monthly: 'Mensal · R$ 9,90/mês', lifetime: 'Vitalício', expired: 'Teste encerrado', blocked: 'Sem plano', shared: 'Agenda compartilhada', unknown: 'Verificando…' }[b.plan] || '—';
   const detail = b.plan === 'trial' ? `Termina em ${fmtLeft(b.trialEndsAt - Date.now())}`
     : b.plan === 'monthly' ? (b.cancelAt ? `Cancelada: vale até ${new Date(b.cancelAt).toLocaleDateString('pt-BR')}` : b.paidUntil ? `Renova em ${new Date(b.paidUntil).toLocaleDateString('pt-BR')}` : 'Ativa')
-      : b.plan === 'lifetime' ? 'Pago uma vez, para sempre. Obrigado!' : '';
+      : b.plan === 'lifetime' ? 'Pago uma vez, para sempre. Obrigado!'
+        : b.plan === 'shared' ? `Liberado pela agenda de ${store.shared?.ownerName || b.ownerName || 'quem te convidou'}. Você não paga nada.` : '';
+  const addon = b.addon && b.addon.active ? `<div class="card card--row"><div><strong>+ Agenda compartilhada ${b.addon.plan === 'equipe' ? 'Equipe · R$ 14,90/mês' : 'Dupla · R$ 6,90/mês'}</strong><small>${b.addon.cancelAt ? `Cancelada: vale até ${new Date(b.addon.cancelAt).toLocaleDateString('pt-BR')}` : 'Complemento mensal, cobrado à parte'}</small></div><button class="btn btn--soft btn--sm" data-action="share">Ver</button></div>` : '';
   return `<section class="block">
     <h2 class="block__title">${icon('card', 16)} Seu plano</h2>
     <div class="card card--row"><div><strong>${esc(label)}</strong>${detail ? `<small>${esc(detail)}</small>` : ''}</div>
-      ${b.plan === 'monthly' ? '<button class="btn btn--soft btn--sm" data-action="billing-portal">Gerenciar</button>' : b.plan !== 'lifetime' ? '<button class="btn btn--primary btn--sm" data-action="plans">Assinar</button>' : ''}
+      ${b.plan === 'monthly' || (b.plan === 'lifetime' && b.addon) ? '<button class="btn btn--soft btn--sm" data-action="billing-portal">Gerenciar</button>' : !['lifetime', 'shared'].includes(b.plan) ? '<button class="btn btn--primary btn--sm" data-action="plans">Assinar</button>' : ''}
     </div>
+    ${addon}
   </section>`;
 }
 

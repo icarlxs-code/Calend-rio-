@@ -1,13 +1,13 @@
 /* Telas "Hoje" (agenda do dia) e "Calendário" (mês) */
 import { store } from '../store.js';
 import { ui } from '../ui.js';
-import { TYPES, isPost, durationOf } from '../constants.js';
+import { TYPES, isPost, durationOf, typeStyle, WORK, ent, isMarketing, crew } from '../constants.js';
 import {
   esc, todayKey, addDays, startOfWeek, fromKey, toKey, fmtDayLong, fmtDayShort, relDay, fmtMonth,
   WD_LETTER, WD_SHORT, dayLabel, fmtDuration, MONTHS_SHORT, MONTHS, toMin, nowMin, fmtTime, fmtCountdown, greeting, rgba, textOn,
 } from '../utils.js';
 import { icon } from '../icons.js';
-import { avatar, avatars, logo, eventCard, emptyState, typeBadge, whoText, timeRange } from '../components.js';
+import { avatar, avatars, logo, eventCard, emptyState, typeBadge, whoText, timeRange, logoOrType } from '../components.js';
 import { dayInsights, nextUp } from '../insights.js';
 import { dayBrief, dayBriefRows, freeTime } from '../planner.js';
 
@@ -51,6 +51,7 @@ export function renderToday() {
       <div class="hdr__titles">
         <p class="hdr__eyebrow">${date === today ? `${greeting()}${me ? ', ' + esc(me.name) : ''}` : esc(fmtDayLong(date))}</p>
         <h1>${esc(relDay(date))}${date === today ? `<span class="hdr__date">${esc(fmtDayShort(date))}</span>` : ''}</h1>
+        ${store.shared || Object.keys(store.profile?.teams || {}).length ? `<button class="wschip" data-action="share">${icon('users', 13)} ${store.shared ? `Agenda de ${esc(store.shared.ownerName)}` : 'Minha agenda'} ${icon('down', 12)}</button>` : ''}
       </div>
       <div class="hdr__actions">
         ${date !== today ? `<button class="chip chip--accent" data-action="go-today">Hoje</button>` : ''}
@@ -94,7 +95,7 @@ export function renderToday() {
           <div><strong>${done} de ${evs.length}</strong><small>tarefas concluídas</small></div>
         </div>
         <div class="summary__types">
-          ${Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([t, n]) => `<span class="tcount tbadge--${t}">${icon(TYPES[t].icon, 13)}<b>${n}</b> ${TYPES[t].label}</span>`).join('')}
+          ${Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([t, n]) => `<span class="tcount tbadge--${t}"${typeStyle(t)}>${icon(TYPES[t].icon, 13)}<b>${n}</b> ${TYPES[t].label}</span>`).join('')}
         </div>
       </div>`
     : '';
@@ -116,9 +117,9 @@ export function renderToday() {
       next = `<button class="next" style="--cc:${color};--cc-soft:${rgba(color, 0.12)}" data-action="open-event" data-id="${n.id}">
         <div class="next__label">${icon('bell', 14)} ${mins > 0 ? 'Próximo · ' + fmtCountdown(mins) : 'Acontecendo agora'}</div>
         <div class="next__row">
-          ${logo(c, 44)}
+          ${logoOrType(c, n.type, 44)}
           <div class="next__txt">
-            <strong>${fmtTime(n.time)} · ${esc(TYPES[n.type].label)} · ${esc(c?.name || '')}</strong>
+            <strong>${[fmtTime(n.time), esc(TYPES[n.type].label), c ? esc(c.name) : ''].filter(Boolean).join(' · ')}</strong>
             <span>${esc(n.title || '')}</span>
           </div>
           ${avatars(n.assignees, 26)}
@@ -180,7 +181,7 @@ export function renderToday() {
           ${store.canEdit('notes', n) ? `<button class="note__del" data-action="del-note" data-id="${n.id}" aria-label="Apagar bilhete">${icon('x', 14)}</button>` : ''}</footer>
       </div>`).join('')}
       <form class="note-add" data-form="note">
-        <input name="text" placeholder="${store.team.length > 1 ? 'Escreva um bilhete para a dupla…' : 'Escreva um bilhete para você…'}" autocomplete="off" maxlength="280">
+        <input name="text" placeholder="${store.team.length > 1 ? `Escreva um bilhete para a ${crew()}…` : 'Escreva um bilhete para você…'}" autocomplete="off" maxlength="280">
         <button class="iconbtn iconbtn--accent" aria-label="Adicionar bilhete">${icon('plus', 18)}</button>
       </form>
     </div>
@@ -207,7 +208,7 @@ export function renderToday() {
     </button>
     ${team}
     <section class="block">
-      <h2 class="block__title">${icon('clock', 16)} Agenda ${store.team.length < 2 ? 'do dia' : ui.person === 'all' ? 'da dupla' : 'de ' + esc(store.member(ui.person)?.name || '')}</h2>
+      <h2 class="block__title">${icon('clock', 16)} Agenda ${store.team.length < 2 ? 'do dia' : ui.person === 'all' ? `da ${crew()}` : 'de ' + esc(store.member(ui.person)?.name || '')}</h2>
       ${summary}
       ${timeline}
     </section>
@@ -219,14 +220,14 @@ export function renderToday() {
 function teamCol(m, date) {
   const evs = store.eventsOn(date, { person: m.id });
   const now = date === todayKey() ? nowMin() : -1;
-  const onsite = evs.filter((e) => ['shoot', 'meeting'].includes(TYPES[e.type]?.kind));
+  const onsite = evs.filter((e) => TYPES[e.type]?.onSite || ['shoot', 'meeting'].includes(TYPES[e.type]?.kind));
   const posts = evs.filter((e) => isPost(e.type)).length;
   const next = evs.find((e) => e.time && e.status !== 'feito' && toMin(e.time) + durationOf(e) > now);
   const ft = freeTime(m.id, date);
   const freeTxt = ft.dayOff ? 'Folga' : `${fmtDuration(Math.round(ft.minutes / 15) * 15) || '0 min'} livres`;
   return `<button class="team__col" data-action="set-person" data-p="${m.id}">
     <span class="team__free ${ft.dayOff ? 'is-off' : ft.minutes >= 240 ? 'is-good' : ft.minutes >= 120 ? 'is-mid' : 'is-low'}">${icon('clock', 12)} ${freeTxt}</span>
-    <div class="team__head">${avatar(m.id, 30)}<div><strong>${esc(m.name)}</strong><small>${evs.length} tarefa${evs.length === 1 ? '' : 's'} · ${posts} post${posts === 1 ? '' : 's'}</small></div></div>
+    <div class="team__head">${avatar(m.id, 30)}<div><strong>${esc(m.name)}</strong><small>${evs.length} ${isMarketing() ? 'tarefa' : 'compromisso'}${evs.length === 1 ? '' : 's'}${isMarketing() ? ` · ${posts} post${posts === 1 ? '' : 's'}` : ''}</small></div></div>
     <ul class="team__where">
       ${onsite.length ? onsite.map((e) => `<li>${icon(TYPES[e.type].icon, 13)}<span><b>${fmtTime(e.time)}</b> ${esc(store.company(e.companyId)?.name || '')}</span></li>`).join('')
         : `<li class="muted">${icon('building', 13)}<span>Trabalho interno / remoto</span></li>`}
@@ -292,13 +293,14 @@ export function renderMonth() {
   </header>
   <div class="page">
     <div class="chips-scroll">
-      <button class="chip${!ui.monthCompany ? ' is-on' : ''}" data-action="month-company" data-id="">Todas as empresas</button>
+      <button class="chip${!ui.monthCompany ? ' is-on' : ''}" data-action="month-company" data-id="">Todos(as)</button>
       ${companies.map((c) => `<button class="chip chip--co${ui.monthCompany === c.id ? ' is-on' : ''}" style="--cc:${c.color}" data-action="month-company" data-id="${c.id}">${logo(c, 18, 5)}${esc(c.name)}</button>`).join('')}
     </div>
 
     <div class="mstats">
-      <div><b>${posts}</b><span>posts</span></div>
-      <div><b>${shoots}</b><span>captações</span></div>
+      ${isMarketing() ? `<div><b>${posts}</b><span>posts</span></div>
+      <div><b>${shoots}</b><span>captações</span></div>` : `<div><b>${monthEvs.length}</b><span>compromissos</span></div>
+      <div><b>${monthEvs.filter((e) => TYPES[e.type]?.onSite).length}</b><span>fora de casa</span></div>`}
       <div><b>${meetings}</b><span>reuniões</span></div>
       <div><b>${monthEvs.filter((e) => e.status === 'feito').length}/${monthEvs.length}</b><span>concluídos</span></div>
     </div>

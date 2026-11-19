@@ -3,10 +3,12 @@
 import { openSheet } from '../components.js';
 import { icon } from '../icons.js';
 import { store } from '../store.js';
+import { TYPES, TYPE_ORDER, WORK, isMarketing } from '../constants.js';
+import { esc } from '../utils.js';
 
 const block = (ic, title, text) => `<div class="gitem"><span class="gitem__ic">${icon(ic, 18)}</span><div><b>${title}</b><p>${text}</p></div></div>`;
 
-const PAGES = [
+const MKT_PAGES = () => [
   {
     key: 'intro', badge: 'Bem-vindo', color: 'linear-gradient(135deg,#111,#3a3a44)', ic: 'sparkles',
     title: 'O Lembra tem dois modos',
@@ -53,7 +55,33 @@ const PAGES = [
   },
 ];
 
+/* Para as outras profissões: o mesmo guia, com os nomes e compromissos da profissão da pessoa */
+function pages() {
+  const P = MKT_PAGES();
+  if (isMarketing()) return P;
+  const labels = TYPE_ORDER.filter((t) => t !== 'outro').map((t) => TYPES[t]?.label).filter(Boolean);
+  const list = (n) => labels.slice(0, n).join(', ').toLowerCase();
+  const prof = WORK.profession ? esc(WORK.profession) : 'o seu trabalho';
+  const t0 = TYPES[TYPE_ORDER[0]] || TYPES.outro;
+  P[0] = { ...P[0], body: P[0].body.replace('Empresas, posts, captações e reuniões', esc(`${WORK.entity.many}, ${list(3)}`)) };
+  P[1] = {
+    ...P[1],
+    title: `Feito para ${prof}`,
+    lead: `O modo Trabalho fala a língua da sua profissão: ${esc(list(5))}. Tudo com hora marcada, avisos calculados para você e cobrança se ficar para trás.`,
+    body: [
+      block(WORK.entity.icon, esc(WORK.entity.many), `Cadastre ${esc(WORK.entity.hint || 'seus grupos de trabalho')} com nome e cor, para separar a agenda de cada um.`),
+      block(t0.icon || 'calendar', 'Seus compromissos', `Marque ${esc(list(6))}… Escreva do seu jeito: o app arruma o título.`),
+      block('bell', 'Avisos sob medida', `Os avisos foram calculados pela sua ficha. Na hora, o Lembra pergunta “${esc(t0.ask || 'Já fez?')}” e, se atrasar, cobra até você marcar como feito.`),
+      block('sparkle', 'Assistente', `Peça em português: “marca ${esc((labels[0] || 'compromisso').toLowerCase())} sexta às 14h”. Ele mostra o que vai fazer e você confirma.`),
+      block('alert', 'Selo de atrasado', 'Passou do horário e não marcou como feito? O cartão fica vermelho para você não esquecer.'),
+    ].join(''),
+  };
+  P[3] = { ...P[3], body: P[3].body.replace('No Trabalho, cadastre uma empresa e um post.', `No Trabalho, marque ${esc((labels[0] || 'um compromisso').toLowerCase())} de hoje ou amanhã.`) };
+  return P;
+}
+
 export function openGuide() {
+  const PAGES = pages();
   let i = 0;
   const html = () => {
     const p = PAGES[i];

@@ -2,7 +2,7 @@
 import { store } from '../store.js';
 import { CONFIG } from '../../config.js';
 import { ui } from '../ui.js';
-import { TYPES, TYPE_ORDER, STATUS, STATUS_ORDER, DURATIONS, REMINDERS, REPEATS, durationOf } from '../constants.js';
+import { TYPES, TYPE_ORDER, STATUS, STATUS_ORDER, DURATIONS, REMINDERS, REPEATS, durationOf, typeStyle, WORK, ent, isMarketing } from '../constants.js';
 import { esc, todayKey, addDays, fmtDayLong, fmtDuration, fmtTime, uid, rgba, fromKey, relDay, toMin, fromMin, dayLabel } from '../utils.js';
 import { icon } from '../icons.js';
 import {
@@ -37,7 +37,7 @@ function detailHtml(id) {
   ${sheetHead('', { right: mine ? `<button class="btn-text" data-act="edit">Editar</button>` : '' })}
   <div class="detail">
     <div class="detail__hero" style="--cc:${color};--cc-soft:${rgba(color, 0.12)}">
-      <div class="detail__co">${logo(c, 40)}<div><strong>${esc(c?.name || 'Sem empresa')}</strong>${c?.instagram ? `<small>@${esc(c.instagram)}</small>` : ''}</div>${typeBadge(e.type, { solid: true })}</div>
+      <div class="detail__co">${logo(c, 40)}<div><strong>${esc(c?.name || 'Sem ' + ent(false, true))}</strong>${c?.instagram ? `<small>@${esc(c.instagram)}</small>` : ''}</div>${typeBadge(e.type, { solid: true })}</div>
       <h2><span class="pfrow">${platformIcons(e, 24)}</span>${esc(e.title || TYPES[e.type].label)}</h2>
       <p class="detail__when">${icon('calendar', 15)} ${esc(relDay(e.date))}, ${esc(fmtDayLong(e.date).split(', ')[1])} · ${icon('clock', 15)} ${esc(timeRange(e))}</p>
     </div>
@@ -120,7 +120,7 @@ async function deleteEvent(id, api) {
       if (!r) return;
       if (r === 'next') ids = next;
     } else if (!(await confirmDialog({ title: 'Excluir este evento?', ok: 'Excluir', danger: true }))) return;
-  } else if (!(await confirmDialog({ title: 'Excluir este evento?', text: 'Ele some para a dupla e para o cliente.', ok: 'Excluir', danger: true }))) return;
+  } else if (!(await confirmDialog({ title: 'Excluir este evento?', text: store.team.length > 1 ? 'Ele some da agenda de todos.' : 'Ele some da sua agenda.', ok: 'Excluir', danger: true }))) return;
   const backup = ids.map((i) => ({ ...store.event(i) }));
   await store.removeMany('events', ids);
   api && api.close();
@@ -136,7 +136,8 @@ export function openEventEditor({ id = null, date = null, companyId = null, type
   const existing = id ? store.event(id) : null;
   if (existing && !store.canEdit('events', existing)) { store._denied('events', existing); return; }
   const companies = store.companiesSorted();
-  const defType = type || 'feed';
+  // tipo inicial: o primeiro da profissão (Feed só para marketing)
+  const defType = type || (TYPE_ORDER.includes('feed') ? 'feed' : TYPE_ORDER[0]);
   const draft = existing
     ? JSON.parse(JSON.stringify(existing))
     : {
@@ -186,15 +187,15 @@ function editorHtml(d, editing, rep) {
     <div class="fgroup">
       <label class="flabel">O que é?</label>
       <div class="typegrid">
-        ${TYPE_ORDER.map((t) => `<button type="button" class="typebtn tbadge--${t}${d.type === t ? ' is-on' : ''}" data-type="${t}">${icon(TYPES[t].icon, 20)}<span>${TYPES[t].label}</span></button>`).join('')}
+        ${TYPE_ORDER.map((t) => `<button type="button" class="typebtn tbadge--${t}${d.type === t ? ' is-on' : ''}"${typeStyle(t)} data-type="${t}">${icon(TYPES[t].icon, 20)}<span>${TYPES[t].label}</span></button>`).join('')}
       </div>
     </div>
 
     <div class="fgroup">
-      <label class="flabel">Empresa</label>
+      <label class="flabel">${ent()}${isMarketing() ? '' : ' <em class="tag">opcional</em>'}</label>
       <div class="cogrid">
         ${companies.map((c) => `<button type="button" class="cobtn${d.companyId === c.id ? ' is-on' : ''}" style="--cc:${c.color}" data-company="${c.id}">${logo(c, 26, 7)}<span>${esc(c.name)}</span></button>`).join('')}
-        <button type="button" class="cobtn cobtn--add" data-newco>${icon('plus', 18)}<span>Nova empresa</span></button>
+        <button type="button" class="cobtn cobtn--add" data-newco>${icon('plus', 18)}<span>Novo(a) ${ent(false, true)}</span></button>
       </div>
     </div>
 
@@ -234,7 +235,7 @@ function editorHtml(d, editing, rep) {
     <div class="fgroup" data-when="location" ${needsLocation(d.type) ? '' : 'hidden'}>
       <label class="flabel" for="f-loc">Local</label>
       <input id="f-loc" class="input" name="location" value="${esc(d.location || '')}" placeholder="Endereço ou nome do lugar" autocomplete="off">
-      <button type="button" class="btn-text btn-text--sm" data-useaddr hidden>${icon('pin', 14)} Usar endereço da empresa</button>
+      <button type="button" class="btn-text btn-text--sm" data-useaddr hidden>${icon('pin', 14)} Usar o endereço cadastrado</button>
     </div>
 
     <div class="fgroup">
@@ -407,7 +408,7 @@ function mountEditor(api, d, original, rep) {
   $('[data-save]').onclick = async () => {
     readForm();
     if (saving) return;
-    if (!d.companyId) {
+    if (!d.companyId && isMarketing()) {
       toast('Escolha a empresa');
       el.querySelector('.cogrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;

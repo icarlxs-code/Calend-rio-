@@ -46,7 +46,8 @@ export async function api(path, body) {
   const res = await fetch(server() + path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify(body || {}),
+    // agenda compartilhada: o servidor confere se a pessoa faz parte dela
+    body: JSON.stringify(store.shared && !(body && 'ws' in body) ? { ...(body || {}), ws: store.workspace } : body || {}),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw Object.assign(new Error(data.error || `Erro ${res.status}`), { status: res.status });

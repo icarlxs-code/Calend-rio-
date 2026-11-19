@@ -5,6 +5,11 @@ import { esc, isStandalone } from '../utils.js';
 import { icon } from '../icons.js';
 import { avatar, toast } from '../components.js';
 import * as push from '../avisos.js';
+import { TYPES, TYPE_ORDER, WORK, isMarketing, ent } from '../constants.js';
+
+/* exemplos com a cara da profissão da pessoa */
+const tl = (i) => TYPES[TYPE_ORDER[i] || 'outro']?.label || 'Compromisso';
+const tlist = (n = 3) => TYPE_ORDER.slice(0, n).map((t) => TYPES[t]?.label.toLowerCase()).join(', ');
 
 const LS_DONE = 'pauta.onboarded';
 const LS_ASKED = 'pauta.notifyAskedAt';
@@ -12,7 +17,8 @@ const LS_ASKED = 'pauta.notifyAskedAt';
 /* Decide se mostra a apresentação completa ou só o pedido de notificações */
 export function maybeOnboard() {
   const done = localStorage.getItem(LS_DONE);
-  if (!done) return show(store.me ? ['welcome', 'notify', 'done'] : ['welcome', 'who', 'notify', 'done']);
+  // conta própria já passou pela ficha (que é a apresentação): só falta pedir as notificações
+  if (!done) return show(store.solo ? ['notify', 'done'] : store.me ? ['welcome', 'notify', 'done'] : ['welcome', 'who', 'notify', 'done']);
   if (!store.me && store.mode === 'local') return show(['who']);
   // já instalado na Tela de Início e ainda não respondeu às notificações: pergunta de novo (no máximo a cada 3 dias)
   const asked = Number(localStorage.getItem(LS_ASKED) || 0);
@@ -47,6 +53,19 @@ function stepHtml(step, i, total) {
       <button class="btn btn--primary btn--block" data-next ${store.me ? '' : 'disabled'}>Continuar</button>`;
   }
   if (step === 'notify') {
+    if (!isMarketing()) {
+      return `<div class="ob__previews">
+        ${preview(`Daqui a 1h: ${tl(0)}`, `14h — ${tl(0).toLowerCase()} marcada na sua agenda`, 'agora')}
+        ${preview(`${TYPES[TYPE_ORDER[0]]?.ask || 'Já fez?'} ${tl(0)}`, 'Se já resolveu, toque e marque como feito ✓', '14:00')}
+        ${preview(`Bom dia, ${me?.name || ''}! Seu dia hoje`, `4 compromissos · primeiro: 8h ${tl(1)}`, '7:20')}
+      </div>
+      <h1>Nunca mais esqueça um compromisso</h1>
+      <p>Avisos antes de cada ${esc(tlist(2))} — calculados pela sua ficha —, uma pergunta na hora exata e cobrança se algo ficar para trás.</p>
+      <div data-notify-msg></div>
+      ${dots}
+      <button class="btn btn--primary btn--block" data-enable>${icon('bell', 18)} Ativar notificações</button>
+      <button class="btn btn--ghost btn--block" data-skip>Agora não</button>`;
+    }
     return `<div class="ob__previews">
         ${preview('Daqui a 2h: Reels · Pura Vida', '18h — postar o Reels “Bastidores”', 'agora')}
         ${preview(`${partner?.name || 'Seu parceiro'} marcou para você`, 'Story · Café Aroma — amanhã, 16h', 'há 2 min')}
@@ -62,9 +81,10 @@ function stepHtml(step, i, total) {
   return `<div class="ob__art ob__art--ok">${icon('check', 40)}</div>
     <h1>Tudo pronto${me ? ', ' + esc(me.name) : ''}!</h1>
     <ul class="ob__tips">
-      <li>${icon('plus', 18)}<span>Toque no <b>+</b> para marcar posts, captações e reuniões.</span></li>
-      <li>${icon('sparkle', 18)}<span>O <b>Assistente</b> avisa conflitos e sugere os melhores horários.</span></li>
-      <li>${icon('link', 18)}<span>Em <b>Empresas</b>, mande para cada cliente o link do cronograma dele.</span></li>
+      <li>${icon('plus', 18)}<span>Toque no <b>+</b> para marcar ${isMarketing() ? 'posts, captações e reuniões' : esc(tlist(3))}.</span></li>
+      <li>${icon('sparkle', 18)}<span>O <b>Assistente</b> avisa conflitos e ${isMarketing() ? 'sugere os melhores horários' : 'marca as coisas por você: é só escrever'}.</span></li>
+      ${isMarketing() ? `<li>${icon('link', 18)}<span>Em <b>Empresas</b>, mande para cada cliente o link do cronograma dele.</span></li>`
+        : `<li>${icon(WORK.entity.icon, 18)}<span>Em <b>${esc(ent(true))}</b>, organize ${esc(WORK.entity.hint || 'seus compromissos por grupo')}.</span></li>`}
     </ul>
     ${dots}
     <button class="btn btn--primary btn--block" data-next>Abrir a agenda</button>`;

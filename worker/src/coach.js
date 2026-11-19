@@ -85,6 +85,44 @@ Não repita estas mensagens recentes: ${recent.join(' | ') || '—'}`;
   return null;
 }
 
+/* ---------- Outras profissões: dicas da rotina, agenda e ânimo (sem posts nem trends) ---------- */
+const WORK_KINDS = ['dica', 'agenda', 'motivacao', 'dica', 'pausa', 'agenda'];
+const hm = (t) => (t ? t.replace(':00', 'h').replace(':', 'h') : '');
+export function workFallback(kind, w, name, today) {
+  const nx = (w.next || []).filter((e) => !e.who || e.who === w.me);
+  const first = nx[0];
+  if (kind === 'agenda' && w.late) return { title: '⏰ Ficou algo para trás', body: `${name}, você tem ${w.late} ${w.late > 1 ? 'compromissos atrasados' : 'compromisso atrasado'}. Resolve e marca como feito, que o dia rende mais leve.` };
+  if (kind === 'agenda' && first) return { title: `📅 ${first.label}${first.time ? ' às ' + hm(first.time) : ''}`, body: `${first.date === today ? 'Hoje' : 'Próximo'}: ${first.title || first.label}. Já deixa tudo pronto pra não correr depois.` };
+  if (kind === 'dica' && (w.tips || []).length) return { title: `💡 Dica${w.profession ? ' para ' + w.profession.toLowerCase() : ''}`, body: pick(w.tips) };
+  if (kind === 'pausa') return { title: '🌿 Respira um pouco', body: pick([`${name}, 2 minutos: ombros para baixo, respira fundo três vezes e bebe água.`, 'Levanta, alonga as costas e olha para longe da tela por um minuto. Seu corpo agradece.', 'Uma pausa curta agora rende mais do que forçar até o fim. Volta já, mais leve.']) };
+  return { title: '✨ Bora!', body: pick([`Você é melhor do que imagina, ${name}. Um passo de cada vez. 💪`, 'Constância vence talento. Hoje é dia de fazer acontecer.', `Deus está contigo, ${name}. Confia no seu processo. 🙏`, 'Quem cumpre o que promete pra si mesmo fica imparável. Vai com tudo hoje.']) };
+}
+async function aiWork(env, kind, w, name, today, recent) {
+  if (!env.AI) return null;
+  const prof = w.profession || 'profissional';
+  const nx = (w.next || []).filter((e) => !e.who || e.who === w.me).slice(0, 3).map((e) => `${e.date === today.slice(0, 10) ? 'hoje' : e.date} ${e.time} ${e.label}${e.title ? ' — ' + e.title : ''}`).join('; ');
+  const task = {
+    dica: `Dê UMA dica prática, específica e útil para a rotina de trabalho de quem é ${prof} (organização, produtividade, cuidado com o tempo, preparo, segurança). ${w.tips?.length ? 'Exemplos do tipo de dica (não copie): ' + w.tips.slice(0, 4).join(' | ') : ''}`,
+    agenda: nx ? `Lembre ${name} do próximo compromisso de trabalho e sugira uma preparação rápida: ${nx}.` : `Incentive ${name} a planejar os próximos compromissos de trabalho no Lembra.`,
+    motivacao: `Mande uma frase motivacional curta e verdadeira para ${name}, que trabalha como ${prof}. Valorize o trabalho dessa profissão. Pode citar fé e constância. Sem clichê exagerado.`,
+    pausa: `Sugira uma pausa rápida de cuidado (respirar, alongar, beber água, postura) adequada para quem é ${prof}.`,
+  }[kind];
+  const sys = `Você escreve notificações de celular para ${name}, que trabalha como ${prof}.
+Hoje é ${today}. Escreva em português do Brasil, tom de amigo que se importa, direto. Pode usar 1 emoji.
+Responda SÓ com JSON: {"title": "até 40 caracteres", "body": "até 160 caracteres"}.
+Não repita estas mensagens recentes: ${recent.join(' | ') || '—'}`;
+  for (const model of MODELS) {
+    try {
+      const out = await env.AI.run(model, { messages: [{ role: 'system', content: sys }, { role: 'user', content: task }], max_tokens: 200, temperature: 0.9 });
+      const m = /\{[\s\S]*\}/.exec(String(out?.response || ''));
+      if (!m) continue;
+      const j = JSON.parse(m[0]);
+      if (j.title && j.body) return { title: String(j.title).slice(0, 60), body: String(j.body).slice(0, 220), byAI: true };
+    } catch (e) { console.log('coach IA', model, e.message); }
+  }
+  return null;
+}
+
 /* Escolhe a empresa: quem está há mais tempo sem post tem mais chance */
 function chooseCompany(list) {
   if (!list.length) return null;
@@ -113,16 +151,33 @@ export async function runCoach(env, sendToMember, team) {
     return ctxCache[key];
   };
   const dates = upcomingDates(br.date);
-  const trends = await getTrends(env);
+  let trendsP = null;
+  const trendsOf = () => (trendsP ||= getTrends(env));
   let sent = 0;
   // grava o próximo horário antes de enviar: nunca manda duas vezes seguidas
   for (const m of due) st.next[m.id] = now + (90 + Math.random() * 60) * 60e3;
   await env.CAL.put('coach', JSON.stringify(st));
   for (const m of due) {
-    const kind = mins < 9 * 60 + 30 ? 'motivacao' : pick(KINDS);
     const ctx = await ctxOf(m);
+    const recent0 = (st.recent[m.id] || []).slice(-5);
+    // outras profissões: dica da rotina, agenda, ânimo e pausa (não fala de posts)
+    if (ctx.work && ctx.work.arch && ctx.work.arch !== 'marketing') {
+      const kind = mins < 9 * 60 + 30 ? 'motivacao' : pick(WORK_KINDS);
+      const w = { ...ctx.work, me: m.id };
+      const useAI = kind !== 'agenda' || !w.late;
+      const msg = (useAI ? await aiWork(env, kind, w, m.name, today, recent0) : null) || workFallback(kind, w, m.name, br.date);
+      sent += await sendToMember(env, m.id, { title: msg.title, body: msg.body, tag: 'coach', url: './' }, 'coach');
+      st.recent[m.id] = [...recent0, msg.body].slice(-6);
+      const u = st.usage && st.usage.date === br.date ? st.usage : { date: br.date, sent: 0, ai: 0 };
+      u.sent++;
+      if (msg.byAI) u.ai++;
+      st.usage = u;
+      continue;
+    }
+    const kind = mins < 9 * 60 + 30 ? 'motivacao' : pick(KINDS);
     const co = chooseCompany((ctx.companies || []).filter((c) => !c.onlyFor || c.onlyFor === m.id));
     const recent = (st.recent[m.id] || []).slice(-5);
+    const trends = await trendsOf();
     const msg = (co || kind === 'motivacao' ? await aiMessage(env, co ? kind : 'motivacao', co, m.name, ctx, trends, dates, recent) : null)
       || fallback(co ? kind : 'motivacao', co, m.name, dates);
     sent += await sendToMember(env, m.id, { title: msg.title, body: msg.body, tag: 'coach', url: './' }, 'coach');

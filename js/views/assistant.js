@@ -1,13 +1,13 @@
 /* Assistente: conversa com o Claude dentro do app + análise automática da agenda */
 import { store } from '../store.js';
 import { ui } from '../ui.js';
-import { TYPES, TYPE_ORDER, isPost } from '../constants.js';
+import { TYPES, TYPE_ORDER, isPost, isMarketing } from '../constants.js';
 import { esc, todayKey, addDays, fromKey, fmtTime, fmtDuration, dayLabel, WD_SHORT, toMin, nowMin } from '../utils.js';
 import { icon } from '../icons.js';
 import { openSheet, sheetHead, avatar, toast } from '../components.js';
 import { dayBrief, freeTime, bestSlots, routine, evLabel } from '../planner.js';
 import { personConflicts } from '../insights.js';
-import { askClaude, PRESETS } from '../claude-link.js';
+import { askClaude, presets } from '../claude-link.js';
 import { planAction } from '../agent.js';
 
 /* ---------- conversa ---------- */
@@ -92,10 +92,11 @@ function chatHtml() {
       <div class="acard__btns"><button class="btn btn--primary btn--sm" data-redo>Fazer agora</button><button class="btn btn--soft btn--sm" data-redo-skip>Ignorar</button></div></div>` : ''}
     <div class="chat">
       ${chat.length ? chat.map((m, i) => `<div class="msg msg--${m.role}${m.error ? ' msg--err' : ''}">${md(m.text)}</div>${m.actions && m.actions.length ? actionsCard(m, i) : ''}`).join('')
-        : `<div class="msg msg--assistant">Oi! Eu vejo e <b>mexo</b> na agenda de vocês. Peça o que quiser, por exemplo: “coloca captação na JG Garcia de segunda a sábado, das 7h ao meio-dia, até o fim do mês”, “passa o reels da Pura Vida para sexta 18h”, “marca cortar cabelo sábado 15h no meu pessoal”. Eu mostro o que vou fazer e você confirma.</div>`}
+        : isMarketing() ? `<div class="msg msg--assistant">Oi! Eu vejo e <b>mexo</b> na agenda de vocês. Peça o que quiser, por exemplo: “coloca captação na JG Garcia de segunda a sábado, das 7h ao meio-dia, até o fim do mês”, “passa o reels da Pura Vida para sexta 18h”, “marca cortar cabelo sábado 15h no meu pessoal”. Eu mostro o que vou fazer e você confirma.</div>`
+        : `<div class="msg msg--assistant">Oi! Eu vejo e <b>mexo</b> na sua agenda. Peça o que quiser, por exemplo: “marca ${esc((TYPES[TYPE_ORDER[0]]?.label || 'reunião').toLowerCase())} amanhã às 14h”, “coloca ${esc((TYPES[TYPE_ORDER[1]]?.label || 'tarefa').toLowerCase())} toda segunda às 8h até o fim do mês”, “marca cortar cabelo sábado 15h no meu pessoal”. Eu mostro o que vou fazer e você confirma.</div>`}
       ${thinking ? `<div class="msg msg--assistant msg--typing"><i></i><i></i><i></i></div>` : ''}
     </div>
-    <div class="presets">${PRESETS.map((p, i) => `<button class="preset" data-preset="${i}">${esc(p.label)}</button>`).join('')}</div>
+    <div class="presets">${presets().map((p, i) => `<button class="preset" data-preset="${i}">${esc(p.label)}</button>`).join('')}</div>
     <form class="chat__form" data-chatform onsubmit="return false">
       <textarea class="input" rows="1" name="q" placeholder="Peça ou pergunte algo…" ${thinking ? 'disabled' : ''}></textarea>
       <button class="iconbtn iconbtn--accent" type="submit" aria-label="Enviar" ${thinking ? 'disabled' : ''}>${icon('right', 20)}</button>
@@ -263,7 +264,7 @@ export function openAssistant() {
   function bindChat(a, send) {
     a.send = send;
     const el = a.el;
-    el.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => send(PRESETS[+b.dataset.preset].q)));
+    el.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => send(presets()[+b.dataset.preset].q)));
     el.querySelectorAll('[data-act-ok]').forEach((b) => (b.onclick = async () => {
       const m = chat[+b.dataset.actOk];
       if (!m || m.actStatus !== 'pending') return;

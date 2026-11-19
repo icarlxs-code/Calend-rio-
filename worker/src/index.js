@@ -8,7 +8,7 @@ import { generateVapid, sendPush } from './webpush.js';
 import { verifyIdToken } from './auth.js';
 import { runCoach } from './coach.js';
 import { runPersonalCoach } from './pcoach.js';
-import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll } from './billing.js';
+import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive } from './billing.js';
 
 const SUBJECT = 'mailto:avisos@calendario.app';
 
@@ -113,12 +113,22 @@ const reply = (env, req, data, status = 200) =>
 
 const clean = (s, n) => String(s || '').slice(0, n);
 const MEMBERS = (env) => JSON.parse(env.TEAM || '[]').map((m) => m.id);
-/* Com quem a pessoa divide a agenda: a dupla entre si; conta própria, só ela mesma */
-const membersOf = (me, env) => (me.ws === 'main' ? MEMBERS(env) : [me.id]);
+/* Com quem a pessoa divide a agenda: a dupla entre si; agenda compartilhada (paga), o dono e os convidados;
+   conta própria, só ela mesma */
+const membersOf = (me, env) => (me.ws === 'main' ? MEMBERS(env) : me.team ? [me.team.ownerId, ...me.team.members.map((m) => m.id)] : [me.id]);
+/* Em qual agenda a pessoa está mexendo: a própria ou a de uma equipe em que entrou (conferido aqui) */
+export async function withWorkspace(env, me, ws) {
+  if (me.ws === 'main') return me;
+  const target = /^[A-Za-z0-9]{6,64}$/.test(ws || '') ? ws : me.ws;
+  const team = await env.CAL.get(`team:${target}`, 'json');
+  if (target === me.ws) return team && team.members?.length && (await teamActive(env, team)) ? { ...me, team } : me;
+  if (!team || !(team.members || []).some((m) => m.uid === me.ws) || !(await teamActive(env, team))) throw Object.assign(new Error('Você não faz parte dessa agenda compartilhada (ou ela não está ativa).'), { status: 403 });
+  return { ...me, ws: target, team, guest: true };
+}
 const scheduleKey = (me) => (me.ws === 'main' ? 'schedule' : `schedule:${me.ws}`);
 /* Contas próprias conhecidas pelo servidor (para os lembretes e mensagens rodarem para elas também) */
 async function registerUser(env, me) {
-  if (me.ws === 'main') return;
+  if (me.ws === 'main' || me.guest) return; // convidado: o relógio já roda pela agenda do dono
   const reg = (await env.CAL.get('users', 'json')) || {};
   const cur = reg[me.id];
   if (cur && cur.name === me.name && cur.ws === me.ws) return; // já conhecido: não gasta gravação
@@ -156,7 +166,13 @@ function cleanProfile(p, me) {
   return {
     name: me.name,
     date: day(p.date),
-    prefs: { nudges: P.nudges !== false, water: P.water !== false, meals: P.meals !== false, faith: P.faith !== false, freq: ['alta', 'normal', 'calma'].includes(P.freq) ? P.freq : 'normal' },
+    prefs: {
+      nudges: P.nudges !== false, water: P.water !== false, meals: P.meals !== false, faith: P.faith !== false, freq: ['alta', 'normal', 'calma'].includes(P.freq) ? P.freq : 'normal',
+      // horários da ficha (janela das mensagens do dia) e o tom que a pessoa escolheu
+      ...Object.fromEntries(['wake', 'sleep', 'lunch'].filter((k) => /^\d{2}:\d{2}$/.test(P[k] || '')).map((k) => [k, P[k]])),
+      ...(['carinhoso', 'firme', 'direto'].includes(P.tone) ? { tone: P.tone } : {}),
+    },
+    work: p.work && typeof p.work === 'object' ? { profession: clean(p.work.profession, 80), goal: clean(p.work.goal, 80) } : null,
     today: arr(p.today, 20).map(ev), tomorrow: arr(p.tomorrow, 20).map(ev), overdue: arr(p.overdue, 10).map(ev),
     lastByCat: byCat(p.lastByCat), nextByCat: byCat(p.nextByCat),
     birthdays: arr(p.birthdays, 10).map((b) => ({ name: clean(b?.name, 60), inDays: Number.isFinite(b?.inDays) ? b.inDays : 99 })),
@@ -199,10 +215,27 @@ async function handle(req, env) {
   }
   const body = await req.json().catch(() => ({}));
 
+  // ---------- agenda compartilhada (complemento pago) ----------
+  if (url.pathname === '/share/sync') {
+    try {
+      return reply(env, req, await syncTeam(env, me, (Array.isArray(body.members) ? body.members : []).slice(0, 20).map((m) => ({ uid: clean(m?.uid, 64), name: clean(m?.name, 40) })), Date.now(), clean(body.ownerName, 40)));
+    } catch (e) { return reply(env, req, { error: e.message }, e.status || 500); }
+  }
+  if (url.pathname === '/share/status') {
+    try {
+      const w = await withWorkspace(env, me, clean(body.ws, 64));
+      return reply(env, req, { ok: true, ws: w.ws, active: !!w.team, members: w.team ? membersOf(w, env) : [me.id] });
+    } catch (e) { return reply(env, req, { ok: false, error: e.message }, e.status || 500); }
+  }
+  // as outras rotas valem para a agenda que a pessoa está usando (a própria ou a compartilhada)
+  if (['/notify', '/schedule', '/coach'].includes(url.pathname)) {
+    try { me = await withWorkspace(env, me, clean(body.ws, 64)); } catch (e) { return reply(env, req, { error: e.message }, e.status || 403); }
+  }
+
   // ---------- cobrança e teste grátis ----------
   if (url.pathname === '/billing/status') return reply(env, req, await billingStatus(env, me));
   if (url.pathname === '/billing/trial') {
-    const st = await startTrial(env, me, { deviceId: clean(body.deviceId, 80), ip: req.headers.get('CF-Connecting-IP') || '' });
+    const st = await startTrial(env, me, { deviceId: clean(body.deviceId, 80), ip: req.headers.get('CF-Connecting-IP') || '', cpf: clean(body.cpf, 20) });
     await registerUser(env, me);
     return reply(env, req, st);
   }
@@ -268,7 +301,14 @@ async function handle(req, env) {
       onlyFor: /^[a-z]{1,20}$/.test(c.onlyFor || '') ? c.onlyFor : null, name: clean(c.name, 80), niche: clean(c.niche, 160), lastPost: clean(c.lastPost, 10), nextPost: clean(c.nextPost, 10),
       daysSincePost: typeof c.daysSincePost === 'number' ? c.daysSincePost : null,
     }));
-    await env.CAL.put(me.ws === 'main' ? 'coach-ctx' : `coach-ctx:${me.ws}`, JSON.stringify({ companies, updatedAt: Date.now() }));
+    const W = body.work && typeof body.work === 'object' ? body.work : null;
+    const work = W ? {
+      arch: /^[a-z_]{2,30}$/.test(W.arch || '') ? W.arch : 'generico', profession: clean(W.profession, 80), entity: clean(W.entity, 30),
+      tips: (Array.isArray(W.tips) ? W.tips : []).slice(0, 12).map((t) => clean(t, 240)).filter(Boolean),
+      next: (Array.isArray(W.next) ? W.next : []).slice(0, 5).map((e) => ({ date: clean(e?.date, 10), time: /^\d{2}:\d{2}$/.test(e?.time || '') ? e.time : '', label: clean(e?.label, 40), title: clean(e?.title, 60), who: /^[\w-]{1,40}$/.test(e?.who || '') ? e.who : '' })),
+      late: Number.isFinite(W.late) ? Math.min(99, Math.max(0, W.late)) : 0,
+    } : null;
+    await env.CAL.put(me.ws === 'main' ? 'coach-ctx' : `coach-ctx:${me.ws}`, JSON.stringify({ companies, work, updatedAt: Date.now() }));
     await registerUser(env, me);
     return reply(env, req, { ok: true });
   }
@@ -294,7 +334,7 @@ async function handle(req, env) {
   if (url.pathname === '/tidy') {
     const titles = (Array.isArray(body.titles) ? body.titles : []).slice(0, 20).map((t) => clean(t, 120));
     if (!titles.length || !env.AI) return reply(env, req, { titles: [] });
-    const prompt = `Corrija SÓ a ortografia, os acentos e as maiúsculas destes títulos curtos de posts de redes sociais em português do Brasil. Nomes próprios, produtos e variedades com inicial maiúscula (ex.: Manga Palmer, Couve-flor). NÃO acrescente nem tire palavras, NÃO mude o sentido. Responda só com um JSON: lista de textos na mesma ordem.\n${JSON.stringify(titles)}`;
+    const prompt = `Corrija SÓ a ortografia, os acentos e as maiúsculas destes títulos curtos de compromissos de uma agenda (trabalho de qualquer profissão ou posts de redes sociais) em português do Brasil. Nomes próprios, produtos e variedades com inicial maiúscula (ex.: Manga Palmer, Couve-flor). NÃO acrescente nem tire palavras, NÃO mude o sentido. Responda só com um JSON: lista de textos na mesma ordem.\n${JSON.stringify(titles)}`;
     for (const model of ['@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/meta/llama-3.1-8b-instruct-fast']) {
       try {
         const out = await env.AI.run(model, { messages: [{ role: 'user', content: prompt }], max_tokens: 800, temperature: 0 });

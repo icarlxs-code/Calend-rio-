@@ -1,17 +1,25 @@
 /* "Perguntar ao Claude": abre o Claude com o login normal da pessoa (app ou claude.ai),
    já com o contexto da agenda. Sem chave de API: nada é enviado por este app. */
 import { store } from './store.js';
-import { TYPES } from './constants.js';
+import { TYPES, WORK, isMarketing } from './constants.js';
 import { todayKey, addDays, fmtDayLong, fromKey, WEEKDAYS } from './utils.js';
 import { routine } from './planner.js';
 import { toast } from './components.js';
 
-export const PRESETS = [
+const MKT_PRESETS = [
   { label: 'Organize meu dia', q: 'Analise a agenda de hoje e me diga, em ordem, o que fazer e quando. Aponte conflitos e onde dá para ganhar tempo livre.' },
   { label: 'Melhores horários da semana', q: 'Sugira os melhores horários para os posts desta semana de cada empresa, sem conflitar com as captações e respeitando o expediente e o almoço.' },
   { label: 'Equilibrar a dupla', q: 'A carga de trabalho entre Henrique e Matheus está equilibrada nos próximos 7 dias? Sugira trocas concretas de responsável.' },
   { label: 'Ideias de conteúdo', q: 'Para cada empresa, sugira 3 ideias de posts (feed, reels e stories) para a próxima semana, com legenda curta.' },
 ];
+/* Atalhos do assistente com a cara da profissão da pessoa */
+const GEN_PRESETS = [
+  { label: 'Organize meu dia', q: 'Analise a minha agenda de hoje e me diga, em ordem, o que fazer e quando. Aponte conflitos e onde dá para ganhar tempo livre.' },
+  { label: 'Como está minha semana?', q: 'Resuma os meus compromissos dos próximos 7 dias, aponte os dias mais cheios e onde tenho tempo livre.' },
+  { label: 'O que está atrasado?', q: 'Liste o que ficou atrasado ou sem marcar como feito e sugira quando resolver cada coisa.' },
+  { label: 'Dicas para minha rotina', q: 'Com base na minha profissão e na minha agenda, me dê 3 dicas práticas para organizar melhor a semana e não esquecer nada.' },
+];
+export const presets = () => (isMarketing() ? MKT_PRESETS : GEN_PRESETS);
 
 const who = (ids = []) => ids.map((id) => store.member(id)?.name).filter(Boolean).join(' e ') || 'sem responsável';
 
@@ -20,7 +28,7 @@ export function buildPrompt(question, days = 14) {
   const t = todayKey();
   const now = new Date();
   const lines = [];
-  lines.push(`Você é o assistente de organização de uma dupla de social media (${store.team.map((m) => m.name).join(' e ')}) que cuida do Instagram de várias empresas. Responda em português do Brasil, de forma curta e direta (sem rodeios), com horários concretos e no máximo uns 10 itens.`);
+  lines.push(`${isMarketing() ? `Você é o assistente de organização de uma dupla de social media (${store.team.map((m) => m.name).join(' e ')}) que cuida do Instagram de várias empresas.` : `Você é o assistente de organização de ${store.team.map((m) => m.name).join(' e ')}${WORK.profession ? `, que trabalha como ${WORK.profession}` : ''}. Fale a língua dessa profissão.`} Responda em português do Brasil, de forma curta e direta (sem rodeios), com horários concretos e no máximo uns 10 itens.`);
   lines.push('');
   lines.push(`Agora: ${fmtDayLong(t)}, ${now.toTimeString().slice(0, 5)}.`);
   lines.push(`Rotina combinada: expediente ${r.workStart}–${r.workEnd}, almoço ${r.lunchStart}–${r.lunchEnd}, folga: ${r.daysOff.map((d) => WEEKDAYS[d]).join(', ') || 'nenhuma'}, deslocamento mínimo entre lugares: ${r.travelMin} min, máximo de ${r.maxTasks} tarefas por pessoa/dia.`);

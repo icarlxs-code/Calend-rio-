@@ -81,6 +81,39 @@ const backend = {
     return fs.setDoc(fs.doc(db, 'users', uid), clean(data), { merge: true });
   },
   idToken: () => (auth.currentUser ? auth.currentUser.getIdToken() : null),
+  /* ---------- agenda compartilhada (teams/{dono}) ---------- */
+  async getTeam(owner) {
+    const s = await fs.getDoc(fs.doc(db, 'teams', owner));
+    return s.exists() ? s.data() : null;
+  },
+  setTeam(owner, data) {
+    return fs.setDoc(fs.doc(db, 'teams', owner), clean(data), { merge: true });
+  },
+  async getInvite(owner) {
+    const s = await fs.getDoc(fs.doc(db, 'teams', owner, 'private', 'invite'));
+    return s.exists() ? s.data() : null;
+  },
+  setInvite(owner, code) {
+    return fs.setDoc(fs.doc(db, 'teams', owner, 'private', 'invite'), { code, at: Date.now() });
+  },
+  watchTeam(owner, cb) {
+    return fs.onSnapshot(fs.doc(db, 'teams', owner), (s) => cb(s.exists() ? s.data() : null), () => cb(null));
+  },
+  /* Convidado entra: cria o pedido com o código do convite e se acrescenta na equipe, juntos.
+     As regras do Firebase conferem o código, se a agenda está ativa e se ainda há vaga. */
+  async joinTeam(owner, code, person) {
+    const me = auth.currentUser.uid;
+    try { const t = await this.getTeam(owner); if (t && (t.members || []).includes(me)) return; } catch { /* ainda não é da equipe: não pode ler */ }
+    const batch = fs.writeBatch(db);
+    batch.set(fs.doc(db, 'teams', owner, 'joins', me), { code, ...clean(person), at: Date.now() });
+    batch.update(fs.doc(db, 'teams', owner), { members: fs.arrayUnion(me), [`names.${me}`]: clean(person) });
+    await batch.commit();
+  },
+  /* Sai da equipe (o próprio convidado) ou tira alguém (o dono) */
+  async leaveTeam(owner, uid) {
+    await fs.updateDoc(fs.doc(db, 'teams', owner), { members: fs.arrayRemove(uid), [`names.${uid}`]: fs.deleteField() });
+    await fs.deleteDoc(fs.doc(db, 'teams', owner, 'joins', uid)).catch(() => {});
+  },
   /* Pergunta ao assistente (Claude) no servidor */
   async ask(question, history) {
     const call = fnMod.httpsCallable(functions, 'perguntar', { timeout: 70000 });

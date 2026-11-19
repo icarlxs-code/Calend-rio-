@@ -22,7 +22,7 @@ export const spanOf = (e) => {
   return [s, s + durationOf(e)];
 };
 const overlaps = (a, b) => a && b && a[0] < b[1] && b[0] < a[1];
-const isOnSite = (e) => ['shoot', 'meeting'].includes(TYPES[e.type]?.kind);
+const isOnSite = (e) => !!TYPES[e.type]?.onSite || ['shoot', 'meeting'].includes(TYPES[e.type]?.kind);
 const isLong = (e) => !isPost(e.type);
 const coName = (e) => store.company(e.companyId)?.name || '';
 export const evLabel = (e) => `${TYPES[e.type]?.label || 'Evento'}${coName(e) ? ' · ' + coName(e) : ''}`;

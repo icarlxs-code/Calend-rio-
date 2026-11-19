@@ -5,6 +5,7 @@ import {
   doneOn, birthdays, phraseOfDay, newList, addEntry, toggleEntry, removeEntry, clearDone, savePrefs, LIST_ICONS, listIcon,
 } from '../personal.js';
 import { openSheet, sheetHead, toast, confirmDialog, avatar } from '../components.js';
+import { isMarketing } from '../constants.js';
 import { icon } from '../icons.js';
 import { store } from '../store.js';
 import { ui, saveUi } from '../ui.js';
@@ -173,7 +174,7 @@ function renderPSettings() {
       <div><strong>${esc(me?.name || 'Você')}</strong><small>${esc(store.user?.email || '')}</small></div>
       ${store.solo ? `<button class="btn btn--soft btn--sm" data-action="edit-profile" style="margin-left:auto">Editar</button>` : ''}
     </div>
-    <button class="pbig" data-action="space" data-space="work">${icon('briefcase', 22)}<div><strong>Ir para o Trabalho</strong><small>${store.team.length > 1 ? 'Agenda da dupla, empresas e clientes' : 'Suas empresas e clientes'}</small></div>${icon('right', 18)}</button>
+    <button class="pbig" data-action="space" data-space="work">${icon('briefcase', 22)}<div><strong>Ir para o Trabalho</strong><small>${store.team.length > 1 ? (isMarketing() ? 'Agenda da dupla, empresas e clientes' : 'Agenda compartilhada da equipe') : isMarketing() ? 'Suas empresas e clientes' : 'Seus compromissos de trabalho'}</small></div>${icon('right', 18)}</button>
 
     ${section(`${icon('bell', 16)} Avisos no celular`, `
       <div class="pnotice ${ok ? 'is-ok' : 'is-warn'}">${ok ? '✅ Ligados neste celular.' : install ? '⚠️ No iPhone, abra o app pelo ícone da Tela de Início para receber avisos.' : perm === 'denied' ? '⚠️ Bloqueados. Ajustes do iPhone → Notificações → Lembra.' : '⚠️ Ainda não ligados neste celular.'}

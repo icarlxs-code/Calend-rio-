@@ -318,6 +318,7 @@ export function buildPersonalSchedule(now = Date.now()) {
   return out.sort((a, b) => a.at - b.at).slice(0, 300);
 }
 /* Resumo da agenda pessoal para as mensagens de ânimo do servidor */
+const GOAL_TEXT = { lembrar: 'nunca mais esquecer compromissos', produtivo: 'ser mais produtivo(a)', tempo: 'ter mais tempo livre', saude: 'cuidar melhor de si', carreira: 'crescer na carreira', organizar: 'organizar o trabalho e a equipe' };
 export function personalProfile() {
   const t = todayKey();
   const ev = (o) => ({ title: o.item.title, cat: o.item.cat, time: o.item.time || null, done: o.done });
@@ -330,7 +331,8 @@ export function personalProfile() {
   const p = personal.prefs;
   return {
     date: t,
-    prefs: { nudges: p.nudges, water: p.water, meals: p.meals, faith: p.faith, freq: p.freq },
+    prefs: { nudges: p.nudges, water: p.water, meals: p.meals, faith: p.faith, freq: p.freq, wake: p.wake, sleep: p.sleep, lunch: p.lunch, tone: p.tone },
+    work: store.profile?.profession ? { profession: store.profile.profession, goal: GOAL_TEXT[store.profile.goal] || '' } : null,
     today: occurrences(t, t).map(ev),
     tomorrow: occurrences(addDays(t, 1), addDays(t, 1)).map(ev),
     overdue: overdue().slice(0, 10).map((it) => ({ title: it.title, cat: it.cat, time: it.time || null, done: false })),

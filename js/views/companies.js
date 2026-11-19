@@ -1,7 +1,7 @@
 /* Empresas: lista, página da empresa, cadastro e link do cliente */
 import { nicheOf } from '../coach.js';
 import { store } from '../store.js';
-import { TYPES, PALETTE, isPost } from '../constants.js';
+import { TYPES, PALETTE, isPost, WORK, ent, isMarketing } from '../constants.js';
 import { esc, todayKey, addDays, startOfWeek, fmtDayShort, relDay, dayLabel, rgba, textOn, resizeImage, uid, monthKey, fmtMonth } from '../utils.js';
 import { icon } from '../icons.js';
 import { openSheet, sheetHead, logo, eventCard, emptyState, toast, confirmDialog } from '../components.js';
@@ -16,13 +16,13 @@ export function renderCompanies() {
   return `
   <header class="hdr">
     <div class="hdr__row">
-      <div class="hdr__titles"><p class="hdr__eyebrow">${list.length} cliente${list.length === 1 ? '' : 's'}</p><h1>Empresas</h1></div>
+      <div class="hdr__titles"><p class="hdr__eyebrow">${list.length} ${list.length === 1 ? ent(false, true) : ent(true, true)}</p><h1>${ent(true)}</h1></div>
       <div class="hdr__actions"><button class="btn btn--primary btn--sm" data-action="new-company">${icon('plus', 16)} Nova</button></div>
     </div>
   </header>
   <div class="page">
-    ${!list.length ? emptyState('Nenhuma empresa ainda', 'Cadastre os clientes com nome, cor e logomarca. Cada um ganha um link próprio para ver só o seu cronograma.',
-      `<button class="btn btn--primary" data-action="new-company">${icon('plus', 18)} Cadastrar empresa</button>`) : ''}
+    ${!list.length ? emptyState(`Nenhum(a) ${ent(false, true)} ainda`, `Cadastre ${WORK.entity.hint} com nome, cor e foto. Assim cada compromisso fica organizado no lugar certo.`,
+      `<button class="btn btn--primary" data-action="new-company">${icon('plus', 18)} Cadastrar ${ent(false, true)}</button>`) : ''}
     <div class="colist">
       ${list.map((c) => {
         const week = store.eventsBetween(ws, we, { companyId: c.id });
@@ -38,7 +38,7 @@ export function renderCompanies() {
             ${icon('right', 18, 'muted')}
           </div>
           <div class="cocard__stats">
-            <span><b>${posts}</b> posts</span><span><b>${shoots}</b> captaç${shoots === 1 ? 'ão' : 'ões'}</span><span class="muted">nesta semana</span>
+            ${isMarketing() ? `<span><b>${posts}</b> posts</span><span><b>${shoots}</b> captaç${shoots === 1 ? 'ão' : 'ões'}</span>` : `<span><b>${week.length}</b> compromisso${week.length === 1 ? '' : 's'}</span>`}<span class="muted">nesta semana</span>
           </div>
           ${next ? `<div class="cocard__next">${icon(TYPES[next.type].icon, 14)} <b>${esc(relDay(next.date))}${next.time ? ' ' + next.time : ''}</b> · ${esc(TYPES[next.type].label)} — ${esc(next.title || '')}</div>` : `<div class="cocard__next muted">Nada agendado</div>`}
         </button>`;
@@ -79,7 +79,7 @@ function companyHtml(id) {
     ${c.instagram ? `<a class="cohero__ig" href="https://instagram.com/${encodeURIComponent(c.instagram)}" target="_blank" rel="noopener">${icon('insta', 14)} @${esc(c.instagram)}</a>` : ''}
     <div class="cohero__btns">
       <button class="btn btn--primary btn--sm" data-act="new">${icon('plus', 16)} Evento</button>
-      <button class="btn btn--soft btn--sm" data-act="clientview">${icon('eye', 16)} Página do cliente</button>
+      ${WORK.clientLike ? `<button class="btn btn--soft btn--sm" data-act="clientview">${icon('eye', 16)} Página do cliente</button>` : ''}
       <button class="btn btn--soft btn--sm" data-act="share">${icon('share', 16)} Enviar</button>
     </div>
   </div>
@@ -104,7 +104,7 @@ function companyHtml(id) {
 
     <section class="block">
       <h2 class="block__title">Próximos 30 dias</h2>
-      ${list || emptyState('Nada agendado', 'Crie o cronograma de postagens desta empresa.')}
+      ${list || emptyState('Nada agendado', `Toque em + para marcar o primeiro compromisso aqui.`)}
     </section>
 
     ${past.length ? `<section class="block">
@@ -134,7 +134,7 @@ export function openCompanyEditor(id = null, onSaved = null) {
     : { id: uid('c_'), name: '', color: PALETTE.find((p) => !used.includes(p)) || PALETTE[0], logo: null, instagram: '', address: '', contact: '', notes: '', shareToken: null };
 
   const html = () => `
-    ${sheetHead(existing ? 'Editar empresa' : 'Nova empresa', {
+    ${sheetHead(existing ? `Editar ${ent(false, true)}` : `Novo(a) ${ent(false, true)}`, {
       left: `<button class="btn-text" data-close>Cancelar</button>`,
       right: `<button class="btn btn--primary btn--sm" data-save>Salvar</button>`,
     })}
@@ -147,31 +147,31 @@ export function openCompanyEditor(id = null, onSaved = null) {
         </div>
       </div>
       <div class="fgroup">
-        <label class="flabel" for="c-name">Nome da empresa</label>
+        <label class="flabel" for="c-name">Nome (${esc(WORK.entity.hint)})</label>
         <input id="c-name" class="input" name="name" value="${esc(d.name)}" placeholder="Ex.: Pura Vida" autocomplete="off" maxlength="60">
       </div>
       <div class="fgroup">
-        <label class="flabel">Cor da empresa no calendário</label>
+        <label class="flabel">Cor no calendário</label>
         <div class="palette">
           ${PALETTE.map((p) => `<button type="button" class="swatch${d.color === p ? ' is-on' : ''}" style="background:${p}" data-color="${p}" aria-label="Cor ${p}">${icon('check', 16)}</button>`).join('')}
           <label class="swatch swatch--custom" title="Outra cor"><input type="color" value="${d.color}" data-customcolor>${icon('plus', 16)}</label>
         </div>
       </div>
-      <div class="fgroup">
+      <div class="fgroup"${isMarketing() ? '' : ' hidden'}>
         <label class="flabel" for="c-ig">Instagram</label>
         <div class="input-prefix"><span>@</span><input id="c-ig" class="input" name="instagram" value="${esc(d.instagram || '')}" placeholder="usuario" autocomplete="off" autocapitalize="none"></div>
       </div>
       <div class="fgroup">
-        <label class="flabel">Notificações desta empresa vão para</label>
+        <label class="flabel">Notificações daqui vão para</label>
         <div class="seg seg--notify">${[['', 'Os dois'], ...store.team.map((m) => [m.id, m.name])].map(([v, l]) => `<button type="button" class="seg__btn${(d.notifyOnly || '') === v ? ' is-on' : ''}" data-only="${v}">${esc(l)}</button>`).join('')}</div>
         <p class="fhelp">Avisos, lembretes, “Já postou?”, cobranças de atraso e dicas desta empresa chegam só para quem estiver marcado.</p>
       </div>
       <div class="fgroup">
-        <label class="flabel" for="c-niche">O que a empresa faz (para as dicas)</label>
+        <label class="flabel" for="c-niche">${isMarketing() ? 'O que a empresa faz (para as dicas)' : 'Observação (para as dicas)'}</label>
         <input id="c-niche" class="input" name="niche" value="${esc(d.niche || nicheOf(d))}" placeholder="Ex.: hamburgueria artesanal, loja de roupas femininas" autocomplete="off" maxlength="160">
       </div>
       <div class="fgroup">
-        <label class="flabel" for="c-addr">Endereço (para captações)</label>
+        <label class="flabel" for="c-addr">Endereço</label>
         <input id="c-addr" class="input" name="address" value="${esc(d.address || '')}" placeholder="Rua, número – bairro" autocomplete="off">
       </div>
       <div class="fgroup">
@@ -182,7 +182,7 @@ export function openCompanyEditor(id = null, onSaved = null) {
         <label class="flabel" for="c-notes">Observações internas</label>
         <textarea id="c-notes" class="input" name="notes" rows="3" placeholder="Tom de voz, o que evitar, preferências…">${esc(d.notes || '')}</textarea>
       </div>
-      ${existing ? `<button type="button" class="btn btn--danger-soft btn--block" data-delete>${icon('trash', 18)} Excluir empresa</button>` : ''}
+      ${existing ? `<button type="button" class="btn btn--danger-soft btn--block" data-delete>${icon('trash', 18)} Excluir ${ent(false, true)}</button>` : ''}
       <div class="form__spacer"></div>
     </form>`;
 
@@ -233,25 +233,25 @@ export function openCompanyEditor(id = null, onSaved = null) {
       const evs = store.state.events.filter((e) => e.companyId === d.id);
       const ok = await confirmDialog({
         title: `Excluir ${d.name}?`,
-        text: evs.length ? `Os ${evs.length} eventos desta empresa também serão apagados e o link do cliente deixará de funcionar.` : 'O link do cliente deixará de funcionar.',
-        ok: 'Excluir empresa',
+        text: evs.length ? `Os ${evs.length} compromissos daqui também serão apagados e o link do cliente deixará de funcionar.` : 'O link do cliente deixará de funcionar.',
+        ok: 'Excluir',
         danger: true,
       });
       if (!ok) return;
       await store.removeMany('events', evs.map((e) => e.id));
       await store.remove('companies', d.id);
       api.close();
-      toast('Empresa excluída');
+      toast('Excluído');
     };
     el.querySelector('[data-save]').onclick = async () => {
       read();
       if (!d.name) {
         form.name.focus();
-        return toast('Digite o nome da empresa');
+        return toast('Digite o nome');
       }
       await store.upsert('companies', { ...d });
       api.close();
-      toast(existing ? 'Empresa atualizada' : 'Empresa cadastrada');
+      toast(existing ? 'Atualizado' : 'Cadastrado');
       onSaved && onSaved(store.company(d.id));
     };
   };

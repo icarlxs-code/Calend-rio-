@@ -6,8 +6,23 @@ import { todayKey, addDays, isStandalone } from './utils.js';
 import { TYPES } from './constants.js';
 import { platform } from './install.js';
 import * as push from './avisos.js';
+import { ageOf } from './persona.js';
 
 let lastFull = 0;
+const ageBand = (birth) => {
+  const a = ageOf(birth);
+  if (a === null) return '';
+  return a < 18 ? 'até 17' : a < 25 ? '18–24' : a < 35 ? '25–34' : a < 45 ? '35–44' : a < 55 ? '45–54' : a < 65 ? '55–64' : '65+';
+};
+function profileSummary() {
+  const p = store.profile || {};
+  if (!p.onboardedAt) return { done: false };
+  return {
+    done: true, profession: p.profession || '', area: p.area || '', arch: p.arch || '', age: ageBand(p.birth), index: Number(p.index) || 0,
+    forget: Number(p.forget) || 0, difficulties: Array.isArray(p.difficulties) ? p.difficulties.slice(0, 12) : [], goal: p.goal || '', journey: p.journey || '', tone: p.tone || '',
+    at: p.onboardedAt,
+  };
+}
 export function reportStats({ open = false, force = false } = {}) {
   const api = store.backendApi;
   if (store.mode !== 'cloud' || !api || !api.writeStats || !store.user) return;
@@ -22,11 +37,13 @@ export function reportStats({ open = false, force = false } = {}) {
   const pEvents = personal.events || [];
   const data = {
     name: me.name || '', email: (store.user.email || '').toLowerCase(), photo: me.photo || null, color: me.color || null,
-    workspace: store.solo ? 'proprio' : 'dupla',
+    workspace: store.shared ? 'compartilhada' : store.solo ? 'proprio' : 'dupla',
     createdAt: store.user.metadata?.creationTime ? Date.parse(store.user.metadata.creationTime) : null,
     lastSeen: now,
     device: { platform: platform(), installed: isStandalone(), notifications: push.permission(), registered: push.deviceRegistered(), ua: navigator.userAgent.slice(0, 160) },
     space: document.documentElement.dataset.space || 'work',
+    // ficha (sem dados sensíveis: nada de CPF, telefone ou data exata de nascimento)
+    profile: profileSummary(),
     counts: {
       companies: store.state.companies.length,
       events: evs.length,

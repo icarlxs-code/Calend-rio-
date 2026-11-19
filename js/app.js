@@ -7,7 +7,7 @@ import { CONFIG } from '../config.js';
 import { store, initLocal, initCloud } from './store.js';
 import { ui, saveUi } from './ui.js';
 import { esc, isStandalone, todayKey, addDays, addMonths, monthKey, uid, toMin, nowMin } from './utils.js';
-import { TYPES } from './constants.js';
+import { TYPES, TYPE_ORDER, WORK, ent, isMarketing, applyArch, crew } from './constants.js';
 import { icon } from './icons.js';
 import { openSheets, toast, confirmDialog, avatar } from './components.js';
 import { renderToday, renderMonth } from './views/calendar.js';
@@ -22,6 +22,9 @@ import { sanitizePayload } from './sanitize.js';
 import { maybeOnboard } from './views/onboarding.js';
 import { showInstallGuide } from './install.js';
 import { checkBilling, trialBanner, openPlans, confirmPayment, openPortal } from './billing.js';
+import { captureInvite, maybeAcceptInvite, startTeam, openShare } from './equipe.js';
+import { personaOf } from './notifier.js';
+import { computePersona } from './persona.js';
 import { reportStats, loadStatsDays, reportSoon } from './stats.js';
 import { ensureSeedCompanies, ensureMatheusLogo, ensureNotifyOwners } from './seed-companies.js';
 import { ensureMatheusJG } from './seed-matheus.js';
@@ -49,7 +52,7 @@ function shell() {
       ${tabBtn('hoje', 'today', 'Hoje')}
       ${tabBtn('mes', 'calendar', 'Calendário')}
       <button class="tabbar__fab" data-action="new-event" aria-label="Novo evento">${icon('plus', 28)}</button>
-      ${tabBtn('empresas', 'building', 'Empresas')}
+      ${tabBtn('empresas', WORK.entity.icon, ent(true))}
       ${tabBtn('ajustes', 'settings', 'Ajustes')}`}
     </nav>`;
 }
@@ -83,7 +86,7 @@ function switchSpace(space, from) {
   const me = store.member(store.me);
   veil.innerHTML = space === 'personal'
     ? `<div><span class="spaceveil__badge">${icon('heart', 40)}</span><strong>Pessoal</strong><small>${me ? esc(me.name) + ' · ' : ''}só você vê</small></div>`
-    : `<div><span class="spaceveil__badge">${icon('briefcase', 40)}</span><strong>Trabalho</strong><small>${store.team.length > 1 ? 'Agenda da dupla' : 'Suas empresas e clientes'}</small></div>`;
+    : `<div><span class="spaceveil__badge">${icon('briefcase', 40)}</span><strong>Trabalho</strong><small>${store.team.length > 1 ? `Agenda da ${crew()}` : isMarketing() ? 'Suas empresas e clientes' : `Seus compromissos de ${esc(ent(true, true))}`}</small></div>`;
   document.body.appendChild(veil);
   // a barra do topo (hora/bateria) entra na mesma cor da transição, quando o círculo chega lá em cima
   const veilBar = space === 'personal' ? '#C88AE8' : '#1E1E25';
@@ -106,7 +109,22 @@ function switchSpace(space, from) {
 window.__calRender = () => render();
 const tabBtn = (id, ic, label) => `<button class="tabbar__btn" data-action="tab" data-tab="${id}">${icon(ic, 24)}<span>${label}</span></button>`;
 
+/* Perfil de trabalho do espaço: a profissão define os nomes (Empresas, Pacientes, Turmas…) e os tipos de compromisso */
+let workSig = '';
+function syncWork() {
+  const wp = store.state.settings.find((s) => s.id === 'workprofile');
+  const arch = wp?.arch || (store.workspace === 'main' ? 'marketing' : store.profile?.arch) || 'generico';
+  const prof = wp?.profession || (store.workspace === 'main' ? '' : store.profile?.profession) || '';
+  const sig = `${arch}|${prof}`;
+  if (sig === workSig) return false;
+  workSig = sig;
+  applyArch(arch, prof);
+  WORK.main = store.workspace === 'main';
+  return true;
+}
 function render() {
+  // mudou a profissão do espaço: refaz a barra de abas (o nome da aba muda)
+  if (syncWork() && document.getElementById('view')) shell();
   const view = document.getElementById('view');
   if (!view) return;
   const scroll = window.scrollY;
@@ -162,6 +180,8 @@ const actions = {
   plans: () => openPlans(),
   'billing-portal': () => openPortal().catch((e) => toast(e.message || 'Não consegui abrir agora')),
   guide: async () => (await import('./views/guide.js')).openGuide(),
+  ficha: async () => (await import('./views/ficha.js')).editFicha(),
+  share: () => openShare(),
   admin: async () => (await import('./views/admin.js')).openAdmin(),
   'set-person': (b) => {
     ui.person = b.dataset.p;
@@ -242,7 +262,7 @@ const actions = {
   },
   ...personalActions,
   'new-event': (b) => {
-    if (!store.state.companies.length) {
+    if (!store.state.companies.length && isMarketing()) {
       toast('Cadastre uma empresa primeiro');
       return openCompanyEditor(null, () => openEventEditor({}));
     }
@@ -525,12 +545,16 @@ let loginNotice = '';
 let signupMode = false;
 let pendingProfile = null;
 
+const invitedBy = () => { try { const i = JSON.parse(localStorage.getItem('lembra.invite') || 'null'); return i ? i.name || 'Uma pessoa' : ''; } catch { return ''; } };
 function showLogin(errMsg = '') {
+  // convidado chegando pelo link: o mais comum é ainda não ter conta
+  if (invitedBy() && !showLogin.seen) { showLogin.seen = true; signupMode = true; }
   const msg = errMsg || loginNotice;
   root.innerHTML = `
   <div class="login">
     <img class="login__logo" src="media/lembra-logo.jpg" alt="${esc(CONFIG.appName)}" width="150" height="150">
     <p>${signupMode ? 'Crie sua conta: sua agenda de trabalho e a pessoal, só suas.' : 'Agenda de trabalho e pessoal'}</p>
+    ${invitedBy() ? `<div class="login__invite">${icon('users', 18)}<span><b>${esc(invitedBy())}</b> convidou você para a agenda de trabalho compartilhada. ${signupMode ? 'Crie sua conta' : 'Entre ou crie sua conta'} para participar — você não paga nada.</span></div>` : ''}
     <form class="form" data-login novalidate>
       ${signupMode ? `<div class="fgroup"><label class="flabel" for="l-name">Seu nome</label><input id="l-name" class="input" name="name" autocomplete="name" maxlength="40" placeholder="Como quer ser chamado"></div>` : ''}
       <div class="fgroup"><label class="flabel" for="l-email">E-mail</label><input id="l-email" class="input" type="email" name="email" value="${esc(loginEmail)}" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email"></div>
@@ -613,12 +637,14 @@ async function startBilling() {
   if (fromStripe) { history.replaceState(null, '', location.pathname + location.search); return confirmPayment(); }
   const st = await checkBilling();
   render();
+  // agenda compartilhada do dono: liga/desliga conforme o complemento pago
+  startTeam().catch((e) => console.warn('equipe', e));
   if (!st.active) return openPlans({ blocking: true });
   if (/^#\/planos/.test(location.hash)) { history.replaceState(null, '', location.pathname + location.search); openPlans(); }
   // 1º acesso: explica os dois modos
   const { guideSeen, openGuide } = await import('./views/guide.js');
   const showGuide = (n = 0) => {
-    if (document.querySelector('.sheet-wrap.is-open, .paywall, .iguide') && n < 40) return setTimeout(() => showGuide(n + 1), 1500);
+    if (document.querySelector('.sheet-wrap.is-open, .paywall, .iguide, .ob, .ficha') && n < 40) return setTimeout(() => showGuide(n + 1), 1500);
     openGuide();
   };
   if (!guideSeen()) setTimeout(showGuide, 1200);
@@ -637,6 +663,7 @@ async function startBilling() {
 function startApp() {
   // pessoa escolhida no filtro precisa existir neste espaço (ex.: celular usado por outra conta antes)
   if (ui.person !== 'all' && !store.member(ui.person)) ui.person = 'all';
+  syncWork();
   shell();
   render();
   store.on(rerenderAll);
@@ -680,6 +707,7 @@ function startApp() {
         events: store.state.events, companies: store.state.companies, routine: routine(), notes: store.state.notes,
         team: store.team, me: store.me, now: { date: todayKey(), minutes: d.getHours() * 60 + d.getMinutes() },
         withIds: true,
+        work: { profession: WORK.profession, entity: WORK.entity, marketing: isMarketing(), types: TYPE_ORDER.map((id) => ({ id, label: TYPES[id]?.label || id })) },
         personal: occurrences(todayKey(), addDays(todayKey(), 30)).map((o) => ({ id: o.item.id, date: o.date, time: o.item.time, title: o.item.title, cat: o.item.cat, done: o.done })),
       });
       const r = await push.api('/ask', { question, history, context, today: todayKey() });
@@ -702,10 +730,24 @@ function startApp() {
     .then(() => setTimeout(() => ensureMatheusJG().catch((e) => console.warn('pedido Matheus', e)), 1200))
     .then(() => setTimeout(() => ensureSeedRoutine().catch((e) => console.warn('rotina', e)), 1500))
     .catch((e) => console.warn('pré-cadastro', e));
-  // boas-vindas / permissão de notificações (depois da abertura)
-  setTimeout(maybeOnboard, 600);
-  // plano da conta: teste grátis de 24h, depois precisa assinar (a dupla não paga)
-  if (store.solo) startBilling();
+  // ficha de cadastro (conta própria: obrigatória antes de começar o teste; dupla: oferecida uma vez)
+  // depois, plano da conta: teste grátis de 24h e depois assinatura (a dupla não paga)
+  import('./views/ficha.js')
+    .then((m) => m.ensureFicha())
+    .catch((e) => console.warn('ficha', e))
+    .then(() => {
+      ensurePersona();
+      if (store.sharedLost) toast(store.sharedLost === 'removido' ? 'Você não faz mais parte daquela agenda compartilhada. Voltou para a sua agenda.' : `A agenda compartilhada de ${store.sharedLost} não está ativa agora. Voltou para a sua agenda.`, { ms: 6000 });
+      // veio por um link de convite: pergunta antes do plano (quem é convidado não paga)
+      return maybeAcceptInvite().catch((e) => console.warn('convite', e));
+    })
+    .then((joined) => {
+      if (joined) return;
+      render();
+      // boas-vindas / permissão de notificações (depois da ficha)
+      setTimeout(maybeOnboard, 400);
+      if (store.solo) startBilling();
+    });
   // resumo de uso da conta (para o Painel do dono)
   if (store.mode === 'cloud') {
     loadStatsDays().then(() => setTimeout(() => reportStats({ open: true }), 4000));
@@ -715,13 +757,21 @@ function startApp() {
   }
   // aberto pelo navegador: ensina a colocar na tela inicial (quando nenhuma outra tela estiver aberta)
   const tryInstall = (n = 0) => {
-    if (document.querySelector('.sheet-wrap.is-open, .spaceveil') && n < 20) return setTimeout(() => tryInstall(n + 1), 3000);
+    if (document.querySelector('.sheet-wrap.is-open, .spaceveil, .ob, .ficha, .paywall') && n < 20) return setTimeout(() => tryInstall(n + 1), 3000);
     showInstallGuide();
   };
   setTimeout(tryInstall, 3500);
   // atualiza o cadastro deste celular para notificações (se já tiver permissão)
   if (store.mode === 'cloud' && push.permission() === 'granted') push.register().catch(() => {});
   setTimeout(() => openDeepLink(), 300);
+}
+
+/* Lembretes calculados pela ficha valem em qualquer agenda em que a pessoa estiver (dupla, própria ou compartilhada) */
+function ensurePersona() {
+  const p = store.profile;
+  if (store.mode !== 'cloud' || !store.me || !p?.onboardedAt || personaOf(store.me)) return;
+  const r = computePersona(p);
+  store.upsert('settings', { id: `persona-${store.me}`, offsets: r.offsets, lateEvery: r.lateEvery, lateMax: r.lateMax, tone: r.tone, index: r.index });
 }
 
 /* Encontra o que foi cadastrado antes do login (só neste aparelho) e leva para a nuvem */
@@ -793,6 +843,8 @@ function watchConflicts() {
 
 /* ---------- rotas ---------- */
 async function boot() {
+  // link de convite para a agenda compartilhada: guarda para depois do login
+  captureInvite();
   const hash = location.hash || '';
   const fb = CONFIG.firebase;
 
@@ -873,6 +925,8 @@ navigator.serviceWorker?.addEventListener('message', (ev) => {
 });
 
 window.addEventListener('hashchange', () => {
+  // abriu um convite com o app já aberto
+  if (/^#\/convite\//.test(location.hash)) { captureInvite(); return maybeAcceptInvite(); }
   if (/^#\/(e|d|p)\//.test(location.hash)) return openDeepLink();
   if (/^#\/(c|v)\//.test(location.hash)) location.reload();
 });

@@ -111,3 +111,21 @@ test('intervalos aleatórios: nunca menos de 25 min e sem ritmo fixo; títulos p
   assert.ok(sd >= 7 && new Set(gaps).size >= gaps.length * 0.45, 'intervalos variados');
   assert.ok(titles.has('💧') && titles.has('☀️'));
 });
+
+test('janela do dia vem da ficha: quem acorda 5h recebe o bom dia 5h30; quem dorme 21h não recebe depois de 20h45', async () => {
+  const { dayWindow, inWindow, anchorsFor } = await import('../src/pcoach.js');
+  const cedo = { name: 'Ana', prefs: { wake: '05:00', sleep: '21:00', lunch: '11:00' }, today: [] };
+  assert.equal(nextNudge(cedo, {}, at('05:20')), null);
+  assert.match(nextNudge(cedo, {}, at('05:30'), () => 0.3).msg.title, /Bom dia/);
+  assert.equal(nextNudge(cedo, { day: '', next: 0 }, at('20:50'), () => 0.3), null);
+  // almoço da ficha (11h): o lembrete de comer vem entre 10h40 e 11h40
+  const lunch = anchorsFor(dayWindow(cedo.prefs)).find((a) => a.key === 'lunch');
+  assert.ok(lunch);
+  const r = nextNudge(cedo, { done: { morning: true }, day: '2026-03-10', lastAny: 0, next: Date.now() + 9e9, nextWater: Date.now() + 9e9 }, at('10:50'), () => 0.5);
+  assert.match(r.msg.title, /Almoço/);
+  // quem trabalha à noite: acorda 17h, dorme 9h → a janela passa da meia-noite
+  const w = dayWindow({ wake: '17:00', sleep: '09:00' });
+  assert.ok(inWindow(2 * 60, w));
+  assert.ok(inWindow(18 * 60, w));
+  assert.ok(!inWindow(12 * 60, w));
+});

@@ -1,6 +1,6 @@
 /* Componentes visuais reutilizáveis + folhas (sheets), toasts e diálogos */
 import { store } from './store.js';
-import { TYPES, STATUS, durationOf } from './constants.js';
+import { TYPES, STATUS, durationOf, isMarketing, WORK } from './constants.js';
 import { esc, initials, rgba, textOn, fmtTime, toMin, fromMin, nowMin, todayKey } from './utils.js';
 import { icon } from './icons.js';
 import { platformIcons } from './platforms.js';
@@ -23,6 +23,13 @@ export const whoText = (ids = []) => {
   return names.join(' e ');
 };
 
+/* Sem empresa/local: nas outras profissões mostra o ícone do tipo (Plantão, Aula…) em vez de "?" */
+export function logoOrType(company, type, size = 36, radius = null) {
+  if (company || isMarketing()) return logo(company, size, radius);
+  const t = TYPES[type] || TYPES.outro;
+  const r = radius ?? Math.round(size * 0.28);
+  return `<span class="logo logo--type" style="--s:${size}px;--r:${r}px;background:${t.color || '#71717A'};color:#fff">${icon(t.icon, Math.round(size * 0.55))}</span>`;
+}
 export function logo(company, size = 36, radius = null) {
   const r = radius ?? Math.round(size * 0.28);
   if (!company) return `<span class="logo" style="--s:${size}px;--r:${r}px;background:#999">?</span>`;
@@ -34,7 +41,8 @@ export function logo(company, size = 36, radius = null) {
 
 export function typeBadge(type, { solid = false } = {}) {
   const t = TYPES[type] || TYPES.outro;
-  return `<span class="tbadge tbadge--${type}${solid ? ' is-solid' : ''}">${icon(t.icon, 13)}${t.label}</span>`;
+  const custom = t.color && !['feed', 'carrossel', 'reels', 'story', 'captacao', 'reuniao', 'producao', 'outro'].includes(type);
+  return `<span class="tbadge tbadge--${type}${solid ? ' is-solid' : ''}"${custom ? ` style="--tc:${t.color}"` : ''}>${icon(t.icon, 13)}${t.label}</span>`;
 }
 
 export function statusPill(status) {
@@ -73,8 +81,8 @@ export function eventCard(e, { showDate = false, compact = false, highlight = []
     </div>
     <div class="ecard__body">
       <div class="ecard__top">
-        ${logo(c, 20, 6)}
-        <span class="ecard__company">${esc(c?.name || 'Sem empresa')}</span>
+        ${logoOrType(c, e.type, 20, 6)}
+        <span class="ecard__company">${esc(c?.name || (isMarketing() ? 'Sem empresa' : ''))}</span>
         ${typeBadge(e.type)}
       </div>
       <div class="ecard__title"><span class="pfrow">${platformIcons(e, 17)}</span>${esc(e.title || TYPES[e.type]?.label || 'Evento')}</div>

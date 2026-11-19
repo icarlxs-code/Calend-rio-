@@ -62,6 +62,13 @@ export function sanitizeItem(col, x) {
   }
   if (col === 'settings') {
     if (/^seed-[\w-]{1,40}$/.test(x.id)) return { id: x.id, done: ids(x.done), updatedAt: x.updatedAt };
+    // perfil de trabalho do espaço (profissão → tipos de compromisso e nomes)
+    if (x.id === 'workprofile') return { id: 'workprofile', arch: str(x.arch, 30), profession: str(x.profession, 80), updatedAt: x.updatedAt };
+    // personalização de cada pessoa (lembretes calculados pela ficha)
+    if (/^persona-[\w-]{1,40}$/.test(x.id)) {
+      const offs = Array.isArray(x.offsets) ? x.offsets.filter((n) => Number.isInteger(n) && n >= 0 && n <= 20160).slice(0, 8) : [];
+      return { id: x.id, offsets: offs, lateEvery: num(x.lateEvery, 5, 120, 10), lateMax: num(x.lateMax, 0, 600, 180), tone: ['carinhoso', 'firme', 'direto'].includes(x.tone) ? x.tone : 'firme', index: num(x.index, 0, 100, 50), updatedAt: x.updatedAt };
+    }
     if (x.id !== 'routine') return null;
     return {
       id: 'routine',
