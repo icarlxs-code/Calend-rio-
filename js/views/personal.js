@@ -177,7 +177,7 @@ function renderPSettings() {
 
     ${section(`${icon('bell', 16)} Avisos no celular`, `
       <div class="pnotice ${ok ? 'is-ok' : 'is-warn'}">${ok ? '✅ Ligados neste celular.' : install ? '⚠️ No iPhone, abra o app pelo ícone da Tela de Início para receber avisos.' : perm === 'denied' ? '⚠️ Bloqueados. Ajustes do iPhone → Notificações → Calendário.' : '⚠️ Ainda não ligados neste celular.'}
-        ${!ok && !install && perm !== 'denied' ? '<button class="btn btn--primary btn--sm" data-action="notify-enable">Ativar</button>' : ''}</div>
+        ${!ok && !install && perm !== 'denied' ? '<button class="btn btn--primary btn--sm" data-action="notify-enable">Ativar</button>' : ''}${install ? '<button class="btn btn--primary btn--sm" data-action="install-guide">Como instalar</button>' : ''}</div>
       <form class="list" data-form="pprefs" onsubmit="return false">
         <label class="list__row"><span><b>Lembretes</b><small>1h, 30 e 20 min antes, na hora e um “já fez?” depois</small></span><input type="checkbox" class="switch" name="reminders" ${prefs.reminders ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Resumo às 8h</b><small>o que você tem hoje</small></span><input type="checkbox" class="switch" name="morning" ${prefs.morning ? 'checked' : ''}></label>

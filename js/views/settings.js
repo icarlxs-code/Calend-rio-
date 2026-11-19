@@ -114,7 +114,7 @@ function notifySection() {
   const prefs = push.getPrefs();
   let state, text, btn = '';
   if (install) {
-    state = 'warn'; text = 'No iPhone, as notificações só funcionam com o app instalado: Compartilhar → Adicionar à Tela de Início, e abra pelo ícone.';
+    state = 'warn'; text = 'No iPhone, as notificações só funcionam com o app instalado na Tela de Início.'; btn = `<button class="btn btn--primary btn--sm" data-action="install-guide">Como instalar</button>`;
   } else if (perm === 'unsupported') {
     state = 'warn'; text = 'Este navegador não aceita notificações.';
   } else if (perm === 'denied') {
@@ -145,6 +145,7 @@ function notifySection() {
     ${perm === 'granted' ? `<button class="btn btn--soft btn--block" data-action="notify-test">${icon('bell', 16)} Enviar notificação de teste</button>` : ''}
     ${usagePlaceholder() ? `<h3 class="block__sub">Uso de hoje (grátis)</h3>${usagePlaceholder()}` : ''}
     ${perm === 'granted' && cloud ? `<button class="btn btn--soft btn--block" data-action="coach-test">✨ Receber uma dica agora</button>` : ''}
+    ${!isStandalone() ? `<button class="btn btn--soft btn--block" data-action="install-guide">${icon('phone', 16)} Instalar na tela inicial</button>` : ''}
     <button class="btn-text btn-text--sm" data-action="onboarding-again">Ver a apresentação de novo</button>
   </section>`;
 }

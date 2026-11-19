@@ -6,7 +6,7 @@ import { personal, startPersonal, occurrences } from './personal.js';
 import { CONFIG } from '../config.js';
 import { store, initLocal, initCloud } from './store.js';
 import { ui, saveUi } from './ui.js';
-import { esc, todayKey, addDays, addMonths, monthKey, uid, toMin, nowMin } from './utils.js';
+import { esc, isStandalone, todayKey, addDays, addMonths, monthKey, uid, toMin, nowMin } from './utils.js';
 import { TYPES } from './constants.js';
 import { icon } from './icons.js';
 import { openSheets, toast, confirmDialog, avatar } from './components.js';
@@ -20,6 +20,7 @@ import { upcomingConflicts } from './insights.js';
 import { decodeSnapshot } from './share.js';
 import { sanitizePayload } from './sanitize.js';
 import { maybeOnboard } from './views/onboarding.js';
+import { showInstallGuide } from './install.js';
 import { ensureSeedCompanies, ensureMatheusLogo, ensureNotifyOwners } from './seed-companies.js';
 import { ensureMatheusJG } from './seed-matheus.js';
 import { ensureSeedRoutine } from './seed-routine.js';
@@ -152,6 +153,7 @@ const actions = {
   tab: (b) => setTab(b.dataset.tab),
   space: (b) => switchSpace(b.dataset.space, b),
   'edit-profile': async () => (await import('./views/profile.js')).openProfile(),
+  'install-guide': () => showInstallGuide({ force: true }),
   'set-person': (b) => {
     ui.person = b.dataset.p;
     saveUi();
@@ -531,6 +533,7 @@ function showLogin(errMsg = '') {
       ${msg ? `<p class="login__err">${esc(msg)}</p>` : ''}
       <button class="btn btn--primary btn--block" type="submit" data-go>${signupMode ? 'Criar minha conta' : 'Entrar'}</button>
       ${signupMode ? '' : '<button class="btn-text btn-text--sm" type="button" data-reset>Esqueci minha senha</button>'}
+      ${isStandalone() ? '' : `<button class="btn btn--soft btn--block login__install" type="button" data-installguide>${icon('phone', 16)} Instalar na tela inicial do celular</button>`}
       <div class="login__switch">${signupMode ? 'Já tem conta?' : 'Ainda não tem conta?'} <button class="btn-text btn-text--sm" type="button" data-mode>${signupMode ? 'Entrar' : 'Criar conta'}</button></div>
     </form>
   </div>`;
@@ -564,6 +567,8 @@ function showLogin(errMsg = '') {
       showLogin(code === 'timeout' ? 'O servidor demorou para responder. Verifique a internet e tente de novo.' : LOGIN_ERRORS[code] || `Não foi possível entrar (${code || err?.message || 'erro desconhecido'}).`);
     }
   };
+  const ig = root.querySelector('[data-installguide]');
+  if (ig) ig.onclick = () => showInstallGuide({ force: true });
   root.querySelector('[data-mode]').onclick = () => { signupMode = !signupMode; showLogin(); };
   const rs = root.querySelector('[data-reset]');
   if (rs) rs.onclick = async () => {
@@ -665,6 +670,12 @@ function startApp() {
     .catch((e) => console.warn('pré-cadastro', e));
   // boas-vindas / permissão de notificações (depois da abertura)
   setTimeout(maybeOnboard, 600);
+  // aberto pelo navegador: ensina a colocar na tela inicial (quando nenhuma outra tela estiver aberta)
+  const tryInstall = (n = 0) => {
+    if (document.querySelector('.sheet-wrap.is-open, .spaceveil') && n < 20) return setTimeout(() => tryInstall(n + 1), 3000);
+    showInstallGuide();
+  };
+  setTimeout(tryInstall, 3500);
   // atualiza o cadastro deste celular para notificações (se já tiver permissão)
   if (store.mode === 'cloud' && push.permission() === 'granted') push.register().catch(() => {});
   setTimeout(() => openDeepLink(), 300);
