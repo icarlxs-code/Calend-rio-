@@ -89,24 +89,26 @@
     var decode = function (i) { return createImageBitmap(blobs[i]); };
     var queue = [];
     for (var k = 0; k < AHEAD && k < FRAMES; k++) queue[k] = decode(k);
-    var start = null;
+    var start = null, last = -1;
     function step(now) {
       if (myRun !== run) return;
       if (start === null) start = now;
-      var idx = Math.floor(((now - start) / 1000) * FPS);
-      if (idx >= FRAMES - Math.round(FPS * 0.3)) finish(); // emenda a transição no fim
-      if (idx >= FRAMES) return;
-      // pega o quadro da vez (pula quadros se o celular atrasar, para manter o tempo)
-      var p = queue[idx];
-      if (!p) p = queue[idx] = decode(idx);
-      p.then(function (bmp) {
-        if (myRun !== run) return bmp.close && bmp.close();
-        draw(ctx, bmp);
-        if (bmp.close) bmp.close();
-      }).catch(function () {});
-      for (var j = 0; j < idx; j++) if (queue[j] && j !== idx) { queue[j].then(function (b) { if (b.close) b.close(); }).catch(function () {}); queue[j] = null; }
-      for (var a = idx + 1; a <= idx + AHEAD && a < FRAMES; a++) if (!queue[a]) queue[a] = decode(a);
-      requestAnimationFrame(step);
+      var idx = Math.min(FRAMES - 1, Math.floor(((now - start) / 1000) * FPS));
+      if (((now - start) / 1000) * FPS >= FRAMES - Math.round(FPS * 0.3)) finish(); // emenda a transição no fim
+      // desenha cada quadro uma única vez (a tela atualiza mais rápido que a animação)
+      if (idx !== last) {
+        last = idx;
+        var p = queue[idx] || (queue[idx] = decode(idx));
+        queue[idx] = null;
+        p.then(function (bmp) {
+          if (myRun === run) draw(ctx, bmp);
+          if (bmp.close) bmp.close();
+        }).catch(function () {});
+        // libera quadros que ficaram para trás (se o celular atrasou) e prepara os próximos
+        for (var j = 0; j < idx; j++) if (queue[j]) { queue[j].then(function (b) { if (b.close) b.close(); }).catch(function () {}); queue[j] = null; }
+        for (var a = idx + 1; a <= idx + AHEAD && a < FRAMES; a++) if (!queue[a]) queue[a] = decode(a);
+      }
+      if (((now - start) / 1000) * FPS < FRAMES + 2) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
   }
