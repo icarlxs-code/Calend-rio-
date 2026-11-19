@@ -1,4 +1,4 @@
-/* Servidor gratuito do Calendário (Cloudflare Workers):
+/* Servidor gratuito do Calendário (Cloudflare Workers) — publicado pelo Cloudflare a partir do GitHub.
    - Notificações em tempo real para o parceiro (/notify)
    - Lembretes no horário certo: o app envia a lista (/schedule) e o servidor
      confere a cada minuto, mesmo com os celulares fechados
