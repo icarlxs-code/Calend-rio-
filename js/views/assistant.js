@@ -19,6 +19,14 @@ let chat = (() => {
   }
 })();
 let thinking = false;
+/* Resposta dentro do app só se o servidor tiver chave da Anthropic; senão, abre o Claude com o login normal */
+let inAppChat = false;
+(async () => {
+  try {
+    const { server } = await import('../avisos.js');
+    if (server()) inAppChat = !!(await (await fetch(server() + '/health')).json()).chat;
+  } catch { /* fica no modo "abrir no Claude" */ }
+})();
 const saveChat = () => {
   try {
     localStorage.setItem(LS_CHAT, JSON.stringify(chat.slice(-30)));
@@ -54,7 +62,7 @@ function chatHtml() {
     <h2 class="block__title">${icon('sparkle', 16)} Pergunte ao assistente</h2>
     <div class="chat">
       ${chat.length ? chat.map((m) => `<div class="msg msg--${m.role}${m.error ? ' msg--err' : ''}">${md(m.text)}</div>`).join('')
-        : `<div class="msg msg--assistant">Oi! Eu vejo a agenda inteira de vocês: posts, captações, reuniões, empresas e a rotina. Pergunte o que quiser, por exemplo “o que eu tenho amanhã?” ou “qual o melhor horário para um Reels da Pura Vida na sexta?”.</div>`}
+        : `<div class="msg msg--assistant">Pergunte o que quiser sobre a agenda, por exemplo “o que eu tenho amanhã?” ou “qual o melhor horário para um Reels da Pura Vida na sexta?”. A pergunta abre no app do Claude, com o seu login, já com a agenda inteira de vocês.</div>`}
       ${thinking ? `<div class="msg msg--assistant msg--typing"><i></i><i></i><i></i></div>` : ''}
     </div>
     <div class="presets">${PRESETS.map((p, i) => `<button class="preset" data-preset="${i}">${esc(p.label)}</button>`).join('')}</div>
@@ -186,6 +194,15 @@ export function openAssistant() {
       const send = async (q) => {
         q = (q || '').trim();
         if (!q || thinking) return;
+        // sem chave no servidor: abre o Claude com o login normal (precisa ser no mesmo toque)
+        if (!inAppChat) {
+          askClaude(q);
+          chat.push({ role: 'user', text: q });
+          chat.push({ role: 'assistant', text: 'Abri sua pergunta no **app do Claude**, com o seu login, já com a agenda de vocês. É só tocar em enviar lá. A agenda também foi copiada: se a mensagem aparecer vazia, segure no campo e toque em **Colar**.' });
+          saveChat();
+          redrawChat(a);
+          return;
+        }
         const history = chat.filter((m) => !m.error).map((m) => ({ role: m.role, text: m.text }));
         chat.push({ role: 'user', text: q });
         thinking = true;

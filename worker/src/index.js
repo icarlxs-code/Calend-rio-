@@ -83,7 +83,7 @@ async function handle(req, env) {
   const url = new URL(req.url);
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors(env, req) });
   if (url.pathname === '/vapid') return reply(env, req, { publicKey: (await getVapid(env)).publicKey });
-  if (url.pathname === '/' || url.pathname === '/health') return reply(env, req, { ok: true, servico: 'Calendário' });
+  if (url.pathname === '/' || url.pathname === '/health') return reply(env, req, { ok: true, servico: 'Calendário', chat: !!env.ANTHROPIC_API_KEY });
   if (req.method !== 'POST') return reply(env, req, { error: 'método não permitido' }, 405);
 
   let me;
