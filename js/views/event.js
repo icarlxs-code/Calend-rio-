@@ -10,6 +10,7 @@ import {
 } from '../components.js';
 import { validateDraft, bestSlots, freePeople, spanOf, evLabel } from '../planner.js';
 import { downloadICS } from '../ics.js';
+import { platformIcons } from '../platforms.js';
 import { openCompanyEditor } from './companies.js';
 
 /* ======================== DETALHE ======================== */
@@ -35,7 +36,7 @@ function detailHtml(id) {
   <div class="detail">
     <div class="detail__hero" style="--cc:${color};--cc-soft:${rgba(color, 0.12)}">
       <div class="detail__co">${logo(c, 40)}<div><strong>${esc(c?.name || 'Sem empresa')}</strong>${c?.instagram ? `<small>@${esc(c.instagram)}</small>` : ''}</div>${typeBadge(e.type, { solid: true })}</div>
-      <h2>${esc(e.title || TYPES[e.type].label)}</h2>
+      <h2><span class="pfrow">${platformIcons(e, 24)}</span>${esc(e.title || TYPES[e.type].label)}</h2>
       <p class="detail__when">${icon('calendar', 15)} ${esc(relDay(e.date))}, ${esc(fmtDayLong(e.date).split(', ')[1])} · ${icon('clock', 15)} ${esc(timeRange(e))}</p>
     </div>
 

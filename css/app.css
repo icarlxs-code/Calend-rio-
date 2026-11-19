@@ -889,3 +889,6 @@ html:not(.intro-done) .tabbar { opacity: 0; }
 .tipsbar em.tipsbar__warn { background: var(--warn-soft); color: var(--warn); }
 .tipsbar.is-open { border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
 .detail__lock { font-size: 13px; color: var(--text-2); background: var(--fill, rgba(127,127,127,.12)); border-radius: 12px; padding: 10px 12px; margin: 0 0 12px; display: flex; gap: 6px; align-items: flex-start; }
+.pf { display: inline-flex; flex: none; vertical-align: -3px; margin-right: 4px; }
+.pf svg { width: 100%; height: 100%; display: block; }
+.pfrow { display: inline-flex; gap: 2px; margin-right: 2px; }

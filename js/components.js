@@ -3,6 +3,7 @@ import { store } from './store.js';
 import { TYPES, STATUS, durationOf } from './constants.js';
 import { esc, initials, rgba, textOn, fmtTime, toMin, fromMin, nowMin, todayKey } from './utils.js';
 import { icon } from './icons.js';
+import { platformIcons } from './platforms.js';
 
 /* ---------- Pessoas e empresas ---------- */
 export function avatar(id, size = 26) {
@@ -71,7 +72,7 @@ export function eventCard(e, { showDate = false, compact = false, highlight = []
         <span class="ecard__company">${esc(c?.name || 'Sem empresa')}</span>
         ${typeBadge(e.type)}
       </div>
-      <div class="ecard__title">${esc(e.title || TYPES[e.type]?.label || 'Evento')}</div>
+      <div class="ecard__title"><span class="pfrow">${platformIcons(e, 17)}</span>${esc(e.title || TYPES[e.type]?.label || 'Evento')}</div>
       ${!compact ? `<div class="ecard__meta">
         ${avatars(e.assignees, 20)}<span>${esc(whoText(e.assignees))}</span>
         ${e.location ? `<span class="ecard__loc">${icon('pin', 12)}${esc(e.location)}</span>` : ''}
