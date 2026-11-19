@@ -65,6 +65,14 @@ test('aviso do parceiro chega na hora (e não volta para quem marcou)', async ()
   assert.equal(phones.matheus.inbox.length, 0);
 });
 
+test('compromisso novo avisa os dois celulares e diz quem recebeu', async () => {
+  const h = phones.henrique.inbox.length, m = phones.matheus.inbox.length;
+  const r = await call('/notify', { as: 'icarlxs@gmail.com', body: { to: ['henrique', 'matheus'], includeSelf: true, title: 'Novo na agenda: Feed · Garcia Hortifruti', body: 'hoje, 22h' } });
+  assert.deepEqual(r.data.results, { henrique: 1, matheus: 1 });
+  assert.equal(phones.henrique.inbox.length, h + 1);
+  assert.equal(phones.matheus.inbox.length, m + 1);
+});
+
 test('lembrete dispara no minuto certo e só uma vez', async () => {
   const now = Date.now();
   await call('/schedule', { as: 'icarlxs@gmail.com', body: { items: [

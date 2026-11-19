@@ -5,7 +5,7 @@
 import { store } from './store.js';
 import { api, server } from './avisos.js';
 import { debounce, todayKey, addDays } from './utils.js';
-import { reminderOffsets, reminderMessage, changeMessage, dailyMessage, isPostType } from '../functions/reminder-rules.js';
+import { reminderOffsets, reminderMessage, changeMessage, dailyMessage, isPostType, TYPE_LABEL as TYPE_NAME } from '../functions/reminder-rules.js';
 
 const nameOf = (id) => store.member(id)?.name || 'Alguém';
 const coName = (id) => store.company(id)?.name || '';
@@ -17,20 +17,47 @@ const nowSP = () => {
 const epoch = (date, time) => Date.parse(`${date}T${time}:00-03:00`);
 const active = () => store.mode === 'cloud' && !!server() && !!store.me;
 
-/* ---------- aviso imediato ao parceiro ---------- */
-function notify(to, msg, tag, url = './') {
-  if (!msg || !to.length) return;
-  api('/notify', { to, title: msg.title, body: msg.body, tag, url }).catch((e) => console.warn('aviso ao parceiro', e.message));
+/* ---------- aviso imediato (parceiro e o próprio celular) ---------- */
+let onResult = null;
+export const setNotifyFeedback = (fn) => (onResult = fn);
+function notify(to, msg, tag, url = './', includeSelf = false) {
+  if (!msg || !to.length) return Promise.resolve(null);
+  return api('/notify', { to, title: msg.title, body: msg.body, tag, url, includeSelf })
+    .catch((e) => {
+      console.warn('aviso', e.message);
+      return { error: e.message };
+    });
 }
+const whenText = (e) => {
+  const t = todayKey();
+  const day = e.date === t ? 'hoje' : e.date === addDays(t, 1) ? 'amanhã' : `${e.date.slice(8, 10)}/${e.date.slice(5, 7)}`;
+  return `${day}${e.time ? ', ' + e.time.replace(':00', 'h').replace(':', 'h').replace(/^0/, '') : ''}`;
+};
 
 export function onEventChange(before, after) {
   if (!active()) return;
   const ev = after || before;
   const others = store.team.map((m) => m.id).filter((id) => id !== store.me);
-  others.forEach((r) => {
+  const jobs = others.map((r) => {
     const msg = changeMessage(before, after, { actor: nameOf(store.me), company: coName(ev.companyId), recipient: r, now: nowSP() });
-    notify([r], msg, `ev-${ev.id}`, `./#/e/${ev.id}`);
-  });
+    return msg ? notify([r], msg, `ev-${ev.id}`, `./#/e/${ev.id}`).then((d) => ({ r, d })) : null;
+  }).filter(Boolean);
+  // o próprio celular também recebe quando um compromisso é criado ou muda de horário
+  const created = !before && after;
+  const moved = before && after && (before.date !== after.date || before.time !== after.time);
+  if (after && (created || moved)) {
+    const what = `${TYPE_NAME[after.type] || 'Tarefa'}${coName(after.companyId) ? ' · ' + coName(after.companyId) : ''}`;
+    const who = (after.assignees || []).map(nameOf).join(' e ') || 'sem responsável';
+    notify([store.me], { title: created ? `Novo na agenda: ${what}` : `Horário alterado: ${what}`, body: `${whenText(after)}${after.title ? ' · ' + after.title : ''} · ${who}` }, `ev-${after.id}`, `./#/e/${after.id}`, true);
+  }
+  if (jobs.length && onResult) {
+    Promise.all(jobs).then((list) => {
+      const missing = list.filter((x) => x.d && !x.d.error && x.d.results && !x.d.results[x.r]).map((x) => nameOf(x.r));
+      const failed = list.find((x) => x.d && x.d.error);
+      const ok = list.filter((x) => x.d && x.d.results && x.d.results[x.r]).map((x) => nameOf(x.r));
+      onResult({ ok, missing, error: failed?.d.error });
+    });
+  }
   syncSchedule();
 }
 

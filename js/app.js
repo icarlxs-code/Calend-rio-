@@ -18,7 +18,7 @@ import { sanitizePayload } from './sanitize.js';
 import { maybeOnboard } from './views/onboarding.js';
 import { ensureSeedCompanies } from './seed-companies.js';
 import { ensureSeedRoutine } from './seed-routine.js';
-import { onEventChange, onActivity, syncSchedule } from './notifier.js';
+import { onEventChange, onActivity, syncSchedule, setNotifyFeedback } from './notifier.js';
 import { buildContext } from '../functions/context.js';
 import { routine } from './planner.js';
 import * as push from './avisos.js';
@@ -393,6 +393,12 @@ function startApp() {
   // servidor gratuito de avisos: aviso ao parceiro na hora + lembretes no horário + chat
   if (store.mode === 'cloud' && push.server()) {
     store.hooks.eventChange = onEventChange;
+    // mostra na tela quem recebeu o aviso (e quem ainda não ativou as notificações)
+    setNotifyFeedback(({ ok, missing, error }) => {
+      if (error) return toast(`Aviso não enviado: ${error}`, { ms: 6000 });
+      if (missing.length) return toast(`${missing.join(' e ')} ainda não ativou as notificações no celular (Ajustes → Notificações → Ativar)`, { ms: 8000 });
+      if (ok.length) toast(`Aviso enviado para ${ok.join(' e ')} ✓`, { ms: 3500 });
+    });
     store.hooks.activity = onActivity;
     store.hooks.ask = async (question, history) => {
       const d = new Date();

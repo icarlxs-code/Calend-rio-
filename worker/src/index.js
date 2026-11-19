@@ -110,11 +110,12 @@ async function handle(req, env) {
   }
 
   if (url.pathname === '/notify') {
-    const to = (Array.isArray(body.to) ? body.to : []).filter((m) => MEMBERS(env).includes(m) && m !== me.id);
+    const to = (Array.isArray(body.to) ? body.to : []).filter((m) => MEMBERS(env).includes(m) && (m !== me.id || body.includeSelf === true));
     const msg = { title: clean(body.title, 120), body: clean(body.body, 300), tag: clean(body.tag, 80), url: clean(body.url, 200) || './' };
     if (!msg.title) return reply(env, req, { error: 'sem texto' }, 400);
-    const sent = (await Promise.all(to.map((m) => sendToMember(env, m, msg, 'partner')))).reduce((a, b) => a + b, 0);
-    return reply(env, req, { ok: true, sent });
+    const counts = await Promise.all(to.map((m) => sendToMember(env, m, msg, 'partner')));
+    const results = Object.fromEntries(to.map((m, i) => [m, counts[i]]));
+    return reply(env, req, { ok: true, sent: counts.reduce((a, b) => a + b, 0), results });
   }
 
   if (url.pathname === '/schedule') {
