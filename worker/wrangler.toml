@@ -1,6 +1,7 @@
 # Servidor gratuito do Calendário (Cloudflare Workers)
-# O id do KV e as variáveis da equipe são preenchidos pelo GitHub Actions na publicação.
-name = "calendario-avisos"
+# Publicado pelo Cloudflare a partir do GitHub (pasta raiz: worker).
+# O armazenamento KV "CAL" é criado automaticamente na primeira publicação.
+name = "calend-rio"
 main = "src/index.js"
 compatibility_date = "2026-10-01"
 workers_dev = true
@@ -10,4 +11,8 @@ crons = ["* * * * *"]
 
 [[kv_namespaces]]
 binding = "CAL"
-id = "KV_ID"
+
+[vars]
+PROJECT_ID = "calendario-48fdb"
+ALLOWED_ORIGINS = "https://icarlxs-code.github.io"
+TEAM = '[{"id":"henrique","name":"Henrique","email":"icarlxs@gmail.com"},{"id":"matheus","name":"Matheus","email":"contatopedrazzi1@gmail.com"}]'
