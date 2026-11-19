@@ -57,8 +57,12 @@ export function eventCard(e, { showDate = false, compact = false, highlight = []
   const color = c?.color || '#888';
   const done = e.status === 'feito';
   const isToday = e.date === todayKey();
-  const past = isToday && e.time && toMin(e.time) + durationOf(e) < nowMin();
+  // atrasado: posts assim que passa o horário; o resto quando passa do fim; dias anteriores também
+  const today = todayKey();
+  const startMin = e.time ? toMin(e.time) : null;
+  const past = e.date < today || (isToday && startMin !== null && (TYPES[e.type]?.kind === 'post' ? startMin : startMin + durationOf(e)) < nowMin());
   const late = past && e.status === 'pendente';
+  const lateBy = late && isToday && startMin !== null ? nowMin() - startMin : null;
   const flagged = highlight.includes(e.id);
   return `
   <article class="ecard${done ? ' is-done' : ''}${late ? ' is-late' : ''}${flagged ? ' is-flagged' : ''}${compact ? ' is-compact' : ''}"
@@ -74,10 +78,11 @@ export function eventCard(e, { showDate = false, compact = false, highlight = []
         ${typeBadge(e.type)}
       </div>
       <div class="ecard__title"><span class="pfrow">${platformIcons(e, 17)}</span>${esc(e.title || TYPES[e.type]?.label || 'Evento')}</div>
+        ${late ? `<span class="ecard__late ecard__late--row">${icon('alert', 12)} Atrasado${lateBy ? ` · ${lateBy >= 60 ? Math.floor(lateBy / 60) + 'h' + (lateBy % 60 ? String(lateBy % 60).padStart(2, '0') : '') : lateBy + ' min'}` : ''}</span>` : ''}
       ${!compact ? `<div class="ecard__meta">
         ${avatars(e.assignees, 20)}<span>${esc(whoText(e.assignees))}</span>
         ${e.location ? `<span class="ecard__loc">${icon('pin', 12)}${esc(e.location)}</span>` : ''}
-        ${late ? `<span class="ecard__late">Atrasado</span>` : ''}
+
         ${e.visibleToClient === false ? `<span class="ecard__private" title="Não aparece para o cliente">${icon('eyeoff', 12)}</span>` : ''}
       </div>` : ''}
     </div>

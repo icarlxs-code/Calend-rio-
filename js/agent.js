@@ -82,7 +82,7 @@ export function planAction(a) {
     let dur = start && end ? toMin(end) - toMin(start) : Number(a.duracao_min) || null;
     if (dur && dur <= 0) dur = null;
     const people = resolvePeople(a.responsaveis);
-    const title = tidyTitle(String(a.titulo || '').slice(0, 120)) || TYPES[type].label;
+    const title = tidyTitle(String(a.titulo || '').slice(0, 120), type) || TYPES[type].label;
     const busy = dates.filter((d) => overlaps(d, start, dur || TYPES[type].dur, people).length);
     const span = dates.length === 1 ? dayLabel(dates[0]) : `${dates.length} dias, de ${fmtDayShort(dates[0])} a ${fmtDayShort(dates[dates.length - 1])}`;
     return {

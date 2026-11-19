@@ -95,12 +95,16 @@ export function reminderMessage(ev, offset, company = '') {
   if (offset > 0) {
     return { title: `Daqui a ${dur(offset)}: ${what}`, body: `${at} — ${VERB[ev.type] || 'a tarefa'}${title ? ' ' + title : ''}${place}` };
   }
+  // na hora exata: pergunta se já foi feito
   if (offset === 0) {
-    return { title: `Agora: ${what}`, body: `Está na hora de ${VERB[ev.type] || 'fazer a tarefa'}${title ? ' ' + title : ''}.` };
+    return {
+      title: isPostType(ev.type) ? `Já postou? ${what}` : `Já fez? ${what}`,
+      body: `Deu ${at}${title ? ' — ' + title : ''}. Se já ${isPostType(ev.type) ? 'postou' : 'fez'}, toque e marque como feito ✓`,
+    };
   }
   return {
-    title: isPostType(ev.type) ? `Já postou? ${what}` : `Já fez? ${what}`,
-    body: `Era às ${at}${title ? ' — ' + title : ''}. Toque para marcar como feito.`,
+    title: `Atrasado: ${what}`,
+    body: `Era às ${at}${title ? ' — ' + title : ''} e ainda não foi marcado como feito. Já ${isPostType(ev.type) ? 'postou' : 'fez'}? Toque para marcar.`,
   };
 }
 

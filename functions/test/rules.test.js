@@ -37,7 +37,8 @@ test('cobrança 30 min depois só se ainda estiver "a fazer"', () => {
   assert.equal(dueReminders([ev()], now)[0].offset, -30);
   assert.equal(dueReminders([ev({ status: 'pronto' })], now).length, 0);
   assert.equal(dueReminders([ev({ status: 'feito' })], { date: '2026-11-18', minutes: 17 * 60 }).length, 0);
-  assert.match(reminderMessage(ev(), -30, 'Pura Vida').title, /^Já postou\?/);
+  assert.match(reminderMessage(ev(), 0, 'Pura Vida').title, /^Já postou\?/);
+  assert.match(reminderMessage(ev(), -30, 'Pura Vida').title, /^Atrasado/);
 });
 
 test('sem horário não gera lembrete', () => {

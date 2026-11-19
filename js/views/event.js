@@ -376,7 +376,7 @@ function mountEditor(api, d, original, rep) {
     el.querySelectorAll('[data-net]').forEach((x) => x.classList.toggle('is-on', x === b));
   }));
   const readForm = () => {
-    d.title = tidyTitle(form.title.value.trim());
+    d.title = tidyTitle(form.title.value.trim(), d.type);
     if (TYPES[d.type].kind === 'post' && !d.platform) d.platform = 'instagram';
     if (TYPES[d.type].kind !== 'post') d.platform = null;
     d.date = form.date.value;

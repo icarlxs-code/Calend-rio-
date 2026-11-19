@@ -34,18 +34,21 @@ export function polishSoon() {
 async function run() {
   if (busy || store.mode !== 'cloud' || !store.me || !store.ready) return;
   const from = addDays(todayKey(), -1);
-  const mine = store.state.events.filter((e) => e.date >= from && e.title && e.titlePolished !== e.title && (e.createdBy || store.me) === store.me && store.canEdit('events', e)).slice(0, 20);
+  const mine = store.state.events.filter((e) => e.date >= from && e.title && (e.titlePolished !== e.title || e.titleV !== 2) && (e.createdBy || store.me) === store.me && store.canEdit('events', e)).slice(0, 20);
   if (!mine.length) return;
   busy = true;
   try {
-    const local = mine.map((e) => tidyTitle(e.title));
+    const local = mine.map((e) => tidyTitle(e.title, e.type));
+    // a IA corrige só o assunto (depois do "—"); o começo fica fixo
+    const subject = (t) => (t.includes(' — ') ? t.split(' — ').slice(1).join(' — ') : t);
     let ai = [];
     if (server()) {
-      try { ai = (await api('/tidy', { titles: local })).titles || []; } catch { ai = []; }
+      try { ai = (await api('/tidy', { titles: local.map(subject) })).titles || []; } catch { ai = []; }
     }
     const items = mine.map((e, i) => {
-      const t = safeFix(local[i], ai[i]);
-      return { ...e, title: t, titlePolished: t };
+      const fixed = safeFix(subject(local[i]), ai[i]);
+      const t = local[i].includes(' — ') ? `${local[i].split(' — ')[0]} — ${fixed}` : fixed;
+      return { ...e, title: t, titlePolished: t, titleV: 2 };
     });
     await store.upsertMany('events', items);
   } finally {

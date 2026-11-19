@@ -10,15 +10,21 @@ const FIX = [
   [/\blancamento\b/gi, 'lançamento'], [/\bcolecao\b/gi, 'coleção'], [/\bvideo\b/gi, 'vídeo'], [/\bsabado\b/gi, 'sábado'], [/\bpromocoes\b/gi, 'promoções'],
 ];
 const strip = (w) => w.toLowerCase().replace(/[.,:;!]+$/, '');
-export function tidyTitle(raw) {
+/* Começo claro para posts: "Post no feed — Couve-flor" */
+export const POST_LABEL = { feed: 'Post no feed', carrossel: 'Carrossel', reels: 'Reels', story: 'Stories' };
+const LABEL_RE = /^(post no feed|carrossel|reels|stories|story)\s+—\s+/i;
+export function tidyTitle(raw, type = null) {
   let t = String(raw || '').replace(/\s+/g, ' ').trim();
   if (!t) return t;
+  const label = POST_LABEL[type];
+  if (!label) return capFirst(fixWords(t)); // captação, reunião etc.: só corrige a escrita
+  if (LABEL_RE.test(t)) return `${label} — ${capFirst(fixWords(t.replace(LABEL_RE, '')))}`;
   const words = t.split(' ');
   // tira as palavras de "comando" do começo (post no feed da …), mas sempre deixa algo
   while (words.length > 1 && FILLER.has(strip(words[0]))) words.shift();
   t = words.join(' ').replace(/\s+(no|pro|pra|para o)\s+(instagram|insta|ig|feed)\s*$/i, '').trim();
-  if (FILLER.has(strip(t))) return capFirst(String(raw).trim()); // era só "post no feed": deixa como estava
-  for (const [re, to] of FIX) t = t.replace(re, to);
-  return capFirst(t);
+  if (FILLER.has(strip(t))) return label; // era só "post no feed"
+  return `${label} — ${capFirst(fixWords(t))}`;
 }
+const fixWords = (t) => { for (const [re, to] of FIX) t = t.replace(re, to); return t; };
 const capFirst = (s) => (s ? s.charAt(0).toLocaleUpperCase('pt-BR') + s.slice(1) : s);
