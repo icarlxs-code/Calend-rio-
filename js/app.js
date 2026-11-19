@@ -422,6 +422,8 @@ function startApp() {
     syncSchedule();
     setInterval(syncSchedule, 15 * 60e3);
   }
+  // dados cadastrados antes do login (guardados só neste aparelho): oferece levar para a nuvem
+  if (store.mode === 'cloud') setTimeout(() => offerLocalMigration().catch((e) => console.warn('migração', e)), 2500);
   // empresas pré-cadastradas (uma única vez)
   ensureSeedCompanies()
     .then(() => setTimeout(() => ensureSeedRoutine().catch((e) => console.warn('rotina', e)), 1500))
@@ -431,6 +433,49 @@ function startApp() {
   // atualiza o cadastro deste celular para notificações (se já tiver permissão)
   if (store.mode === 'cloud' && push.permission() === 'granted') push.register().catch(() => {});
   setTimeout(() => openDeepLink(), 300);
+}
+
+/* Encontra o que foi cadastrado antes do login (só neste aparelho) e leva para a nuvem */
+async function offerLocalMigration() {
+  if (!store.ready || localStorage.getItem('cal.migrated')) return;
+  let saved;
+  try {
+    saved = JSON.parse(localStorage.getItem('pauta.data.v1') || 'null');
+  } catch {
+    saved = null;
+  }
+  if (!saved || saved.demo) return;
+  // empresas com o mesmo nome de uma que já está na nuvem viram a mesma empresa
+  const byName = new Map(store.state.companies.map((c) => [c.name.trim().toLowerCase(), c.id]));
+  const remap = {};
+  const companies = (saved.companies || []).filter((c) => {
+    const same = byName.get((c.name || '').trim().toLowerCase());
+    if (same) {
+      remap[c.id] = same;
+      return false;
+    }
+    return !store.company(c.id);
+  });
+  const events = (saved.events || []).filter((e) => !store.event(e.id)).map((e) => ({ ...e, companyId: remap[e.companyId] || e.companyId }));
+  const notes = (saved.notes || []).filter((n) => !store.state.notes.some((x) => x.id === n.id));
+  if (!companies.length && !events.length && !notes.length) {
+    localStorage.setItem('cal.migrated', '1');
+    return;
+  }
+  const parts = [events.length && `${events.length} compromisso${events.length > 1 ? 's' : ''}`, companies.length && `${companies.length} empresa${companies.length > 1 ? 's' : ''}`, notes.length && `${notes.length} bilhete${notes.length > 1 ? 's' : ''}`].filter(Boolean).join(', ');
+  const many = companies.length + events.length + notes.length > 1;
+  const ok = await confirmDialog({
+    title: 'Encontrei dados só neste aparelho',
+    text: `${parts} ${many ? 'foram cadastrados' : 'foi cadastrado'} antes do login e ${many ? 'estão guardados' : 'está guardado'} só aqui. Enviar para a nuvem? Assim ${many ? 'aparecem' : 'aparece'} em qualquer celular, no Safari e para o parceiro.`,
+    ok: 'Enviar para a nuvem',
+  });
+  if (!ok) {
+    localStorage.setItem('cal.migrated', 'recusado');
+    return;
+  }
+  await store.importData({ companies, events, notes, settings: [] });
+  localStorage.setItem('cal.migrated', '1');
+  toast(`Pronto! ${parts} agora ${many ? 'estão' : 'está'} na nuvem.`, { ms: 5000 });
 }
 
 /* Avisa quando aparece um conflito novo na SUA agenda (ex.: o parceiro marcou algo em cima) */
