@@ -44,9 +44,9 @@
   var canvas = document.getElementById('intro-canvas');
   var root = document.documentElement;
   if (!intro || !canvas) return;
-  var FRAMES = 72, FPS = 24, AHEAD = 4;
+  var FRAMES = 48, FPS = 30, AHEAD = 5;
   var URLS = [];
-  for (var i = 1; i <= FRAMES; i++) URLS.push('media/intro/f' + ('00' + i).slice(-3) + '.webp');
+  for (var i = 1; i <= FRAMES; i++) URLS.push('media/intro2/f' + ('00' + i).slice(-3) + '.webp');
   var AWAY_MS = 30000; // tempo fora do app para repetir a abertura
   var leaving = false, timers = [], hiddenAt = 0, run = 0, blobs = null, loading = null;
   var isClient = function () { return /^#\/(c|v)\//.test(location.hash); };
@@ -123,7 +123,7 @@
     ctx && ctx.clearRect(0, 0, canvas.width, canvas.height);
     // primeira vez sem os quadros no celular: mostra a capa e segue (eles baixam por trás)
     timers.push(setTimeout(function () { if (myRun === run && !blobs) finish(); }, 2500));
-    timers.push(setTimeout(finish, 3000 + 3500)); // segurança: nunca prende a pessoa na abertura
+    timers.push(setTimeout(finish, Math.ceil(FRAMES / FPS * 1000) + 3500)); // segurança: nunca prende a pessoa na abertura
     loadAll().then(function () {
       if (myRun !== run || leaving) return;
       if (typeof createImageBitmap !== 'function') return finish();
