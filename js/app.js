@@ -63,7 +63,7 @@ function setBarColor(light, dark = light) {
 /* Pessoal parece outro app: título, ícone e cor da barra do iPhone próprios */
 function applySpaceMeta(personalMode) {
   const [l, d] = SPACE_BAR[personalMode ? 'personal' : 'work'];
-  setBarColor(l, d);
+  if (document.documentElement.classList.contains('intro-done')) setBarColor(l, d); // durante a abertura fica preta
   const set = (sel, attr, val) => { const el = document.querySelector(sel); if (el) el.setAttribute(attr, val); };
   set('link[rel="manifest"]', 'href', personalMode ? 'pessoal.webmanifest' : 'manifest.webmanifest');
   set('link[rel="apple-touch-icon"]', 'href', personalMode ? 'icons/pessoal-180.png' : 'icons/icon-180.png');

@@ -1,10 +1,10 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-tv65paiq'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-47xp6ohq'/*CACHE*/;
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster5.jpg',
   ...Array.from({ length: 67 }, (_, i) => `media/intro5/f${String(i + 1).padStart(3, '0')}.webp`),
   'media/logos/pura-vida.jpg', 'media/lembra-logo.jpg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/a-TV65PAIQ.js', 'dist/c-IY6FCE6X.js', 'dist/c-7IL2T3Z2.js', 'dist/c-AB7TZIE6.js', 'dist/c-RZZCBQEG.js', 'dist/c-QTXSQ3OU.js', 'dist/c-NMWKTJKE.js', 'dist/c-G4KESOLV.js', 'dist/c-MG7DV5A4.js', 'dist/c-FG3EU3CO.js', 'dist/c-EXX2MQ62.js', 'dist/c-RGFQ4KJ7.js', 'dist/c-RXMPZOAJ.js', 'dist/c-AKZEKLBI.js', 'dist/c-YEARXB46.js', 'dist/c-3GA6RSWB.js', 'dist/c-TWCTTFP7.js', 'dist/c-UCBOIM2G.js', 'dist/c-VHNSBD2M.js',
+  /*FILES*/ 'dist/a-47XP6OHQ.js', 'dist/c-IY6FCE6X.js', 'dist/c-7IL2T3Z2.js', 'dist/c-AB7TZIE6.js', 'dist/c-RZZCBQEG.js', 'dist/c-QTXSQ3OU.js', 'dist/c-NMWKTJKE.js', 'dist/c-G4KESOLV.js', 'dist/c-MG7DV5A4.js', 'dist/c-FG3EU3CO.js', 'dist/c-EXX2MQ62.js', 'dist/c-RGFQ4KJ7.js', 'dist/c-RXMPZOAJ.js', 'dist/c-AKZEKLBI.js', 'dist/c-YEARXB46.js', 'dist/c-3GA6RSWB.js', 'dist/c-TWCTTFP7.js', 'dist/c-UCBOIM2G.js', 'dist/c-VHNSBD2M.js',
 ];
 
 self.addEventListener('install', (e) => {

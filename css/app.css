@@ -1165,7 +1165,7 @@ html, body { overflow-x: hidden; max-width: 100%; }
    Escura no Trabalho (combina com a ilha do iPhone) e roxa no Pessoal; texto da barra fica branco. */
 :root { --bar: #0E0E12; }
 :root[data-space="personal"] { --bar: linear-gradient(90deg, #C88AE8 0%, #A06BFF 55%, #7C6BFF 100%); }
-body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px); background: var(--bar); z-index: 150; pointer-events: none; }
+/* (faixa desenhada atrás da hora/bateria removida: a barra do iPhone fica limpa, na cor do app) */
 .spaceveil { z-index: 300; }
 body.is-client::before { display: none; }
 .profpic { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px 0; }
@@ -1233,3 +1233,7 @@ body.is-client::before { display: none; }
 .adays i { height: 16px; border-radius: 3px; background: var(--surface-3); }
 .adays i.on { background: var(--ok); }
 .login__logo { width: 150px; height: 150px; border-radius: 34px; box-shadow: 0 14px 40px rgba(0,0,0,.25); }
+
+/* Abertura: tela inteira preta (sem faixa branca embaixo) */
+html:not(.intro-done), html:not(.intro-done) body { background: #000; }
+.intro { position: fixed; top: 0; left: 0; right: 0; bottom: 0; height: 100lvh; min-height: 100vh; }
