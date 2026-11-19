@@ -20,6 +20,9 @@ const active = () => store.mode === 'cloud' && !!server() && !!store.me;
 /* ---------- aviso imediato (parceiro e o próprio celular) ---------- */
 let onResult = null;
 export const setNotifyFeedback = (fn) => (onResult = fn);
+/* Empresa com dono das notificações (ex.: Garcia Hortifruti → só o Henrique) */
+const onlyFor = (companyId) => store.company(companyId)?.notifyOnly || null;
+const allowedFor = (member, companyId) => { const o = onlyFor(companyId); return !o || o === member; };
 function notify(to, msg, tag, url = './', includeSelf = false) {
   if (!msg || !to.length) return Promise.resolve(null);
   return api('/notify', { to, title: msg.title, body: msg.body, tag, url, includeSelf })
@@ -43,7 +46,7 @@ export function onEventChange(before, after) {
   const generic = (actor) => ({ title: `${actor} alterou: ${what}`, body: `${whenText(ev)}${ev.title ? ' · ' + ev.title : ''} · ${who}` });
   // "Avisar o parceiro" desligado no evento: o outro só recebe se for responsável por ele
   const silent = (after || before).notifyPartner === false;
-  const others = store.team.map((m) => m.id).filter((id) => id !== store.me && (!silent || (ev.assignees || []).includes(id)));
+  const others = store.team.map((m) => m.id).filter((id) => id !== store.me && allowedFor(id, ev.companyId) && (!silent || (ev.assignees || []).includes(id)));
   const jobs = others.map((r) => {
     const msg = changeMessage(before, after, { actor: nameOf(store.me), company: coName(ev.companyId), recipient: r, now: nowSP() }) || generic(nameOf(store.me));
     return notify([r], msg, `ev-${ev.id}`, `./#/e/${ev.id}`).then((d) => ({ r, d }));
@@ -53,7 +56,7 @@ export function onEventChange(before, after) {
   if (!before && after) mine = { title: `Novo na agenda: ${what}`, body: `${whenText(after)}${after.title ? ' · ' + after.title : ''} · ${who}` };
   else if (before && after && (before.date !== after.date || before.time !== after.time)) mine = { title: `Horário alterado: ${what}`, body: `${whenText(before)} → ${whenText(after)} · ${who}` };
   else mine = changeMessage(before, after, { actor: 'Você', company: coName(ev.companyId), recipient: null, now: nowSP() }) || generic('Você');
-  notify([store.me], mine, `ev-${ev.id}`, after ? `./#/e/${ev.id}` : './', true);
+  if (allowedFor(store.me, ev.companyId)) notify([store.me], mine, `ev-${ev.id}`, after ? `./#/e/${ev.id}` : './', true);
   if (jobs.length && onResult) {
     Promise.all(jobs).then((list) => {
       const missing = list.filter((x) => x.d && !x.d.error && x.d.results && !x.d.results[x.r]).map((x) => nameOf(x.r));
@@ -67,7 +70,8 @@ export function onEventChange(before, after) {
 
 export function onActivity(a) {
   if (!active()) return;
-  const others = a.notifyPartner === false ? [] : store.team.map((m) => m.id).filter((id) => id !== store.me);
+  const co = a.sample?.companyId || a.events?.[0]?.companyId;
+  const others = a.notifyPartner === false ? [] : store.team.map((m) => m.id).filter((id) => id !== store.me && allowedFor(id, co));
   const actor = nameOf(store.me);
   let msg = null;
   if (a.kind === 'deleted' && a.events?.length) {
@@ -82,7 +86,7 @@ export function onActivity(a) {
   } else if (a.kind === 'import') {
     msg = { title: `${actor} importou a agenda`, body: `${a.count || 0} itens atualizados.` };
   }
-  notify(store.team.map((m) => m.id), msg, `act-${a.id || Date.now()}`, './', true);
+  notify([...others, ...(allowedFor(store.me, co) ? [store.me] : [])], msg, `act-${a.id || Date.now()}`, './', true);
   syncSchedule();
 }
 
@@ -100,14 +104,15 @@ export function buildSchedule(now = Date.now()) {
       if (at < now - 10 * 60e3 || at > now + 4 * 86400e3) return;
       const msg = reminderMessage(ev, offset, coName(ev.companyId));
       const resp = (ev.assignees || []).map(nameOf).join(' e ');
-      store.team.map((m) => m.id).filter((member) => ev.notifyPartner !== false || member === ev.createdBy || (ev.assignees || []).includes(member)).forEach((member) => items.push({
+      store.team.map((m) => m.id).filter((member) => allowedFor(member, ev.companyId) && (ev.notifyPartner !== false || member === ev.createdBy || (ev.assignees || []).includes(member))).forEach((member) => items.push({
         id: `r_${ev.id}_${offset}_${ev.date}${ev.time.replace(':', '')}_${member}`,
         at, member, title: msg.title, body: resp && !(ev.assignees.length === 1 && ev.assignees[0] === member) ? `${msg.body} · ${resp}` : msg.body, tag: `rem-${ev.id}`, url: `./#/e/${ev.id}`, kind: 'reminders', badge: pendingOn(member, ev.date),
       }));
     });
     // atrasado: cobrança a cada 10 min (só para quem é responsável) até marcar como feito
     if (ev.status === 'pendente') {
-      const who = (ev.assignees || []).length ? ev.assignees : [ev.createdBy || store.me].filter(Boolean);
+      const owner = onlyFor(ev.companyId);
+      const who = owner ? [owner] : (ev.assignees || []).length ? ev.assignees : [ev.createdBy || store.me].filter(Boolean);
       lateReminders(ev, at0, coName(ev.companyId)).forEach((r) => {
         if (r.at < now - 10 * 60e3 || r.at > now + 4 * 86400e3) return;
         who.forEach((member) => items.push({

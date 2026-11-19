@@ -23,7 +23,7 @@ export function coachContext() {
     const past = posts.filter((e) => e.date <= t && (e.status === 'feito' || e.date < t)).map((e) => e.date).sort();
     const next = posts.filter((e) => e.date >= t && e.status !== 'feito').map((e) => e.date).sort();
     const last = past[past.length - 1] || '';
-    return { name: c.name, niche: nicheOf(c) || 'pequena empresa local', lastPost: last, nextPost: next[0] || '', daysSincePost: last ? diffDays(last, t) : null };
+    return { onlyFor: c.notifyOnly || null, name: c.name, niche: nicheOf(c) || 'pequena empresa local', lastPost: last, nextPost: next[0] || '', daysSincePost: last ? diffDays(last, t) : null };
   });
 }
 

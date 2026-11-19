@@ -41,6 +41,20 @@ export async function ensureMatheusLogo() {
   }
 }
 
+/* Quem recebe as notificações de cada empresa (pedido do Henrique, 19/11):
+   Garcia Hortifruti → só o Henrique · JG Garcia → só o Matheus. Uma vez só; depois dá para mudar na empresa. */
+const OWNER_ID = 'seed-notify-owner-v1';
+export function ensureNotifyOwners() {
+  if (!store.ready || store.mode !== 'cloud' || store.state.settings.some((s) => s.id === OWNER_ID)) return;
+  const rules = [[/garcia\s*hortifruti/i, 'henrique'], [/^\s*jg\s*garcia/i, 'matheus']];
+  const done = [];
+  for (const c of store.state.companies) {
+    const r = rules.find(([re]) => re.test(c.name));
+    if (r && c.notifyOnly !== r[1]) { store.writeRaw('companies', { ...c, notifyOnly: r[1], updatedAt: Date.now() }); done.push(c.id); }
+  }
+  if (store.state.companies.length) store.writeRaw('settings', { id: OWNER_ID, done });
+}
+
 let running = false;
 export async function ensureSeedCompanies() {
   if (running || !store.ready || store.state.settings.some((s) => s.id === SEED_ID)) return;

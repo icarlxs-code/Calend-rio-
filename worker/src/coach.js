@@ -114,7 +114,7 @@ export async function runCoach(env, sendToMember, team) {
   await env.CAL.put('coach', JSON.stringify(st));
   for (const m of due) {
     const kind = mins < 9 * 60 + 30 ? 'motivacao' : pick(KINDS);
-    const co = chooseCompany(ctx.companies || []);
+    const co = chooseCompany((ctx.companies || []).filter((c) => !c.onlyFor || c.onlyFor === m.id));
     const recent = (st.recent[m.id] || []).slice(-5);
     const msg = (co || kind === 'motivacao' ? await aiMessage(env, co ? kind : 'motivacao', co, m.name, ctx, trends, dates, recent) : null)
       || fallback(co ? kind : 'motivacao', co, m.name, dates);

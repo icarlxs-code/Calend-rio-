@@ -208,7 +208,7 @@ async function handle(req, env) {
 
   if (url.pathname === '/coach') {
     const companies = (Array.isArray(body.companies) ? body.companies : []).slice(0, 40).map((c) => ({
-      name: clean(c.name, 80), niche: clean(c.niche, 160), lastPost: clean(c.lastPost, 10), nextPost: clean(c.nextPost, 10),
+      onlyFor: /^[a-z]{1,20}$/.test(c.onlyFor || '') ? c.onlyFor : null, name: clean(c.name, 80), niche: clean(c.niche, 160), lastPost: clean(c.lastPost, 10), nextPost: clean(c.nextPost, 10),
       daysSincePost: typeof c.daysSincePost === 'number' ? c.daysSincePost : null,
     }));
     await env.CAL.put('coach-ctx', JSON.stringify({ companies, updatedAt: Date.now() }));

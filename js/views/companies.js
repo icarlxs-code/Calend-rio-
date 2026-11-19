@@ -162,6 +162,11 @@ export function openCompanyEditor(id = null, onSaved = null) {
         <div class="input-prefix"><span>@</span><input id="c-ig" class="input" name="instagram" value="${esc(d.instagram || '')}" placeholder="usuario" autocomplete="off" autocapitalize="none"></div>
       </div>
       <div class="fgroup">
+        <label class="flabel">Notificações desta empresa vão para</label>
+        <div class="seg seg--notify">${[['', 'Os dois'], ...store.team.map((m) => [m.id, m.name])].map(([v, l]) => `<button type="button" class="seg__btn${(d.notifyOnly || '') === v ? ' is-on' : ''}" data-only="${v}">${esc(l)}</button>`).join('')}</div>
+        <p class="fhelp">Avisos, lembretes, “Já postou?”, cobranças de atraso e dicas desta empresa chegam só para quem estiver marcado.</p>
+      </div>
+      <div class="fgroup">
         <label class="flabel" for="c-niche">O que a empresa faz (para as dicas)</label>
         <input id="c-niche" class="input" name="niche" value="${esc(d.niche || nicheOf(d))}" placeholder="Ex.: hamburgueria artesanal, loja de roupas femininas" autocomplete="off" maxlength="160">
       </div>
@@ -188,12 +193,14 @@ export function openCompanyEditor(id = null, onSaved = null) {
       d.name = form.name.value.trim();
       d.instagram = form.instagram.value.trim().replace(/^@/, '');
       d.niche = form.niche.value.trim();
+      d.notifyOnly = el.querySelector('[data-only].is-on')?.dataset.only || null;
       d.address = form.address.value.trim();
       d.contact = form.contact.value.trim();
       d.notes = form.notes.value.trim();
     };
     const preview = () => (el.querySelector('[data-preview]').innerHTML = logo({ ...d, name: form.name.value || '?' }, 88, 24));
     form.name.addEventListener('input', preview);
+    el.querySelectorAll('[data-only]').forEach((b) => (b.onclick = () => el.querySelectorAll('[data-only]').forEach((x) => x.classList.toggle('is-on', x === b))));
     el.querySelectorAll('[data-color]').forEach((b) => (b.onclick = () => {
       d.color = b.dataset.color;
       el.querySelectorAll('[data-color]').forEach((x) => x.classList.toggle('is-on', x === b));

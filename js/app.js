@@ -20,7 +20,7 @@ import { upcomingConflicts } from './insights.js';
 import { decodeSnapshot } from './share.js';
 import { sanitizePayload } from './sanitize.js';
 import { maybeOnboard } from './views/onboarding.js';
-import { ensureSeedCompanies, ensureMatheusLogo } from './seed-companies.js';
+import { ensureSeedCompanies, ensureMatheusLogo, ensureNotifyOwners } from './seed-companies.js';
 import { ensureMatheusJG } from './seed-matheus.js';
 import { ensureSeedRoutine } from './seed-routine.js';
 import { onEventChange, onActivity, syncSchedule, setNotifyFeedback } from './notifier.js';
@@ -506,6 +506,7 @@ function startApp() {
   // empresas pré-cadastradas (uma única vez)
   ensureSeedCompanies()
     .then(() => setTimeout(() => ensureMatheusLogo().catch(() => {}), 800))
+    .then(() => setTimeout(() => { try { ensureNotifyOwners(); } catch (e) { console.warn(e); } }, 1000))
     .then(() => setTimeout(() => ensureMatheusJG().catch((e) => console.warn('pedido Matheus', e)), 1200))
     .then(() => setTimeout(() => ensureSeedRoutine().catch((e) => console.warn('rotina', e)), 1500))
     .catch((e) => console.warn('pré-cadastro', e));

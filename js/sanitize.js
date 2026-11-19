@@ -48,6 +48,7 @@ export function sanitizeItem(col, x) {
       logo: safeLogo(x.logo),
       instagram: str(x.instagram, 60).replace(/[^\w.]/g, ''),
       niche: str(x.niche, 160),
+      notifyOnly: typeof x.notifyOnly === 'string' && /^[a-z]{1,20}$/.test(x.notifyOnly) ? x.notifyOnly : null,
       address: str(x.address, 300),
       contact: str(x.contact, 300),
       notes: str(x.notes),
