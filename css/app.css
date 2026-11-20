@@ -1506,3 +1506,24 @@ a.list__row { color: inherit; text-decoration: none; }
 .aerr__top b { font-size: 13.5px; color: var(--danger); word-break: break-word; }
 .aerr__top span { flex: none; font-size: 12px; font-weight: 700; color: var(--text-2); background: var(--surface-2); padding: 2px 8px; border-radius: 99px; }
 .aerr small { display: block; font-size: 12px; color: var(--text-3); margin-top: 4px; word-break: break-word; }
+/* celulares pequenos: campos de horário não vazam para fora da tela */
+.list__row input[type="time"] { min-width: 0; width: 7.2em; flex: none; }
+@media (max-width: 400px) {
+  [data-routine-form] .list__row { flex-wrap: wrap; row-gap: 8px; }
+  [data-routine-form] .list__row > span:first-child { flex-basis: 100%; }
+  [data-routine-form] .list__row input[type="time"] { flex: 1 1 0; width: auto; }
+}
+.devrow > span { flex-direction: column; align-items: flex-start !important; gap: 2px !important; }
+/* celulares pequenos: título do Pessoal não espreme; botões do topo menores */
+@media (max-width: 400px) {
+  .phdr h1 { font-size: 25px; }
+  .phdr__actions { gap: 6px; }
+  .phdr__actions .btn-pill, .phdr__actions [data-action="space"] span { font-size: 13px; }
+}
+@media (max-width: 370px) {
+  .phdr__row { flex-wrap: wrap; align-items: flex-start; }
+  .phdr__actions { margin-left: auto; }
+}
+/* campos lado a lado (data, CPF, horários) nunca saem da caixa */
+.row2 .input, .row3 .input { min-width: 0; width: 100%; }
+.ficha input[type="date"] { font-size: 16px; padding-right: 8px; }

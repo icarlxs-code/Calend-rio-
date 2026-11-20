@@ -210,8 +210,17 @@ const actions = {
     const strip = document.querySelector('[data-strip]');
     if (!strip) return;
     const days = [...strip.children].map((c) => c.dataset.k);
-    const i = Math.max(0, Math.min(days.length - 7, days.indexOf(strip.dataset.left) + Number(b.dataset.n)));
-    strip.dataset.left = days[i];
+    const target = addDays(strip.dataset.left || days[0], Number(b.dataset.n));
+    const i = days.indexOf(target);
+    // perto da ponta (ou fora dela): redesenha a faixa já centralizada na semana nova — nunca perde semanas
+    if (i < 7 || i > days.length - 14) {
+      ui.stripCenter = addDays(target, 3);
+      ui.stripLeft = target;
+      ui.stripReset = true;
+      render();
+      return;
+    }
+    strip.dataset.left = target;
     strip.dataset.touch = String(Date.now());
     strip.scrollTo({ left: i * cellW(strip), behavior: 'smooth' });
   },
@@ -378,6 +387,7 @@ function bindStrip(view) {
     }
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(() => {
+      if (!strip.isConnected) return; // faixa antiga (a tela foi redesenhada): ignora
       const i = Math.round(strip.scrollLeft / cellW(strip));
       if (days[i]) strip.dataset.left = days[i];
       const mid = days[Math.min(days.length - 1, i + 3)];
@@ -385,6 +395,9 @@ function bindStrip(view) {
     });
     clearTimeout(t);
     t = setTimeout(() => {
+      // a tela foi redesenhada no meio da rolagem: a faixa antiga não manda mais em nada
+      // (sem isso, ela lia posição 0 e jogava o calendário para meses atrás)
+      if (!strip.isConnected || cellW(strip) < 10) return;
       const i = Math.round(strip.scrollLeft / cellW(strip));
       // perto das pontas: anda a janela de dias e continua de onde estava (rolagem infinita)
       if (i < 14 || i > days.length - 7 - 14) {

@@ -163,3 +163,15 @@ test('chat com chave: usa Haiku 5.5 com esforço baixo e manda a agenda', async 
   assert.match(sent.system[1].text, /Quem pergunta: Henrique[\s\S]*13h Feed Pura Vida/);
   assert.equal(sent.messages[0].role, 'user', 'conversa começa pela pessoa');
 });
+
+test('ninguém sequestra o aparelho de outra pessoa reaproveitando o identificador dele', async () => {
+  const [h, m] = JSON.parse(env.TEAM).map((x) => x.email);
+  await call('/subscribe', { as: h, body: { id: 'h9', subscription: phone('henrique') } });
+  const before = phones.henrique.inbox.length;
+  // o parceiro tenta registrar o PRÓPRIO celular com o identificador do aparelho do Henrique
+  await call('/subscribe', { as: m, body: { id: 'h9', subscription: phone('intruso') } });
+  const r = await call('/test', { as: h });
+  assert.equal(r.status, 200);
+  assert.equal(phones.henrique.inbox.length, before + 1, 'o aviso do Henrique continua indo para o celular dele');
+  assert.equal(phones.intruso.inbox.length, 0, 'e nunca para o celular de outra pessoa');
+});

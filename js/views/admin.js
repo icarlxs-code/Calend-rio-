@@ -121,6 +121,25 @@ function errorsHtml(errors) {
   </section>`;
 }
 
+/* Cada conta grava o próprio resumo: o painel trata tudo como não confiável (números viram números, foto só imagem) */
+const N = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+const S = (v, n = 120) => (typeof v === 'string' ? v.slice(0, n) : '');
+function cleanStat(u) {
+  const c = u.counts || {}, d = u.device || {}, p = u.profile || {};
+  return {
+    uid: S(u.uid, 64), name: S(u.name, 60), email: S(u.email, 120), workspace: S(u.workspace, 20), space: S(u.space, 20),
+    photo: typeof u.photo === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(u.photo) ? u.photo : null,
+    color: /^#[0-9a-fA-F]{6}$/.test(u.color || '') ? u.color : '#8E8E93',
+    createdAt: N(u.createdAt), lastSeen: N(u.lastSeen), opens: N(u.opens),
+    activeDays: Array.isArray(u.activeDays) ? u.activeDays.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)).slice(-40) : [],
+    counts: Object.fromEntries(['companies', 'events', 'myEvents', 'thisWeek', 'done30', 'late', 'posts30', 'notes', 'personal', 'lists', 'birthdays'].map((k) => [k, N(c[k])])),
+    device: { platform: S(d.platform, 20), installed: !!d.installed, notifications: S(d.notifications, 20), registered: !!d.registered },
+    profile: p.done ? { done: true, profession: S(p.profession, 80), area: S(p.area, 80), age: S(p.age, 10), index: N(p.index), forget: N(p.forget),
+      difficulties: Array.isArray(p.difficulties) ? p.difficulties.filter((x) => typeof x === 'string').slice(0, 12).map((x) => x.slice(0, 30)) : [],
+      goal: S(p.goal, 30), journey: S(p.journey, 30) } : { done: false },
+  };
+}
+
 export async function openAdmin() {
   let users = null, err = null, openUid = null, q = '', plans = {}, errors = null;
   const html = () => {
@@ -180,7 +199,7 @@ export async function openAdmin() {
   });
   const load = async () => {
     try {
-      users = await store.backendApi.listStats(); err = null;
+      users = (await store.backendApi.listStats()).map(cleanStat); err = null;
       try { const { api } = await import('../avisos.js'); plans = (await api('/billing/all', {})).byWs || {}; } catch { plans = {}; }
       try { const { api } = await import('../avisos.js'); errors = (await api('/admin/errors', {})).errors || []; } catch { errors = null; }
     }

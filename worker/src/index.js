@@ -283,7 +283,11 @@ async function handle(req, env) {
     const s = body.subscription;
     if (!s?.endpoint || !/^https:\/\//.test(s.endpoint) || !s.keys?.p256dh || !s.keys?.auth) return reply(env, req, { error: 'aparelho inválido' }, 400);
     const subs = await getSubs(env);
-    const id = clean(body.id, 80) || s.endpoint.slice(-40);
+    let id = clean(body.id, 80) || s.endpoint.slice(-40);
+    // o identificador do aparelho de outra pessoa não pode ser reaproveitado (não dá para "sequestrar" os avisos dela)
+    if (subs[id] && subs[id].member !== me.id) id = `${me.id}:${id}`.slice(0, 120);
+    // o mesmo endereço de notificação não pode ficar registrado em nome de duas pessoas
+    for (const [k, d] of Object.entries(subs)) if (k !== id && d.subscription?.endpoint === s.endpoint && d.member !== me.id) delete subs[k];
     subs[id] = {
       member: me.id,
       subscription: { endpoint: s.endpoint, keys: { p256dh: clean(s.keys.p256dh, 200), auth: clean(s.keys.auth, 100) } },
@@ -340,7 +344,7 @@ async function handle(req, env) {
 
   if (url.pathname === '/coach') {
     const companies = (Array.isArray(body.companies) ? body.companies : []).slice(0, 40).map((c) => ({
-      onlyFor: /^[a-z]{1,20}$/.test(c.onlyFor || '') ? c.onlyFor : null, name: clean(c.name, 80), niche: clean(c.niche, 160), lastPost: clean(c.lastPost, 10), nextPost: clean(c.nextPost, 10),
+      onlyFor: /^[\w-]{1,40}$/.test(c.onlyFor || '') ? c.onlyFor : null, name: clean(c.name, 80), niche: clean(c.niche, 160), lastPost: clean(c.lastPost, 10), nextPost: clean(c.nextPost, 10),
       daysSincePost: typeof c.daysSincePost === 'number' ? c.daysSincePost : null,
     }));
     const W = body.work && typeof body.work === 'object' ? body.work : null;

@@ -182,7 +182,7 @@ function fillDevices() {
     if (!counts) { box.innerHTML = '<div class="list__row"><span><small>Não deu para conferir os celulares agora.</small></span></div>'; return; }
     box.innerHTML = store.team.map((m) => {
       const n = counts[m.id] || 0;
-      return `<div class="list__row"><span><b>${esc(m.name)}</b><small>${n ? `${n} celular${n > 1 ? 'es' : ''} recebendo avisos` : 'Nenhum celular cadastrado — não recebe notificações. Abra o app pelo ícone → Ajustes → Notificações → Ativar/Cadastrar.'}</small></span><span>${n ? '✅' : '⚠️'}</span></div>`;
+      return `<div class="list__row devrow"><span><b>${esc(m.name)}</b><small>${n ? `${n} celular${n > 1 ? 'es' : ''} recebendo avisos` : 'Nenhum celular cadastrado — não recebe notificações. Abra o app pelo ícone → Ajustes → Notificações → Ativar/Cadastrar.'}</small></span><span>${n ? '✅' : '⚠️'}</span></div>`;
     }).join('');
   });
 }
@@ -218,7 +218,7 @@ function routineSection() {
         <div class="daysoff">${WD_SHORT.map((w, i) => `<label class="dayoff"><input type="checkbox" name="off" value="${i}"${r.daysOff.includes(i) ? ' checked' : ''}><span>${w}</span></label>`).join('')}</div>
       </div>
     </form>
-    <p class="fhelp">O assistente usa isso para não marcar nada em cima do almoço, da folga ou fora do expediente, e para proteger o tempo livre de vocês.</p>
+    <p class="fhelp">O assistente usa isso para não marcar nada em cima do almoço, da folga ou fora do expediente, e para proteger o ${store.team.length > 1 ? 'tempo livre de vocês' : 'seu tempo livre'}.</p>
   </section>`;
 }
 

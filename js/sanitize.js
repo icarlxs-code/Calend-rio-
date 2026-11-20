@@ -15,10 +15,14 @@ export const safeDate = (d) => (DATE.test(d || '') ? d : null);
 export const safeTime = (t) => (TIME.test(t || '') ? t : '');
 const safeType = (t) => (TYPES[t] ? t : 'outro');
 const safeStatus = (s) => (STATUS[s] ? s : 'pendente');
-const ids = (a) => (Array.isArray(a) ? a.filter((x) => typeof x === 'string').slice(0, 10) : []);
+const ID = /^[\w-]{1,100}$/;
+const ids = (a) => (Array.isArray(a) ? a.filter((x) => typeof x === 'string' && ID.test(x)).slice(0, 10) : []);
+const safeId = (v) => (typeof v === 'string' && ID.test(v) ? v : null);
 
+/* Só letras, números, _ e - nos identificadores: ninguém (nem um convidado da agenda compartilhada)
+   consegue esconder código num identificador que vai para a tela. */
 export function sanitizeItem(col, x) {
-  if (!x || typeof x !== 'object' || typeof x.id !== 'string') return null;
+  if (!x || typeof x !== 'object' || typeof x.id !== 'string' || !ID.test(x.id)) return null;
   if (col === 'events') {
     const date = safeDate(x.date);
     if (!date) return null;
@@ -33,6 +37,10 @@ export function sanitizeItem(col, x) {
       internalNote: str(x.internalNote),
       location: str(x.location, 300),
       assignees: ids(x.assignees),
+      companyId: safeId(x.companyId),
+      createdBy: safeId(x.createdBy),
+      updatedBy: safeId(x.updatedBy),
+      seriesId: safeId(x.seriesId),
       duration: x.duration ? num(x.duration, 5, 1440, null) : null,
       reminder: num(x.reminder, -1, 10080, 30),
       visibleToClient: x.visibleToClient !== false,
@@ -48,7 +56,7 @@ export function sanitizeItem(col, x) {
       logo: safeLogo(x.logo),
       instagram: str(x.instagram, 60).replace(/[^\w.]/g, ''),
       niche: str(x.niche, 160),
-      notifyOnly: typeof x.notifyOnly === 'string' && /^[a-z]{1,20}$/.test(x.notifyOnly) ? x.notifyOnly : null,
+      notifyOnly: typeof x.notifyOnly === 'string' && /^[\w-]{1,40}$/.test(x.notifyOnly) ? x.notifyOnly : null,
       address: str(x.address, 300),
       contact: str(x.contact, 300),
       notes: str(x.notes),

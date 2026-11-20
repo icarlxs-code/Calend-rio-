@@ -35,9 +35,12 @@ export const siteUrl = () => {
 export const inviteLink = (token) => `${siteUrl()}convite/#${token}`;
 
 /* Pessoas de uma equipe, na ordem: dono e convidados */
+const hex = (c, d) => (/^#[0-9a-fA-F]{6}$/.test(c || '') ? c : d);
+const nm = (n, d) => (typeof n === 'string' && n.trim() ? n.trim().slice(0, 40) : d);
 export function teamPeople(t, owner, mine = null) {
-  const out = [{ id: idOf(owner), name: t.ownerName || 'Dono', color: t.ownerColor || '#7C5CFF', photo: null, uid: owner, owner: true }];
-  (t.members || []).forEach((uid, i) => out.push({ id: idOf(uid), name: t.names?.[uid]?.name || 'Convidado', color: t.names?.[uid]?.color || COLORS[i % COLORS.length], photo: null, uid }));
+  const out = [{ id: idOf(owner), name: nm(t.ownerName, 'Dono'), color: hex(t.ownerColor, '#7C5CFF'), photo: null, uid: owner, owner: true }];
+  (t.members || []).filter((uid) => typeof uid === 'string' && /^[A-Za-z0-9]{6,64}$/.test(uid))
+    .forEach((uid, i) => out.push({ id: idOf(uid), name: nm(t.names?.[uid]?.name, 'Convidado'), color: hex(t.names?.[uid]?.color, COLORS[i % COLORS.length]), photo: null, uid }));
   // a própria pessoa aparece com a foto e a cor do perfil dela
   return mine ? out.map((p) => (p.id === mine.id ? { ...p, ...mine, uid: p.uid, owner: p.owner } : p)) : out;
 }
