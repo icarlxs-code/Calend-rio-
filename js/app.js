@@ -22,7 +22,8 @@ import { decodeSnapshot } from './share.js';
 import { sanitizePayload } from './sanitize.js';
 import { maybeOnboard } from './views/onboarding.js';
 import { showInstallGuide } from './install.js';
-import { checkBilling, trialBanner, openPlans, confirmPayment, openPortal, buying, clearBuying } from './billing.js';
+import { onDone } from './reward.js';
+import { checkBilling, trialBanner, openPlans, confirmPayment, openPortal, buying, clearBuying, hasAccess, requireAccess, lastKnown } from './billing.js';
 import { captureInvite, maybeAcceptInvite, startTeam, openShare, pendingInvite } from './equipe.js';
 import { personaOf } from './notifier.js';
 import { applyProfTheme, applyThemePref, setThemePref } from './theme.js';
@@ -154,8 +155,10 @@ function render() {
   const ni = view.querySelector('[data-form="note"] input');
   if (ni && draftNote) ni.value = draftNote;
   if (ni && hadFocus) ni.focus({ preventScroll: true });
-  // faixa do teste grátis (contagem regressiva)
-  const tb = trialBanner();
+  // faixa do teste grátis (contagem regressiva) ou de conta sem plano (tudo travado)
+  const locked = !hasAccess();
+  document.documentElement.classList.toggle('is-locked', locked);
+  const tb = locked ? lockBanner() : trialBanner();
   if (tb) (view.querySelector('.page') || view).insertAdjacentHTML('afterbegin', tb);
   bindSwipes();
   bindStrip(view);
@@ -165,6 +168,16 @@ function render() {
     if (pq && draftP) pq.value = draftP;
     if (pq && hadP) pq.focus({ preventScroll: true });
   }
+}
+/* Conta própria sem plano: faixa no topo; o resto do app fica apagado e não responde */
+function lockBanner() {
+  const b = store.billing || {};
+  const checking = b.plan === 'checking';
+  return `<button class="trialbar trialbar--lock" data-action="plans" data-allow-locked>
+    <span class="trialbar__ic">${icon(checking ? 'clock' : 'lock', 16)}</span>
+    <span><b>${checking ? 'Conferindo seu plano…' : b.plan === 'offline' ? 'Sem conexão para conferir seu plano' : 'Seu Lembra está pausado'}</b><small>${checking ? 'Só um instante' : b.plan === 'offline' ? 'Toque para tentar de novo' : 'Comece o teste grátis ou assine para liberar tudo'}</small></span>
+    <span class="trialbar__go">${checking ? '…' : 'Liberar'}</span>
+  </button>`;
 }
 function rerenderAll() {
   render();
@@ -276,8 +289,12 @@ const actions = {
     const e = store.event(b.dataset.id);
     if (!e) return;
     const status = e.status === 'feito' ? 'pendente' : 'feito';
+    const at = b.getBoundingClientRect(); // a tela é redesenhada ao salvar: mede o botão antes
     await store.upsert('events', { ...e, status });
-    if (status === 'feito') toast(`${TYPES[e.type].label} concluído`, { action: 'Desfazer', onAction: () => store.upsert('events', { ...store.event(e.id), status: e.status }) });
+    if (status === 'feito' && store.event(e.id)?.status === 'feito') {
+      const left = e.date === todayKey() ? store.eventsOn(e.date, { person: store.me }).filter((x) => x.status !== 'feito').length : null;
+      toast(onDone({ el: at, left }), { action: 'Desfazer', onAction: () => store.upsert('events', { ...store.event(e.id), status: e.status }) });
+    }
   },
   ...personalActions,
   'new-event': (b) => {
@@ -323,6 +340,21 @@ const actions = {
 
 // rede de segurança: nenhum formulário do app pode "enviar" a página (isso recarregaria o app)
 document.addEventListener('submit', (ev) => ev.preventDefault(), true);
+
+/* Conta sem plano ativo: qualquer toque na agenda ou nas abas não faz nada — abre os planos.
+   (Ficam livres a tela de planos, a ficha, os termos, o convite da agenda compartilhada e "Sair".) */
+const lockGuard = (ev) => {
+  if (hasAccess() || document.body.classList.contains('is-client')) return;
+  // só a agenda e as abas: janelas de convite, termos e confirmações continuam funcionando
+  // (gravar continua bloqueado no store, para qualquer caminho)
+  const inApp = ev.target.closest && ev.target.closest('#view, .tabbar');
+  if (!inApp || ev.target.closest('[data-allow-locked], [data-action="logout"]')) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  if (ev.type === 'focusin' && ev.target.blur) ev.target.blur();
+  requireAccess();
+};
+['click', 'focusin'].forEach((t) => document.addEventListener(t, lockGuard, true));
 
 document.addEventListener('click', (ev) => {
   const b = ev.target.closest('[data-action]');
@@ -753,6 +785,11 @@ async function startBilling() {
 function startApp() {
   // pessoa escolhida no filtro precisa existir neste espaço (ex.: celular usado por outra conta antes)
   if (ui.person !== 'all' && !store.member(ui.person)) ui.person = 'all';
+  // conta própria: até o servidor confirmar o plano, nada fica liberado (a não ser o último plano válido deste aparelho)
+  if (store.solo && store.mode === 'cloud' && !store.billing) store.billing = lastKnown() || { plan: 'checking', active: false };
+  // portão do plano: sem plano ativo nada é criado, alterado ou apagado (a ficha e os ajustes de rotina podem)
+  store.gate = (col) => col === 'settings' || requireAccess();
+  personal.gate = () => requireAccess();
   syncWork();
   shell();
   render();
@@ -868,7 +905,8 @@ function ensurePersona() {
 
 /* Encontra o que foi cadastrado antes do login (só neste aparelho) e leva para a nuvem */
 async function offerLocalMigration() {
-  if (!store.ready || localStorage.getItem('cal.migrated')) return;
+  if (!store.ready || localStorage.getItem('cal.migrated') || !hasAccess()) return; // sem plano ativo: oferece depois
+
   let saved;
   try {
     saved = JSON.parse(localStorage.getItem('pauta.data.v1') || 'null');

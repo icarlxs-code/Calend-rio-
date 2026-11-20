@@ -37,6 +37,8 @@ export async function connect(config) {
     auth = authApi.getAuth(app);
   }
   if (useEmulator()) authApi.connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+  // e-mails do login (confirmação e "esqueci a senha") em português
+  try { auth.languageCode = 'pt-BR'; } catch { /* ok */ }
   functions = fnMod.getFunctions(app, CONFIG.functionsRegion || 'southamerica-east1');
   if (useEmulator()) fnMod.connectFunctionsEmulator(functions, '127.0.0.1', 5001);
   return {

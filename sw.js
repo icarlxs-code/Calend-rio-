@@ -1,10 +1,10 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-tslssjc4'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-zpkc5j7v'/*CACHE*/;
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster5.jpg',
   ...Array.from({ length: 67 }, (_, i) => `media/intro5/f${String(i + 1).padStart(3, '0')}.webp`),
   'media/logos/pura-vida.jpg', 'media/lembra-logo.jpg', 'media/marca/completa-preto.png', 'media/marca/completa-branco.png', 'media/marca/simbolo-preto.png', 'media/marca/simbolo-branco.png', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/c-BMGPDTIL.js', 'dist/c-HAW5G6ZS.js', 'dist/c-AJC37G3E.js', 'dist/c-ZROCKM6T.js', 'dist/a-TSLSSJC4.js', 'dist/c-U4DR35MC.js', 'dist/c-DIUQLQ5R.js', 'dist/c-L5OZ4PT2.js', 'dist/c-6UUEHBDI.js', 'dist/c-QASBI575.js', 'dist/c-SODDIOXL.js', 'dist/c-WMVIU2OE.js', 'dist/c-RUUGNTKW.js', 'dist/c-6ZXGRYEG.js', 'dist/c-VLIKKZDO.js', 'dist/c-NL6ANOYI.js', 'dist/c-7AHVABAR.js', 'dist/c-FXKLM36Z.js', 'dist/c-EWRUVEN5.js', 'dist/c-JRJBASYT.js', 'dist/c-YMOOP2FQ.js', 'dist/c-OJ553DWS.js', 'dist/c-XXF3RBEU.js', 'dist/c-X3PB6JZ2.js', 'dist/c-YEARXB46.js', 'dist/c-BYHTQNTY.js', 'dist/c-S6VVKE3W.js', 'dist/c-VHNSBD2M.js',
+  /*FILES*/ 'dist/c-GPKOWZD6.js', 'dist/c-LULTGO4C.js', 'dist/c-WC4M523O.js', 'dist/c-CHGCZLVC.js', 'dist/a-ZPKC5J7V.js', 'dist/c-43UXVYXU.js', 'dist/c-2333HXB6.js', 'dist/c-GFH5UB6W.js', 'dist/c-OD6RBA75.js', 'dist/c-XLL6IVDS.js', 'dist/c-WMVIU2OE.js', 'dist/c-3PLJZ2AC.js', 'dist/c-AY5WSY73.js', 'dist/c-EIUC5NNC.js', 'dist/c-H7PUCZME.js', 'dist/c-O7LJ3BTE.js', 'dist/c-2B2LEZQ4.js', 'dist/c-LPWAEI45.js', 'dist/c-2UQTB4LY.js', 'dist/c-E6Y4HJSB.js', 'dist/c-F4CQFADB.js', 'dist/c-FFSZDZJY.js', 'dist/c-OJMU622A.js', 'dist/c-F25S5TTN.js', 'dist/c-AUSHTMPE.js', 'dist/c-YEARXB46.js', 'dist/c-BYHTQNTY.js', 'dist/c-WIXQMUSO.js', 'dist/c-VHNSBD2M.js',
 ];
 
 self.addEventListener('install', (e) => {

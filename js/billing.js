@@ -15,19 +15,46 @@ export function deviceId() {
   } catch { return ''; }
 }
 const saveLast = (st) => { try { localStorage.setItem(LS_LAST, JSON.stringify({ ...st, at: Date.now(), ws: store.workspace })); } catch { /* ok */ } };
-const lastKnown = () => { try { const j = JSON.parse(localStorage.getItem(LS_LAST) || 'null'); return j && j.ws === store.workspace ? j : null; } catch { return null; } };
+/* Última situação conhecida NESTE aparelho e desta conta — só vale se o plano ainda estiver dentro do prazo */
+const stillValid = (b, now = Date.now()) => !!b && !!b.active && (
+  b.plan === 'lifetime' || b.plan === 'team'
+  || (b.plan === 'trial' && b.trialEndsAt > now)
+  || (b.plan === 'monthly' && (!b.paidUntil || b.paidUntil + 3 * 864e5 > now) && now - (b.at || 0) < 35 * 864e5)
+  || (b.plan === 'shared' && now - (b.at || 0) < 3 * 864e5));
+export const lastKnown = () => { try { const j = JSON.parse(localStorage.getItem(LS_LAST) || 'null'); return j && j.ws === store.workspace && stillValid(j) ? j : null; } catch { return null; } };
+
+/* A conta pode usar o app agora? (conta própria sem plano ativo: tudo travado) */
+export function hasAccess() {
+  if (!store.solo || store.mode !== 'cloud') return true;
+  const b = store.billing;
+  if (!b || !b.active) return false;
+  if (b.plan === 'trial' && !(b.trialEndsAt > Date.now())) return false;
+  return true;
+}
+/* Tentou mexer sem plano: não deixa e mostra os planos */
+let lastNag = 0;
+export function requireAccess() {
+  if (hasAccess()) return true;
+  if (Date.now() - lastNag > 800) {
+    lastNag = Date.now();
+    if (!document.querySelector('.paywall')) openPlans({ blocking: true });
+  }
+  return false;
+}
 
 /* Situação do plano (começa o teste no 1º acesso) */
 export async function checkBilling() {
-  if (!store.solo || store.mode !== 'cloud' || !server()) return (store.billing = { plan: 'team', active: true });
+  if (!store.solo || store.mode !== 'cloud') return (store.billing = { plan: 'team', active: true });
+  if (!server()) return (store.billing = { plan: 'offline', active: false });
   try {
     // o teste grátis NÃO começa sozinho: a pessoa escolhe começar (botão na tela de planos)
     const st = await api('/billing/status', {});
     store.billing = st;
     saveLast(st);
   } catch (e) {
-    // sem conexão com o servidor: usa a última situação conhecida (não trava quem já pagou)
-    store.billing = lastKnown() || { plan: 'unknown', active: true };
+    // sem conexão com o servidor: usa a última situação conhecida, se ainda estiver no prazo (não trava quem já pagou).
+    // Sem nenhuma confirmação: fica travado até conseguir conferir (nunca libera "no escuro").
+    store.billing = lastKnown() || { plan: 'offline', active: false };
   }
   return store.billing;
 }
@@ -58,71 +85,117 @@ export async function startTrialNow() {
   return st;
 }
 
-/* Tela de planos. blocking = sem plano ativo (não dá para fechar: o app fica bloqueado até começar o teste ou assinar) */
+/* Tela de planos. blocking = sem plano ativo (não dá para fechar: o app fica bloqueado até começar o teste ou assinar).
+   Tocar num plano só ESCOLHE; o pagamento abre no botão "Continuar". */
+const PLAN_INFO = {
+  mensal: { name: 'Mensal', price: 'R$ 9,90', per: '/mês', note: 'Cancele quando quiser', cta: 'Assinar o Mensal · R$ 9,90/mês' },
+  vitalicio: { name: 'Vitalício', price: 'R$ 150', per: ' uma vez', note: 'Pague uma vez. Use para sempre.', cta: 'Garantir o Vitalício · R$ 150' },
+};
+const COMPARE = [
+  ['Agenda de trabalho com a cara da sua profissão', true, true],
+  ['Modo Pessoal: aniversários, compromissos e listas', true, true],
+  ['Lembretes e mensagens calculados para o seu ritmo', true, true],
+  ['Assistente que organiza a agenda por você', true, true],
+  ['Sem mensalidade: paga uma vez e pronto', false, true],
+  ['Preço travado: nunca paga reajuste', false, true],
+  ['Todas as novidades que vierem, sem pagar mais', false, true],
+  ['Selo Vitalício no seu perfil', false, true],
+];
 export function openPlans({ blocking = false } = {}) {
   document.querySelector('.paywall')?.remove();
   const b = store.billing || {};
   const canTrial = b.plan === 'none';
-  const title = canTrial ? 'Experimente o Lembra grátis por 24 horas' : !blocking ? 'Escolha seu plano'
-    : b.plan === 'blocked' ? (b.reason === 'cpf' ? 'Este CPF já usou o teste grátis' : b.reason === 'rede' ? 'O teste grátis já foi usado nesta conexão' : 'O teste grátis já foi usado neste aparelho')
-      : 'Seu teste grátis terminou';
-  const sub = canTrial ? 'Tudo liberado, sem cartão e sem compromisso. Depois, escolha o plano que preferir.' : !blocking ? 'Continue usando tudo do Lembra, sem limites.'
-    : b.plan === 'blocked' ? 'O teste grátis é um por pessoa. Para usar o Lembra com esta conta, escolha um plano abaixo.'
-      : 'Gostou? Escolha um plano para continuar usando tudo: sua agenda de trabalho, lembretes calculados para você, assistente e o modo Pessoal.';
+  const offline = b.plan === 'offline';
+  const isMonthly = b.plan === 'monthly';
+  const title = offline ? 'Não consegui conferir seu plano'
+    : canTrial ? 'Experimente o Lembra grátis por 24 horas'
+      : isMonthly ? 'Passe para o Vitalício'
+        : !blocking ? 'Escolha seu plano'
+          : b.plan === 'blocked' ? (b.reason === 'cpf' ? 'Este CPF já usou o teste grátis' : b.reason === 'rede' ? 'O teste grátis já foi usado nesta conexão' : 'O teste grátis já foi usado neste aparelho')
+            : 'Seu teste grátis terminou';
+  const sub = offline ? 'Verifique a internet e toque em “Tentar de novo”. Assim que conectar, tudo volta ao normal.'
+    : canTrial ? 'Tudo liberado, sem cartão e sem compromisso. Nunca mais esqueça um compromisso — depois, escolha o plano que preferir.'
+      : isMonthly ? 'Pague uma vez e nunca mais pense em mensalidade. Sua assinatura mensal é cancelada na hora, sem cobrança dupla.'
+        : !blocking ? 'Continue com tudo liberado, sem limites.'
+          : b.plan === 'blocked' ? 'O teste grátis é um por pessoa. Para usar o Lembra com esta conta, escolha um plano abaixo.'
+            : 'Sua agenda, seus lembretes e o seu modo Pessoal estão guardados, esperando você. Escolha um plano e continue de onde parou.';
+  let chosen = 'vitalicio';
+  const tick = (on) => (on ? `<span class="cmp__yes">${icon('check', 15)}</span>` : '<span class="cmp__no">—</span>');
   const w = document.createElement('div');
   w.className = 'paywall';
   w.innerHTML = `<div class="paywall__inner">
-    <div class="brandwrap">${brand('completa', { h: 104, on: 'dark' })}</div>
+    <div class="brandwrap">${brand('completa', { h: 96, on: 'dark' })}</div>
     <h1>${esc(title)}</h1>
     <p>${esc(sub)}</p>
-    ${canTrial ? `<button class="btn btn--trial btn--block" data-trial>${icon('sparkles', 18)} Começar meu teste grátis de 24h</button><p class="paywall__or">ou assine agora</p>` : ''}
-    <div class="plans">
-      <button class="plan" data-plan="mensal">
-        <span class="plan__name">Mensal</span>
-        <span class="plan__price"><b>R$ 9,90</b>/mês</span>
-        <span class="plan__note">Cancele quando quiser</span>
-      </button>
-      <button class="plan plan--best" data-plan="vitalicio">
-        <span class="plan__tag">Melhor valor</span>
-        <span class="plan__name">Vitalício</span>
-        <span class="plan__price"><b>R$ 150</b> uma vez</span>
-        <span class="plan__note">Para sempre, sem mensalidade</span>
-      </button>
+    ${offline ? `<button class="btn btn--primary btn--block" data-retry>${icon('refresh', 18)} Tentar de novo</button>` : ''}
+    ${canTrial ? `<button class="btn btn--trial btn--block" data-trial>${icon('sparkles', 18)} Começar meu teste grátis de 24h</button><p class="paywall__or">ou escolha seu plano</p>` : ''}
+    <div class="plans" role="radiogroup" aria-label="Planos">
+      ${Object.entries(PLAN_INFO).map(([k, p]) => {
+        const current = isMonthly && k === 'mensal';
+        return `<button class="plan${k === 'vitalicio' ? ' plan--best' : ''}${k === chosen ? ' is-on' : ''}" data-plan="${k}" role="radio" aria-checked="${k === chosen}"${current ? ' disabled' : ''}>
+        ${k === 'vitalicio' ? '<span class="plan__tag">Melhor valor</span>' : current ? '<span class="plan__tag plan__tag--cur">Seu plano</span>' : ''}
+        <span class="plan__radio" aria-hidden="true">${icon('check', 13)}</span>
+        <span class="plan__name">${p.name}</span>
+        <span class="plan__price"><b>${p.price}</b>${p.per}</span>
+        <span class="plan__note">${p.note}</span>
+        ${k === 'vitalicio' ? '<span class="plan__save">Se paga em 15 meses</span>' : ''}
+      </button>`;
+      }).join('')}
     </div>
-    <ul class="paywall__list">
-      <li>${icon('check', 15)} Agenda de trabalho com a cara da sua profissão</li>
-      <li>${icon('check', 15)} Modo Pessoal: aniversários, compromissos e listas</li>
-      <li>${icon('check', 15)} Notificações, lembretes e mensagens de ânimo</li>
-      <li>${icon('check', 15)} Assistente que organiza a agenda por você</li>
-    </ul>
-    <p class="paywall__addon">${icon('users', 14)}<span>Quer dividir a agenda com sócio ou equipe? A <b>agenda compartilhada</b> é um complemento à parte, a partir de R$ 6,90/mês (não incluso no vitalício).</span></p>
-    <p class="paywall__safe">${icon('lock', 13)} Pagamento seguro pela Stripe (cartão de crédito).</p>
+    <div class="cmp" aria-label="O que vem em cada plano">
+      <div class="cmp__row cmp__row--head"><span>O que vem</span><span>Mensal</span><span>Vitalício</span></div>
+      ${COMPARE.map(([t, m, v]) => `<div class="cmp__row"><span>${esc(t)}</span>${tick(m)}${tick(v)}</div>`).join('')}
+      <div class="cmp__row cmp__row--addon"><span>${icon('users', 14)} Agenda compartilhada (dividir com sócio, amigo ou equipe)</span><span class="cmp__price">à parte<br><b>R$&nbsp;6,90</b><br>por mês</span><span class="cmp__price">à parte<br><b>R$&nbsp;4,90</b><br>por mês</span></div>
+    </div>
+    <p class="paywall__addon">${icon('info', 14)}<span><b>Compartilhar a agenda não vem em nenhum plano, nem no Vitalício.</b> É um complemento mensal, contratado à parte depois: <b>Dupla</b> (você + 1 pessoa) R$ 6,90/mês ou <b>Equipe</b> (você + até 4) R$ 14,90/mês. No Vitalício sai mais barato: R$ 4,90 e R$ 9,90. Quem você convidar não paga nada.</span></p>
+    <p class="paywall__safe">${icon('lock', 13)} Pagamento seguro pela Stripe, com cartão de crédito. Arrependeu? Devolvemos em até 7 dias.</p>
     <p class="paywall__err" data-err hidden></p>
     <div class="paywall__foot">
       <button class="btn-text btn-text--sm" data-paid>Já paguei — verificar</button>
       ${blocking ? '<button class="btn-text btn-text--sm" data-action="logout">Sair da conta</button>' : '<button class="btn-text btn-text--sm" data-pclose>Agora não</button>'}
     </div>
+    <div class="paywall__cta"><button class="btn btn--primary btn--block btn--big" data-buy>${esc(PLAN_INFO[chosen].cta)}</button></div>
   </div>`;
   document.body.appendChild(w);
   requestAnimationFrame(() => w.classList.add('is-open'));
   const err = w.querySelector('[data-err]');
-  w.querySelectorAll('[data-plan]').forEach((btn) => (btn.onclick = async () => {
+  const buy = w.querySelector('[data-buy]');
+  // tocar no plano só marca a escolha (não abre o pagamento)
+  w.querySelectorAll('[data-plan]').forEach((btn) => (btn.onclick = () => {
+    if (btn.disabled) return;
+    chosen = btn.dataset.plan;
+    w.querySelectorAll('[data-plan]').forEach((x) => { const on = x === btn; x.classList.toggle('is-on', on); x.setAttribute('aria-checked', String(on)); });
+    buy.textContent = PLAN_INFO[chosen].cta;
     err.hidden = true;
-    btn.classList.add('is-busy');
+    if (navigator.vibrate) navigator.vibrate(6);
+  }));
+  buy.onclick = async () => {
+    err.hidden = true;
+    buy.disabled = true; buy.classList.add('is-busy');
+    const label = buy.textContent;
+    buy.textContent = 'Abrindo o pagamento seguro…';
     try {
-      const r = await api('/billing/checkout', { plan: btn.dataset.plan, returnUrl: location.href });
+      const r = await api('/billing/checkout', { plan: chosen, returnUrl: location.href });
       if (!r.url) throw new Error(r.error || 'sem endereço');
-      markBuying(btn.dataset.plan);
+      markBuying(chosen);
       location.href = r.url; // página de pagamento da Stripe
     } catch (e) {
-      err.textContent = /[a-z]{3,} [a-z]{3,} [a-z]{3,}/.test(e.message || '') && !/[ãçéêóõí]/.test(e.message || '') ? 'O pagamento está temporariamente indisponível. Tente de novo em alguns minutos.' : e.message || 'Não consegui abrir o pagamento agora. Tente de novo.';
+      err.textContent = /[a-z]{3,} [a-z]{3,} [a-z]{3,}/.test(e.message || '') && !/[ãçéêóõíá]/.test(e.message || '') ? 'O pagamento está temporariamente indisponível. Tente de novo em alguns minutos.' : e.message || 'Não consegui abrir o pagamento agora. Tente de novo.';
       err.hidden = false;
-      btn.classList.remove('is-busy');
+      buy.disabled = false; buy.classList.remove('is-busy'); buy.textContent = label;
+      err.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
-  }));
+  };
   const close = w.querySelector('[data-pclose]');
   if (close) close.onclick = () => { w.classList.remove('is-open'); setTimeout(() => w.remove(), 250); };
   w.querySelector('[data-paid]').onclick = () => confirmPayment({ manual: true });
+  const retry = w.querySelector('[data-retry]');
+  if (retry) retry.onclick = async () => {
+    retry.disabled = true;
+    const st = await checkBilling();
+    if (st.active) { w.classList.remove('is-open'); setTimeout(() => w.remove(), 250); window.__calRender && window.__calRender(); return; }
+    openPlans({ blocking: true });
+  };
   const tb = w.querySelector('[data-trial]');
   if (tb) tb.onclick = async () => {
     tb.disabled = true; tb.textContent = 'Liberando…';
@@ -136,7 +209,7 @@ export function openPlans({ blocking = false } = {}) {
       }
       openPlans({ blocking: true }); // teste já usado (CPF, aparelho ou conexão): mostra o motivo
     } catch (e) {
-      tb.disabled = false; tb.textContent = 'Começar meu teste grátis de 24h';
+      tb.disabled = false; tb.innerHTML = `${icon('sparkles', 18)} Começar meu teste grátis de 24h`;
       err.textContent = 'Não consegui liberar agora. Verifique a internet e tente de novo.'; err.hidden = false;
     }
   };

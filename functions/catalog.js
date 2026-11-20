@@ -492,3 +492,49 @@ export function profStyle(profession = '') {
   const hit = n && PROF_STYLE.find(([re]) => re.test(n));
   return hit ? hit[1] : {};
 }
+
+/* Campos do editor de compromisso com a cara de cada área: [rótulo, exemplo].
+   desc = detalhes do compromisso; note = anotação que só você (ou a equipe) vê. */
+export const FORM = {
+  marketing: { desc: ['Descrição / legenda', 'Ideia do post, legenda, roteiro…'], note: ['Nota interna', 'Equipamento, observações, combinados…'], title: 'Ex.: Post de lançamento' },
+  saude_clinica: { desc: ['Detalhes do atendimento', 'Motivo, preparo, o que levar, convênio…'], note: ['Anotação privada', 'Lembretes seus sobre este atendimento…'] },
+  saude_plantao: { desc: ['Detalhes do plantão', 'Setor, ala, quem passa o plantão…'], note: ['Anotação privada', 'Material, trocas de escala, combinados…'] },
+  educacao: { desc: ['Conteúdo', 'Tema da aula, capítulo, exercícios, material…'], note: ['Anotação privada', 'Alunos para acompanhar, recados para a coordenação…'] },
+  obra: { desc: ['Detalhes do serviço', 'Etapa da obra, medidas, materiais…'], note: ['Anotação interna', 'Equipe, ferramentas, combinados com o cliente…'] },
+  servicos_tecnicos: { desc: ['O que vai ser feito', 'Defeito, equipamento, peças, endereço…'], note: ['Anotação interna', 'Peças, valor combinado, ferramentas…'] },
+  industria: { desc: ['Detalhes', 'Máquina, linha, ordem de serviço…'], note: ['Anotação interna', 'EPI, ferramentas, quem acompanha…'] },
+  seguranca_militar: { desc: ['Detalhes', 'Local, fardamento, material, horário de apresentação…'], note: ['Anotação privada', 'Escala, trocas, combinados…'] },
+  vendas: { desc: ['Detalhes', 'Produto, valor, condição de pagamento…'], note: ['Anotação interna', 'Objeções, próximos passos…'] },
+  administrativo: { desc: ['Detalhes', 'Pauta, documentos, o que preparar…'], note: ['Anotação interna', 'Responsáveis, combinados…'] },
+  tecnologia: { desc: ['Detalhes', 'Tarefa, link do card, ambiente…'], note: ['Anotação interna', 'Riscos, dependências, quem revisa…'] },
+  transporte: { desc: ['Detalhes da entrega', 'Endereço, cliente, horário combinado…'], note: ['Anotação privada', 'Valor, observações da rota…'] },
+  gastronomia: { desc: ['Detalhes do pedido', 'Sabor, recheio, tamanho, quantidade, decoração…'], note: ['Anotação interna', 'Ingredientes para comprar, valor, sinal pago…'] },
+  beleza: { desc: ['Detalhes do atendimento', 'Serviço, cor, comprimento, preferências…'], note: ['Anotação interna', 'Produtos, valor, alergias…'] },
+  agro: { desc: ['Detalhes', 'Talhão, cultura, quantidade, insumos…'], note: ['Anotação privada', 'Clima, máquinas, quem ajuda…'] },
+  servicos_gerais: { desc: ['Detalhes do serviço', 'Cômodos, tarefas, endereço…'], note: ['Anotação interna', 'Material, valor, chave, combinados…'] },
+  juridico: { desc: ['Detalhes', 'Processo, vara, documentos…'], note: ['Anotação privada', 'Estratégia, prazos internos…'] },
+  ciencia: { desc: ['Detalhes', 'Protocolo, amostras, equipamento…'], note: ['Anotação privada', 'Resultados parciais, ideias…'] },
+  estudante: { desc: ['O que estudar', 'Capítulo, lista de exercícios, tema…'], note: ['Anotação', 'Dúvidas para levar ao professor…'] },
+  generico: { desc: ['Detalhes', 'O que fazer, o que levar, observações…'], note: ['Anotação privada', 'Combinados, lembretes extras…'] },
+};
+/* Profissões com detalhes ainda mais específicos (ganham do padrão da área) */
+const FORM_PROF = [
+  [/confeit|doceir|boleir/, { first: 'encomenda', desc: ['Detalhes da encomenda', 'Sabor da massa, recheio, cobertura, tamanho, tema da festa…'], note: ['Anotação interna', 'Ingredientes para comprar, sinal pago, retirada ou entrega…'] }],
+  [/salgadeir/, { first: 'encomenda', desc: ['Detalhes da encomenda', 'Tipos de salgado, quantidade, frito ou congelado…'], note: ['Anotação interna', 'Ingredientes, sinal pago, retirada ou entrega…'] }],
+  [/pizzai|cozinh|chef/, { desc: ['Detalhes', 'Cardápio, quantidade de pessoas, restrições…'], note: ['Anotação interna', 'Compras, equipe, valor combinado…'] }],
+  [/barbeir/, { desc: ['Detalhes do atendimento', 'Corte, barba, sobrancelha, pigmentação…'], note: ['Anotação interna', 'Máquina e pente preferidos, valor…'] }],
+  [/manicur|pedicur|unh/, { desc: ['Detalhes do atendimento', 'Mão, pé, alongamento, cor do esmalte…'], note: ['Anotação interna', 'Alergias, valor, preferências…'] }],
+  [/cabeleir/, { desc: ['Detalhes do atendimento', 'Corte, coloração, escova, química…'], note: ['Anotação interna', 'Fórmula da cor, produtos, valor…'] }],
+  [/maquiad/, { desc: ['Detalhes do atendimento', 'Ocasião, horário da festa, estilo…'], note: ['Anotação interna', 'Tom de pele, produtos, valor…'] }],
+  [/fot[oó]graf|videomaker|cinegraf/, { desc: ['Detalhes do ensaio', 'Local, tipo de ensaio, roupas, referências…'], note: ['Anotação interna', 'Equipamento, valor, entrega das fotos…'] }],
+  [/personal|educador f[ií]sico|treinador/, { desc: ['Detalhes do treino', 'Treino do dia, foco, cargas…'], note: ['Anotação privada', 'Evolução, dores, observações do aluno…'] }],
+  [/psic[oó]log|terapeut/, { desc: ['Detalhes da sessão', 'Online ou presencial, link da sala…'], note: ['Anotação privada', 'Só você vê. Lembretes para a próxima sessão…'] }],
+  [/dentist|odont/, { desc: ['Detalhes do atendimento', 'Procedimento, dente, preparo…'], note: ['Anotação privada', 'Materiais, laboratório, retorno…'] }],
+  [/veterin/, { desc: ['Detalhes do atendimento', 'Animal, tutor, vacina, exame…'], note: ['Anotação privada', 'Peso, medicação, retorno…'] }],
+  [/motorist|entregad|motoboy|caminhon/, { desc: ['Detalhes da corrida', 'Origem, destino, carga, cliente…'], note: ['Anotação privada', 'Valor, pedágio, combustível…'] }],
+];
+export function formOf(arch, profession = '') {
+  const n = String(profession || '').toLowerCase();
+  const hit = n && FORM_PROF.find(([re]) => re.test(n));
+  return { ...(FORM[arch] || FORM.generico), ...(hit ? hit[1] : {}) };
+}

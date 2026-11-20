@@ -4,7 +4,7 @@ import { brand } from '../brand.js';
 import { icon } from '../icons.js';
 import { esc } from '../utils.js';
 import { PROFESSIONS, ARCHETYPES, TYPE_DEFS, archOf, searchProfessions, profStyle } from '../../functions/catalog.js';
-import { DIFFICULTIES, JOURNEYS, GOALS, TONES, METHODS, VOLUMES, PRONOUNS, computePersona, validCPF, maskCPF, ageOf } from '../persona.js';
+import { DIFFICULTIES, JOURNEYS, GOALS, TONES, METHODS, VOLUMES, PRONOUNS, GENDERS, computePersona, validCPF, maskCPF, ageOf, g } from '../persona.js';
 import { store, saveUserProfile } from '../store.js';
 import { savePrefs } from '../personal.js';
 import { routine } from '../planner.js';
@@ -22,7 +22,7 @@ const STEPS = ['inicio', 'voce', 'trabalho', 'rotina', 'dificuldades', 'estilo',
 export function openFicha({ initial = {}, onDone, onClose, required = true } = {}) {
   const f = {
     name: '', nickname: '', birth: '', cpf: '', phone: '', profession: '', role: '', workplace: '',
-    pronoun: '', volume: '', method: '',
+    pronoun: '', gender: '', volume: '', method: '',
     journey: 'comercial', workStart: '08:00', workEnd: '18:00', workDays: [1, 2, 3, 4, 5], wake: '06:30', sleep: '22:30', lunch: '12:00',
     difficulties: [], forget: 3, lead: '', tone: 'firme', freq: '', faith: true, water: true, meals: true, goal: 'lembrar', consent: false,
     ...initial,
@@ -66,11 +66,14 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
         </ul></div>${nav('Começar')}`,
     voce: () => `<h2>Sobre você</h2><p class="ficha__sub">Seus dados ficam guardados só na sua conta.</p>
       <label class="flabel" for="fi-name">Nome completo</label><input id="fi-name" class="input" data-f="name" value="${esc(f.name)}" autocomplete="name" maxlength="80">
-      <label class="flabel" for="fi-nick">Como quer ser chamado(a)?</label><input id="fi-nick" class="input" data-f="nickname" value="${esc(f.nickname)}" maxlength="30" placeholder="Ex.: Rafa">
+      <label class="flabel" for="fi-nick">Como prefere que o Lembra te chame?</label><input id="fi-nick" class="input" data-f="nickname" value="${esc(f.nickname)}" maxlength="30" placeholder="Ex.: Rafa">
       <div class="row2"><div><label class="flabel" for="fi-birth">Nascimento</label><input id="fi-birth" class="input" type="date" data-f="birth" value="${esc(f.birth)}"></div>
       <div><label class="flabel" for="fi-cpf">CPF</label><input id="fi-cpf" class="input" inputmode="numeric" data-f="cpf" value="${esc(maskCPF(f.cpf))}" placeholder="000.000.000-00" maxlength="14"></div></div>
-      <label class="flabel">Como prefere ser tratado(a)?</label>
+      <label class="flabel">Você se identifica como</label>
+      <div class="ficha__chips">${GENDERS.map((x) => `<button class="ficha__chip${f.gender === x.id ? ' is-on' : ''}" data-gender="${x.id}">${esc(x.label)}</button>`).join('')}</div>
+      <label class="flabel">Como o Lembra fala com você?</label>
       <div class="ficha__chips">${PRONOUNS.map((p) => `<button class="ficha__chip${f.pronoun === p.id ? ' is-on' : ''}" data-pronoun="${p.id}">${esc(p.label)}</button>`).join('')}</div>
+      <p class="fhelp">Isso muda o jeito de falar (pronta, pronto ou “tudo pronto”) e as sugestões do seu modo Pessoal. Ninguém mais vê.</p>
       <label class="flabel" for="fi-phone">Celular (opcional)</label><input id="fi-phone" class="input" type="tel" inputmode="tel" data-f="phone" value="${esc(f.phone)}" placeholder="(00) 00000-0000" maxlength="20">
       <p class="fhelp">O CPF serve só para identificar sua conta e garantir um teste grátis por pessoa. Ele não aparece para ninguém.</p>${nav()}`,
     trabalho: () => {
@@ -97,7 +100,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       <div class="ficha__chips">${METHODS.map((m) => `<button class="ficha__chip${f.method === m.id ? ' is-on' : ''}" data-method="${m.id}">${esc(m.label)}</button>`).join('')}</div>
       <label class="flabel">O quanto você esquece as coisas?</label>
       <input class="ficha__range" type="range" min="1" max="5" step="1" data-f="forget" value="${f.forget}"><p class="ficha__rangev"><b>${FORGET[f.forget]}</b></p>
-      <label class="flabel">Com quanta antecedência gosta de ser avisado(a)?</label>
+      <label class="flabel">Quanto tempo antes você quer o aviso?</label>
       <div class="ficha__chips">${LEADS.map((l) => `<button class="ficha__chip${String(f.lead) === String(l.v) ? ' is-on' : ''}" data-lead="${l.v}">${l.l}</button>`).join('')}</div>${nav()}`,
     estilo: () => `<h2>Como o Lembra fala com você</h2><p class="ficha__sub">Quando você atrasar ou precisar de um empurrão.</p>
       <div class="ficha__cards ficha__cards--1">${TONES.map((t) => `<button class="ficha__card${f.tone === t.id ? ' is-on' : ''}" data-tone="${t.id}"><b>${esc(t.label)}</b><small>${esc(t.sample)}</small></button>`).join('')}</div>
@@ -114,7 +117,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       const p = computePersona(f);
       const arch = archOf(f.profession);
       const a = ARCHETYPES[arch];
-      return `<h2>Pronto, ${esc(f.nickname || f.name.split(' ')[0] || '')}! Este é o seu Lembra</h2>
+      return `<h2>${g('Pronto', 'Pronta', 'Tudo pronto', f.pronoun)}, ${esc(f.nickname || f.name.split(' ')[0] || '')}! Este é o seu Lembra</h2>
       <div class="ficha__score"><div class="ficha__gauge" style="--v:${p.index}"><b>${p.index}</b><small>/100</small></div><div><b>Índice de esquecimento</b><small>Calculado pelas suas respostas. Quanto maior, mais o Lembra cuida de você.</small></div></div>
       <div class="ficha__box"><b>${icon('briefcase', 15)} Trabalho: ${esc(f.profession)}</b><p>Aba “${esc(a.entity.many)}” · compromissos: ${a.types.map((t) => esc(TYPE_DEFS[t].label)).join(', ')}.</p></div>
       <div class="ficha__box"><b>${icon('bell', 15)} Como o Lembra vai trabalhar para você</b><ul>${p.why.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div>
@@ -152,6 +155,8 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       if (age === null || age > 110) return 'Informe uma data de nascimento válida.';
       if (age < 13) return 'O Lembra é para maiores de 13 anos (menores de 18 com autorização dos responsáveis).';
       if (!validCPF(f.cpf)) return 'CPF inválido. Confira os números.';
+      if (!f.gender) return 'Escolha como você se identifica (pode ser “Prefiro não dizer”).';
+      if (!f.pronoun) return 'Escolha como o Lembra fala com você.';
     }
     if (s === 'trabalho' && !f.profession.trim()) return 'Escolha ou escreva a sua profissão.';
     if (s === 'rotina' && !f.workDays.length) return 'Marque pelo menos um dia de trabalho.';
@@ -195,6 +200,14 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     $('[data-lead]').forEach((b) => (b.onclick = () => pickOne('lead', b.dataset.lead, (v) => { f.lead = v === '' ? '' : +v; })));
     $('[data-tone]').forEach((b) => (b.onclick = () => pickOne('tone', b.dataset.tone, (v) => { f.tone = v; })));
     // escolhas de uma opção só (sem redesenhar a tela inteira: não perde o que está digitado)
+    $('[data-gender]').forEach((b) => (b.onclick = () => {
+      f.gender = b.dataset.gender;
+      $('[data-gender]').forEach((x) => x.classList.toggle('is-on', x === b));
+      const pr = GENDERS.find((x) => x.id === f.gender)?.pronoun || 'n';
+      f.pronoun = pr;
+      $('[data-pronoun]').forEach((x) => x.classList.toggle('is-on', x.dataset.pronoun === pr));
+      if (err) { err = ''; showErr(); }
+    }));
     for (const k of ['pronoun', 'volume', 'method']) $(`[data-${k}]`).forEach((b) => (b.onclick = () => { f[k] = b.dataset[k]; $(`[data-${k}]`).forEach((x) => x.classList.toggle('is-on', x === b)); }));
     $('[data-freq]').forEach((b) => (b.onclick = () => pickOne('freq', b.dataset.freq, (v) => { f.freq = v; })));
     $('[data-goal]').forEach((b) => (b.onclick = () => pickOne('goal', b.dataset.goal, (v) => { f.goal = v; })));
@@ -220,7 +233,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
 }
 
 /* ---------- salvar e quando pedir a ficha ---------- */
-const KEYS = ['name', 'nickname', 'pronoun', 'birth', 'cpf', 'phone', 'profession', 'area', 'arch', 'role', 'workplace', 'journey', 'volume', 'method', 'workStart', 'workEnd', 'workDays',
+const KEYS = ['name', 'nickname', 'pronoun', 'gender', 'birth', 'cpf', 'phone', 'profession', 'area', 'arch', 'role', 'workplace', 'journey', 'volume', 'method', 'workStart', 'workEnd', 'workDays',
   'wake', 'sleep', 'lunch', 'difficulties', 'forget', 'lead', 'tone', 'freq', 'faith', 'water', 'meals', 'goal'];
 
 /* A ficha vira: perfil da conta + perfil de trabalho do espaço + lembretes da pessoa + mensagens do Pessoal */

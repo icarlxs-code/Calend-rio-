@@ -73,7 +73,7 @@ function card(u, open) {
       <div class="agrid">
         <div><small>Empresas / grupos</small><b>${c.companies || 0}</b></div>
         <div><small>Eventos (total no espaço)</small><b>${c.events || 0}</b></div>
-        <div><small>Cadastrados por ele(a)</small><b>${c.myEvents || 0}</b></div>
+        <div><small>Cadastrados pela pessoa</small><b>${c.myEvents || 0}</b></div>
         <div><small>Próximos 7 dias</small><b>${c.thisWeek || 0}</b></div>
         <div><small>Posts (30 dias)</small><b>${c.posts30 || 0}</b></div>
         <div><small>Feitos (30 dias)</small><b>${c.done30 || 0}</b></div>

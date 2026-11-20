@@ -86,7 +86,12 @@ export const store = {
     if (this.onDenied) this.onDenied(`Só ${owner} pode alterar isso (foi ${owner === 'o parceiro' ? 'ele' : owner} quem cadastrou).`);
   },
 
+  /* Portão do plano: conta própria sem plano ativo não grava nada (o app define store.gate) */
+  gate: null,
+  _locked(col) { return !!(this.gate && !this.gate(col)); },
+
   async upsert(col, item) {
+    if (this._locked(col)) return item;
     const existing = this.state[col]?.find((x) => x.id === item.id);
     if (existing && !this.canEdit(col, existing)) {
       this._denied(col, existing);
@@ -106,6 +111,7 @@ export const store = {
     return item;
   },
   async upsertMany(col, items, { activity = null } = {}) {
+    if (this._locked(col)) return;
     items = items.filter((it) => {
       const existing = this.state[col]?.find((x) => x.id === it.id);
       return !existing || this.canEdit(col, existing);
@@ -126,6 +132,7 @@ export const store = {
     this.emit();
   },
   async remove(col, id) {
+    if (this._locked(col)) return;
     const target = this.state[col]?.find((x) => x.id === id);
     if (target && !this.canEdit(col, target)) {
       this._denied(col, target);
@@ -140,6 +147,7 @@ export const store = {
     this.emit();
   },
   async removeMany(col, ids, opts = {}) {
+    if (this._locked(col)) return;
     const blocked = this.state[col].filter((x) => ids.includes(x.id) && !this.canEdit(col, x));
     if (blocked.length) {
       if (!opts.silent) this._denied(col, blocked[0]);

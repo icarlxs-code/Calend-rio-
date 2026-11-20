@@ -16,8 +16,8 @@ export function openProfile() {
         <label class="btn btn--soft btn--sm">${icon('camera', 16)} ${d.photo ? 'Trocar foto' : 'Colocar foto'}<input type="file" accept="image/*" data-photo hidden></label>
         ${d.photo ? '<button type="button" class="btn-text btn-text--sm" data-nophoto>Tirar foto</button>' : ''}
       </div>
-      <div class="fgroup"><label class="flabel" for="p-name">${store.profile?.nickname ? 'Como quer ser chamado(a)' : 'Nome'}</label><input id="p-name" class="input" name="name" value="${esc(d.name)}" maxlength="40" autocomplete="name"></div>
-      <div class="fgroup"><label class="flabel">Sua cor</label><div class="palette">${COLORS.map((c) => `<button type="button" class="swatch${d.color === c ? ' is-on' : ''}" style="background:${c}" data-color="${c}" aria-label="Cor">${icon('check', 16)}</button>`).join('')}</div></div>
+      <div class="fgroup"><label class="flabel" for="p-name">${store.profile?.nickname ? 'Como prefere que o Lembra te chame' : 'Nome'}</label><input id="p-name" class="input" name="name" value="${esc(d.name)}" maxlength="40" autocomplete="name"></div>
+      <div class="fgroup"><label class="flabel">Sua cor</label><div class="palette palette--8">${COLORS.map((c) => `<button type="button" class="swatch${d.color === c ? ' is-on' : ''}" style="background:${c}" data-color="${c}" aria-label="Cor">${icon('check', 16)}</button>`).join('')}</div></div>
       <p class="fhelp">E-mail da conta: ${esc(store.user?.email || '')}</p>
     </form>`;
   const api = openSheet({

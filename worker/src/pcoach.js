@@ -87,7 +87,7 @@ const T = {
     'Respira. Você dá conta. Sempre deu 💜',
     'Pequenas vitórias também contam. Comemora cada uma 🎉',
     'Feito é melhor que perfeito. Bora fazer acontecer 💪',
-    'Você é lindo por dentro e por fora, {n}. Se valoriza 💜',
+    'Você é {lindo} por dentro e por fora, {n}. Se valoriza 💜',
     'Deus está contigo em cada detalhe do seu dia 🙏',
     'Quem planta constância colhe resultado. Continua 🌱',
     'Não se compara com ninguém. Seu tempo é seu 💜',
@@ -104,10 +104,12 @@ const T = {
     'Descansa os olhos da tela um pouco, {n} 👀',
   ],
 };
-const OPENERS = ['Ei, {n}!', 'Opa, passando aqui:', 'Ô {n},', 'Só um toque de amigo:', 'Olha só,', 'Psiu, {n}!', 'Rapidinho:', 'Ei, campeão,', 'Fala, {n}!', 'Lembrete de quem torce por você:'];
+const OPENERS = ['Ei, {n}!', 'Opa, passando aqui:', 'Ô {n},', 'Só um toque de amigo:', 'Olha só,', 'Psiu, {n}!', 'Rapidinho:', 'Ei, {campeao},', 'Fala, {n}!', 'Lembrete de quem torce por você:'];
 const CLOSERS = ['Tô contigo 💜', 'Bora! 💪', 'Você consegue.', 'Confia.', 'Orgulho de você.', 'Conta comigo.', 'Vai dar certo 🙏', 'Um passo de cada vez.', 'Você é importante, viu?', 'Segue firme!'];
 const pick = (a, seed) => a[Math.abs(seed) % a.length];
 const fill = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
+/* palavras no gênero que a pessoa escolheu na ficha: feminino, masculino ou neutro */
+export const genderWords = (pr) => (pr === 'f' ? { lindo: 'linda', campeao: 'campeã' } : pr === 'm' ? { lindo: 'lindo', campeao: 'campeão' } : { lindo: 'incrível', campeao: 'você' });
 const verseText = ([t, ref]) => `“${t}” — ${ref}`;
 const hm = (t) => (t ? t.replace(/^0/, '').replace(':00', 'h').replace(':', 'h') : '');
 
@@ -130,8 +132,10 @@ export function agendaMessages(p, br, st) {
   const lb = p.lastByCat || {}, nb = p.nextByCat || {};
   if (!nb.beleza) {
     const days = lb.beleza ? Math.round((Date.parse(br.date) - Date.parse(lb.beleza)) / 864e5) : null;
-    if (days === null) out.push({ key: 'hair', title: '💈 Cuidar de você', body: `Já pensou em agendar um corte de cabelo, ${n}? Cuidar da aparência levanta a autoestima. Você merece 💜`, every: 5 });
-    else if (days >= 21) out.push({ key: 'hair', title: '💈 E o cabelo?', body: `Faz ${days} dias desde o último corte. Precisa agendar? Anota aqui no app que eu te lembro 😉`, every: 4 });
+    const fem = p.prefs?.pronoun === 'f', masc = p.prefs?.pronoun === 'm';
+    const what = fem ? 'um horário no salão (cabelo, unhas, sobrancelha)' : masc ? 'um corte de cabelo (e dar um tapa na barba)' : 'um momento de cuidado com o visual';
+    if (days === null) out.push({ key: 'hair', title: '💈 Cuidar de você', body: `Já pensou em agendar ${what}, ${n}? Cuidar da aparência levanta a autoestima. Você merece 💜`, every: 5 });
+    else if (days >= (fem ? 14 : 21)) out.push({ key: 'hair', title: fem ? '💅 Hora de se cuidar?' : '💈 E o cabelo?', body: `Faz ${days} dias desde o último cuidado com o visual. Precisa agendar? Anota aqui no app que eu te lembro 😉`, every: 4 });
   }
   for (const b of (p.birthdays || []).filter((x) => x.inDays >= 1 && x.inDays <= 5)) {
     out.push({ key: `bd-${b.name}`, title: '🎁 Aniversário chegando', body: `${b.name} faz aniversário ${b.inDays === 1 ? 'amanhã' : `em ${b.inDays} dias`}. Já pensou no presente ou numa mensagem bonita?`, every: 2 });
@@ -200,7 +204,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
   if (mins > L) return null;
   const seed = Math.floor(rand() * 1e6);
   const n = p.name || '';
-  const V = { n };
+  const V = { n, ...genderWords(p.prefs?.pronoun) };
   let msg = null;
 
   // 1) momentos fixos do dia
@@ -264,8 +268,8 @@ export function nextNudge(p, st, now, rand = Math.random) {
   // variedade mesmo sem IA: às vezes um jeito diferente de começar e de terminar
   if (!['morning', 'night', 'verse'].includes(msg.kind)) {
     const r1 = rand(), r2 = rand();
-    if (r1 < 0.45 && !/^(ei|opa|ô|psiu|fala|olha)\b/i.test(msg.body)) msg.body = `${pick(OPENERS, Math.floor(r1 * 1e6))} ${msg.body.charAt(0).toLowerCase()}${msg.body.slice(1)}`.replace(/\{n\}/g, n);
-    if (r2 < 0.4) msg.body = `${msg.body} ${pick(CLOSERS, Math.floor(r2 * 1e6))}`.replace(/\{n\}/g, n);
+    if (r1 < 0.45 && !/^(ei|opa|ô|psiu|fala|olha)\b/i.test(msg.body)) msg.body = fill(`${pick(OPENERS, Math.floor(r1 * 1e6))} ${msg.body.charAt(0).toLowerCase()}${msg.body.slice(1)}`, V);
+    if (r2 < 0.4) msg.body = fill(`${msg.body} ${pick(CLOSERS, Math.floor(r2 * 1e6))}`, V);
   }
   if (!isWater) st.next = now + randomGap(prefs.freq, rand) * 60e3;
   st.lastAny = now;

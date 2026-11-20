@@ -11,6 +11,8 @@ import { store } from '../store.js';
 import { ui, saveUi } from '../ui.js';
 import * as push from '../avisos.js';
 import { usagePlaceholder, fillUsage } from '../usage.js';
+import { onDone, streak } from '../reward.js';
+import { suggestions, addSuggestion, hideSuggestion, forYouLead } from '../foryou.js';
 import { esc, todayKey, addDays, dayLabel, fmtTime, fromKey, toKey, diffDays, greeting, fmtDayLong, monthKey, addMonths, fmtMonth, WD_LETTER, MONTHS } from '../utils.js';
 
 const firstName = () => store.member(store.me)?.name || '';
@@ -62,6 +64,7 @@ function renderHome() {
       <p class="phero__phrase">“${esc(phraseOfDay(t))}”</p>
       <div class="phero__stats">
         <span>${icon('cal2', 14)}<b>${pending}</b> para hoje</span>
+        ${streak().days >= 2 ? `<span>🔥<b>${streak().days}</b> dias seguidos</span>` : ''}
         ${late.length ? `<span class="is-warn">${icon('alert', 14)}<b>${late.length}</b> atrasad${late.length > 1 ? 'os' : 'o'}</span>` : ''}
         ${bdays.some((b) => diffDays(t, b.next) <= 7) ? `<span>${icon('cake', 14)}<b>${bdays.filter((b) => diffDays(t, b.next) <= 7).length}</b> aniversário${bdays.filter((b) => diffDays(t, b.next) <= 7).length > 1 ? 's' : ''} na semana</span>` : ''}
       </div>
@@ -73,6 +76,7 @@ function renderHome() {
       <button class="pquick__go" aria-label="Anotar">${icon('plus', 18)}</button>
     </form>
     <div class="pchips">${quickCats.map((k) => `<button class="pchip" data-action="p-new" data-cat="${k}">${catTile(k, 24)}${esc(CATS[k].label)}</button>`).join('')}</div>
+    ${forYou()}
 
     ${late.length ? section('<span style="color:var(--danger)">Ficou pra trás</span>', `<div class="plist">${late.map((it) => row(it, it.date, false, { showDate: true })).join('')}</div>`) : ''}
     ${section('Hoje', today.length ? `<div class="plist">${today.map((o) => row(o.item, o.date, o.done)).join('')}</div>` : emptyCard('sun', 'Dia livre', 'Nada anotado pra hoje. Aproveita ou anota algo acima.', ['#FFD25A', '#FF9F1A']))}
@@ -92,6 +96,20 @@ function renderHome() {
     ${lists.length ? section('Listas', `<div class="pgrid">${lists.slice(0, 4).map(listCard).join('')}</div>`, `<button class="btn-text btn-text--sm" data-action="ptab" data-tab="p-listas">Ver todas</button>`) : ''}
     <div style="height:28px"></div>
   </div>`;
+}
+
+/* "Feito para você": sugestões calculadas pela ficha (idade, identidade, dificuldades, rotina) */
+function forYou() {
+  const list = suggestions(6);
+  if (!list.length) return '';
+  return `<section class="block foryou">
+    <h2 class="block__title"><span class="ptitle">${tile('sparkles', ['#C78BFF', '#7C5CFF'], 26)}Feito para você</span></h2>
+    <p class="foryou__lead">${esc(forYouLead())}</p>
+    <div class="foryou__list">${list.map((x) => `<div class="foryou__item">
+      <button class="foryou__add" data-action="p-sug" data-id="${x.id}">${catTile(x.cat, 36)}<span><b>${esc(x.title)}</b><small>${esc(x.why)}</small></span><i>${icon('plus', 16)}</i></button>
+      <button class="foryou__x" data-action="p-sug-x" data-id="${x.id}" aria-label="Não quero esta sugestão">${icon('x', 14)}</button>
+    </div>`).join('')}</div>
+  </section>`;
 }
 
 /* ---------- Agenda (mês + aniversários) ---------- */
@@ -196,7 +214,7 @@ function renderPSettings() {
     ${section(`${icon('heart', 16)} Ícone próprio na Tela de Início`, `<div class="pcard"><p>Quer o Pessoal como se fosse outro app, com ícone próprio?</p>
       <ol><li>Abra este endereço no <b>Safari</b> com o modo Pessoal aberto.</li><li>Toque em <b>Compartilhar</b> → <b>Adicionar à Tela de Início</b>.</li><li>Vai aparecer o ícone <b>“Pessoal”</b>, que abre direto aqui. Entre com o mesmo e-mail e senha.</li></ol></div>`)}
 
-    ${section(`${icon('lock', 16)} Privacidade`, `<div class="pcard"><p>Tudo aqui fica guardado só na sua conta: ${totals.events} anotaç${totals.events === 1 ? 'ão' : 'ões'}, ${totals.lists} lista${totals.lists === 1 ? '' : 's'} e ${totals.bdays} aniversário${totals.bdays === 1 ? '' : 's'}. Nem o parceiro nem os clientes conseguem ver.</p></div>`)}
+    ${section(`${icon('lock', 16)} Privacidade`, `<div class="pcard"><p>Tudo aqui fica guardado só na sua conta: ${totals.events} anotaç${totals.events === 1 ? 'ão' : 'ões'}, ${totals.lists} lista${totals.lists === 1 ? '' : 's'} e ${totals.bdays} aniversário${totals.bdays === 1 ? '' : 's'}. ${store.team.length > 1 ? 'Nem o parceiro nem os clientes conseguem ver.' : 'Ninguém mais consegue ver: nem clientes, nem quem divide a agenda de trabalho com você.'}</p></div>`)}
     <button class="btn btn--soft btn--block" data-action="logout">Sair da conta</button>
     <div style="height:28px"></div>
   </div>`;
@@ -226,6 +244,7 @@ export function bindPersonal(view) {
     if (!q) { openPersonalEditor(); return false; }
     f.q.value = '';
     const it = savePersonal({ ...parseQuick(q), remind: 'auto' });
+    if (!it) { f.q.value = q; return false; } // sem plano ativo: nada foi salvo
     toast(`Anotado: ${dayLabel(it.date)}${it.time ? ' às ' + fmtTime(it.time) : ''}`, { action: 'Ajustar', onAction: () => openPersonalEditor(it.id), ms: 4000 });
     return false;
   };
@@ -265,20 +284,31 @@ export const personalActions = {
     const it = personal.item(b.dataset.id);
     if (!it) return;
     const was = doneOn(it, b.dataset.date);
-    toggleDone(it, b.dataset.date);
-    if (!was) toast('Feito ✓', { action: 'Desfazer', onAction: () => toggleDone(personal.item(it.id), b.dataset.date) });
+    const at = b.getBoundingClientRect();
+    const saved = toggleDone(it, b.dataset.date);
+    if (!was && saved && saved.updatedAt) {
+      const t = todayKey();
+      const left = b.dataset.date === t ? occurrences(t, t).filter((o) => !o.done).length : null;
+      toast(onDone({ el: at, left }), { action: 'Desfazer', onAction: () => toggleDone(personal.item(it.id), b.dataset.date) });
+    }
   },
   'p-new': (b) => {
     if (b.classList.contains('tabbar__fab') && ui.ptab === 'p-listas') return openListForm();
     openPersonalEditor(null, { cat: b.dataset.cat, date: b.dataset.date || (ui.ptab === 'p-agenda' ? ui.pSel : null) });
   },
   'p-list': (b) => openList(b.dataset.id),
+  'p-sug': (b) => {
+    const it = addSuggestion(b.dataset.id);
+    if (!it) return;
+    toast(`Anotado: ${it.title} · ${REPEATS[it.repeat] ? REPEATS[it.repeat].toLowerCase() : ''} ✓`, { action: 'Ajustar', onAction: () => openPersonalEditor(it.id), ms: 4500 });
+  },
+  'p-sug-x': (b) => { hideSuggestion(b.dataset.id); toast('Ok, não sugiro mais essa'); },
   'p-nudge-test': async () => {
     try { await push.api('/pnudge-test', {}); toast('Pronto! A mensagem chega em até 1 minuto.', { ms: 4500 }); }
     catch { toast('Não deu para pedir agora. Verifique a conexão.'); }
   },
   'p-newlist': (b) => {
-    if (b.dataset.name) { const l = newList(b.dataset.name, b.dataset.ic); return openList(l.id); }
+    if (b.dataset.name) { const l = newList(b.dataset.name, b.dataset.ic); return l && openList(l.id); }
     openListForm();
   },
 };
@@ -408,9 +438,9 @@ export function openPersonalEditor(id = null, preset = {}) {
       el.querySelector('[data-save]').onclick = () => {
         const title = form.title.value.trim();
         if (!title) { form.title.focus(); return toast('Escreva o que é'); }
-        savePersonal({ ...d, title, date: form.date.value || todayKey(), time: form.time.value || null, repeat: form.repeat.value, note: form.note.value.trim(), birthYear: +form.birthYear.value || null, remind: form.remind.checked ? 'auto' : 'none' });
+        const ok = savePersonal({ ...d, title, date: form.date.value || todayKey(), time: form.time.value || null, repeat: form.repeat.value, note: form.note.value.trim(), birthYear: +form.birthYear.value || null, remind: form.remind.checked ? 'auto' : 'none' });
         a.close();
-        toast('Salvo ✓');
+        if (ok) toast('Salvo ✓');
       };
       const del = el.querySelector('[data-del]');
       if (del) del.onclick = async () => {

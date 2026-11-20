@@ -33,11 +33,12 @@ export function renderSettings() {
     <button class="pbig" data-action="guide">${icon('sparkles', 22)}<div><strong>Como funciona o Lembra</strong><small>Para que serve o modo Trabalho e o modo Pessoal</small></div>${icon('right', 18)}</button>
     ${cloud ? `<button class="pbig pbig--privacy" data-action="privacy">${icon('lock', 22)}<div><strong>Privacidade e dados</strong><small>LGPD: termos, baixar meus dados, excluir conta</small></div>${icon('right', 18)}</button>` : ''}
     <section class="block">
-      <h2 class="block__title">${icon('user', 16)} Quem está usando este celular?</h2>
+      <h2 class="block__title">${icon('user', 16)} ${cloud ? 'Sua conta' : 'Quem está usando este celular?'}</h2>
       ${cloud
-        ? `<div class="card card--row">${me ? avatar(me.id, 40) : icon('user', 24)}<div><strong>${esc(me?.name || store.user?.email || '')}</strong><small>${esc(store.user?.email || '')}</small></div>
-            ${store.solo ? `<button class="btn btn--soft btn--sm" data-action="edit-profile">Editar</button>` : ''}
-            <button class="btn btn--soft btn--sm" data-action="logout">${icon('logout', 16)} Sair</button></div>`
+        ? `<div class="card whocard">
+            <div class="whocard__top">${me ? avatar(me.id, 48) : icon('user', 24)}<div class="whocard__txt"><strong>${esc(me?.name || store.user?.email || '')}${store.billing?.plan === 'lifetime' ? `<span class="vbadge">${icon('crown', 12)} Vitalício</span>` : ''}</strong><small>${esc(store.user?.email || '')}</small></div></div>
+            <div class="whocard__btns">${store.solo ? `<button class="btn btn--soft btn--sm" data-action="edit-profile">${icon('edit', 16)} Editar perfil</button>` : ''}
+            <button class="btn btn--soft btn--sm" data-action="logout">${icon('logout', 16)} Sair</button></div></div>`
         : `<div class="whogrid">${store.team.map((m) => `<button class="whobtn${store.me === m.id ? ' is-on' : ''}" style="--mc:${m.color}" data-action="set-me" data-p="${m.id}">${avatar(m.id, 34)}<span>${esc(m.name)}</span><i class="whobtn__check">${icon('check', 14)}</i></button>`).join('')}</div>
            <p class="fhelp">Usado para saudação, “Criado por” e nos lembretes.</p>`}
     </section>
@@ -147,7 +148,7 @@ function notifySection() {
   } else if (perm !== 'granted') {
     state = 'warn'; text = 'Desativadas neste celular.'; btn = `<button class="btn btn--primary btn--sm" data-action="notify-enable">Ativar</button>`;
   } else if (cloud && device) {
-    state = 'ok'; text = 'Ativadas. Os lembretes e os avisos do parceiro chegam mesmo com o app fechado.'; btn = `<button class="btn btn--soft btn--sm" data-action="notify-enable">Recadastrar</button>`;
+    state = 'ok'; text = store.team.length > 1 ? 'Ativadas. Os lembretes e os avisos do parceiro chegam mesmo com o app fechado.' : 'Ativadas. Seus lembretes chegam mesmo com o app fechado.'; btn = `<button class="btn btn--soft btn--sm" data-action="notify-enable">Recadastrar</button>`;
   } else if (cloud) {
     state = 'warn'; text = 'Permissão concedida, mas este celular ainda não foi cadastrado no servidor. Toque em Cadastrar.'; btn = `<button class="btn btn--primary btn--sm" data-action="notify-enable">Cadastrar</button>`;
   } else {
@@ -189,17 +190,19 @@ function fillDevices() {
 
 function planSection() {
   const b = store.billing || {};
-  const label = { trial: 'Teste grátis', monthly: 'Mensal · R$ 9,90/mês', lifetime: 'Vitalício', expired: 'Teste encerrado', blocked: 'Sem plano', shared: 'Agenda compartilhada', unknown: 'Verificando…' }[b.plan] || '—';
+  const label = { trial: 'Teste grátis', monthly: 'Mensal · R$ 9,90/mês', lifetime: 'Vitalício', expired: 'Teste encerrado', blocked: 'Sem plano', none: 'Sem plano', shared: 'Agenda compartilhada', checking: 'Conferindo…', offline: 'Sem conexão para conferir' }[b.plan] || '—';
   const detail = b.plan === 'trial' ? `Termina em ${fmtLeft(b.trialEndsAt - Date.now())}`
     : b.plan === 'monthly' ? (b.cancelAt ? `Cancelada: vale até ${new Date(b.cancelAt).toLocaleDateString('pt-BR')}` : b.paidUntil ? `Renova em ${new Date(b.paidUntil).toLocaleDateString('pt-BR')}` : 'Ativa')
       : b.plan === 'lifetime' ? 'Pago uma vez, para sempre. Obrigado!'
         : b.plan === 'shared' ? `Liberado pela agenda de ${store.shared?.ownerName || b.ownerName || 'quem te convidou'}. Você não paga nada.` : '';
-  const addon = b.addon && b.addon.active ? `<div class="card card--row"><div><strong>+ Agenda compartilhada ${b.addon.plan === 'equipe' ? 'Equipe · R$ 14,90/mês' : 'Dupla · R$ 6,90/mês'}</strong><small>${b.addon.cancelAt ? `Cancelada: vale até ${new Date(b.addon.cancelAt).toLocaleDateString('pt-BR')}` : 'Complemento mensal, cobrado à parte'}</small></div><button class="btn btn--soft btn--sm" data-action="share">Ver</button></div>` : '';
+  const ap = (k) => (b.plan === 'lifetime' ? { dupla: '4,90', equipe: '9,90' } : { dupla: '6,90', equipe: '14,90' })[k];
+  const addon = b.addon && b.addon.active ? `<div class="card card--row"><div><strong>+ Agenda compartilhada ${b.addon.plan === 'equipe' ? `Equipe · R$ ${ap('equipe')}/mês` : `Dupla · R$ ${ap('dupla')}/mês`}</strong><small>${b.addon.cancelAt ? `Cancelada: vale até ${new Date(b.addon.cancelAt).toLocaleDateString('pt-BR')}` : 'Complemento mensal, cobrado à parte'}</small></div><button class="btn btn--soft btn--sm" data-action="share">Ver</button></div>` : '';
   return `<section class="block">
     <h2 class="block__title">${icon('card', 16)} Seu plano</h2>
     <div class="card card--row"><div><strong>${esc(label)}</strong>${detail ? `<small>${esc(detail)}</small>` : ''}</div>
       ${b.plan === 'monthly' || (b.plan === 'lifetime' && b.addon) ? '<button class="btn btn--soft btn--sm" data-action="billing-portal">Gerenciar</button>' : !['lifetime', 'shared'].includes(b.plan) ? '<button class="btn btn--primary btn--sm" data-action="plans">Assinar</button>' : ''}
     </div>
+    ${b.plan === 'monthly' ? `<button class="card card--row upgrade" data-action="plans">${icon('crown', 20)}<div><strong>Passe para o Vitalício</strong><small>Paga R$ 150 uma vez e nunca mais tem mensalidade. A mensal é cancelada na hora.</small></div>${icon('right', 16)}</button>` : ''}
     ${addon}
   </section>`;
 }

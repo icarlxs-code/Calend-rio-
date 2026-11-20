@@ -1549,3 +1549,86 @@ a.list__row { color: inherit; text-decoration: none; }
 @media (max-width: 380px) { .typegrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .btn--trial { min-height: 56px; font-size: 17px; border: 0; color: #fff; background: linear-gradient(135deg, #FF7AA2, #A06BFF 55%, #6A7BFF); box-shadow: 0 10px 30px rgba(160, 107, 255, .35); display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; }
 .paywall__or { font-size: 13px !important; color: rgba(255,255,255,.55) !important; margin: 2px 0 -4px; }
+
+/* ---------- Tela de planos: escolher primeiro, pagar no botão ---------- */
+.paywall .plan { transition: border-color .15s, transform .12s, box-shadow .15s; min-height: 132px; padding-top: 18px; }
+.paywall .plan:active { transform: scale(.98); }
+.paywall .plan:not(.is-on) { border-color: rgba(255,255,255,.14); background: rgba(255,255,255,.04); }
+.paywall .plan:not(.is-on) .plan__name, .paywall .plan:not(.is-on) .plan__price { opacity: .78; }
+.paywall .plan.is-on { border-color: #A06BFF; box-shadow: 0 0 0 3px rgba(160,107,255,.35), 0 12px 30px rgba(160,107,255,.22); }
+.paywall .plan[disabled] { opacity: .55; }
+.plan__radio { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); display: grid; place-items: center; color: transparent; }
+.plan.is-on .plan__radio { background: #A06BFF; border-color: #A06BFF; color: #fff; }
+.plan--best .plan__tag { right: auto; left: 12px; }
+.plan__tag--cur { left: 12px; right: auto; background: rgba(255,255,255,.25) !important; }
+.plan__name { padding-right: 26px; }
+.plan__save { margin-top: 4px; font-size: 11.5px; font-weight: 800; color: #3DDC84; }
+.cmp { width: 100%; border-radius: 18px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); overflow: hidden; text-align: left; }
+.cmp__row { display: grid; grid-template-columns: minmax(0, 1fr) 62px 62px; align-items: center; gap: 6px; padding: 9px 12px; font-size: 13px; line-height: 1.3; color: rgba(255,255,255,.88); border-top: 1px solid rgba(255,255,255,.07); }
+.cmp__row > span:not(:first-child) { text-align: center; justify-self: center; }
+.cmp__row--head { border-top: 0; font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: rgba(255,255,255,.55); background: rgba(255,255,255,.04); }
+.cmp__row--head > span:last-child { color: #C9A8FF; }
+.cmp__yes { color: #3DDC84; display: inline-grid; }
+.cmp__no { color: rgba(255,255,255,.3); }
+.cmp__row--addon > span:first-child { display: flex; gap: 6px; align-items: flex-start; }
+.cmp__row--addon .ic { flex: none; margin-top: 1px; color: #FFB547; }
+.cmp__price { font-size: 11px; color: rgba(255,255,255,.6); line-height: 1.25; }
+.cmp__price b { color: #fff; font-size: 12.5px; }
+.paywall__cta { position: sticky; bottom: 0; width: calc(100% + 40px); margin: 4px -20px calc(-1 * (var(--safe-b) + 28px)); padding: 14px 20px calc(var(--safe-b) + 16px); background: linear-gradient(to top, #0B0B0E 70%, rgba(11,11,14,0)); z-index: 2; }
+.btn--big { min-height: 56px; font-size: 17px; font-weight: 800; }
+.btn.is-busy { opacity: .7; }
+@media (max-width: 370px) { .cmp__row { grid-template-columns: minmax(0, 1fr) 52px 52px; font-size: 12.5px; } .plan__price b { font-size: 19px; } }
+
+/* ---------- Conta sem plano ativo: tudo apagado e travado ---------- */
+html.is-locked #view .page > *:not(.trialbar--lock), html.is-locked #view > *:not(.page):not(.trialbar--lock) { filter: grayscale(1); opacity: .38; pointer-events: none; user-select: none; }
+html.is-locked .tabbar { filter: grayscale(1); opacity: .45; }
+.trialbar--lock { background: linear-gradient(135deg, #6A4BFF, #C13FD9); position: relative; z-index: 2; }
+.trialbar--lock .trialbar__go { color: #6A4BFF; }
+.paywall .btn--primary { background: linear-gradient(135deg, #8B5CFF, #D946EF); color: #fff; box-shadow: 0 10px 28px rgba(160, 107, 255, .35); border: 0; }
+
+/* ---------- Sua conta (Ajustes) ---------- */
+.whocard { display: flex; flex-direction: column; gap: 12px; }
+.whocard__top { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.whocard__top > .avatar, .whocard__top > .ic { flex: none; }
+.whocard__txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.whocard__txt strong { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 16px; overflow-wrap: anywhere; }
+.whocard__txt small { color: var(--text-3); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.whocard__btns { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; }
+.whocard__btns .btn { width: 100%; justify-content: center; }
+.vbadge { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; background: linear-gradient(135deg, #F5C451, #E59A1C); color: #3A2500; }
+.upgrade { width: 100%; border: 1.5px solid #A06BFF; text-align: left; font: inherit; color: var(--text); margin-top: 8px; }
+.upgrade > .ic:first-child { color: #A06BFF; flex: none; }
+/* Seu perfil: 8 cores numa linha só */
+.palette--8 { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+/* janela aberta cobre a barra de abas (no iPhone a barra com desfoque passava por cima da janela) */
+body.has-sheet .tabbar { visibility: hidden; }
+.sheet-wrap { transform: translateZ(0); }
+
+/* ---------- Recompensa: faíscas, sequência e progresso ---------- */
+.burst { position: fixed; z-index: 1200; width: 0; height: 0; pointer-events: none; }
+.burst i { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 2px; opacity: 0; animation: burst .8s cubic-bezier(.15,.8,.3,1) forwards; }
+.burst i:nth-child(3n) { border-radius: 50%; }
+@keyframes burst { 0% { transform: translate(0, 0) scale(.6) rotate(0); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(var(--x), calc(var(--y) + 24px)) scale(1) rotate(200deg); opacity: 0; } }
+.streak { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 12px; font-weight: 800; color: #E8590C; background: rgba(255, 146, 43, .14); padding: 3px 8px; border-radius: 999px; width: fit-content; }
+.summary__progress > div:last-child { display: flex; flex-direction: column; }
+.dayprog { padding: 12px 14px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); }
+.dayprog__top { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.dayprog__bar { height: 8px; border-radius: 999px; background: var(--surface-2); margin-top: 8px; overflow: hidden; }
+.dayprog__bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #34C759, #0E9F6E); transition: width .5s cubic-bezier(.2,.8,.2,1); }
+
+/* ---------- Feito para você (Pessoal) ---------- */
+.foryou__lead { font-size: 13px; color: var(--text-3); margin: -4px 0 10px; }
+.foryou__list { display: flex; flex-direction: column; gap: 8px; }
+.foryou__item { position: relative; }
+.foryou__add { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 44px 10px 10px; border-radius: 18px; border: 1.5px dashed color-mix(in srgb, var(--p-accent, #A06BFF) 45%, transparent); background: var(--surface); color: var(--text); font: inherit; text-align: left; }
+.foryou__add b { font-size: 15px; }
+.foryou__add small { font-size: 12.5px; color: var(--text-3); }
+.foryou__add > i { position: absolute; right: 40px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--p-accent, #A06BFF); color: #fff; }
+.foryou__add { padding-right: 76px; }
+.foryou__x { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; border: 0; background: transparent; color: var(--text-3); display: grid; place-items: center; }
+.foryou__add > span:not(.ptile) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.foryou__add > .ptile { flex: none; }
+.paywall__foot { align-items: center; width: 100%; }
+.paywall__safe { display: block !important; text-align: center; line-height: 1.45; }
+.paywall__safe .ic { display: inline-block; vertical-align: -2px; margin-right: 4px; }
+.cmp__price b { white-space: nowrap; }

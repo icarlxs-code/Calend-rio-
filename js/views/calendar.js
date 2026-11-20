@@ -1,4 +1,5 @@
 /* Telas "Hoje" (agenda do dia) e "Calendário" (mês) */
+import { streak } from '../reward.js';
 import { store } from '../store.js';
 import { ui } from '../ui.js';
 import { TYPES, isPost, durationOf, typeStyle, WORK, ent, isMarketing, crew, todos } from '../constants.js';
@@ -95,7 +96,7 @@ export function renderToday() {
     ? `<div class="summary">
         <div class="summary__progress">
           <div class="ring" style="--p:${pct}"><span>${pct}%</span></div>
-          <div><strong>${done} de ${evs.length}</strong><small>tarefas concluídas</small></div>
+          <div><strong>${done} de ${evs.length}</strong><small>${done === evs.length ? 'Dia 100% concluído 🏆' : evs.length - done === 1 && date === today ? 'Falta só 1 para fechar o dia' : 'concluídos'}</small>${streak().days >= 2 ? `<span class="streak">🔥 ${streak().days} dias seguidos</span>` : ''}</div>
         </div>
         <div class="summary__types">
           ${Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([t, n]) => `<span class="tcount tbadge--${t}"${typeStyle(t)}>${icon(TYPES[t].icon, 13)}<b>${n}</b> ${TYPES[t].label}</span>`).join('')}

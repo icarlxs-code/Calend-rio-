@@ -24,15 +24,29 @@ test('teste grátis de 24h e depois expira', async () => {
   assert.equal(statusOf(b, user('A'), now + TRIAL_MS + 1).plan, 'expired');
 });
 
-test('conta nova no mesmo aparelho ou na mesma rede não ganha outro teste', async () => {
+test('conta nova no mesmo aparelho ou no mesmo endereço de internet (IP) não ganha outro teste', async () => {
   const env = mkEnv(); const now = Date.now();
   await startTrial(env, user('A'), { deviceId: 'dev1', ip: '1.1.1.1', now });
   const sameDev = await startTrial(env, user('B'), { deviceId: 'dev1', ip: '9.9.9.9', now });
   assert.equal(sameDev.plan, 'blocked'); assert.equal(sameDev.reason, 'aparelho');
-  const sameNet = await startTrial(env, user('C'), { deviceId: 'dev2', ip: '1.1.1.1', now });
+  const sameNet = await startTrial(env, user('C'), { deviceId: 'dev2', ip: '1.1.1.1', now: now + 26 * 3600e3 });
   assert.equal(sameNet.plan, 'blocked'); assert.equal(sameNet.reason, 'rede');
+  // celular no 4G/5G (IPv6): o final do endereço muda, mas o bloco do aparelho é o mesmo
+  await startTrial(env, user('V1'), { deviceId: 'dv1', ip: '2804:14c:5b81:4a2b:1111:2222:3333:4444', now });
+  const v2 = await startTrial(env, user('V2'), { deviceId: 'dv2', ip: '2804:14c:5b81:4a2b:aaaa::1', now });
+  assert.equal(v2.plan, 'blocked'); assert.equal(v2.reason, 'rede');
+  // depois de 30 dias a mesma conexão pode testar de novo (endereços mudam de dono)
+  assert.equal((await startTrial(env, user('C2'), { deviceId: 'dev2b', ip: '1.1.1.1', now: now + 31 * 864e5 })).plan, 'trial');
   const other = await startTrial(env, user('D'), { deviceId: 'dev3', ip: '2.2.2.2', now });
   assert.equal(other.plan, 'trial');
+});
+
+test('IPv6 vira o bloco /64 do aparelho; IPv4 fica igual', async () => {
+  const { netOf } = await import('../src/billing.js');
+  assert.equal(netOf('2804:14c:5b81:4a2b:1111:2222:3333:4444'), '2804:14c:5b81:4a2b::/64');
+  assert.equal(netOf('2804:014c:5b81:4a2b::1'), '2804:14c:5b81:4a2b::/64');
+  assert.equal(netOf('2001:db8::1'), '2001:db8:0:0::/64');
+  assert.equal(netOf('187.10.20.30'), '187.10.20.30');
 });
 
 test('checkout: monta a assinatura de R$ 9,90 e o vitalício de R$ 150', async () => {
@@ -71,4 +85,23 @@ test('aviso da Stripe: só aceita assinado; libera vitalício e assinatura; canc
   assert.equal((await billingStatus(env, user('B'))).plan, 'monthly');
   await handleStripeEvent(env, { type: 'customer.subscription.deleted', data: { object: { id: 'sub_2', customer: 'cus_2', status: 'canceled' } } });
   assert.equal((await billingStatus(env, user('B'))).active, false);
+});
+
+test('nunca cobra em dobro: vitalício não compra mensal; mensal não assina de novo; virar vitalício cancela o mensal', async () => {
+  const env = mkEnv(); const calls = [];
+  const fakeFetch = async (url, opt) => { calls.push({ url, body: new URLSearchParams(opt.body) }); return { ok: true, json: async () => ({ url: 'https://checkout.stripe.com/c/x' }) }; };
+  await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { client_reference_id: 'M', mode: 'subscription', subscription: 'sub_m', customer: 'cus_m', metadata: { uid: 'M', plan: 'mensal' } } } });
+  await assert.rejects(createCheckout(env, user('M'), { plan: 'mensal', returnUrl: 'https://x.test/' }, fakeFetch), /já assina/);
+  // passa para o vitalício: a Stripe é chamada para cancelar a mensalidade
+  const realFetch = globalThis.fetch; const deleted = [];
+  env.STRIPE_SECRET_KEY = 'sk_test_x';
+  globalThis.fetch = async (url, opt) => { deleted.push([opt.method, url]); return { ok: true, json: async () => ({}) }; };
+  try {
+    await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { client_reference_id: 'M', mode: 'payment', payment_status: 'paid', customer: 'cus_m', payment_intent: 'pi_1', metadata: { uid: 'M', plan: 'vitalicio' } } } });
+  } finally { globalThis.fetch = realFetch; }
+  assert.deepEqual(deleted, [['DELETE', 'https://api.stripe.com/v1/subscriptions/sub_m']]);
+  const st = statusOf(JSON.parse(env.kv['bill:M']), user('M'));
+  assert.equal(st.plan, 'lifetime');
+  await assert.rejects(createCheckout(env, user('M'), { plan: 'vitalicio', returnUrl: 'https://x.test/' }, fakeFetch), /já é vitalícia/);
+  await assert.rejects(createCheckout(env, user('M'), { plan: 'mensal', returnUrl: 'https://x.test/' }, fakeFetch), /já é vitalícia/);
 });

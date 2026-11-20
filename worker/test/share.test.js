@@ -36,7 +36,7 @@ test('agenda compartilhada: exige plano base pago e é cobrada à parte (não ve
   await createCheckout(env, user(OWNER), { plan: 'equipe', returnUrl: 'https://x.test/' }, fakeFetch(calls));
   const p = calls[0];
   assert.equal(p.get('mode'), 'subscription');
-  assert.equal(p.get('line_items[0][price_data][unit_amount]'), '1490');
+  assert.equal(p.get('line_items[0][price_data][unit_amount]'), '990', 'vitalício paga a Equipe com desconto (R$ 9,90)');
   assert.equal(p.get('line_items[0][price_data][recurring][interval]'), 'month');
   assert.equal(p.get('subscription_data[metadata][plan]'), 'equipe');
   await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { client_reference_id: OWNER, mode: 'subscription', subscription: 'sub_add', customer: 'cus_1', metadata: { uid: OWNER, plan: 'equipe' } } } });

@@ -23,9 +23,9 @@ test('lembrete pessoal: lê o formato novo e o antigo, e não repete', async () 
 });
 
 import { everyone } from '../src/index.js';
-test('contas próprias: lembretes do espaço delas também são enviados', async () => {
+test('contas próprias: lembretes do espaço delas também são enviados (só com plano ativo)', async () => {
   const now = Date.now();
-  const kv = { users: JSON.stringify({ uABC: { name: 'Amigo', ws: 'ABC' } }), 'schedule:ABC': JSON.stringify({ items: [{ id: 'x1', at: now - 1000, member: 'uABC', title: 't', body: 'b' }] }), subs: '{}', vapid: JSON.stringify({ publicKey: 'x', privateKey: 'y' }) };
+  const kv = { users: JSON.stringify({ uABC: { name: 'Amigo', ws: 'ABC' }, uSEM: { name: 'Sem plano', ws: 'SEM' } }), 'bill:ABC': JSON.stringify({ uid: 'ABC', lifetime: true }), 'bill:SEM': JSON.stringify({ uid: 'SEM', trialEndsAt: now - 1000 }), 'schedule:SEM': JSON.stringify({ items: [{ id: 'x2', at: now - 1000, member: 'uSEM', title: 't', body: 'b' }] }), 'schedule:ABC': JSON.stringify({ items: [{ id: 'x1', at: now - 1000, member: 'uABC', title: 't', body: 'b' }] }), subs: '{}', vapid: JSON.stringify({ publicKey: 'x', privateKey: 'y' }) };
   const env = mkEnv(kv);
   assert.equal(await runSchedule(env), 1);
   const all = await everyone(env);

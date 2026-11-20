@@ -4,6 +4,7 @@
 import { store } from './store.js';
 import { todayKey, addDays, fromKey, pad, uid } from './utils.js';
 import { server, api } from './avisos.js';
+import { streak } from './reward.js';
 
 export const CATS = {
   lembrete: { label: 'Lembrete', emoji: '📝', ic: 'note', g: ['#8E9AAF', '#5B6478'], color: '#6B7489', words: [] },
@@ -15,7 +16,7 @@ export const CATS = {
   pagar: { label: 'Pagar conta', emoji: '💸', ic: 'card', g: ['#3FD0E0', '#0E8FB0'], color: '#14A3C2', words: ['pagar', 'conta de', 'boleto', 'fatura', 'aluguel', 'pix'] },
   compras: { label: 'Compras', emoji: '🛒', ic: 'cart', g: ['#8B8CFF', '#5146E5'], color: '#5E5CF0', words: ['comprar', 'mercado', 'farmácia', 'farmacia'] },
 };
-export const REPEATS = { none: 'Não repete', daily: 'Todo dia', weekly: 'Toda semana', monthly: 'Todo mês', yearly: 'Todo ano' };
+export const REPEATS = { none: 'Não repete', daily: 'Todo dia', weekly: 'Toda semana', biweekly: 'A cada 2 semanas', monthly: 'Todo mês', yearly: 'Todo ano' };
 export const LIST_ICONS = {
   cart: { g: ['#8B8CFF', '#5146E5'] },
   listcheck: { g: ['#4BD88B', '#16A35A'] },
@@ -47,6 +48,7 @@ export const personal = {
   get lists() { return items.filter((x) => x.kind === 'list').sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)); },
   get prefs() { return { ...DEFAULT_PREFS, ...(items.find((x) => x.kind === 'prefs') || {}) }; },
   ready: false,
+  gate: null, // portão do plano (definido pelo app)
   on(fn) { listeners.add(fn); return () => listeners.delete(fn); },
   item: (id) => items.find((x) => x.id === id),
 };
@@ -78,6 +80,8 @@ function writeFailed(e) {
 const saveLocal = () => { try { localStorage.setItem(LS, JSON.stringify(items)); } catch { /* cheio */ } };
 
 export function savePersonal(it) {
+  // sem plano ativo: nada é gravado (só as preferências da ficha)
+  if (personal.gate && it.kind !== 'prefs' && !personal.gate(it)) return null;
   it = { ...it, updatedAt: Date.now() };
   if (!it.id) it.id = uid('p_');
   if (!it.createdAt) it.createdAt = Date.now();
@@ -89,6 +93,7 @@ export function savePersonal(it) {
   return it;
 }
 export function removePersonal(id) {
+  if (personal.gate && !personal.gate({ id })) return;
   items = items.filter((x) => x.id !== id);
   const c = cloud();
   if (c) c.delPersonal(id).catch(writeFailed); else saveLocal();
@@ -117,6 +122,7 @@ export function occursOn(it, day) {
   if (r === 'yearly') return day.slice(5) === it.date.slice(5);
   if (r === 'monthly') return day.slice(8) === it.date.slice(8);
   if (r === 'weekly') return fromKey(day).getDay() === fromKey(it.date).getDay();
+  if (r === 'biweekly') return Math.round((fromKey(day) - fromKey(it.date)) / 864e5) % 14 === 0;
   return false;
 }
 export const doneOn = (it, day) => (it.repeat && it.repeat !== 'none' ? (it.doneDates || []).includes(day) : !!it.done);
@@ -219,7 +225,7 @@ const V = {
   beleza: {
     m60: ['Daqui 1h tem {t}, hein! Já vai se organizando 💈', 'Lembrete carinhoso: {t} às {h}. Hoje é dia de se cuidar ✨'],
     m30: ['Não esquece de {tl}, tá? Vai melhorar sua autoestima demais 💈', 'Meia hora pra {tl}! Se cuidar também é prioridade 😉'],
-    m20: ['Vai lá, hein! Você tem que ficar bonito pra você mesmo. Não esquece: você é lindo 💜', 'Bora? Daqui a pouco é {tl}. Vai sair de lá se sentindo outra pessoa ✨'],
+    m20: ['Vai lá, hein! Se cuidar é um presente pra {vcmesmo}. Não esquece: você é {lindo} 💜', 'Bora? Daqui a pouco é {tl}. Vai sair de lá se sentindo outra pessoa ✨'],
     m0: ['É agora! {t} — aproveita esse momento seu 💈', 'Chegou a hora de {tl}. Você merece esse cuidado 💜'],
     after: ['E aí, ficou top? 😍 Marca como feito pra eu saber!', 'Já foi? Aposto que ficou lindo. Marca como feito 💜'],
   },
@@ -248,8 +254,8 @@ const V = {
     m60: ['Daqui 1h: {t}. Bora deixar isso resolvido? 💸', 'Não esquece: {t} às {h}. Conta paga = cabeça leve 😌'],
     m30: ['Meia hora pra {tl}. Resolve logo e esquece o assunto 💸', 'Já separa o que precisa pra {tl} 😉'],
     m20: ['Paga logo, vai! Depois é só alívio 😌', 'Não deixa pra depois não, hein! {t} 💸'],
-    m0: ['É agora: {t}. Dois minutinhos e pronto 💸', 'Hora de {tl}! Você é organizado(a), olha só 😎'],
-    after: ['Pagou? Marca como feito e dorme tranquilo 😌', 'Resolvido? Marca como feito ✅'],
+    m0: ['É agora: {t}. Dois minutinhos e pronto 💸', 'Hora de {tl}! Organização nível máximo, olha só 😎'],
+    after: ['Pagou? Marca como feito e dorme {tranquilo} 😌', 'Resolvido? Marca como feito ✅'],
   },
   compromisso: {
     m60: ['Daqui 1h: {t}. Já vai se arrumando 📍', 'Lembrete: {t} às {h}. Vai ser bom, confia 😉'],
@@ -272,7 +278,11 @@ function voice(it, stage, date) {
   const pool = (V[it.cat] || V.lembrete)[stage] || V.lembrete[stage];
   const s = pool[hash(it.id + date + stage) % pool.length];
   const tl = t.charAt(0).toLowerCase() + t.slice(1);
-  return s.replace(/\{tl\}/g, tl).replace(/\{t\}/g, t).replace(/\{h\}/g, it.time ? hm(it.time) : '');
+  // palavras no gênero que a pessoa escolheu na ficha (feminino, masculino ou neutro)
+  const pr = store.profile?.pronoun || personal.prefs.pronoun;
+  const G = { lindo: ['lindo', 'linda', 'incrível'], vcmesmo: ['você mesmo', 'você mesma', 'você'], tranquilo: ['tranquilo', 'tranquila', 'em paz'] };
+  const gw = (k) => G[k][pr === 'm' ? 0 : pr === 'f' ? 1 : 2];
+  return s.replace(/\{tl\}/g, tl).replace(/\{t\}/g, t).replace(/\{h\}/g, it.time ? hm(it.time) : '').replace(/\{(lindo|vcmesmo|tranquilo)\}/g, (_, k) => gw(k));
 }
 const TITLES = { m60: 'Daqui a 1 hora', m30: 'Daqui a 30 min', m20: 'Daqui a 20 min', m0: 'É agora!', after: 'E aí? 👀' };
 
@@ -298,7 +308,9 @@ export function buildPersonalSchedule(now = Date.now()) {
         add(at(date, '08:00'), 'Hoje é aniversário 🎂', `${it.title} — não esquece de dar os parabéns!`, k('d0'), tag, url);
       } else if (it.time) {
         const base = at(date, it.time);
-        for (const [stage, min] of [['m60', 60], ['m30', 30], ['m20', 20], ['m0', 0], ['after', -45]]) {
+        // hábito diário: só na hora; repetição semanal/mensal: 1h antes e na hora; compromisso único: a escada completa
+        const stages = it.repeat === 'daily' ? [['m0', 0]] : it.repeat && it.repeat !== 'none' ? [['m60', 60], ['m0', 0]] : [['m60', 60], ['m30', 30], ['m20', 20], ['m0', 0], ['after', -45]];
+        for (const [stage, min] of stages) {
           add(base - min * 60e3, `${c.emoji} ${TITLES[stage]}`, voice(it, stage, date), k(stage), tag, url);
         }
       } else if (!prefs.morning) {
@@ -315,10 +327,18 @@ export function buildPersonalSchedule(now = Date.now()) {
     if (prefs.morning) add(at(d, '08:00'), `Seu dia hoje: ${list.length} ${list.length > 1 ? 'coisas' : 'coisa'} 📋`, body, `pm-${d}-${list.length}`, 'p-manha', './#/p/hoje');
     if (prefs.night) add(at(addDays(d, -1), '21:00'), `Amanhã: ${list.length} ${list.length > 1 ? 'coisas' : 'coisa'} na agenda 🌙`, body, `pn-${d}-${list.length}`, 'p-noite', './#/p/hoje');
   }
+  // sequência de dias em jogo: um toque no começo da noite (só se ainda não concluiu nada hoje)
+  const st = streak();
+  if (prefs.nudges !== false && st.days >= 2 && !st.today) {
+    const sleep = /^\d{2}:\d{2}$/.test(prefs.sleep || '') ? prefs.sleep : '22:30';
+    const [sh, sm] = sleep.split(':').map(Number);
+    const when = Math.min(20 * 60, sh * 60 + sm - 90);
+    if (when > 12 * 60) add(at(t, `${String(Math.floor(when / 60)).padStart(2, '0')}:${String(when % 60).padStart(2, '0')}`), `🔥 ${st.days} dias seguidos`, 'Sua sequência está em jogo. Conclua uma coisa hoje e ela continua crescendo 💪', `streak-${t}`, 'streak', './');
+  }
   return out.sort((a, b) => a.at - b.at).slice(0, 300);
 }
 /* Resumo da agenda pessoal para as mensagens de ânimo do servidor */
-const GOAL_TEXT = { lembrar: 'nunca mais esquecer compromissos', produtivo: 'ser mais produtivo(a)', tempo: 'ter mais tempo livre', saude: 'cuidar melhor de si', carreira: 'crescer na carreira', organizar: 'organizar o trabalho e a equipe' };
+const GOAL_TEXT = { lembrar: 'nunca mais esquecer compromissos', produtivo: 'render mais no dia', tempo: 'ter mais tempo livre', saude: 'cuidar melhor de si', carreira: 'crescer na carreira', organizar: 'organizar o trabalho e a equipe' };
 export function personalProfile() {
   const t = todayKey();
   const ev = (o) => ({ title: o.item.title, cat: o.item.cat, time: o.item.time || null, done: o.done });
@@ -354,6 +374,8 @@ export function syncPersonalSchedule() {
     api('/personal', { items: list, profile }).then(() => (lastSig = sig)).catch(() => {});
   }, 2500);
 }
+// concluiu algo (trabalho ou pessoal): refaz a lista (tira o aviso da sequência do dia)
+if (typeof window !== 'undefined') window.addEventListener('lembra:done', () => { lastSig = ''; syncPersonalSchedule(); });
 // renova a lista e o resumo do dia de tempos em tempos (e quando a pessoa volta ao app)
 setInterval(() => { lastSig = ''; syncPersonalSchedule(); }, 3 * 3600e3);
 if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (!document.hidden) syncPersonalSchedule(); });

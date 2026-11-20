@@ -8,10 +8,10 @@
 export const DIFFICULTIES = [
   { id: 'esquecer', label: 'Esqueço compromissos', w: 16 },
   { id: 'prazos', label: 'Perco prazos', w: 12 },
-  { id: 'atrasos', label: 'Chego atrasado(a)', w: 10 },
+  { id: 'atrasos', label: 'Me atraso com frequência', w: 10 },
   { id: 'procrastinar', label: 'Deixo tudo para depois', w: 12 },
   { id: 'sobrecarga', label: 'Muitas coisas ao mesmo tempo', w: 8 },
-  { id: 'desorganizacao', label: 'Me sinto desorganizado(a)', w: 8 },
+  { id: 'desorganizacao', label: 'Minha rotina vive bagunçada', w: 8 },
   { id: 'datas', label: 'Esqueço aniversários e datas', w: 5 },
   { id: 'equilibrio', label: 'Conciliar trabalho e vida pessoal', w: 3 },
   { id: 'agua', label: 'Esqueço de beber água', w: 0 },
@@ -40,14 +40,26 @@ export const VOLUMES = [
   { id: '7-10', label: '7 a 10', max: 11, w: 6 },
   { id: '10+', label: 'Mais de 10', max: 15, w: 9 },
 ];
-export const PRONOUNS = [
-  { id: 'f', label: 'Ela' },
-  { id: 'm', label: 'Ele' },
-  { id: 'n', label: 'Prefiro não dizer' },
+/* Como a pessoa se identifica (define o tratamento e as sugestões do modo Pessoal) */
+export const GENDERS = [
+  { id: 'mulher', label: 'Mulher', pronoun: 'f' },
+  { id: 'homem', label: 'Homem', pronoun: 'm' },
+  { id: 'mulher_trans', label: 'Mulher trans', pronoun: 'f' },
+  { id: 'homem_trans', label: 'Homem trans', pronoun: 'm' },
+  { id: 'nao_binario', label: 'Não binário', pronoun: 'n' },
+  { id: 'nao_dizer', label: 'Prefiro não dizer', pronoun: 'n' },
 ];
+/* Como o Lembra fala com a pessoa: no feminino, no masculino ou de forma neutra */
+export const PRONOUNS = [
+  { id: 'f', label: 'No feminino' },
+  { id: 'm', label: 'No masculino' },
+  { id: 'n', label: 'Neutro' },
+];
+/* Escolhe a palavra certa: g('pronto', 'pronta', 'tudo pronto', pronome) */
+export const g = (m, f, n, pr) => (pr === 'f' ? f : pr === 'm' ? m : n);
 export const GOALS = [
   { id: 'lembrar', label: 'Nunca mais esquecer compromissos' },
-  { id: 'produtivo', label: 'Ser mais produtivo(a)' },
+  { id: 'produtivo', label: 'Render mais no dia' },
   { id: 'tempo', label: 'Ter mais tempo livre' },
   { id: 'saude', label: 'Cuidar melhor de mim' },
   { id: 'carreira', label: 'Crescer na carreira' },

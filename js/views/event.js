@@ -12,6 +12,7 @@ import { validateDraft, bestSlots, freePeople, spanOf, evLabel } from '../planne
 import { downloadICS } from '../ics.js';
 import { POST_NETS, platformById } from '../platforms.js';
 import { tidyTitle } from '../tidy.js';
+import { onDone } from '../reward.js';
 import { platformIcons } from '../platforms.js';
 import { openCompanyEditor } from './companies.js';
 
@@ -48,16 +49,16 @@ function detailHtml(id) {
     </div>
 
     <ul class="rows">
-      <li><span class="rows__k">${icon('users', 16)} Responsável</span><span class="rows__v">${(e.assignees || []).map((a) => avatar(a, 22)).join('')} ${esc(whoText(e.assignees))}</span></li>
+      ${solo() ? '' : `<li><span class="rows__k">${icon('users', 16)} Responsável</span><span class="rows__v">${(e.assignees || []).map((a) => avatar(a, 22)).join('')} ${esc(whoText(e.assignees))}</span></li>`}
       ${e.location ? `<li><span class="rows__k">${icon('pin', 16)} Local</span><a class="rows__v link" href="https://maps.apple.com/?q=${encodeURIComponent(e.location)}" target="_blank" rel="noopener">${esc(e.location)}</a></li>` : ''}
       ${TYPES[e.type].kind !== 'post' || e.duration ? `<li><span class="rows__k">${icon('clock', 16)} Duração</span><span class="rows__v">${esc(fmtDuration(durationOf(e)))}</span></li>` : ''}
       <li><span class="rows__k">${icon('bell', 16)} Lembrete</span><span class="rows__v">${esc(rem?.label || '—')}</span></li>
       ${series ? `<li><span class="rows__k">${icon('repeat', 16)} Repetição</span><span class="rows__v">${series} eventos na série</span></li>` : ''}
-      <li><span class="rows__k">${icon(e.visibleToClient === false ? 'eyeoff' : 'eye', 16)} Cliente</span><span class="rows__v">${e.visibleToClient === false ? 'Não aparece para o cliente' : 'Aparece no calendário do cliente'}</span></li>
+      ${WORK.clientLike ? `<li><span class="rows__k">${icon(e.visibleToClient === false ? 'eyeoff' : 'eye', 16)} Cliente</span><span class="rows__v">${e.visibleToClient === false ? 'Não aparece para o cliente' : 'Aparece no link do cliente'}</span></li>` : ''}
     </ul>
 
-    ${e.description ? `<div class="textbox"><h4>Descrição / legenda</h4><p>${esc(e.description)}</p></div>` : ''}
-    ${e.internalNote ? `<div class="textbox textbox--note"><h4>${icon('eyeoff', 13)} Nota interna (só a equipe vê)</h4><p>${esc(e.internalNote)}</p></div>` : ''}
+    ${e.description ? `<div class="textbox"><h4>${esc(WORK.form.desc[0])}</h4><p>${esc(e.description)}</p></div>` : ''}
+    ${e.internalNote ? `<div class="textbox textbox--note"><h4>${icon('eyeoff', 13)} ${esc(WORK.form.note[0])} (${noteTag()})</h4><p>${esc(e.internalNote)}</p></div>` : ''}
 
     <div class="actions">
       <button data-act="ics">${icon('bell', 20)}<span>Lembrete no iPhone</span></button>
@@ -73,7 +74,12 @@ function mountDetail(api, id) {
   const el = api.el;
   el.querySelectorAll('[data-status]').forEach((b) => (b.onclick = async () => {
     const e = store.event(id);
+    const at = b.getBoundingClientRect();
     await store.upsert('events', { ...e, status: b.dataset.status });
+    if (b.dataset.status === 'feito' && e.status !== 'feito' && store.event(id)?.status === 'feito') {
+      const left = e.date === todayKey() ? store.eventsOn(e.date, { person: store.me }).filter((x) => x.status !== 'feito').length : null;
+      toast(onDone({ el: at, left }));
+    }
   }));
   const act = (name, fn) => {
     const b = el.querySelector(`[data-act="${name}"]`);
@@ -85,7 +91,7 @@ function mountDetail(api, id) {
     const copy = { ...e, id: uid('e_'), status: 'pendente', seriesId: null, createdAt: null, createdBy: null };
     await store.upsert('events', copy);
     api.close();
-    toast('Evento duplicado');
+    toast(`${EVc()} duplicado`);
     openEventEditor({ id: copy.id });
   });
   act('tomorrow', async () => {
@@ -111,7 +117,7 @@ async function deleteEvent(id, api) {
     const next = store.state.events.filter((x) => x.seriesId === e.seriesId && x.date >= e.date).map((x) => x.id);
     if (next.length > 1) {
       const r = await chooseDialog({
-        title: 'Excluir evento repetido',
+        title: `Excluir ${EV()} repetido`,
         options: [
           { label: 'Só este', value: 'one', danger: true },
           { label: `Este e os próximos (${next.length})`, value: 'next', danger: true },
@@ -119,12 +125,12 @@ async function deleteEvent(id, api) {
       });
       if (!r) return;
       if (r === 'next') ids = next;
-    } else if (!(await confirmDialog({ title: 'Excluir este evento?', ok: 'Excluir', danger: true }))) return;
-  } else if (!(await confirmDialog({ title: 'Excluir este evento?', text: store.team.length > 1 ? 'Ele some da agenda de todos.' : 'Ele some da sua agenda.', ok: 'Excluir', danger: true }))) return;
+    } else if (!(await confirmDialog({ title: `Excluir este ${EV()}?`, ok: 'Excluir', danger: true }))) return;
+  } else if (!(await confirmDialog({ title: `Excluir este ${EV()}?`, text: store.team.length > 1 ? 'Ele some da agenda de todos.' : 'Ele some da sua agenda.', ok: 'Excluir', danger: true }))) return;
   const backup = ids.map((i) => ({ ...store.event(i) }));
   await store.removeMany('events', ids);
   api && api.close();
-  toast(ids.length > 1 ? `${ids.length} eventos excluídos` : 'Evento excluído', {
+  toast(ids.length > 1 ? `${ids.length} ${EV()}s excluídos` : `${EVc()} excluído`, {
     action: 'Desfazer',
     onAction: () => store.upsertMany('events', backup),
     ms: 4500,
@@ -173,13 +179,17 @@ function notifyHelp(d, m) {
   if (d.notifyPartner === false) return resp ? `Sem aviso agora. Como ${m.name} é responsável, ele ainda recebe os lembretes do horário.` : `${m.name} não recebe aviso nem lembretes deste evento. Fica só na agenda.`;
   return `${m.name} recebe o aviso de que você marcou e os lembretes do horário.`;
 }
+const EV = () => (isMarketing() ? 'evento' : 'compromisso');
+const EVc = () => (isMarketing() ? 'Evento' : 'Compromisso');
+const solo = () => store.team.length < 2;
+const noteTag = () => (solo() ? 'só você vê' : `só ${store.team.length > 2 ? 'a equipe' : 'vocês'} veem`);
 const needsDuration = (type) => ['shoot', 'meeting', 'work', 'other'].includes(TYPES[type].kind);
 const needsLocation = (type) => ['shoot', 'meeting'].includes(TYPES[type].kind);
 
 function editorHtml(d, editing, rep) {
   const companies = store.companiesSorted();
   return `
-  ${sheetHead(editing ? 'Editar evento' : 'Novo evento', {
+  ${sheetHead(editing ? `Editar ${EV()}` : `Novo ${EV()}`, {
     left: `<button class="btn-text" data-close>Cancelar</button>`,
     right: `<button class="btn btn--primary btn--sm" data-save>Salvar</button>`,
   })}
@@ -199,10 +209,10 @@ function editorHtml(d, editing, rep) {
       </div>
     </div>
 
-    <div class="fgroup" data-when="net" ${TYPES[d.type].kind === 'post' ? '' : 'hidden'}>
+    ${TYPE_ORDER.some((t) => TYPES[t].kind === 'post') || TYPES[d.type].kind === 'post' ? `<div class="fgroup" data-when="net" ${TYPES[d.type].kind === 'post' ? '' : 'hidden'}>
       <label class="flabel">Onde vai postar?</label>
       <div class="netgrid">${POST_NETS.map((id) => { const p = platformById(id); return p ? `<button type="button" class="netbtn${(d.platform || 'instagram') === id ? ' is-on' : ''}" data-net="${id}"><span class="pf" style="width:22px;height:22px">${p.svg}</span><span>${esc(p.name.replace(' (Twitter)', ''))}</span></button>` : ''; }).join('')}</div>
-    </div>
+    </div>` : ''}
 
     <div class="fgroup">
       <label class="flabel" for="f-title">Título</label>
@@ -223,12 +233,12 @@ function editorHtml(d, editing, rep) {
 
     <div data-hint></div>
 
-    <div class="fgroup">
+    <div class="fgroup"${solo() ? ' hidden' : ''}>
       <label class="flabel">Quem vai fazer?</label>
       <div class="whogrid">
         ${store.team.map((m) => `<button type="button" class="whobtn${(d.assignees || []).includes(m.id) ? ' is-on' : ''}" style="--mc:${m.color}" data-who="${m.id}">${avatar(m.id, 30)}<span>${esc(m.name)}</span><i class="whobtn__check">${icon('check', 14)}</i></button>`).join('')}
       </div>
-      <p class="fhelp">Marque os dois se forem juntos.</p>
+      <p class="fhelp">${store.team.length > 2 ? 'Marque todos que vão juntos.' : 'Marque os dois se forem juntos.'}</p>
       ${store.team.filter((m) => m.id !== store.me).map((m) => `<label class="list__row notifyrow"><span><b>${icon('bell', 15)} Avisar ${m.name === 'Matheus' || m.name === 'Henrique' ? 'o ' : ''}${esc(m.name)}</b><small data-notifyhelp>${notifyHelp(d, m)}</small></span><input type="checkbox" class="switch" name="notifyPartner" ${d.notifyPartner !== false ? 'checked' : ''}></label>`).join('')}
     </div>
 
@@ -239,12 +249,12 @@ function editorHtml(d, editing, rep) {
     </div>
 
     <div class="fgroup">
-      <label class="flabel" for="f-desc">Descrição / legenda <em class="tag">${icon('eye', 12)} cliente vê</em></label>
-      <textarea id="f-desc" class="input" name="description" rows="3" placeholder="Ideia do post, legenda, roteiro…">${esc(d.description || '')}</textarea>
+      <label class="flabel" for="f-desc">${esc(WORK.form.desc[0])}${WORK.clientLike ? ` <em class="tag">${icon('eye', 12)} cliente vê</em>` : ''}</label>
+      <textarea id="f-desc" class="input" name="description" rows="3" placeholder="${esc(WORK.form.desc[1])}">${esc(d.description || '')}</textarea>
     </div>
     <div class="fgroup">
-      <label class="flabel" for="f-note">Nota interna <em class="tag tag--note">${icon('eyeoff', 12)} só a equipe</em></label>
-      <textarea id="f-note" class="input" name="internalNote" rows="2" placeholder="Equipamento, observações, combinados…">${esc(d.internalNote || '')}</textarea>
+      <label class="flabel" for="f-note">${esc(WORK.form.note[0])} <em class="tag tag--note">${icon('eyeoff', 12)} ${noteTag()}</em></label>
+      <textarea id="f-note" class="input" name="internalNote" rows="2" placeholder="${esc(WORK.form.note[1])}">${esc(d.internalNote || '')}</textarea>
     </div>
 
     <div class="list">
@@ -257,7 +267,7 @@ function editorHtml(d, editing, rep) {
       <label class="list__row" data-when="until" hidden><span>${icon('calendar', 18)} Até</span>
         <input type="date" name="until" value="${rep.until}">
       </label>` : ''}
-      <label class="list__row"><span>${icon('eye', 18)} Aparece para o cliente</span>
+      <label class="list__row"${WORK.clientLike ? '' : ' hidden'}><span>${icon('eye', 18)} Aparece no link do cliente</span>
         <input type="checkbox" class="switch" name="visibleToClient" ${d.visibleToClient !== false ? 'checked' : ''}>
       </label>
       ${editing ? `<label class="list__row"><span>${icon('check', 18)} Status</span>
@@ -265,7 +275,7 @@ function editorHtml(d, editing, rep) {
       </label>` : ''}
     </div>
 
-    ${editing ? `<button type="button" class="btn btn--danger-soft btn--block" data-delete>${icon('trash', 18)} Excluir evento</button>` : ''}
+    ${editing ? `<button type="button" class="btn btn--danger-soft btn--block" data-delete>${icon('trash', 18)} Excluir ${EV()}</button>` : ''}
     <div class="form__spacer"></div>
   </form>`;
 }
@@ -414,8 +424,10 @@ function mountEditor(api, d, original, rep) {
       return;
     }
     if (!d.date) return toast('Escolha o dia');
+    // agenda só sua: o compromisso é sempre seu
+    if (solo() && store.me && !d.assignees.length) d.assignees = [store.me];
     if (!d.assignees.length) {
-      const ok = await confirmDialog({ title: 'Ninguém responsável?', text: 'Este evento ficará sem responsável. Deseja salvar assim mesmo?', ok: 'Salvar assim' });
+      const ok = await confirmDialog({ title: 'Ninguém responsável?', text: `Este ${EV()} ficará sem responsável. Deseja salvar assim mesmo?`, ok: 'Salvar assim' });
       if (!ok) return;
     }
     if (saving) return;
@@ -457,7 +469,7 @@ function mountEditor(api, d, original, rep) {
     } else {
       if (!(await checkBeforeSave(d, true, api, refreshAll))) return;
       await store.upsert('events', { ...d });
-      toast('Evento salvo');
+      toast(`${EVc()} salvo ✓`);
     }
     api.close();
   };
@@ -526,7 +538,7 @@ function assistantPanel(d, isNew) {
     <div class="assist__sugg">
       <p>${esc(t.tip)}</p>
       ${slots.length ? `<div class="hintbox__times">${slots.map((s) => `<button type="button" class="tchip${d.time === s.time ? ' is-on' : ''}" data-settime="${s.time}">${fmtTime(s.time)}${s.peak ? '<small>pico</small>' : '<small>livre</small>'}</button>`).join('')}</div>`
-        : `<p class="muted">Nenhum horário livre nesse dia${(d.assignees || []).length ? ' para ' + esc(whoText(d.assignees)) : ''}. Tente outro dia ou outra pessoa.</p>`}
+        : `<p class="muted">Nenhum horário livre nesse dia${(d.assignees || []).length ? ' para ' + esc(whoText(d.assignees)) : ''}. Tente outro dia${store.team.length > 1 ? ' ou outra pessoa' : ''}.</p>`}
     </div>
   </section>`;
 }
@@ -593,7 +605,7 @@ async function saveEdit(d, original) {
     const next = store.state.events.filter((x) => x.seriesId === d.seriesId && x.date > original.date);
     if (next.length) {
       const r = await chooseDialog({
-        title: 'Evento repetido',
+        title: `${EVc()} repetido`,
         text: 'Aplicar as alterações a quais eventos?',
         options: [
           { label: 'Só a este', value: 'one', primary: true },

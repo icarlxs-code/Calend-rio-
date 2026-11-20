@@ -1,5 +1,5 @@
 /* Tipos de evento, status, paleta e dicas */
-import { TYPE_DEFS, ARCHETYPES, ARCH_THEME, profStyle } from '../functions/catalog.js';
+import { TYPE_DEFS, ARCHETYPES, ARCH_THEME, profStyle, formOf } from '../functions/catalog.js';
 
 export const TYPES = {
   feed: {
@@ -68,7 +68,7 @@ export const TYPE_ORDER = ['feed', 'story', 'reels', 'carrossel', 'captacao', 'r
 /* ícone original de cada tipo (a profissão pode trocar: dentista → dente, veterinário → pata…) */
 const BASE_ICON = Object.fromEntries(Object.entries(TYPES).map(([k, t]) => [k, t.icon]));
 /* Perfil de trabalho ativo (muda com a profissão da conta) */
-export const WORK = { arch: 'marketing', profession: '', entity: ARCHETYPES.marketing.entity, clientLike: true, tips: ARCHETYPES.marketing.tips, badge: 'building', theme: null };
+export const WORK = { arch: 'marketing', profession: '', entity: ARCHETYPES.marketing.entity, clientLike: true, tips: ARCHETYPES.marketing.tips, badge: 'building', theme: null, form: formOf('marketing') };
 export function applyArch(arch, profession = '') {
   const a = ARCHETYPES[arch] || ARCHETYPES.generico;
   WORK.arch = ARCHETYPES[arch] ? arch : 'generico';
@@ -82,6 +82,9 @@ export function applyArch(arch, profession = '') {
   for (const [k, ic] of Object.entries(BASE_ICON)) TYPES[k].icon = (st.types && st.types[k]) || ic;
   WORK.badge = st.icon || a.entity.icon;
   WORK.theme = ARCH_THEME[WORK.arch] || null;
+  WORK.form = formOf(WORK.arch, profession);
+  // profissão com um tipo principal (ex.: confeiteira → Encomenda vem primeiro e já marcado)
+  if (WORK.form.first && TYPE_ORDER.includes(WORK.form.first)) TYPE_ORDER.splice(0, TYPE_ORDER.length, WORK.form.first, ...TYPE_ORDER.filter((t) => t !== WORK.form.first));
   return WORK;
 }
 /* Cor do tipo (tipos novos usam a cor do catálogo) */

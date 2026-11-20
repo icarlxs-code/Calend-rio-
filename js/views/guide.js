@@ -5,12 +5,14 @@ import { icon } from '../icons.js';
 import { store } from '../store.js';
 import { TYPES, TYPE_ORDER, WORK, isMarketing } from '../constants.js';
 import { esc } from '../utils.js';
+import { g } from '../persona.js';
+const welcome = () => g('Bem-vindo', 'Bem-vinda', 'Boas-vindas', store.profile?.pronoun);
 
 const block = (ic, title, text) => `<div class="gitem"><span class="gitem__ic">${icon(ic, 18)}</span><div><b>${title}</b><p>${text}</p></div></div>`;
 
 const MKT_PAGES = () => [
   {
-    key: 'intro', badge: 'Bem-vindo', color: 'linear-gradient(135deg,#111,#3a3a44)', ic: 'sparkles',
+    key: 'intro', badge: welcome(), color: 'linear-gradient(135deg,#111,#3a3a44)', ic: 'sparkles',
     title: 'O Lembra tem dois modos',
     lead: 'Um para o seu trabalho e outro para a sua vida pessoal. Cada um com a sua tela, seus lembretes e suas cores — e o que está em um nunca aparece no outro.',
     body: `<div class="gmodes">
@@ -40,11 +42,11 @@ const MKT_PAGES = () => [
       block('cake', 'Aniversários', 'Repetem todo ano, com aviso na véspera e no dia — e a idade que a pessoa vai fazer.'),
       block('listcheck', 'Listas', 'Mercado, coisas para fazer, ideias, presentes… marque os itens conforme for resolvendo.'),
       block('droplet', 'Mensagens de ânimo', 'Água, hora de comer, versículos e palavras de motivação em horários variados. Você escolhe o que quer receber.'),
-      block('lock', 'Privado', 'Só você vê. Nem o parceiro de trabalho, nem os clientes.'),
+      block('lock', 'Privado', 'Só você vê. Nem clientes, nem quem divide a agenda de trabalho com você.'),
     ].join(''),
   },
   {
-    key: 'start', badge: 'Pronto para começar', color: 'linear-gradient(135deg,#0E9F6E,#34C759)', ic: 'check',
+    key: 'start', badge: g('Pronto para começar', 'Pronta para começar', 'Tudo pronto para começar', store.profile?.pronoun), color: 'linear-gradient(135deg,#0E9F6E,#34C759)', ic: 'check',
     title: 'Três passos para começar',
     lead: 'Leva menos de 2 minutos:',
     body: [

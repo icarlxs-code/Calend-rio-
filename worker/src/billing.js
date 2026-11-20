@@ -2,8 +2,8 @@
    - Planos: mensal R$ 9,90 (assinatura) e vitalício R$ 150 (pagamento único).
    - Complemento mensal, à parte: Agenda compartilhada Dupla R$ 6,90 (+1 pessoa) ou Equipe R$ 14,90 (+4).
      Exige o plano base pago; quem entra pelo convite fica coberto pelo plano do dono.
-   - Teste: 24h a partir do 1º acesso. Um teste por aparelho e por rede (IP) — quem já testou
-     não ganha outro criando conta nova.
+   - Teste: 24h a partir do toque em "Começar meu teste grátis". Um teste por CPF, por aparelho e por
+     endereço de internet (IP, 30 dias) — quem já testou não ganha outro criando conta nova.
    - A dupla Henrique + Matheus (equipe do app) não paga.
    Chaves (segredos do Worker, configurados no painel da Cloudflare):
      STRIPE_SECRET_KEY (sk_live_... ou sk_test_...) e STRIPE_WEBHOOK_SECRET (whsec_...). */
@@ -17,7 +17,23 @@ export const PLANS = {
   equipe: { name: 'Lembra · Agenda compartilhada Equipe (você + até 4 pessoas)', amount: 1490, mode: 'subscription', addon: true, seats: 4 },
 };
 const isAddon = (plan) => !!PLANS[plan]?.addon;
-const IP_WINDOW = 30 * 864e5; // a mesma rede só ganha um teste a cada 30 dias
+/* Vantagem do vitalício: a agenda compartilhada sai mais barata (Dupla R$ 4,90 · Equipe R$ 9,90) */
+export const LIFETIME_ADDON = { dupla: 490, equipe: 990 };
+export const addonPrice = (plan, b) => (b && b.lifetime && LIFETIME_ADDON[plan]) || PLANS[plan]?.amount || 0;
+const IP_WINDOW = 30 * 864e5; // o mesmo endereço de internet só ganha UM teste a cada 30 dias
+const IP_MAX = 1;
+/* Endereço de internet da pessoa. IPv6 (a maioria dos celulares no 4G/5G): usa o bloco do aparelho (/64),
+   que não muda quando o celular troca o final do endereço — assim criar outra conta não dá outro teste. */
+export function netOf(ip) {
+  const a = String(ip || '').trim().toLowerCase();
+  if (!a) return '';
+  if (!a.includes(':')) return a;
+  const parts = a.split('::');
+  const head = parts[0] ? parts[0].split(':') : [];
+  const tail = parts[1] ? parts[1].split(':') : [];
+  const full = parts.length > 1 ? [...head, ...Array(8 - head.length - tail.length).fill('0'), ...tail] : head;
+  return full.slice(0, 4).map((x) => x.replace(/^0+(?=.)/, '')).join(':') + '::/64';
+}
 
 async function sha(text) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -48,6 +64,17 @@ export function statusOf(b, me, now = Date.now()) {
   if (b.trialEndsAt && b.trialEndsAt > now) return { plan: 'trial', active: true, trialEndsAt: b.trialEndsAt, ...extra };
   if (b.trialDenied) return { plan: 'blocked', active: false, reason: b.trialDenied, ...extra };
   return { plan: 'expired', active: false, trialEndsAt: b.trialEndsAt || null, ...extra };
+}
+
+/* Até quando a conta tem direito aos lembretes, mensagens e assistente (0 = sem plano) */
+export const FOREVER = 8.64e15;
+export function untilOf(st, now = Date.now()) {
+  if (!st || !st.active) return 0;
+  if (st.plan === 'team' || st.plan === 'lifetime') return FOREVER;
+  if (st.plan === 'monthly') return st.paidUntil ? st.paidUntil + 3 * 864e5 : now + 32 * 864e5;
+  if (st.plan === 'trial') return st.trialEndsAt || 0;
+  if (st.plan === 'shared') return now + 864e5;
+  return 0;
 }
 
 /* ---------- Agenda compartilhada: quem está em qual equipe ----------
@@ -101,12 +128,15 @@ export async function startTrial(env, me, { deviceId, ip, cpf, now = Date.now() 
   let b = await getBill(env, uid);
   if (b && (b.trialEndsAt || b.trialDenied || b.lifetime || b.subActive)) return statusOf(b, me, now);
   const dev = deviceId ? await sha('dev:' + deviceId) : null;
-  const net = ip ? await sha('ip:' + ip) : null;
+  // TRIAL_IP_CHECK="0" só nos testes automáticos (todos os celulares de teste saem do mesmo endereço)
+  const net = ip && env.TRIAL_IP_CHECK !== '0' ? await sha('ip:' + netOf(ip)) : null;
   // CPF: guardado só embaralhado (com o segredo do servidor), um teste por pessoa
   const doc = validCPF(cpf) ? await sha(`cpf:${env.CPF_SALT || 'lembra'}:${String(cpf).replace(/\D/g, '')}`) : null;
   const [usedDev, usedNet, usedDoc] = await Promise.all([dev ? env.CAL.get(`trial-dev:${dev}`, 'json') : null, net ? env.CAL.get(`trial-ip:${net}`, 'json') : null, doc ? env.CAL.get(`trial-cpf:${doc}`, 'json') : null]);
   const otherDev = usedDev && usedDev.uid !== uid;
-  const otherNet = usedNet && usedNet.uid !== uid && now - usedNet.at < IP_WINDOW;
+  // rede: o mesmo endereço de internet (IP) que já usou o teste nos últimos 30 dias não ganha outro
+  const netList = (Array.isArray(usedNet) ? usedNet : usedNet ? [usedNet] : []).filter((x) => now - x.at < IP_WINDOW);
+  const otherNet = netList.filter((x) => x.uid !== uid).length >= IP_MAX;
   const otherDoc = usedDoc && usedDoc.uid !== uid;
   b = { ...(b || {}), uid, email: me.email, createdAt: now };
   if (otherDoc || otherDev || otherNet) {
@@ -115,7 +145,7 @@ export async function startTrial(env, me, { deviceId, ip, cpf, now = Date.now() 
     b.trialStartedAt = now;
     b.trialEndsAt = now + TRIAL_MS;
     const mark = JSON.stringify({ uid, at: now });
-    await Promise.all([dev && env.CAL.put(`trial-dev:${dev}`, mark), net && env.CAL.put(`trial-ip:${net}`, mark, { expirationTtl: IP_WINDOW / 1000 }), doc && env.CAL.put(`trial-cpf:${doc}`, mark)].filter(Boolean));
+    await Promise.all([dev && env.CAL.put(`trial-dev:${dev}`, mark), net && env.CAL.put(`trial-ip:${net}`, JSON.stringify([...netList, { uid, at: now }].slice(-10)), { expirationTtl: IP_WINDOW / 1000 + 60 }), doc && env.CAL.put(`trial-cpf:${doc}`, mark)].filter(Boolean));
   }
   await putBill(env, uid, b);
   return statusOf(b, me, now);
@@ -182,12 +212,15 @@ export async function createCheckout(env, me, { plan, returnUrl }, fetchImpl = f
   if (me.ws === 'main') throw Object.assign(new Error('A sua conta já é liberada.'), { status: 400 });
   const back = siteBase(env, returnUrl);
   const b = (await getBill(env, me.ws)) || {};
+  // nunca cobra duas vezes pela mesma coisa
+  if (!p.addon && b.lifetime) throw Object.assign(new Error('Sua conta já é vitalícia: está tudo liberado para sempre.'), { status: 409 });
+  if (plan === 'mensal' && basePaid(b)) throw Object.assign(new Error('Você já assina o plano Mensal.'), { status: 409 });
   if (p.addon) {
     if (!basePaid(b)) throw Object.assign(new Error('A agenda compartilhada é um complemento: primeiro assine o plano Mensal ou o Vitalício.'), { status: 409 });
     const cur = addonOf(b);
     if (cur && cur.active) throw Object.assign(new Error(cur.plan === plan ? 'Você já tem esse plano ativo.' : 'Você já tem a agenda compartilhada. Para trocar de plano, cancele em “Gerenciar assinatura” e assine o outro.'), { status: 409 });
   }
-  const price = { currency: 'brl', unit_amount: p.amount, product_data: { name: p.name } };
+  const price = { currency: 'brl', unit_amount: p.addon ? addonPrice(plan, b) : p.amount, product_data: { name: p.addon && b.lifetime ? `${p.name} · preço de vitalício` : p.name } };
   if (p.mode === 'subscription') price.recurring = { interval: 'month' };
   const params = {
     mode: p.mode,
@@ -248,7 +281,13 @@ export async function handleStripeEvent(env, ev) {
     const b = (await getBill(env, uid)) || { uid };
     b.customer = o.customer || b.customer;
     // vitalício: cartão confirma na hora; Pix/boleto confirmam depois (async_payment_succeeded)
-    if (o.mode === 'payment' && o.payment_status === 'paid') { b.lifetime = true; b.lifetimeAt = now; b.lifetimePI = o.payment_intent || b.lifetimePI || null; b.pending = null; }
+    if (o.mode === 'payment' && o.payment_status === 'paid') {
+      b.lifetime = true; b.lifetimeAt = now; b.lifetimePI = o.payment_intent || b.lifetimePI || null; b.pending = null;
+      // quem assinava o mensal e passou para o vitalício: a mensalidade é cancelada na hora
+      if (b.subActive && b.subscription) {
+        try { await stripe(env, `subscriptions/${b.subscription}`, {}, fetch, 'DELETE'); b.subActive = false; b.upgradedAt = now; } catch (e) { console.log('cancelar mensal após vitalício', e.message); }
+      }
+    }
     else if (o.mode === 'payment' && ev.type === 'checkout.session.completed') b.pending = { plan: o.metadata?.plan || 'vitalicio', at: now };
     if (ev.type === 'checkout.session.async_payment_failed') b.pending = null;
     if (o.mode === 'subscription' && isAddon(o.metadata?.plan)) b.addon = { plan: o.metadata.plan, subscription: o.subscription, subActive: true, paidUntil: now + 32 * 864e5, since: now };
@@ -256,7 +295,7 @@ export async function handleStripeEvent(env, ev) {
     b.updatedAt = now;
     if (b.customer) await env.CAL.put(`cust:${b.customer}`, uid);
     await putBill(env, uid, b);
-    return;
+    return uid;
   }
   if (ev.type === 'customer.subscription.updated' || ev.type === 'customer.subscription.deleted' || ev.type === 'customer.subscription.created') {
     const uid = o.metadata?.uid || (o.customer && (await env.CAL.get(`cust:${o.customer}`)));
@@ -277,7 +316,7 @@ export async function handleStripeEvent(env, ev) {
     }
     b.updatedAt = now;
     await putBill(env, uid, b);
-    return;
+    return uid;
   }
   // reembolso total do vitalício (ex.: arrependimento em 7 dias): encerra o acesso vitalício
   if (ev.type === 'charge.refunded' && o.refunded) {
@@ -285,7 +324,7 @@ export async function handleStripeEvent(env, ev) {
     if (!uid) return;
     const b = await getBill(env, uid);
     if (b && b.lifetime && (!b.lifetimePI || b.lifetimePI === o.payment_intent)) { b.lifetime = false; b.refundedAt = now; b.updatedAt = now; await putBill(env, uid, b); }
-    return;
+    return uid;
   }
   if (ev.type === 'invoice.paid' && o.customer) {
     const uid = await env.CAL.get(`cust:${o.customer}`);
@@ -298,6 +337,7 @@ export async function handleStripeEvent(env, ev) {
     if ((subId && b.addon && b.addon.subscription === subId) || isAddon(plan)) b.addon = { ...(b.addon || {}), ...(isAddon(plan) ? { plan } : {}), ...(subId ? { subscription: subId } : {}), subActive: true, paidUntil: until };
     else { b.subActive = true; b.paidUntil = until; }
     await putBill(env, uid, b);
+    return uid;
   }
 }
 

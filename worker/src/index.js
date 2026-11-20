@@ -8,7 +8,7 @@ import { generateVapid, sendPush } from './webpush.js';
 import { verifyIdToken } from './auth.js';
 import { runCoach } from './coach.js';
 import { runPersonalCoach } from './pcoach.js';
-import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling } from './billing.js';
+import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling, untilOf, statusOf } from './billing.js';
 
 const SUBJECT = 'mailto:avisos@calendario.app';
 
@@ -58,8 +58,8 @@ async function sendToMember(env, member, msg, pref, statuses = []) {
 async function runSchedule(env) {
   const now = Date.now();
   const sch = await getSchedule(env);
-  const reg = (await env.CAL.get('users', 'json')) || {};
-  const others = await Promise.all([...new Set(Object.values(reg).map((u) => u.ws))].map((ws) => env.CAL.get(`schedule:${ws}`, 'json')));
+  const reg = await registry(env, now);
+  const others = await Promise.all([...new Set(activeRegs(reg, now).map(([, u]) => u.ws))].map((ws) => env.CAL.get(`schedule:${ws}`, 'json')));
   const allItems = [...(sch.items || []), ...others.flatMap((o) => (o && o.items) || [])];
   const due0 = allItems.filter((it) => it.at <= now && it.at > now - 15 * 60e3);
   if (!due0.length) return 0;
@@ -127,19 +127,48 @@ export async function withWorkspace(env, me, ws) {
 }
 const scheduleKey = (me) => (me.ws === 'main' ? 'schedule' : `schedule:${me.ws}`);
 /* Contas próprias conhecidas pelo servidor (para os lembretes e mensagens rodarem para elas também) */
-async function registerUser(env, me) {
+async function registerUser(env, me, st = null) {
   if (me.ws === 'main' || me.guest) return; // convidado: o relógio já roda pela agenda do dono
   const reg = (await env.CAL.get('users', 'json')) || {};
   const cur = reg[me.id];
-  if (cur && cur.name === me.name && cur.ws === me.ws) return; // já conhecido: não gasta gravação
-  reg[me.id] = { name: me.name, ws: me.ws, at: Date.now() };
+  const until = st ? untilOf(st) : cur?.until;
+  if (cur && cur.name === me.name && cur.ws === me.ws && cur.until === until) return; // já conhecido: não gasta gravação
+  reg[me.id] = { name: me.name, ws: me.ws, at: cur?.at || Date.now(), ...(until !== undefined ? { until } : {}) };
   await env.CAL.put('users', JSON.stringify(reg));
 }
-/* Todas as pessoas para o relógio: a dupla + contas próprias */
+/* Plano mudou (pagou, renovou, cancelou, reembolso, teste começou): atualiza até quando a conta tem direito */
+async function refreshUntil(env, ws) {
+  if (!ws || ws === 'main') return;
+  const st = await billingStatus(env, { ws, id: '' });
+  const until = untilOf(st);
+  const reg = (await env.CAL.get('users', 'json')) || {};
+  let changed = false;
+  for (const u of Object.values(reg)) if (u.ws === ws && u.until !== until) { u.until = until; changed = true; }
+  if (changed) await env.CAL.put('users', JSON.stringify(reg));
+}
+/* Tem plano ativo? (teste, mensal, vitalício, convidado de agenda compartilhada ativa ou a dupla).
+   Sem plano: o servidor não guarda lembretes, não manda mensagens e o assistente não responde. */
+async function entitled(env, me) {
+  if (me.ws === 'main' || me.guest) return { plan: 'team', active: true };
+  return billingStatus(env, me);
+}
+const LOCKED = { error: 'Sem plano ativo: comece o teste grátis ou assine para usar.', locked: true };
+/* Registro com o prazo do plano; contas antigas (sem prazo) são conferidas uma vez */
+async function registry(env, now = Date.now()) {
+  const reg = (await env.CAL.get('users', 'json')) || {};
+  const legacy = Object.values(reg).filter((u) => u.until === undefined);
+  if (legacy.length) {
+    await Promise.all(legacy.map(async (u) => { u.until = untilOf(statusOf(await env.CAL.get(`bill:${u.ws}`, 'json'), { ws: u.ws }, now), now); }));
+    await env.CAL.put('users', JSON.stringify(reg));
+  }
+  return reg;
+}
+const activeRegs = (reg, now = Date.now()) => Object.entries(reg).filter(([, u]) => (u.until || 0) > now);
+/* Todas as pessoas para o relógio: a dupla + contas próprias COM PLANO ATIVO */
 export async function everyone(env) {
   const team = JSON.parse(env.TEAM || '[]').map((m) => ({ ...m, ws: 'main', ctxKey: 'coach-ctx' }));
-  const reg = (await env.CAL.get('users', 'json')) || {};
-  return [...team, ...Object.entries(reg).map(([id, u]) => ({ id, name: u.name, ws: u.ws, ctxKey: `coach-ctx:${u.ws}` }))];
+  const reg = await registry(env);
+  return [...team, ...activeRegs(reg).map(([id, u]) => ({ id, name: u.name, ws: u.ws, ctxKey: `coach-ctx:${u.ws}` }))];
 }
 /* Dono do app (painel): e-mail configurado no servidor (ADMIN_EMAIL) */
 const isAdmin = (env, me) => {
@@ -204,7 +233,8 @@ async function handle(req, env) {
     const payload = await req.text();
     try {
       const ev = await verifyStripe(env, payload, req.headers.get('Stripe-Signature'));
-      await handleStripeEvent(env, ev);
+      const uid = await handleStripeEvent(env, ev);
+      if (uid) await refreshUntil(env, uid);
       return new Response('ok');
     } catch (e) {
       console.log('webhook stripe', e.message);
@@ -239,11 +269,21 @@ async function handle(req, env) {
   }
 
   // ---------- cobrança e teste grátis ----------
-  if (url.pathname === '/billing/status') return reply(env, req, await billingStatus(env, me));
+  if (url.pathname === '/billing/status') {
+    const st = await billingStatus(env, me);
+    // mantém o prazo do relógio em dia (ex.: o teste acabou, o mensal renovou)
+    if (me.ws !== 'main') { const reg = (await env.CAL.get('users', 'json')) || {}; if (reg[me.id] && reg[me.id].until !== untilOf(st)) await registerUser(env, me, st); }
+    return reply(env, req, st);
+  }
   if (url.pathname === '/billing/trial') {
     const st = await startTrial(env, me, { deviceId: clean(body.deviceId, 80), ip: req.headers.get('CF-Connecting-IP') || '', cpf: clean(body.cpf, 20) });
-    await registerUser(env, me);
+    await registerUser(env, me, st);
     return reply(env, req, st);
+  }
+  let plan = null;
+  if (['/notify', '/schedule', '/coach', '/personal', '/ask', '/tidy', '/test', '/coach-test', '/pnudge-test'].includes(url.pathname)) {
+    plan = await entitled(env, me);
+    if (!plan.active) return reply(env, req, LOCKED, 402);
   }
   if (url.pathname === '/billing/checkout' || url.pathname === '/billing/portal') {
     try {
@@ -315,7 +355,7 @@ async function handle(req, env) {
       .slice(0, 1500)
       .map((it) => ({ id: clean(it.id, 120), at: it.at, member: it.member, title: clean(it.title, 120), body: clean(it.body, 300), tag: clean(it.tag, 80), url: clean(it.url, 200), kind: ['reminders', 'daily'].includes(it.kind) ? it.kind : 'reminders', badge: Number.isFinite(it.badge) ? it.badge : undefined }));
     await env.CAL.put(scheduleKey(me), JSON.stringify({ items, updatedAt: now, by: me.id }));
-    await registerUser(env, me);
+    await registerUser(env, me, plan);
     return reply(env, req, { ok: true, count: items.length });
   }
 
@@ -355,7 +395,7 @@ async function handle(req, env) {
       late: Number.isFinite(W.late) ? Math.min(99, Math.max(0, W.late)) : 0,
     } : null;
     await env.CAL.put(me.ws === 'main' ? 'coach-ctx' : `coach-ctx:${me.ws}`, JSON.stringify({ companies, work, updatedAt: Date.now() }));
-    await registerUser(env, me);
+    await registerUser(env, me, plan);
     return reply(env, req, { ok: true });
   }
   if (url.pathname === '/coach-test' || url.pathname === '/pnudge-test') {
@@ -372,7 +412,7 @@ async function handle(req, env) {
       .map((it) => ({ id: clean(it.id, 120), at: it.at, title: clean(it.title, 80), body: clean(it.body, 200), tag: clean(it.tag, 80), url: clean(it.url, 120) }));
     await env.CAL.put(`pitems:${me.id}`, JSON.stringify(items));
     if (body.profile && typeof body.profile === 'object') await env.CAL.put(`pprofile:${me.id}`, JSON.stringify(cleanProfile(body.profile, me)));
-    await registerUser(env, me);
+    await registerUser(env, me, plan);
     return reply(env, req, { ok: true, count: items.length });
   }
 

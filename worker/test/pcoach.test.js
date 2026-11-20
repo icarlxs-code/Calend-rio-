@@ -46,7 +46,12 @@ test('mensagens da agenda: pendência, aniversário, lista; cabelo já marcado n
   assert.match(msgs, /Cortar cabelo/); // mais tarde hoje
   assert.doesNotMatch(msgs, /agendar um corte/);
   const noHair = agendaMessages({ ...prof, nextByCat: {}, lastByCat: { beleza: '2026-10-20' } }, br, {}).map((m) => m.body).join(' ');
-  assert.match(noHair, /Faz 31 dias desde o último corte/);
+  assert.match(noHair, /Faz 31 dias desde o último cuidado com o visual/);
+  // no gênero da pessoa: mulher → salão; homem → corte e barba; neutro → sem marcar gênero
+  const ask = (pronoun) => agendaMessages({ ...prof, prefs: { ...(prof.prefs || {}), pronoun }, nextByCat: {}, lastByCat: {} }, br, {}).map((m) => m.body).join(' ');
+  assert.match(ask('f'), /salão/);
+  assert.match(ask('m'), /corte de cabelo/);
+  assert.match(ask('n'), /cuidado com o visual/);
 });
 
 test('ao longo de um dia: água de hora em hora + outras mensagens, sem repetir texto seguido', () => {

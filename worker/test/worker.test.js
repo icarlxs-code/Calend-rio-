@@ -175,3 +175,24 @@ test('ninguém sequestra o aparelho de outra pessoa reaproveitando o identificad
   assert.equal(phones.henrique.inbox.length, before + 1, 'o aviso do Henrique continua indo para o celular dele');
   assert.equal(phones.intruso.inbox.length, 0, 'e nunca para o celular de outra pessoa');
 });
+
+test('sem plano ativo o servidor não guarda lembretes, não manda avisos e o assistente não responde', async () => {
+  const tk = `${b64({ alg: 'none' })}.${b64({ email: 'novo@teste.local', user_id: 'SEMPLANO123', exp: Math.floor(Date.now() / 1000) + 3600 })}.`;
+  const req = (path, body = {}) => handle(new Request(`https://w.dev${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tk}` }, body: JSON.stringify(body) }), env);
+  for (const p of ['/schedule', '/personal', '/coach', '/ask', '/notify', '/tidy', '/test']) {
+    const r = await req(p, { items: [{ id: 'x', at: Date.now() + 60e3, member: 'uSEMPLANO123', title: 'burla' }], question: 'oi', title: 'x', to: ['uSEMPLANO123'] });
+    assert.equal(r.status, 402, `${p} bloqueado sem plano`);
+    assert.equal((await r.json()).locked, true);
+  }
+  assert.equal(kv.get('schedule:SEMPLANO123'), undefined, 'nada foi guardado');
+  // começou o teste grátis: libera
+  const t = await req('/billing/trial', { deviceId: 'dev-semplano', cpf: '' });
+  assert.equal((await t.json()).plan, 'trial');
+  const ok = await req('/schedule', { items: [{ id: 'y', at: Date.now() + 60e3, member: 'uSEMPLANO123', title: 'ok' }] });
+  assert.equal(ok.status, 200);
+  assert.ok(JSON.parse(kv.get('users')).uSEMPLANO123.until > Date.now(), 'o relógio sabe até quando vale');
+  // o teste acabou: o relógio para de mandar (sem o app precisar avisar)
+  const reg = JSON.parse(kv.get('users')); reg.uSEMPLANO123.until = Date.now() - 1; kv.set('users', JSON.stringify(reg));
+  const { everyone } = await import('../src/index.js');
+  assert.ok(!(await everyone(env)).some((m) => m.id === 'uSEMPLANO123'));
+});

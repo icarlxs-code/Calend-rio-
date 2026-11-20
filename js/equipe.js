@@ -15,9 +15,12 @@ import { openPlans, openPortal, markBuying } from './billing.js';
 import { CONFIG } from '../config.js';
 
 export const ADDONS = {
-  dupla: { name: 'Dupla', price: '6,90', seats: 1, line: 'Você + 1 pessoa', each: 'R$ 3,45 por pessoa' },
-  equipe: { name: 'Equipe', price: '14,90', seats: 4, line: 'Você + até 4 pessoas', each: 'R$ 2,98 por pessoa' },
+  dupla: { name: 'Dupla', price: '6,90', vprice: '4,90', seats: 1, line: 'Você + 1 pessoa' },
+  equipe: { name: 'Equipe', price: '14,90', vprice: '9,90', seats: 4, line: 'Você + até 4 pessoas' },
 };
+/* Vitalício paga o complemento mais barato (o servidor cobra o mesmo valor) */
+export const addonPrice = (k) => (store.billing?.plan === 'lifetime' ? ADDONS[k].vprice : ADDONS[k].price);
+const perPerson = (k) => `R$ ${(Number(addonPrice(k).replace(',', '.')) / (ADDONS[k].seats + 1)).toFixed(2).replace('.', ',')} por pessoa`;
 const LS_INVITE = 'lembra.invite';
 const INVITE_DAYS = 7;
 const wsKey = () => `lembra.ws.${store.user?.uid || 'x'}`;
@@ -182,7 +185,7 @@ export function openShare() {
     const seats = active ? ADDONS[addon.plan].seats : 0;
     const pending = (invites || []).filter((i) => inviteState(i) === 'ok');
     const free = Math.max(0, seats - people.length);
-    const ownerPart = active ? `<div class="share__plan">${icon('crown', 18)}<div><b>Plano ${esc(ADDONS[addon.plan].name)} ativo</b><small>${people.length} de ${seats} ${seats > 1 ? 'vagas usadas' : 'vaga usada'} · R$ ${ADDONS[addon.plan].price}/mês${addon.cancelAt ? ` · cancelado, vale até ${new Date(addon.cancelAt).toLocaleDateString('pt-BR')}` : ''}</small></div></div>
+    const ownerPart = active ? `<div class="share__plan">${icon('crown', 18)}<div><b>Plano ${esc(ADDONS[addon.plan].name)} ativo</b><small>${people.length} de ${seats} ${seats > 1 ? 'vagas usadas' : 'vaga usada'} · R$ ${addonPrice(addon.plan)}/mês${addon.cancelAt ? ` · cancelado, vale até ${new Date(addon.cancelAt).toLocaleDateString('pt-BR')}` : ''}</small></div></div>
       <section class="block">
         <h2 class="block__title">${icon('link', 16)} Convidar</h2>
         <div class="card">
@@ -208,9 +211,9 @@ export function openShare() {
       <button class="btn btn--soft btn--block" data-portal>Gerenciar assinatura</button>`
       : `<div class="share__hero">${icon('share2', 30)}<h2>Divida sua agenda de trabalho</h2><p>Sócio, equipe, secretária, colega de plantão: cada pessoa com o próprio login, vendo a mesma agenda e recebendo os avisos do que é dela.</p></div>
       <div class="plans plans--light">
-        ${Object.entries(ADDONS).map(([k, a]) => `<button class="plan${k === 'equipe' ? ' plan--best' : ''}" data-addon="${k}">${k === 'equipe' ? '<span class="plan__tag">Mais vantajoso</span>' : ''}<span class="plan__name">${a.name}</span><span class="plan__price"><b>R$ ${a.price}</b>/mês</span><span class="plan__note">${a.line}<br>${a.each}</span></button>`).join('')}
+        ${Object.entries(ADDONS).map(([k, a]) => `<button class="plan${k === 'equipe' ? ' plan--best' : ''}" data-addon="${k}">${k === 'equipe' ? '<span class="plan__tag">Mais vantajoso</span>' : ''}<span class="plan__name">${a.name}</span><span class="plan__price"><b>R$ ${addonPrice(k)}</b>/mês</span><span class="plan__note">${a.line}<br>${perPerson(k)}${b().plan === 'lifetime' ? `<br><s>R$ ${a.price}</s> · preço de vitalício` : ''}</span></button>`).join('')}
       </div>
-      <div class="share__note">${icon('alert', 16)}<div><b>Complemento à parte, por mês.</b> Não está incluso no plano Mensal nem no Vitalício. Quem você convidar <b>não paga nada</b> enquanto o complemento estiver ativo. Cancele quando quiser.</div></div>
+      <div class="share__note">${icon('alert', 16)}<div><b>Complemento à parte, por mês.</b> Não está incluso no plano Mensal nem no Vitalício (quem é Vitalício paga menos). Quem você convidar <b>não paga nada</b> enquanto o complemento estiver ativo. Cancele quando quiser.</div></div>
       ${!paidBase ? `<p class="fhelp">Para contratar, primeiro escolha seu plano (Mensal ou Vitalício).</p><button class="btn btn--primary btn--block" data-base>Escolher meu plano</button>` : ''}
       <p class="share__err" data-err hidden></p>`;
     return `${sheetHead('Agenda compartilhada')}<div class="page page--sheet">${ownerPart}${guestPart}</div>`;
