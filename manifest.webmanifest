@@ -41,31 +41,31 @@
   "screenshots": [
     {
       "src": "media/screens/hoje.jpg",
-      "sizes": "540x1173",
+      "sizes": "540x1170",
       "type": "image/jpeg",
       "form_factor": "narrow",
-      "label": "hoje"
+      "label": "Agenda do dia com a cara da sua profissão"
     },
     {
       "src": "media/screens/calendario.jpg",
-      "sizes": "540x1173",
+      "sizes": "540x1170",
       "type": "image/jpeg",
       "form_factor": "narrow",
-      "label": "calendario"
+      "label": "Calendário do mês"
     },
     {
       "src": "media/screens/ficha.jpg",
-      "sizes": "540x1173",
+      "sizes": "540x1170",
       "type": "image/jpeg",
       "form_factor": "narrow",
-      "label": "ficha"
+      "label": "Novo compromisso com o próximo horário livre"
     },
     {
       "src": "media/screens/pessoal.jpg",
-      "sizes": "540x1173",
+      "sizes": "540x1170",
       "type": "image/jpeg",
       "form_factor": "narrow",
-      "label": "pessoal"
+      "label": "Modo Pessoal com sugestões feitas para você"
     }
   ]
 }

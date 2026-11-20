@@ -309,7 +309,9 @@ export function buildPersonalSchedule(now = Date.now()) {
       } else if (it.time) {
         const base = at(date, it.time);
         // hábito diário: só na hora; repetição semanal/mensal: 1h antes e na hora; compromisso único: a escada completa
-        const stages = it.repeat === 'daily' ? [['m0', 0]] : it.repeat && it.repeat !== 'none' ? [['m60', 60], ['m0', 0]] : [['m60', 60], ['m30', 30], ['m20', 20], ['m0', 0], ['after', -45]];
+        // compromisso único: 30 min antes, na hora e "já fez?" depois (quem esquece muito também recebe 1h antes)
+        const many = (Number(store.profile?.index) || 0) >= 70;
+        const stages = it.repeat === 'daily' ? [['m0', 0]] : it.repeat && it.repeat !== 'none' ? [['m60', 60], ['m0', 0]] : [...(many ? [['m60', 60]] : []), ['m30', 30], ['m0', 0], ['after', -45]];
         for (const [stage, min] of stages) {
           add(base - min * 60e3, `${c.emoji} ${TITLES[stage]}`, voice(it, stage, date), k(stage), tag, url);
         }

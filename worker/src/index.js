@@ -8,7 +8,7 @@ import { generateVapid, sendPush } from './webpush.js';
 import { verifyIdToken } from './auth.js';
 import { runCoach } from './coach.js';
 import { runPersonalCoach } from './pcoach.js';
-import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling, untilOf, statusOf } from './billing.js';
+import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling, untilOf, statusOf, grantComp } from './billing.js';
 
 const SUBJECT = 'mailto:avisos@calendario.app';
 
@@ -108,10 +108,13 @@ const cors = (env, req) => {
     Vary: 'Origin',
   };
 };
+const SEC = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store' };
 const reply = (env, req, data, status = 200) =>
-  new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors(env, req) } });
+  new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...SEC, ...cors(env, req) } });
 
 const clean = (s, n) => String(s || '').slice(0, n);
+/* Endereço de uma notificação: só telas do próprio app ("./" ou "./#/e/<id>"), nunca um site de fora */
+const appUrl = (u) => { const v = String(u || ''); return /^\.\/(#\/[\w/-]{0,120})?$/.test(v) ? v : './'; };
 const MEMBERS = (env) => JSON.parse(env.TEAM || '[]').map((m) => m.id);
 /* Com quem a pessoa divide a agenda: a dupla entre si; agenda compartilhada (paga), o dono e os convidados;
    conta própria, só ela mesma */
@@ -216,8 +219,33 @@ function cleanProfile(p, me) {
   };
 }
 
+/* A pessoa entrou mesmo na equipe? Lê teams/{dono}/joins/{uid} no Firestore com o login do próprio dono
+   (as regras do banco só deixam criar esse registro gastando um convite válido). */
+async function joinedProof(env, token, owner, uid) {
+  if (!env.PROJECT_ID || !token) return false;
+  const base = (env.FIRESTORE_URL || 'https://firestore.googleapis.com').replace(/\/+$/, '');
+  try {
+    const r = await fetch(`${base}/v1/projects/${env.PROJECT_ID}/databases/(default)/documents/teams/${owner}/joins/${uid}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!r.ok) return false;
+    const j = await r.json();
+    return !!j?.fields?.token?.stringValue;
+  } catch { return false; }
+}
+
+/* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
+const LIMITS = { '/admin/grant': 30, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20 };
+const hits = new Map();
+export function tooMany(key, max, now = Date.now()) {
+  const h = hits.get(key);
+  if (!h || now - h.t > 60e3) { hits.set(key, { t: now, n: 1 }); if (hits.size > 5000) hits.clear(); return false; }
+  h.n++;
+  return h.n > max;
+}
+const MAX_BODY = 1_500_000; // 1,5 MB (a lista de lembretes de 8 dias cabe com folga)
+
 async function handle(req, env) {
   const url = new URL(req.url);
+  if (Number(req.headers.get('Content-Length') || 0) > MAX_BODY) return reply(env, req, { error: 'pedido grande demais' }, 413);
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors(env, req) });
   if (url.pathname === '/vapid') return reply(env, req, { publicKey: (await getVapid(env)).publicKey });
   if (url.pathname === '/' || url.pathname === '/health') return reply(env, req, { ok: true, servico: 'Lembra', chat: !!(env.ANTHROPIC_API_KEY || env.AI) });
@@ -226,11 +254,13 @@ async function handle(req, env) {
     const form = await req.formData().catch(() => null);
     const text = String((form && form.get('ics')) || '');
     if (!text.startsWith('BEGIN:VCALENDAR') || text.length > 300000) return new Response('Arquivo inválido', { status: 400 });
-    return new Response(text, { headers: { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': 'inline; filename="lembrete.ics"', 'Cache-Control': 'no-store' } });
+    if (/<\s*script|<\s*html|javascript:/i.test(text)) return new Response('Arquivo inválido', { status: 400 });
+    return new Response(text, { headers: { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': 'inline; filename="lembrete.ics"', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' } });
   }
   // Avisos da Stripe (pagamento confirmado, renovação, cancelamento): conferidos pela assinatura
   if (url.pathname === '/billing/webhook' && req.method === 'POST') {
     const payload = await req.text();
+    if (payload.length > 512_000) return new Response('grande demais', { status: 413 });
     try {
       const ev = await verifyStripe(env, payload, req.headers.get('Stripe-Signature'));
       const uid = await handleStripeEvent(env, ev);
@@ -249,12 +279,22 @@ async function handle(req, env) {
   } catch (e) {
     return reply(env, req, { error: 'Sem permissão: ' + e.message }, 401);
   }
-  const body = await req.json().catch(() => ({}));
+  if (tooMany(`${me.id}:${url.pathname}`, LIMITS[url.pathname] || 120)) return reply(env, req, { error: 'Muitos pedidos seguidos. Espere um minuto.' }, 429);
+  const raw = await req.text().catch(() => '');
+  if (raw.length > MAX_BODY) return reply(env, req, { error: 'pedido grande demais' }, 413);
+  let body = {};
+  try { body = raw ? JSON.parse(raw) : {}; } catch { body = {}; }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) body = {};
 
   // ---------- agenda compartilhada (complemento pago) ----------
   if (url.pathname === '/share/sync') {
     try {
-      return reply(env, req, await syncTeam(env, me, (Array.isArray(body.members) ? body.members : []).slice(0, 20).map((m) => ({ uid: clean(m?.uid, 64), name: clean(m?.name, 40) })), Date.now(), clean(body.ownerName, 40)));
+      const wanted = (Array.isArray(body.members) ? body.members : []).slice(0, 20).map((m) => ({ uid: clean(m?.uid, 64), name: clean(m?.name, 40) })).filter((m) => /^[A-Za-z0-9]{6,64}$/.test(m.uid));
+      // segurança: só entra quem tem a prova de entrada no banco (criada pela própria pessoa ao gastar um convite).
+      // O dono não consegue colocar alguém na equipe só por mandar a lista.
+      const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+      const proven = await Promise.all(wanted.map((m) => joinedProof(env, token, me.ws, m.uid)));
+      return reply(env, req, await syncTeam(env, me, wanted.filter((_, i) => proven[i]), Date.now(), clean(body.ownerName, 40)));
     } catch (e) { return reply(env, req, { error: e.message }, e.status || 500); }
   }
   if (url.pathname === '/share/status') {
@@ -292,6 +332,14 @@ async function handle(req, env) {
     } catch (e) {
       return reply(env, req, { error: e.message }, e.status || 500);
     }
+  }
+  if (url.pathname === '/admin/grant') {
+    if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
+    try {
+      const st = await grantComp(env, clean(body.uid, 64), body.on === true);
+      await refreshUntil(env, clean(body.uid, 64));
+      return reply(env, req, { ok: true, status: st });
+    } catch (e) { return reply(env, req, { error: e.message }, e.status || 500); }
   }
   if (url.pathname === '/billing/all') {
     if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
@@ -339,9 +387,19 @@ async function handle(req, env) {
     return reply(env, req, { ok: true, id });
   }
 
+  // saiu da conta neste celular: o aparelho para de receber os avisos dela
+  if (url.pathname === '/unsubscribe') {
+    const endpoint = clean(body.endpoint, 1000), id = clean(body.id, 120);
+    const subs = await getSubs(env);
+    let n = 0;
+    for (const [k, d] of Object.entries(subs)) if (d.member === me.id && (k === id || (endpoint && d.subscription?.endpoint === endpoint))) { delete subs[k]; n++; }
+    if (n) await env.CAL.put('subs', JSON.stringify(subs));
+    return reply(env, req, { ok: true, removed: n });
+  }
+
   if (url.pathname === '/notify') {
     const to = (Array.isArray(body.to) ? body.to : []).filter((m) => membersOf(me, env).includes(m) && (m !== me.id || body.includeSelf === true));
-    const msg = { title: clean(body.title, 120), body: clean(body.body, 300), tag: clean(body.tag, 80), url: clean(body.url, 200) || './' };
+    const msg = { title: clean(body.title, 120), body: clean(body.body, 300), tag: clean(body.tag, 80), url: appUrl(body.url) };
     if (!msg.title) return reply(env, req, { error: 'sem texto' }, 400);
     const counts = await Promise.all(to.map((m) => sendToMember(env, m, msg, 'partner')));
     const results = Object.fromEntries(to.map((m, i) => [m, counts[i]]));
@@ -353,8 +411,9 @@ async function handle(req, env) {
     const items = (Array.isArray(body.items) ? body.items : [])
       .filter((it) => it && membersOf(me, env).includes(it.member) && Number.isFinite(it.at) && it.at > now - 15 * 60e3 && it.at < now + 8 * 86400e3)
       .slice(0, 1500)
-      .map((it) => ({ id: clean(it.id, 120), at: it.at, member: it.member, title: clean(it.title, 120), body: clean(it.body, 300), tag: clean(it.tag, 80), url: clean(it.url, 200), kind: ['reminders', 'daily'].includes(it.kind) ? it.kind : 'reminders', badge: Number.isFinite(it.badge) ? it.badge : undefined }));
-    await env.CAL.put(scheduleKey(me), JSON.stringify({ items, updatedAt: now, by: me.id }));
+      .map((it) => ({ id: clean(it.id, 120), at: it.at, member: it.member, title: clean(it.title, 120), body: clean(it.body, 300), tag: clean(it.tag, 80), url: appUrl(it.url), kind: ['reminders', 'daily'].includes(it.kind) ? it.kind : 'reminders', badge: Number.isFinite(it.badge) ? it.badge : undefined }));
+    const prev = await env.CAL.get(scheduleKey(me), 'json');
+    if (!prev || JSON.stringify(prev.items) !== JSON.stringify(items)) await env.CAL.put(scheduleKey(me), JSON.stringify({ items, updatedAt: now, by: me.id }));
     await registerUser(env, me, plan);
     return reply(env, req, { ok: true, count: items.length });
   }
@@ -394,7 +453,9 @@ async function handle(req, env) {
       next: (Array.isArray(W.next) ? W.next : []).slice(0, 5).map((e) => ({ date: clean(e?.date, 10), time: /^\d{2}:\d{2}$/.test(e?.time || '') ? e.time : '', label: clean(e?.label, 40), title: clean(e?.title, 60), who: /^[\w-]{1,40}$/.test(e?.who || '') ? e.who : '' })),
       late: Number.isFinite(W.late) ? Math.min(99, Math.max(0, W.late)) : 0,
     } : null;
-    await env.CAL.put(me.ws === 'main' ? 'coach-ctx' : `coach-ctx:${me.ws}`, JSON.stringify({ companies, work, updatedAt: Date.now() }));
+    const ctxKey = me.ws === 'main' ? 'coach-ctx' : `coach-ctx:${me.ws}`;
+    const oldCtx = await env.CAL.get(ctxKey, 'json');
+    if (!oldCtx || JSON.stringify([oldCtx.companies, oldCtx.work]) !== JSON.stringify([companies, work]) || Date.now() - (oldCtx.updatedAt || 0) > 6 * 3600e3) await env.CAL.put(ctxKey, JSON.stringify({ companies, work, updatedAt: Date.now() }));
     await registerUser(env, me, plan);
     return reply(env, req, { ok: true });
   }
@@ -409,9 +470,16 @@ async function handle(req, env) {
   if (url.pathname === '/personal') {
     const items = (Array.isArray(body.items) ? body.items : []).slice(0, 300)
       .filter((it) => it && typeof it.at === 'number')
-      .map((it) => ({ id: clean(it.id, 120), at: it.at, title: clean(it.title, 80), body: clean(it.body, 200), tag: clean(it.tag, 80), url: clean(it.url, 120) }));
-    await env.CAL.put(`pitems:${me.id}`, JSON.stringify(items));
-    if (body.profile && typeof body.profile === 'object') await env.CAL.put(`pprofile:${me.id}`, JSON.stringify(cleanProfile(body.profile, me)));
+      .map((it) => ({ id: clean(it.id, 120), at: it.at, title: clean(it.title, 80), body: clean(it.body, 200), tag: clean(it.tag, 80), url: appUrl(it.url) }));
+    const prevItems = await env.CAL.get(`pitems:${me.id}`);
+    if (prevItems !== JSON.stringify(items)) await env.CAL.put(`pitems:${me.id}`, JSON.stringify(items));
+    if (body.profile && typeof body.profile === 'object') {
+      const { updatedAt, ...prof } = cleanProfile(body.profile, me);
+      const old = await env.CAL.get(`pprofile:${me.id}`, 'json');
+      const { updatedAt: u0, ...oldProf } = old || {};
+      // grava se mudou ou a cada 3h (o "hoje" do servidor se baseia nesse resumo)
+      if (!old || JSON.stringify(oldProf) !== JSON.stringify(prof) || Date.now() - (u0 || 0) > 3 * 3600e3) await env.CAL.put(`pprofile:${me.id}`, JSON.stringify({ ...prof, updatedAt: Date.now() }));
+    }
     await registerUser(env, me, plan);
     return reply(env, req, { ok: true, count: items.length });
   }

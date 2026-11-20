@@ -122,8 +122,9 @@ export function computePersona(f) {
   if (Number.isFinite(lead) && lead > 0) offsets.add(lead);
   const offs = [...offsets].sort((a, b) => b - a);
   const procrast = diffs.has('procrastinar');
-  const lateEvery = procrast || index > 70 ? 10 : index > 40 ? 15 : 25;
-  const lateMax = index > 60 || procrast ? 180 : index > 30 ? 120 : 60;
+  // cobrança de atraso firme, mas sem virar spam: no máximo 6 avisos (quem esquece muito), 3 ou 1
+  const lateEvery = procrast || index > 70 ? 20 : index > 40 ? 30 : 45;
+  const lateMax = index > 60 || procrast ? 120 : index > 30 ? 90 : 45;
   const tone = ['carinhoso', 'firme', 'direto'].includes(f.tone) ? f.tone : 'firme';
   const journey = JOURNEYS.find((j) => j.id === f.journey) || JOURNEYS[0];
   const freq = f.freq || (diffs.has('ansiedade') ? 'calma' : procrast || diffs.has('desorganizacao') ? 'alta' : 'normal');

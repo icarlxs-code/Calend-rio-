@@ -196,3 +196,30 @@ test('sem plano ativo o servidor não guarda lembretes, não manda avisos e o as
   const { everyone } = await import('../src/index.js');
   assert.ok(!(await everyone(env)).some((m) => m.id === 'uSEMPLANO123'));
 });
+
+test('segurança: notificação nunca leva para site de fora; sair da conta tira o aparelho; pedidos em rajada são barrados', async () => {
+  const [h, m] = JSON.parse(env.TEAM).map((x) => x.email);
+  await call('/subscribe', { as: m, body: { id: 'm-link', subscription: phone('matheus') } });
+  phones.matheus.inbox.length = 0;
+  await call('/notify', { as: h, body: { to: ['matheus'], title: 'Clique aqui', url: 'https://golpe.example/login' } });
+  await call('/notify', { as: h, body: { to: ['matheus'], title: 'Outro', url: 'javascript:alert(1)' } });
+  await call('/notify', { as: h, body: { to: ['matheus'], title: 'Certo', url: './#/e/e_abc123' } });
+  assert.deepEqual(phones.matheus.inbox.map((x) => x.url), ['./', './', './#/e/e_abc123']);
+  // sair da conta: o aparelho deixa de receber
+  await call('/subscribe', { as: m, body: { id: 'm-sair', subscription: phone('sair') } });
+  const before = Object.values(JSON.parse(kv.get('subs'))).filter((d) => d.subscription.endpoint === phones.sair.endpoint).length;
+  assert.equal(before, 1);
+  // outra pessoa não consegue tirar o aparelho de alguém
+  await call('/unsubscribe', { as: h, body: { id: 'm-sair', endpoint: phones.sair.endpoint } });
+  assert.equal(Object.values(JSON.parse(kv.get('subs'))).filter((d) => d.subscription.endpoint === phones.sair.endpoint).length, 1);
+  const r = await call('/unsubscribe', { as: m, body: { id: 'm-sair', endpoint: phones.sair.endpoint } });
+  assert.equal(r.data.removed, 1);
+  assert.equal(Object.values(JSON.parse(kv.get('subs'))).filter((d) => d.subscription.endpoint === phones.sair.endpoint).length, 0);
+  // rajada: o limite por minuto devolve 429
+  let last = 0;
+  for (let i = 0; i < 14; i++) last = (await call('/log', { as: m, body: { msg: `erro ${i}` } })).status;
+  assert.equal(last, 429);
+  // pedido gigante é recusado
+  const big = await handle(new Request('https://w.dev/schedule', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token(m)}`, 'Content-Length': '9000000' }, body: '{}' }), env);
+  assert.equal(big.status, 413);
+});

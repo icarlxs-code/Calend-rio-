@@ -1861,3 +1861,29 @@ button:active:not(:disabled), .btn:active, .pbig:active, .pchip:active, .prow:ac
 .list__row > span:first-child:has(> small) { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; flex: 1; min-width: 0; }
 .list__row > span:first-child:has(> small) small { font-size: 13px; color: var(--text-3); line-height: 1.3; }
 .list__row > span:first-child:has(> small) b { font-weight: 600; }
+
+/* ---------- janelas: fundo desfocado (como o iOS) e entrada suave ---------- */
+.sheet-backdrop { background: rgba(0, 0, 0, 0.22); -webkit-backdrop-filter: blur(8px) saturate(120%); backdrop-filter: blur(8px) saturate(120%); transition: opacity .32s ease; }
+.sheet { transition: transform .38s cubic-bezier(.32, .72, 0, 1); box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.12); }
+.sheet--dialog { border-radius: 22px 22px 0 0; }
+.paywall, .ficha { transition: opacity .3s ease, transform .3s var(--ease); }
+
+/* ---------- Trabalho ⇄ Pessoal: o ícone pulsa, cresce e vira o do destino ---------- */
+.spaceveil__badge { position: relative; overflow: visible; }
+.spaceveil__badge > i { position: absolute; inset: 0; display: grid; place-items: center; }
+.sv-from { animation: svBeat .62s cubic-bezier(.3, .7, .3, 1) both; }
+.sv-to { opacity: 0; animation: svIn .5s cubic-bezier(.2, .9, .25, 1.2) .3s both; }
+@keyframes svBeat {
+  0% { transform: scale(1); opacity: 1; }
+  18% { transform: scale(1.28); }
+  32% { transform: scale(.94); }
+  46% { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(.2) rotate(18deg); opacity: 0; }
+}
+@keyframes svIn { 0% { opacity: 0; transform: scale(.3) rotate(-24deg); } 70% { opacity: 1; transform: scale(1.1) rotate(2deg); } 100% { opacity: 1; transform: none; } }
+.spaceveil strong { animation: svText .4s var(--ease) .32s both; }
+.spaceveil small { animation: svText .4s var(--ease) .4s both; }
+@keyframes svText { from { opacity: 0; transform: translateY(8px); } to { opacity: .95; transform: none; } }
+.spaceveil.is-in .spaceveil__badge { animation: svBadge .7s var(--ease) both; }
+@keyframes svBadge { 0% { transform: scale(.7); } 45% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .sv-from, .sv-to, .spaceveil strong, .spaceveil small, .spaceveil.is-in .spaceveil__badge { animation: none; } .sv-from { opacity: 0; } .sv-to { opacity: 1; } }

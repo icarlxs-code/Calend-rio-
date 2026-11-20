@@ -104,6 +104,17 @@ export async function register() {
   return { ok: true, id };
 }
 
+/* Saiu da conta: este celular para de receber os avisos dela (no servidor e no próprio aparelho) */
+export async function unregisterDevice() {
+  try {
+    const reg = await navigator.serviceWorker?.ready;
+    const sub = reg && (await reg.pushManager.getSubscription());
+    if (server() && store.mode === 'cloud') await api('/unsubscribe', { id: localStorage.getItem(LS_DEVICE) || '', endpoint: sub?.endpoint || '' }).catch(() => {});
+    if (sub) await sub.unsubscribe().catch(() => {});
+  } catch { /* sem notificações neste aparelho */ }
+  try { localStorage.removeItem(LS_DEVICE); } catch { /* ok */ }
+}
+
 export async function setPrefs(prefs) {
   localStorage.setItem(LS_PREFS, JSON.stringify(prefs));
   if (store.mode === 'cloud' && permission() === 'granted') await register().catch(() => {});

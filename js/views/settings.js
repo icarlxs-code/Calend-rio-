@@ -11,6 +11,7 @@ import { avatar, toast, confirmDialog, chooseDialog } from '../components.js';
 import { downloadICS } from '../ics.js';
 import { routine } from '../planner.js';
 import { THEMES, themePref } from '../theme.js';
+import { soundOn } from '../sound.js';
 import * as push from '../avisos.js';
 import { resetOnboarding } from './onboarding.js';
 import { WD_SHORT } from '../utils.js';
@@ -127,6 +128,7 @@ function themeCard() {
   return `<section class="block">
     <h2 class="block__title">${icon('sun', 16)} Aparência</h2>
     <div class="seg3">${THEMES.map((t) => `<button class="seg3__btn${cur === t.id ? ' is-on' : ''}" data-action="theme" data-v="${t.id}">${icon(t.id === 'dark' ? 'moon' : t.id === 'light' ? 'sun' : 'phone', 18)}<b>${t.label}</b><small>${t.hint}</small></button>`).join('')}</div>
+    <div class="list" style="margin-top:10px"><label class="list__row"><span><b>Sons</b><small>Toque suave ao trocar de modo e ao concluir</small></span><input type="checkbox" class="switch" data-sound ${soundOn() ? 'checked' : ''}></label></div>
     ${!isMarketing() && WORK.theme ? `<p class="fhelp">As cores do modo Trabalho combinam com a sua área${WORK.profession ? ` (${esc(WORK.profession)})` : ''}.</p>` : ''}
   </section>`;
 }
@@ -199,7 +201,7 @@ function planSection() {
   const label = { trial: 'Teste grátis', monthly: 'Mensal · R$ 9,90/mês', lifetime: 'Vitalício', expired: 'Teste encerrado', blocked: 'Sem plano', none: 'Sem plano', shared: 'Agenda compartilhada', checking: 'Conferindo…', offline: 'Sem conexão para conferir' }[b.plan] || '—';
   const detail = b.plan === 'trial' ? `Termina em ${fmtLeft(b.trialEndsAt - Date.now())}`
     : b.plan === 'monthly' ? (b.cancelAt ? `Cancelada: vale até ${new Date(b.cancelAt).toLocaleDateString('pt-BR')}` : b.paidUntil ? `Renova em ${new Date(b.paidUntil).toLocaleDateString('pt-BR')}` : 'Ativa')
-      : b.plan === 'lifetime' ? 'Pago uma vez, para sempre. Obrigado!'
+      : b.plan === 'lifetime' ? (b.comp ? 'Acesso cortesia liberado pelo Lembra.' : 'Pago uma vez, para sempre. Obrigado!')
         : b.plan === 'shared' ? `Liberado pela agenda de ${store.shared?.ownerName || b.ownerName || 'quem te convidou'}. Você não paga nada.` : '';
   const ap = (k) => (b.plan === 'lifetime' ? { dupla: '4,90', equipe: '9,90' } : { dupla: '6,90', equipe: '14,90' })[k];
   const addon = b.addon && b.addon.active ? `<div class="card card--row"><div><strong>+ Agenda compartilhada ${b.addon.plan === 'equipe' ? `Equipe · R$ ${ap('equipe')}/mês` : `Dupla · R$ ${ap('dupla')}/mês`}</strong><small>${b.addon.cancelAt ? `Cancelada: vale até ${new Date(b.addon.cancelAt).toLocaleDateString('pt-BR')}` : 'Complemento mensal, cobrado à parte'}</small></div><button class="btn btn--soft btn--sm" data-action="share">Ver</button></div>` : '';

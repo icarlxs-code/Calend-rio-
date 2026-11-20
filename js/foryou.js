@@ -27,7 +27,8 @@ const nextDate = (mmdd) => { const t = todayKey(); const y = +t.slice(0, 4); con
 function catalog(w) {
   const a = w.age ?? 30;
   const out = [];
-  const add = (id, title, cat, repeat, date, time, why, score) => out.push({ id, title, cat, repeat, date, time, why, score });
+  const LOOK = { telas: ['moon', ['#5E5CE6', '#5E5CE6']], respirar: ['droplet', ['#30B0C7', '#30B0C7']], niveres: ['cake', ['#FF2D55', '#FF2D55']], familia: ['heart', ['#FF375F', '#FF375F']], semana: ['cal2', ['#0A84FF', '#0A84FF']], revisar: ['clock', ['#FF9500', '#FF9500']], fe: ['sun', ['#FFB800', '#FFB800']], autocuidado: ['heart', ['#AF52DE', '#AF52DE']] };
+  const add = (id, title, cat, repeat, date, time, why, score) => out.push({ id, title, cat, repeat, date, time, why, score, ...(LOOK[id] ? { ic: LOOK[id][0], g: LOOK[id][1] } : {}) });
   // cuidado pessoal (conforme a identidade)
   if (w.style === 'm') {
     add('cabelo', 'Cortar o cabelo', 'beleza', 'monthly', nextDow(6), '10:00', 'Todo mês, para nunca passar do ponto', 90);

@@ -105,3 +105,17 @@ test('nunca cobra em dobro: vitalício não compra mensal; mensal não assina de
   await assert.rejects(createCheckout(env, user('M'), { plan: 'vitalicio', returnUrl: 'https://x.test/' }, fakeFetch), /já é vitalícia/);
   await assert.rejects(createCheckout(env, user('M'), { plan: 'mensal', returnUrl: 'https://x.test/' }, fakeFetch), /já é vitalícia/);
 });
+
+test('cortesia do dono: libera e tira o acesso (para revisores das lojas), sem mexer em quem pagou', async () => {
+  const { grantComp } = await import('../src/billing.js');
+  const env = mkEnv();
+  let st = await grantComp(env, 'REVISOR1', true);
+  assert.equal(st.plan, 'lifetime'); assert.equal(st.comp, true);
+  st = await grantComp(env, 'REVISOR1', false);
+  assert.equal(st.active, false);
+  // quem pagou o vitalício não perde o acesso se o dono tocar em "tirar cortesia"
+  await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { client_reference_id: 'PAGOU1', mode: 'payment', payment_status: 'paid', metadata: { uid: 'PAGOU1', plan: 'vitalicio' } } } });
+  st = await grantComp(env, 'PAGOU1', false);
+  assert.equal(st.plan, 'lifetime');
+  await assert.rejects(grantComp(env, '../x', true), /inválida/);
+});

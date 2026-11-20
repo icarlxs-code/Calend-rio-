@@ -30,7 +30,7 @@ function last30(u) {
   return Array.from({ length: 30 }, (_, i) => addDays(t, i - 29)).map((d) => `<i class="${set.has(d) ? 'on' : ''}" title="${d.split('-').reverse().join('/')}"></i>`).join('');
 }
 let planOf = () => null;
-const planLabel = (p) => (!p ? 'Conta própria' : { trial: 'Teste grátis', monthly: 'Mensal', lifetime: 'Vitalício', expired: 'Teste acabou', blocked: 'Sem plano', none: 'Sem plano' }[p.plan] || 'Conta própria');
+const planLabel = (p) => (!p ? 'Conta própria' : p.comp ? 'Cortesia' : { trial: 'Teste grátis', monthly: 'Mensal', lifetime: 'Vitalício', expired: 'Teste acabou', blocked: 'Sem plano', none: 'Sem plano' }[p.plan] || 'Conta própria');
 function card(u, open) {
   const c = u.counts || {};
   const d = u.device || {};
@@ -88,6 +88,10 @@ function card(u, open) {
       </div>
       <h4>Uso nos últimos 30 dias</h4>
       <div class="adays">${last30(u)}</div>
+      ${u.workspace === 'proprio' ? `<h4>Acesso</h4>
+      ${planOf(u.uid)?.comp ? `<button class="btn btn--soft btn--block" data-grant="${esc(u.uid)}" data-on="0">Tirar o acesso cortesia</button>`
+        : planOf(u.uid)?.plan === 'lifetime' || planOf(u.uid)?.plan === 'monthly' ? '<p class="fhelp">Conta paga.</p>'
+          : `<button class="btn btn--primary btn--block" data-grant="${esc(u.uid)}" data-on="1">Liberar acesso cortesia (revisor da loja, parceiro)</button>`}` : ''}
     </div>` : ''}
   </div>`;
 }
@@ -151,7 +155,7 @@ export async function openAdmin() {
     planOf = (uid) => plans[uid] || null;
     const P = Object.values(plans);
     const monthly = P.filter((p) => p.plan === 'monthly').length;
-    const lifetime = P.filter((p) => p.plan === 'lifetime').length;
+    const lifetime = P.filter((p) => p.plan === 'lifetime' && !p.comp).length;
     const trial = P.filter((p) => p.plan === 'trial').length;
     const addons = P.filter((p) => p.addon && p.addon.active);
     // receita por mês: mensais + complementos (vitalício paga o complemento mais barato); o vitalício em si entra uma vez só
@@ -213,6 +217,14 @@ export async function openAdmin() {
     onMount: (a) => {
       a.el.querySelectorAll('[data-toggle]').forEach((b) => (b.onclick = () => { openUid = openUid === b.dataset.toggle ? null : b.dataset.toggle; a.set(html()); }));
       a.el.querySelectorAll('[data-tab-admin]').forEach((b) => (b.onclick = () => { tab = b.dataset.tabAdmin; a.set(html()); a.el.scrollTop = 0; }));
+      a.el.querySelectorAll('[data-grant]').forEach((b) => (b.onclick = async () => {
+        b.disabled = true;
+        try {
+          const { api } = await import('../avisos.js');
+          const r = await api('/admin/grant', { uid: b.dataset.grant, on: b.dataset.on === '1' });
+          plans[b.dataset.grant] = r.status; toast(b.dataset.on === '1' ? 'Acesso cortesia liberado ✓' : 'Acesso cortesia retirado'); a.set(html());
+        } catch (e) { b.disabled = false; toast(e.message || 'Não consegui agora.'); }
+      }));
       const r = a.el.querySelector('[data-reload]');
       if (r) r.onclick = () => load();
       const ce = a.el.querySelector('[data-clear-errors]');

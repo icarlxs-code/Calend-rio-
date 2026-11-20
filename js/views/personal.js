@@ -42,7 +42,7 @@ const header = (eyebrow, title, right = '') => `
       <div class="phdr__actions">${right}</div>
     </div>
   </header>`;
-const workBtn = `<button class="pswitch" data-action="space" data-space="work" aria-label="Ir para o Trabalho">${icon('briefcase', 16)}<span>Trabalho</span></button>`;
+const workBtn = `<button class="iconbtn iconbtn--work" data-action="space" data-space="work" aria-label="Ir para o Trabalho">${icon('briefcase', 19)}</button>`;
 
 /* ---------- Hoje ---------- */
 function renderHome() {
@@ -106,7 +106,7 @@ function forYou() {
     <h2 class="block__title"><span class="ptitle">${tile('sparkles', ['#C78BFF', '#7C5CFF'], 26)}Feito para você</span></h2>
     <p class="foryou__lead">${esc(forYouLead())}</p>
     <div class="foryou__list">${list.map((x) => `<div class="foryou__item">
-      <button class="foryou__add" data-action="p-sug" data-id="${x.id}">${catTile(x.cat, 36)}<span><b>${esc(x.title)}</b><small>${esc(x.why)}</small></span><i>${icon('plus', 16)}</i></button>
+      <button class="foryou__add" data-action="p-sug" data-id="${x.id}">${x.ic ? tile(x.ic, x.g, 36) : catTile(x.cat, 36)}<span><b>${esc(x.title)}</b><small>${esc(x.why)}</small></span><i>${icon('plus', 16)}</i></button>
       <button class="foryou__x" data-action="p-sug-x" data-id="${x.id}" aria-label="Não quero esta sugestão">${icon('x', 14)}</button>
     </div>`).join('')}</div>
   </section>`;
@@ -198,7 +198,7 @@ function renderPSettings() {
       <div class="pnotice ${ok ? 'is-ok' : 'is-warn'}">${ok ? '✅ Ligados neste celular.' : install ? '⚠️ No iPhone, abra o app pelo ícone da Tela de Início para receber avisos.' : perm === 'denied' ? '⚠️ Bloqueados. Ajustes do iPhone → Notificações → Lembra.' : '⚠️ Ainda não ligados neste celular.'}
         ${!ok && !install && perm !== 'denied' ? '<button class="btn btn--primary btn--sm" data-action="notify-enable">Ativar</button>' : ''}${install ? '<button class="btn btn--primary btn--sm" data-action="install-guide">Como instalar</button>' : ''}</div>
       <form class="list" data-form="pprefs" onsubmit="return false">
-        <label class="list__row"><span><b>Lembretes</b><small>1h, 30 e 20 min antes, na hora e um “já fez?” depois</small></span><input type="checkbox" class="switch" name="reminders" ${prefs.reminders ? 'checked' : ''}></label>
+        <label class="list__row"><span><b>Lembretes</b><small>30 min antes, na hora e um “já fez?” depois</small></span><input type="checkbox" class="switch" name="reminders" ${prefs.reminders ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Resumo às 8h</b><small>o que você tem hoje</small></span><input type="checkbox" class="switch" name="morning" ${prefs.morning ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Boa noite, às 21h</b><small>o que vem amanhã, pra nada te pegar de surpresa</small></span><input type="checkbox" class="switch" name="night" ${prefs.night ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Mensagens de ânimo</b><small>ao longo do dia: motivação, versículos e lembretes do que você anotou</small></span><input type="checkbox" class="switch" name="nudges" ${prefs.nudges ? 'checked' : ''}></label>

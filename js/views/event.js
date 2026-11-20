@@ -3,7 +3,7 @@ import { store } from '../store.js';
 import { CONFIG } from '../../config.js';
 import { ui } from '../ui.js';
 import { TYPES, TYPE_ORDER, STATUS, STATUS_ORDER, DURATIONS, REMINDERS, REPEATS, durationOf, typeStyle, WORK, ent, isMarketing, novo } from '../constants.js';
-import { esc, todayKey, addDays, fmtDayLong, fmtDuration, fmtTime, uid, rgba, fromKey, relDay, toMin, fromMin, dayLabel } from '../utils.js';
+import { esc, todayKey, addDays, fmtDayLong, fmtDuration, fmtTime, uid, rgba, fromKey, relDay, toMin, fromMin, dayLabel, nowMin } from '../utils.js';
 import { icon } from '../icons.js';
 import {
   openSheet, sheetHead, avatar, logo, typeBadge, whoText, timeRange, toast, confirmDialog, chooseDialog,
@@ -162,6 +162,12 @@ export function openEventEditor({ id = null, date = null, companyId = null, type
         visibleToClient: TYPES[defType].client,
         status: 'pendente',
       };
+  // compromisso novo sem horário escolhido: já vem no próximo horário livre (fora do almoço e sem conflito)
+  if (!existing && !time && !isMarketing()) {
+    const sl = bestSlots(draft, { limit: 6 }).map((x) => x.time).sort();
+    if (sl.length) draft.time = sl[0];
+    else if (draft.date === todayKey()) { const n = Math.ceil((nowMin() + 30) / 30) * 30; if (n < 24 * 60) draft.time = fromMin(n); }
+  }
   const original = existing ? JSON.parse(JSON.stringify(existing)) : null;
   const rep = { mode: 'none', until: addDays(draft.date, 28) };
 

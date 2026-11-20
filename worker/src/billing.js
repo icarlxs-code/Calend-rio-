@@ -58,7 +58,7 @@ export function statusOf(b, me, now = Date.now()) {
   if (!b) return { plan: 'none', active: false };
   const addon = addonOf(b, now);
   const extra = addon ? { addon } : {};
-  if (b.lifetime) return { plan: 'lifetime', active: true, ...extra };
+  if (b.lifetime) return { plan: 'lifetime', active: true, ...(b.comp ? { comp: true } : {}), ...extra };
   if (b.subActive && (!b.paidUntil || b.paidUntil > now - 3 * 864e5)) return { plan: 'monthly', active: true, paidUntil: b.paidUntil || null, cancelAt: b.cancelAt || null, ...extra };
   if (b.pending && now - b.pending.at < 4 * 864e5) extra.pending = b.pending.plan;
   if (b.trialEndsAt && b.trialEndsAt > now) return { plan: 'trial', active: true, trialEndsAt: b.trialEndsAt, ...extra };
@@ -339,6 +339,18 @@ export async function handleStripeEvent(env, ev) {
     await putBill(env, uid, b);
     return uid;
   }
+}
+
+/* Dono do app libera (ou tira) um acesso cortesia: revisores da Apple/Google, parceiros, testes.
+   Funciona como vitalício, mas marcado como cortesia (não conta como venda). */
+export async function grantComp(env, uid, on, now = Date.now()) {
+  if (!/^[A-Za-z0-9]{6,64}$/.test(uid || '')) throw Object.assign(new Error('conta inválida'), { status: 400 });
+  const b = (await getBill(env, uid)) || { uid, createdAt: now };
+  if (on) { if (!b.lifetime) { b.lifetime = true; b.comp = true; b.lifetimeAt = now; } }
+  else if (b.comp) { b.lifetime = false; b.comp = false; }
+  b.updatedAt = now;
+  await putBill(env, uid, b);
+  return statusOf(b, { ws: uid }, now);
 }
 
 /* Para o Painel do dono: situação de cada conta */

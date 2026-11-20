@@ -23,6 +23,7 @@ import { sanitizePayload } from './sanitize.js';
 import { maybeOnboard } from './views/onboarding.js';
 import { showInstallGuide } from './install.js';
 import { onDone } from './reward.js';
+import { chime, setSound } from './sound.js';
 import { checkBilling, trialBanner, openPlans, confirmPayment, openPortal, buying, clearBuying, hasAccess, requireAccess, lastKnown } from './billing.js';
 import { captureInvite, maybeAcceptInvite, startTeam, openShare, pendingInvite } from './equipe.js';
 import { personaOf } from './notifier.js';
@@ -90,14 +91,17 @@ function switchSpace(space, from) {
   const r = from && from.getBoundingClientRect ? from.getBoundingClientRect() : null;
   if (r) { veil.style.setProperty('--x', `${r.left + r.width / 2}px`); veil.style.setProperty('--y', `${r.top + r.height / 2}px`); }
   const me = store.member(store.me);
-  veil.innerHTML = space === 'personal'
-    ? `<div><span class="spaceveil__badge">${icon('heart', 40)}</span><strong>Pessoal</strong><small>${me ? esc(me.name) + ' · ' : ''}só você vê</small></div>`
-    : `<div><span class="spaceveil__badge">${icon('briefcase', 40)}</span><strong>Trabalho</strong><small>${store.team.length > 1 ? `Agenda da ${crew()}` : isMarketing() ? 'Suas empresas e clientes' : `Seus compromissos de ${esc(ent(true, true))}`}</small></div>`;
+  // o ícone de onde você está pulsa, cresce e vira o ícone do destino (coração ⇄ maleta)
+  const icFrom = space === 'personal' ? 'briefcase' : 'heart', icTo = space === 'personal' ? 'heart' : 'briefcase';
+  const label = space === 'personal' ? 'Pessoal' : 'Trabalho';
+  const sub = space === 'personal' ? `${me ? esc(me.name) + ' · ' : ''}só você vê` : store.team.length > 1 ? `Agenda da ${crew()}` : isMarketing() ? 'Suas empresas e clientes' : `Seus compromissos de ${esc(ent(true, true))}`;
+  veil.innerHTML = `<div><span class="spaceveil__badge"><i class="sv-from">${icon(icFrom, 40)}</i><i class="sv-to">${icon(icTo, 40)}</i></span><strong>${label}</strong><small>${sub}</small></div>`;
   document.body.appendChild(veil);
   // a barra do topo (hora/bateria) entra na mesma cor da transição, quando o círculo chega lá em cima
   const veilBar = space === 'personal' ? '#FF2D55' : '#000000';
   setTimeout(() => setBarColor(veilBar), 180);
   if (navigator.vibrate) navigator.vibrate(8);
+  chime(space);
   requestAnimationFrame(() => requestAnimationFrame(() => veil.classList.add('is-in')));
   setTimeout(() => {
     ui.space = space;
@@ -109,8 +113,8 @@ function switchSpace(space, from) {
     if (view) { view.classList.add('is-entering'); setTimeout(() => view.classList.remove('is-entering'), 600); }
     setBarColor(veilBar); // continua na cor da transição enquanto ela está na tela
   }, 430);
-  setTimeout(() => { veil.classList.add('is-out'); const [l, d] = space === 'personal' ? SPACE_BAR.personal : [WORK.theme?.bg || SPACE_BAR.work[0], SPACE_BAR.work[1]]; setBarColor(l, d); }, 560);
-  setTimeout(() => veil.remove(), 900);
+  setTimeout(() => { veil.classList.add('is-out'); const [l, d] = space === 'personal' ? SPACE_BAR.personal : [WORK.theme?.bg || SPACE_BAR.work[0], SPACE_BAR.work[1]]; setBarColor(l, d); }, 700);
+  setTimeout(() => veil.remove(), 1050);
 }
 window.__calRender = () => render();
 const tabBtn = (id, ic, label) => `<button class="tabbar__btn" data-action="tab" data-tab="${id}">${icon(ic, 24)}<span>${label}</span></button>`;
@@ -330,7 +334,9 @@ const actions = {
   'onboarding-again': () => settingsActions.onboardingAgain(),
   export: () => settingsActions.export(),
   logout: async () => {
-    if (await confirmDialog({ title: 'Sair da conta?', ok: 'Sair' })) {
+    if (await confirmDialog({ title: 'Sair da conta?', text: 'Este celular deixa de receber os lembretes desta conta até você entrar de novo.', ok: 'Sair' })) {
+      // antes de sair: este aparelho para de receber as notificações desta conta (privacidade)
+      await Promise.race([push.unregisterDevice(), new Promise((r) => setTimeout(r, 4000))]);
       await cloudApi.signOut();
       purgeAuth();
       try { localStorage.removeItem(LS_UID); } catch { /* ok */ }
@@ -367,6 +373,7 @@ document.addEventListener('click', (ev) => {
   fn(b);
 });
 document.addEventListener('change', (ev) => {
+  if (ev.target.matches('[data-sound]')) { setSound(ev.target.checked); if (ev.target.checked) chime(ui.space); }
   if (ev.target.matches('[data-action-change="import"]')) settingsActions.import(ev.target);
   if (ev.target.closest('[data-notify-form]')) settingsActions.notifyPrefs(ev.target.closest('[data-notify-form]'));
   if (ev.target.closest('[data-routine-form]')) settingsActions.routine(ev.target.closest('[data-routine-form]'));
@@ -900,7 +907,10 @@ function startApp() {
 /* Lembretes calculados pela ficha valem em qualquer agenda em que a pessoa estiver (dupla, própria ou compartilhada) */
 function ensurePersona() {
   const p = store.profile;
-  if (store.mode !== 'cloud' || !store.me || !p?.onboardedAt || personaOf(store.me)) return;
+  if (store.mode !== 'cloud' || !store.me || !p?.onboardedAt) return;
+  const cur = personaOf(store.me);
+  // persona antiga (cobrava de 10 em 10 min): recalcula no ritmo novo, mais equilibrado
+  if (cur && !(store.solo && cur.lateEvery < 20)) return;
   const r = computePersona(p);
   store.upsert('settings', { id: `persona-${store.me}`, offsets: r.offsets, lateEvery: r.lateEvery, lateMax: r.lateMax, tone: r.tone, index: r.index });
 }
@@ -1034,6 +1044,8 @@ async function boot() {
     if (expected && expected !== user.uid) {
       try { await cloudApi.signOut(); } catch { /* ok */ }
       purgeAuth();
+      // o aparelho para de receber avisos da conta antiga (a inscrição velha deixa de existir)
+      try { const reg = await navigator.serviceWorker?.ready; const sub = reg && (await reg.pushManager.getSubscription()); if (sub) await sub.unsubscribe(); localStorage.removeItem('pauta.device'); } catch { /* ok */ }
       loginNotice = 'Por segurança, entre de novo com a sua conta.';
       if (started) return location.reload();
       return showLogin();

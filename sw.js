@@ -1,10 +1,10 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-mqqt3kqy'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-cxzm5l66'/*CACHE*/;
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster5.jpg',
   ...Array.from({ length: 67 }, (_, i) => `media/intro5/f${String(i + 1).padStart(3, '0')}.webp`),
   'media/logos/pura-vida.jpg', 'media/lembra-logo.jpg', 'media/marca/completa-preto.png', 'media/marca/completa-branco.png', 'media/marca/simbolo-preto.png', 'media/marca/simbolo-branco.png', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/c-3NED24YC.js', 'dist/c-LULTGO4C.js', 'dist/c-XMJFM433.js', 'dist/c-QRQYLPZP.js', 'dist/a-MQQT3KQY.js', 'dist/c-MPMAPF2A.js', 'dist/c-UL2LDEZV.js', 'dist/c-ZRWETKYP.js', 'dist/c-4JWHQNJE.js', 'dist/c-P7LCBIEN.js', 'dist/c-WMVIU2OE.js', 'dist/c-NPPFPZCA.js', 'dist/c-B6LAWJNI.js', 'dist/c-RTMXEMCY.js', 'dist/c-G4P7AEWA.js', 'dist/c-X652N5W6.js', 'dist/c-YGRRTMLY.js', 'dist/c-PGW6LBGY.js', 'dist/c-SDVL7S5U.js', 'dist/c-YTWWMWRX.js', 'dist/c-F4CQFADB.js', 'dist/c-B5GJXJUS.js', 'dist/c-A32SP4L4.js', 'dist/c-JKA3WHR5.js', 'dist/c-AUSHTMPE.js', 'dist/c-YEARXB46.js', 'dist/c-BYHTQNTY.js', 'dist/c-U53RW4YL.js', 'dist/c-VHNSBD2M.js',
+  /*FILES*/ 'dist/c-N2Z55CK5.js', 'dist/c-LULTGO4C.js', 'dist/c-RG4DRKH3.js', 'dist/c-55J75WPK.js', 'dist/a-CXZM5L66.js', 'dist/c-74MW3OB5.js', 'dist/c-UL2LDEZV.js', 'dist/c-ILBIMTU3.js', 'dist/c-ZGNS3VBL.js', 'dist/c-G6FKCGZR.js', 'dist/c-WMVIU2OE.js', 'dist/c-YB3ZMVOW.js', 'dist/c-E2W27NY7.js', 'dist/c-4XEPNLR7.js', 'dist/c-SCKG7PCO.js', 'dist/c-PT576CWU.js', 'dist/c-YGRRTMLY.js', 'dist/c-PGW6LBGY.js', 'dist/c-I2ROTYC2.js', 'dist/c-XIMVGU7Z.js', 'dist/c-4WJ4TYVF.js', 'dist/c-V7C77ZH7.js', 'dist/c-XSJKC2OU.js', 'dist/c-JKA3WHR5.js', 'dist/c-AUSHTMPE.js', 'dist/c-YEARXB46.js', 'dist/c-BYHTQNTY.js', 'dist/c-U53RW4YL.js', 'dist/c-VHNSBD2M.js',
 ];
 
 self.addEventListener('install', (e) => {
@@ -71,7 +71,12 @@ self.addEventListener('push', (e) => {
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
-  const target = new URL(e.notification.data?.url || './', self.registration.scope).href;
+  // segurança: só abre telas do próprio app (nunca um site de fora, mesmo que a mensagem traga outro endereço)
+  let target = self.registration.scope;
+  try {
+    const u = new URL(e.notification.data?.url || './', self.registration.scope);
+    if (u.origin === self.location.origin && u.href.startsWith(self.registration.scope) && /^(#\/[\w/-]{0,120})?$/.test(u.hash)) target = u.href;
+  } catch { /* endereço inválido: abre o início */ }
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
       const c = cs.find((x) => x.url.startsWith(self.registration.scope));

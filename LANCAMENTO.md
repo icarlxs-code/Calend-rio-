@@ -28,6 +28,11 @@ Tudo o que é código já está pronto e testado. Estes passos são de contas e 
 3. No código, troque em `config.js` → `siteUrl: 'https://lembra.com.br/'` e em `worker/wrangler.toml` → `SITE_URL` e acrescente o domínio em `ALLOWED_ORIGINS`.
 4. Firebase → Authentication → Settings → **Domínios autorizados** → adicione `lembra.com.br`.
 
+## 3b. Conta de demonstração para a revisão da Apple e do Google (obrigatório nas lojas)
+1. Crie uma conta no app (ex.: `revisao.lembra@…`), preencha a ficha.
+2. No seu celular: Ajustes → **Painel do dono** → aba **Pessoas** → toque na conta → **Liberar acesso cortesia**.
+3. Informe e-mail e senha dessa conta no formulário da loja ("Informações para o revisor").
+
 ## 4. Google Play (Android)
 O Lembra já é um app instalável (PWA). Para a loja, ele é empacotado como **Trusted Web Activity**:
 1. Conta de desenvolvedor Google Play (taxa única de US$ 25).
@@ -38,6 +43,12 @@ O Lembra já é um app instalável (PWA). Para a loja, ele é empacotado como **
 
 ## 5. App Store (iPhone)
 1. Conta Apple Developer (US$ 99/ano) e um Mac com Xcode (ou um serviço que gere o app, como o PWABuilder → iOS).
+   **Ponto técnico importante:** dentro de um app de iPhone "empacotado" (WebView), as notificações da web **não funcionam**.
+   Para a versão da App Store, os lembretes precisam ir pelo sistema de notificações da Apple (APNs), por exemplo com
+   Capacitor + Firebase Cloud Messaging. Isso é um trabalho à parte, feito num Mac. Enquanto isso, no iPhone o app funciona
+   completo pelo Safari → Compartilhar → **Adicionar à Tela de Início** (notificações funcionando, iOS 16.4 ou mais novo).
+   A Apple também recusa apps que são "só um site" (regra 4.2): o app nativo deve usar recursos do aparelho (notificações nativas,
+   widgets, etc.).
 2. Atenção às regras de pagamento: para assinaturas digitais vendidas **dentro** do app de iPhone, a Apple exige a compra pelo próprio
    sistema dela (In-App Purchase, com taxa de 15–30%). O mesmo vale, em regra, para o Google Play Billing. As exceções variam por país:
    confirme as regras vigentes na hora de publicar. Caminho mais simples: lançar primeiro pelo site (Stripe, sem taxa de loja) e,
@@ -50,6 +61,10 @@ O Lembra já é um app instalável (PWA). Para a loja, ele é empacotado como **
   vale o bloco do aparelho. Efeito colateral: duas pessoas da mesma casa (mesmo Wi-Fi) ou da mesma rede no mesmo mês — só a
   primeira ganha o teste; a segunda vê os planos. Para afrouxar, troque `IP_WINDOW`/`IP_MAX` em `worker/src/billing.js`.
 
-## 7. Conferir depois de configurar
+## 7. Prints para as lojas
+Prontos na pasta `media/loja/` (1290 × 2796, tamanho exigido pela App Store para iPhone de 6,7"), no tema claro e no escuro:
+Hoje, Pessoal, Novo compromisso, Planos e Calendário. O Google Play aceita os mesmos arquivos.
+
+## 8. Conferir depois de configurar
 - Abra o app, vá em Ajustes → Seu plano → Assinar → pague com um cartão de teste da Stripe (modo teste) e confira se volta liberado.
 - Ajustes → Painel do dono: contas, pagantes, receita, erros do app.
