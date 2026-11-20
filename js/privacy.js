@@ -1,5 +1,6 @@
 /* Privacidade e dados (LGPD): aceite dos Termos, baixar meus dados, excluir minha conta.
    Direitos do titular (art. 18): acesso, portabilidade, correção (Sua ficha) e eliminação. */
+import { brand } from './brand.js';
 import { store, saveUserProfile } from './store.js';
 import { personal } from './personal.js';
 import { openSheet, sheetHead, toast, confirmDialog } from './components.js';
@@ -22,7 +23,7 @@ export function ensureTermsAccepted() {
     w.className = 'ficha is-open termsgate';
     const first = !store.profile?.consentAt;
     w.innerHTML = `<div class="ficha__inner"><div class="ficha__step">
-      <div class="ficha__hero"><img src="media/lembra-logo.jpg" alt="" width="80" height="80">
+      <div class="ficha__hero"><div class="brandwrap">${brand('completa', { h: 110 })}</div>
       <h1>${first ? 'Sua privacidade em primeiro lugar' : 'Atualizamos nossos Termos'}</h1>
       <p>Para seguir a Lei Geral de Proteção de Dados (LGPD), precisamos da sua concordância com os Termos de Uso e a Política de Privacidade do ${esc(CONFIG.appName || 'Lembra')}.</p></div>
       <ul class="ficha__bul">
@@ -159,7 +160,7 @@ async function askDelete() {
         go.disabled = true; go.textContent = 'Excluindo…';
         try {
           await deleteEverything(pass);
-          document.body.innerHTML = `<div class="splash"><img src="icons/icon-192.png" alt="" width="72" height="72"><h2>Conta excluída</h2><p>Seus dados foram apagados. Obrigado por ter usado o ${esc(CONFIG.appName || 'Lembra')}.</p></div>`;
+          document.body.innerHTML = `<div class="splash"><div class="brandwrap">${brand('simbolo', { h: 64 })}</div><h2>Conta excluída</h2><p>Seus dados foram apagados. Obrigado por ter usado o ${esc(CONFIG.appName || 'Lembra')}.</p></div>`;
           setTimeout(() => location.reload(), 4000);
         } catch (e) {
           go.disabled = false; go.textContent = 'Excluir para sempre';

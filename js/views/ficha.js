@@ -1,5 +1,6 @@
 /* Ficha de cadastro do Lembra: conhece a pessoa para o app trabalhar para ela.
    Etapas: boas-vindas → você → trabalho → rotina → dificuldades → estilo → resumo calculado. */
+import { brand } from '../brand.js';
 import { icon } from '../icons.js';
 import { esc } from '../utils.js';
 import { PROFESSIONS, ARCHETYPES, TYPE_DEFS, archOf, searchProfessions, profStyle } from '../../functions/catalog.js';
@@ -38,7 +39,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
 
   const views = {
     inicio: () => `<div class="ficha__hero">
-        <img src="media/lembra-logo.jpg" alt="Lembra" width="88" height="88">
+        <div class="brandwrap">${brand('completa', { h: 118 })}</div>
         <h1>Vamos montar o seu Lembra</h1>
         <p>Em 2 minutos o app aprende como é o seu trabalho, a sua rotina e o que costuma escapar da sua cabeça. Com isso ele calcula <b>quantos avisos</b> você precisa, <b>quando</b> te mandar mensagens e <b>como</b> falar com você.</p>
         <ul class="ficha__bul">

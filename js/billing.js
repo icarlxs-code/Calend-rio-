@@ -3,6 +3,7 @@
 import { store } from './store.js';
 import { server, api } from './avisos.js';
 import { icon } from './icons.js';
+import { brand } from './brand.js';
 import { esc } from './utils.js';
 
 const LS_DEV = 'lembra.device', LS_LAST = 'lembra.plan';
@@ -63,7 +64,7 @@ export function openPlans({ blocking = false } = {}) {
   const w = document.createElement('div');
   w.className = 'paywall';
   w.innerHTML = `<div class="paywall__inner">
-    <img class="paywall__logo" src="media/lembra-logo.jpg" alt="Lembra" width="96" height="96">
+    <div class="brandwrap">${brand('completa', { h: 104, on: 'dark' })}</div>
     <h1>${esc(title)}</h1>
     <p>${esc(sub)}</p>
     <div class="plans">
@@ -142,18 +143,18 @@ export async function confirmPayment({ quiet = false } = {}) {
   document.querySelector('.paywall')?.remove();
   const w = document.createElement('div');
   w.className = 'paywall is-open';
-  w.innerHTML = `<div class="paywall__inner"><img class="paywall__logo" src="media/lembra-logo.jpg" alt="" width="96" height="96"><h1>Confirmando seu pagamento…</h1><p>Leva só alguns segundos.</p><div class="spinner"></div></div>`;
+  w.innerHTML = `<div class="paywall__inner"><div class="brandwrap">${brand('simbolo', { h: 64, on: 'dark' })}</div><h1>Confirmando seu pagamento…</h1><p>Leva só alguns segundos.</p><div class="spinner"></div></div>`;
   document.body.appendChild(w);
   for (let i = 0; i < 20; i++) {
     const st = await checkBilling();
     // Pix ou boleto: a Stripe confirma depois (Pix em minutos, boleto em até 3 dias úteis)
     if (st.pending && st.plan !== 'lifetime') {
-      w.querySelector('.paywall__inner').innerHTML = `<img class="paywall__logo" src="media/lembra-logo.jpg" alt="" width="96" height="96"><h1>Pagamento em processamento</h1><p>Pagou com Pix ou boleto? Assim que o banco confirmar (Pix em alguns minutos, boleto em até 3 dias úteis), tudo é liberado sozinho. Você recebe o recibo por e-mail.</p><button class="btn btn--primary btn--block" data-go>Entendi</button>`;
+      w.querySelector('.paywall__inner').innerHTML = `<div class="brandwrap">${brand('simbolo', { h: 64, on: 'dark' })}</div><h1>Pagamento em processamento</h1><p>Pagou com Pix ou boleto? Assim que o banco confirmar (Pix em alguns minutos, boleto em até 3 dias úteis), tudo é liberado sozinho. Você recebe o recibo por e-mail.</p><button class="btn btn--primary btn--block" data-go>Entendi</button>`;
       w.querySelector('[data-go]').onclick = () => { w.remove(); if (!st.active) openPlans({ blocking: true }); };
       return false;
     }
     if (st.plan === 'lifetime' || st.plan === 'monthly') {
-      w.querySelector('.paywall__inner').innerHTML = `<img class="paywall__logo" src="media/lembra-logo.jpg" alt="" width="96" height="96"><h1>Pagamento confirmado! 🎉</h1><p>${st.plan === 'lifetime' ? 'Seu Lembra é vitalício. Obrigado!' : 'Sua assinatura mensal está ativa. Obrigado!'}</p><button class="btn btn--primary btn--block" data-go>Começar a usar</button>`;
+      w.querySelector('.paywall__inner').innerHTML = `<div class="brandwrap">${brand('simbolo', { h: 64, on: 'dark' })}</div><h1>Pagamento confirmado! 🎉</h1><p>${st.plan === 'lifetime' ? 'Seu Lembra é vitalício. Obrigado!' : 'Sua assinatura mensal está ativa. Obrigado!'}</p><button class="btn btn--primary btn--block" data-go>Começar a usar</button>`;
       w.querySelector('[data-go]').onclick = () => { w.remove(); window.__calRender && window.__calRender(); };
       return true;
     }
@@ -176,14 +177,14 @@ export async function openPortal() {
 async function confirmAddon(plan) {
   const w = document.createElement('div');
   w.className = 'paywall is-open';
-  w.innerHTML = `<div class="paywall__inner"><img class="paywall__logo" src="media/lembra-logo.jpg" alt="" width="96" height="96"><h1>Ativando a agenda compartilhada…</h1><p>Leva só alguns segundos.</p><div class="spinner"></div></div>`;
+  w.innerHTML = `<div class="paywall__inner"><div class="brandwrap">${brand('simbolo', { h: 64, on: 'dark' })}</div><h1>Ativando a agenda compartilhada…</h1><p>Leva só alguns segundos.</p><div class="spinner"></div></div>`;
   document.body.appendChild(w);
   for (let i = 0; i < 20; i++) {
     const st = await checkBilling();
     if (st.addon && st.addon.active) {
       const { startTeam, openShare } = await import('./equipe.js');
       await startTeam();
-      w.querySelector('.paywall__inner').innerHTML = `<img class="paywall__logo" src="media/lembra-logo.jpg" alt="" width="96" height="96"><h1>Agenda compartilhada ativa! 🎉</h1><p>Plano ${plan === 'equipe' ? 'Equipe: você + até 4 pessoas' : 'Dupla: você + 1 pessoa'}. Agora mande o convite para quem vai participar.</p><button class="btn btn--primary btn--block" data-go>Convidar agora</button>`;
+      w.querySelector('.paywall__inner').innerHTML = `<div class="brandwrap">${brand('simbolo', { h: 64, on: 'dark' })}</div><h1>Agenda compartilhada ativa! 🎉</h1><p>Plano ${plan === 'equipe' ? 'Equipe: você + até 4 pessoas' : 'Dupla: você + 1 pessoa'}. Agora mande o convite para quem vai participar.</p><button class="btn btn--primary btn--block" data-go>Convidar agora</button>`;
       w.querySelector('[data-go]').onclick = () => { w.remove(); window.__calRender && window.__calRender(); openShare(); };
       return true;
     }

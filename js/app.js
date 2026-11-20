@@ -1,4 +1,5 @@
 /* Inicialização, navegação e ações globais */
+import { brand } from './brand.js';
 import { syncCoach } from './coach.js';
 import { polishSoon } from './polish.js';
 import { renderPersonalSpace, personalTabbar, bindPersonal, personalActions, openPersonalEditor } from './views/personal.js';
@@ -601,7 +602,7 @@ function showLogin(errMsg = '') {
   const msg = errMsg || loginNotice;
   root.innerHTML = `
   <div class="login">
-    <img class="login__logo" src="media/lembra-logo.jpg" alt="${esc(CONFIG.appName)}" width="150" height="150">
+    <div class="brandwrap login__brand">${brand('completa', { h: 150, alt: esc(CONFIG.appName) })}</div>
     <p>${signupMode ? 'Crie sua conta: sua agenda de trabalho e a pessoal, só suas.' : 'Agenda de trabalho e pessoal'}</p>
     ${invitedBy() ? `<div class="login__invite">${icon('users', 18)}<span><b>${esc(invitedBy())}</b> convidou você para a agenda de trabalho compartilhada. ${signupMode ? 'Crie sua conta' : 'Entre ou crie sua conta'} para participar — você não paga nada.</span></div>` : ''}
     <form class="form" data-login novalidate>
@@ -677,7 +678,7 @@ function showLogin(errMsg = '') {
 function cloudError(err) {
   if (document.querySelector('[data-login]') || document.getElementById('view')) return;
   root.innerHTML = `<div class="splash">
-    <img src="icons/icon-192.png" alt="" width="72" height="72">
+    <div class="brandwrap">${brand('simbolo', { h: 64 })}</div>
     <h2>Não consegui conectar</h2>
     <p>Verifique a internet e tente de novo.</p>
     <button class="btn btn--primary" data-retry>Tentar de novo</button>
@@ -687,7 +688,7 @@ function cloudError(err) {
 }
 
 function loading(msg = 'Carregando…') {
-  root.innerHTML = `<div class="splash"><img src="icons/icon-192.png" alt="" width="72" height="72"><p>${esc(msg)}</p></div>`;
+  root.innerHTML = `<div class="splash"><div class="brandwrap">${brand('simbolo', { h: 64 })}</div><p>${esc(msg)}</p></div>`;
 }
 
 async function startBilling() {

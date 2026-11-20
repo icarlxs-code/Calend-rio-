@@ -1,10 +1,10 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-oemf73vj'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-nilqdp7a'/*CACHE*/;
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster5.jpg',
   ...Array.from({ length: 67 }, (_, i) => `media/intro5/f${String(i + 1).padStart(3, '0')}.webp`),
-  'media/logos/pura-vida.jpg', 'media/lembra-logo.jpg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/c-EG2ERH3T.js', 'dist/c-HAW5G6ZS.js', 'dist/c-6L4FT2PF.js', 'dist/c-ZM5I4USS.js', 'dist/a-OEMF73VJ.js', 'dist/c-NWRPKADX.js', 'dist/c-DIUQLQ5R.js', 'dist/c-L5OZ4PT2.js', 'dist/c-UKIQZ73T.js', 'dist/c-ZIZURTA7.js', 'dist/c-B5STERAB.js', 'dist/c-OGFOOFMZ.js', 'dist/c-L7TUVRH5.js', 'dist/c-BT57OCAW.js', 'dist/c-K4LS4E4B.js', 'dist/c-7AHVABAR.js', 'dist/c-FXKLM36Z.js', 'dist/c-PPJYAJ22.js', 'dist/c-MD5BJN7T.js', 'dist/c-U7PIDNPX.js', 'dist/c-RXUPT7PP.js', 'dist/c-XXF3RBEU.js', 'dist/c-X3PB6JZ2.js', 'dist/c-YEARXB46.js', 'dist/c-BYHTQNTY.js', 'dist/c-S6VVKE3W.js', 'dist/c-VHNSBD2M.js',
+  'media/logos/pura-vida.jpg', 'media/lembra-logo.jpg', 'media/marca/completa-preto.png', 'media/marca/completa-branco.png', 'media/marca/simbolo-preto.png', 'media/marca/simbolo-branco.png', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
+  /*FILES*/ 'dist/c-AJX3QP3A.js', 'dist/c-HAW5G6ZS.js', 'dist/c-H3LV7ACY.js', 'dist/c-VTZD7DGO.js', 'dist/a-NILQDP7A.js', 'dist/c-WSAEMETX.js', 'dist/c-DIUQLQ5R.js', 'dist/c-L5OZ4PT2.js', 'dist/c-OIZRP5HK.js', 'dist/c-AOYQAHPW.js', 'dist/c-A5BM2PUF.js', 'dist/c-WMVIU2OE.js', 'dist/c-LFOZNV4I.js', 'dist/c-C4YYUGDC.js', 'dist/c-3TYOWXBP.js', 'dist/c-Y776C6SS.js', 'dist/c-7AHVABAR.js', 'dist/c-FXKLM36Z.js', 'dist/c-FWRU7HIT.js', 'dist/c-BV5K63YJ.js', 'dist/c-EBLUZLN2.js', 'dist/c-AGRG3NPN.js', 'dist/c-XXF3RBEU.js', 'dist/c-X3PB6JZ2.js', 'dist/c-YEARXB46.js', 'dist/c-BYHTQNTY.js', 'dist/c-S6VVKE3W.js', 'dist/c-VHNSBD2M.js',
 ];
 
 self.addEventListener('install', (e) => {

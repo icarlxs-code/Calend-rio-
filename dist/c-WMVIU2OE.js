@@ -1,0 +1,1 @@
+function d(a="completa",{cls:e="",alt:l="Lembra",h:t=null,on:n="auto"}={}){let o=t?` style="height:${t}px"`:"",r=(b,c)=>`<img class="brand brand--${a} ${c} ${e}" src="media/marca/${a}-${b}.png" alt="${l}"${o} draggable="false">`;return n==="dark"?r("branco",""):n==="light"?r("preto",""):r("preto","brand--onlight")+r("branco","brand--ondark")}export{d as a};
