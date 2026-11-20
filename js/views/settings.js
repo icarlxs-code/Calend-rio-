@@ -25,13 +25,17 @@ export function renderSettings() {
     <div class="hdr__row"><div class="hdr__titles"><p class="hdr__eyebrow">${esc(CONFIG.appName)}${store.solo ? '' : ' · ' + esc(CONFIG.agencyName)}</p><h1>Ajustes</h1></div></div>
   </header>
   <div class="page">
-    <button class="pbig pbig--toPersonal" data-action="space" data-space="personal">${icon('heart', 22)}<div><strong>Abrir o modo Pessoal</strong><small>Aniversários, compromissos, listas — só você vê</small></div>${icon('right', 18)}</button>
-    ${cloud && (store.user?.email || '').toLowerCase() === (CONFIG.adminEmail || '').toLowerCase() ? `<button class="pbig" data-action="admin">${icon('users', 22)}<div><strong>Painel do dono</strong><small>Quantas pessoas usam o app e os detalhes de cada conta</small></div>${icon('right', 18)}</button>` : ''}
     ${store.solo ? planSection() : ''}
-    ${cloud ? fichaCard() : ''}
-    ${cloud && store.solo ? `<button class="pbig pbig--share" data-action="share">${icon('share2', 22)}<div><strong>Agenda compartilhada</strong><small>${store.shared ? `Você está na agenda de ${esc(store.shared.ownerName)}` : store.billing?.addon?.active ? `Plano ${store.billing.addon.plan === 'equipe' ? 'Equipe' : 'Dupla'} ativo · convide e gerencie` : 'Divida a agenda de trabalho com sócio ou equipe · à parte'}</small></div>${icon('right', 18)}</button>` : ''}
-    <button class="pbig" data-action="guide">${icon('sparkles', 22)}<div><strong>Como funciona o Lembra</strong><small>Para que serve o modo Trabalho e o modo Pessoal</small></div>${icon('right', 18)}</button>
-    ${cloud ? `<button class="pbig pbig--privacy" data-action="privacy">${icon('lock', 22)}<div><strong>Privacidade e dados</strong><small>LGPD: termos, baixar meus dados, excluir conta</small></div>${icon('right', 18)}</button>` : ''}
+    <section class="block">
+      <div class="glist">
+        ${grow({ cls: 'pbig--toPersonal', attrs: 'data-action="space" data-space="personal"', ic: 'heart', c: '#FF2D55', t: 'Modo Pessoal', s: 'Aniversários, compromissos e listas — só você vê' })}
+        ${cloud ? fichaRow() : ''}
+        ${cloud && store.solo ? grow({ cls: 'pbig--share', attrs: 'data-action="share"', ic: 'users', c: '#34C759', t: 'Agenda compartilhada', s: store.shared ? `Você está na agenda de ${esc(store.shared.ownerName)}` : store.billing?.addon?.active ? `Plano ${store.billing.addon.plan === 'equipe' ? 'Equipe' : 'Dupla'} ativo · convide e gerencie` : 'Divida a agenda com sócio ou equipe · à parte' }) : ''}
+        ${grow({ attrs: 'data-action="guide"', ic: 'sparkles', c: '#5856D6', t: 'Como funciona o Lembra', s: 'Trabalho e Pessoal em 1 minuto' })}
+        ${cloud ? grow({ cls: 'pbig--privacy', attrs: 'data-action="privacy"', ic: 'lock', c: '#8E8E93', t: 'Privacidade e dados', s: 'Termos, baixar ou apagar meus dados' }) : ''}
+      </div>
+    </section>
+    ${cloud && (store.user?.email || '').toLowerCase() === (CONFIG.adminEmail || '').toLowerCase() ? `<section class="block"><div class="glist">${grow({ attrs: 'data-action="admin"', ic: 'chart', c: '#0A84FF', t: 'Painel do dono', s: 'Receita, pessoas e saúde do app' })}</div></section>` : ''}
     <section class="block">
       <h2 class="block__title">${icon('user', 16)} ${cloud ? 'Sua conta' : 'Quem está usando este celular?'}</h2>
       ${cloud
@@ -126,10 +130,12 @@ function themeCard() {
     ${!isMarketing() && WORK.theme ? `<p class="fhelp">As cores do modo Trabalho combinam com a sua área${WORK.profession ? ` (${esc(WORK.profession)})` : ''}.</p>` : ''}
   </section>`;
 }
-function fichaCard() {
+/* Linha de lista agrupada: ícone num quadrado colorido + título + detalhe + seta */
+export const grow = ({ cls = '', attrs = '', ic, c, t, s = '', badge = '' }) => `<button class="glist__row ${cls}" ${attrs}><span class="glist__ic" style="--c:${c}">${icon(ic, 18)}</span><span class="glist__txt"><b>${esc(t)}</b>${s ? `<small>${s}</small>` : ''}</span>${badge ? `<span class="glist__badge">${esc(badge)}</span>` : ''}${icon('right', 16)}</button>`;
+function fichaRow() {
   const p = store.profile || {};
-  if (!p.onboardedAt) return `<button class="pbig pbig--ficha" data-action="ficha">${icon('idcard', 22)}<div><strong>Preencha sua ficha</strong><small>2 minutos: o Lembra se adapta à sua profissão e calcula seus lembretes</small></div>${icon('right', 18)}</button>`;
-  return `<button class="pbig pbig--ficha" data-action="ficha">${icon(!isMarketing() && WORK.badge ? WORK.badge : 'idcard', 22)}<div><strong>Sua ficha</strong><small>${esc(p.profession || 'Profissão')} · índice de esquecimento ${Number(p.index) || 0}/100 · toque para ajustar</small></div>${icon('right', 18)}</button>`;
+  if (!p.onboardedAt) return grow({ cls: 'pbig--ficha', attrs: 'data-action="ficha"', ic: 'idcard', c: '#FF9500', t: 'Preencha sua ficha', s: '2 minutos: o Lembra se adapta a você' });
+  return grow({ cls: 'pbig--ficha', attrs: 'data-action="ficha"', ic: !isMarketing() && WORK.badge ? WORK.badge : 'idcard', c: '#FF9500', t: 'Sua ficha', s: `${esc(p.profession || 'Profissão')} · índice ${Number(p.index) || 0}/100`, badge: '' });
 }
 
 function notifySection() {

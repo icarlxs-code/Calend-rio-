@@ -99,7 +99,7 @@ export function renderToday() {
           <div><strong>${done} de ${evs.length}</strong><small>${done === evs.length ? 'Dia 100% concluído 🏆' : evs.length - done === 1 && date === today ? 'Falta só 1 para fechar o dia' : 'concluídos'}</small>${streak().days >= 2 ? `<span class="streak">🔥 ${streak().days} dias seguidos</span>` : ''}</div>
         </div>
         <div class="summary__types">
-          ${Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([t, n]) => `<span class="tcount tbadge--${t}"${typeStyle(t)}>${icon(TYPES[t].icon, 13)}<b>${n}</b> ${TYPES[t].label}</span>`).join('')}
+          ${Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([t, n]) => `<span class="tcount tbadge--${t}"${typeStyle(t)}>${icon(TYPES[t].icon, 13)}${TYPES[t].label} <b>${n}</b></span>`).join('')}
         </div>
       </div>`
     : '';
@@ -305,7 +305,7 @@ export function renderMonth() {
       ${isMarketing() ? `<div><b>${posts}</b><span>posts</span></div>
       <div><b>${shoots}</b><span>captações</span></div>` : `<div><b>${monthEvs.length}</b><span>compromissos</span></div>
       <div><b>${monthEvs.filter((e) => TYPES[e.type]?.onSite).length}</b><span>fora de casa</span></div>`}
-      <div><b>${meetings}</b><span>reuniões</span></div>
+      ${isMarketing() ? `<div><b>${meetings}</b><span>reuniões</span></div>` : `<div><b>${monthEvs.filter((e) => e.status === 'pendente' && e.date < todayKey()).length}</b><span>atrasados</span></div>`}
       <div><b>${monthEvs.filter((e) => e.status === 'feito').length}/${monthEvs.length}</b><span>concluídos</span></div>
     </div>
 

@@ -154,7 +154,7 @@ export function openPlans({ blocking = false } = {}) {
       <button class="btn-text btn-text--sm" data-paid>Já paguei — verificar</button>
       ${blocking ? '<button class="btn-text btn-text--sm" data-action="logout">Sair da conta</button>' : '<button class="btn-text btn-text--sm" data-pclose>Agora não</button>'}
     </div>
-    <div class="paywall__cta"><button class="btn btn--primary btn--block btn--big" data-buy>${esc(PLAN_INFO[chosen].cta)}</button></div>
+    <div class="paywall__cta"><button class="btn btn--primary btn--block btn--big${canTrial ? ' btn--alt' : ''}" data-buy>${esc(PLAN_INFO[chosen].cta)}</button></div>
   </div>`;
   document.body.appendChild(w);
   requestAnimationFrame(() => w.classList.add('is-open'));

@@ -62,9 +62,11 @@ export function timeRange(e) {
 /* Cartão de evento (lista do dia) */
 export function eventCard(e, { showDate = false, compact = false, highlight = [] } = {}) {
   const c = store.company(e.companyId);
-  const color = c?.color || '#888';
+  // sem empresa/cliente: a cor da faixa é a do tipo (Consulta, Plantão, Encomenda…)
+  const color = c?.color || TYPES[e.type]?.color || '#888';
   const done = e.status === 'feito';
   const isToday = e.date === todayKey();
+  const solo = store.team.length < 2;
   // atrasado: posts assim que passa o horário; o resto quando passa do fim; dias anteriores também
   const today = todayKey();
   const startMin = e.time ? toMin(e.time) : null;
@@ -81,14 +83,14 @@ export function eventCard(e, { showDate = false, compact = false, highlight = []
     </div>
     <div class="ecard__body">
       <div class="ecard__top">
-        ${logoOrType(c, e.type, 20, 6)}
-        <span class="ecard__company">${esc(c?.name || (isMarketing() ? 'Sem empresa' : ''))}</span>
+        ${c || isMarketing() ? logoOrType(c, e.type, 20, 6) : ''}
+        ${c || isMarketing() ? `<span class="ecard__company">${esc(c?.name || 'Sem empresa')}</span>` : ''}
         ${typeBadge(e.type)}
       </div>
       <div class="ecard__title"><span class="pfrow">${platformIcons(e, 17)}</span>${esc(e.title || TYPES[e.type]?.label || 'Evento')}</div>
         ${late ? `<span class="ecard__late ecard__late--row">${icon('alert', 12)} Atrasado${lateBy ? ` · ${lateBy >= 60 ? Math.floor(lateBy / 60) + 'h' + (lateBy % 60 ? String(lateBy % 60).padStart(2, '0') : '') : lateBy + ' min'}` : ''}</span>` : ''}
-      ${!compact ? `<div class="ecard__meta">
-        ${avatars(e.assignees, 20)}<span>${esc(whoText(e.assignees))}</span>
+      ${!compact && (!solo || e.location || e.visibleToClient === false) ? `<div class="ecard__meta">
+        ${solo ? '' : `${avatars(e.assignees, 20)}<span>${esc(whoText(e.assignees))}</span>`}
         ${e.location ? `<span class="ecard__loc">${icon('pin', 12)}${esc(e.location)}</span>` : ''}
 
         ${e.visibleToClient === false ? `<span class="ecard__private" title="Não aparece para o cliente">${icon('eyeoff', 12)}</span>` : ''}

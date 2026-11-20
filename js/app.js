@@ -61,7 +61,7 @@ function shell() {
     </nav>`;
 }
 /* Cor da barra de status do iPhone (hora/bateria) acompanha o app */
-const SPACE_BAR = { work: ['#F4F4F6', '#000000'], personal: ['#F7F3FA', '#0E0A13'] };
+const SPACE_BAR = { work: ['#F2F2F7', '#000000'], personal: ['#F2F2F7', '#000000'] };
 function setBarColor(light, dark = light) {
   // tema escolhido à mão (Claro/Escuro) vale para as duas situações do celular
   const forced = document.documentElement.dataset.theme;
@@ -95,8 +95,8 @@ function switchSpace(space, from) {
     : `<div><span class="spaceveil__badge">${icon('briefcase', 40)}</span><strong>Trabalho</strong><small>${store.team.length > 1 ? `Agenda da ${crew()}` : isMarketing() ? 'Suas empresas e clientes' : `Seus compromissos de ${esc(ent(true, true))}`}</small></div>`;
   document.body.appendChild(veil);
   // a barra do topo (hora/bateria) entra na mesma cor da transição, quando o círculo chega lá em cima
-  const veilBar = space === 'personal' ? '#C88AE8' : '#1E1E25';
-  setTimeout(() => setBarColor(veilBar), 260);
+  const veilBar = space === 'personal' ? '#FF2D55' : '#000000';
+  setTimeout(() => setBarColor(veilBar), 180);
   if (navigator.vibrate) navigator.vibrate(8);
   requestAnimationFrame(() => requestAnimationFrame(() => veil.classList.add('is-in')));
   setTimeout(() => {
@@ -108,9 +108,9 @@ function switchSpace(space, from) {
     const view = document.getElementById('view');
     if (view) { view.classList.add('is-entering'); setTimeout(() => view.classList.remove('is-entering'), 600); }
     setBarColor(veilBar); // continua na cor da transição enquanto ela está na tela
-  }, 680);
-  setTimeout(() => { veil.classList.add('is-out'); const [l, d] = space === 'personal' ? SPACE_BAR.personal : [WORK.theme?.bg || SPACE_BAR.work[0], SPACE_BAR.work[1]]; setBarColor(l, d); }, 900);
-  setTimeout(() => veil.remove(), 1350);
+  }, 430);
+  setTimeout(() => { veil.classList.add('is-out'); const [l, d] = space === 'personal' ? SPACE_BAR.personal : [WORK.theme?.bg || SPACE_BAR.work[0], SPACE_BAR.work[1]]; setBarColor(l, d); }, 560);
+  setTimeout(() => veil.remove(), 900);
 }
 window.__calRender = () => render();
 const tabBtn = (id, ic, label) => `<button class="tabbar__btn" data-action="tab" data-tab="${id}">${icon(ic, 24)}<span>${label}</span></button>`;
@@ -158,7 +158,8 @@ function render() {
   // faixa do teste grátis (contagem regressiva) ou de conta sem plano (tudo travado)
   const locked = !hasAccess();
   document.documentElement.classList.toggle('is-locked', locked);
-  const tb = locked ? lockBanner() : trialBanner();
+  // em Ajustes o plano já aparece em "Seu plano": sem a faixa repetida
+  const tb = locked ? lockBanner() : ui.tab === 'ajustes' && !personalMode ? '' : trialBanner();
   if (tb) (view.querySelector('.page') || view).insertAdjacentHTML('afterbegin', tb);
   bindSwipes();
   bindStrip(view);
@@ -646,10 +647,11 @@ function showLogin(errMsg = '') {
   root.innerHTML = `
   <div class="login">
     <div class="brandwrap login__brand">${brand('completa', { h: 150, alt: esc(CONFIG.appName) })}</div>
-    <p>${signupMode ? 'Crie sua conta: sua agenda de trabalho e a pessoal, só suas.' : 'Agenda de trabalho e pessoal'}</p>
+    <h1 class="login__hook">${signupMode ? 'Crie sua conta grátis' : 'Que bom ter você aqui'}</h1>
+    <p class="login__lead">${signupMode ? 'Em 2 minutos o Lembra aprende a sua rotina e passa a lembrar de tudo por você.' : 'Entre para ver o que tem para hoje.'}</p>
     ${invitedBy() ? `<div class="login__invite">${icon('users', 18)}<span><b>${esc(invitedBy())}</b> convidou você para a agenda de trabalho compartilhada. ${signupMode ? 'Crie sua conta' : 'Entre ou crie sua conta'} para participar — você não paga nada.</span></div>` : ''}
     <form class="form" data-login novalidate>
-      ${signupMode ? `<div class="fgroup"><label class="flabel" for="l-name">Seu nome</label><input id="l-name" class="input" name="name" autocomplete="name" maxlength="40" placeholder="Como quer ser chamado" value="${esc(loginName)}"></div>` : ''}
+      ${signupMode ? `<div class="fgroup"><label class="flabel" for="l-name">Seu nome</label><input id="l-name" class="input" name="name" autocomplete="name" maxlength="40" placeholder="Seu primeiro nome" value="${esc(loginName)}"></div>` : ''}
       <div class="fgroup"><label class="flabel" for="l-email">E-mail</label><input id="l-email" class="input" type="email" name="email" value="${esc(loginEmail)}" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email"></div>
       <div class="fgroup"><label class="flabel" for="l-pass">Senha</label>
         <div class="input-eye"><input id="l-pass" class="input" type="password" name="pass" autocomplete="${signupMode ? 'new-password' : 'current-password'}" placeholder="${signupMode ? '8+ caracteres, letras e números' : ''}" value="${esc(loginPass)}" autocapitalize="none" autocorrect="off" spellcheck="false">

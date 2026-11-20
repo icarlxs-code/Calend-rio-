@@ -328,7 +328,7 @@ const P = (area, arch, names) => names.map((name) => ({ name, area, arch }));
 export const PROFESSIONS = [
   ...P('Administração e negócios', 'administrativo', ['Administrador', 'Assistente administrativo', 'Auxiliar administrativo', 'Secretário', 'Recepcionista', 'Gerente comercial', 'Gerente de vendas', 'Analista financeiro', 'Contador', 'Auxiliar contábil', 'Analista de RH', 'Assistente de RH', 'Comprador', 'Almoxarife', 'Supervisor operacional', 'Empresário', 'Consultor empresarial', 'Analista de logística', 'Auxiliar de escritório', 'Diretor comercial']),
   ...P('Comércio e vendas', 'vendas', ['Vendedor', 'Atendente de loja', 'Operador de caixa', 'Gerente de loja', 'Promotor de vendas', 'Representante comercial', 'Consultor de vendas', 'Corretor de imóveis', 'Corretor de seguros', 'Atendente de supermercado', 'Repositor de mercadorias', 'Estoquista', 'Fiscal de loja', 'Supervisor de vendas', 'Gerente de supermercado', 'Vendedor de veículos', 'Vendedor ambulante', 'Feirante', 'Balconista', 'Telemarketing']),
-  ...P('Saúde', 'saude_clinica', ['Médico', 'Dentista', 'Psicólogo', 'Fisioterapeuta', 'Nutricionista', 'Fonoaudiólogo', 'Veterinário', 'Biomédico', 'Radiologista', 'Terapeuta ocupacional', 'Farmacêutico']),
+  ...P('Saúde', 'saude_clinica', ['Médico', 'Dentista', 'Psicólogo', 'Fisioterapeuta', 'Personal trainer', 'Educador físico', 'Nutricionista', 'Fonoaudiólogo', 'Veterinário', 'Biomédico', 'Radiologista', 'Terapeuta ocupacional', 'Farmacêutico']),
   ...P('Saúde', 'saude_plantao', ['Enfermeiro', 'Técnico de enfermagem', 'Auxiliar de enfermagem', 'Técnico em radiologia', 'Cuidador de idosos', 'Agente comunitário de saúde', 'Socorrista', 'Instrumentador cirúrgico', 'Recepcionista hospitalar']),
   ...P('Educação', 'educacao', ['Professor', 'Professor de educação infantil', 'Professor de ensino fundamental', 'Professor de ensino médio', 'Professor universitário', 'Pedagogo', 'Diretor escolar', 'Coordenador pedagógico', 'Auxiliar de creche', 'Monitor escolar', 'Instrutor de cursos', 'Professor de idiomas', 'Professor de educação física', 'Bibliotecário', 'Psicopedagogo']),
   ...P('Tecnologia e comunicação', 'tecnologia', ['Programador', 'Desenvolvedor de software', 'Desenvolvedor web', 'Analista de sistemas', 'Analista de suporte técnico', 'Técnico de informática', 'Analista de dados']),
@@ -360,7 +360,7 @@ export function archOf(profession) {
   const exact = PROFESSIONS.find((p) => norm(p.name) === n);
   if (exact) return exact.arch;
   const KEYS = [
-    [/medic|dentist|psicolog|fisioter|nutricion|fono|veterin|clinic|odonto|cardio|pediatr|dermat/, 'saude_clinica'],
+    [/medic|dentist|psicolog|fisioter|nutricion|fono|veterin|clinic|odonto|cardio|pediatr|dermat|personal trainer|educador fisico|preparador fisico/, 'saude_clinica'],
     [/enferm|plantao|socorr|cuidador|hospital|samu/, 'saude_plantao'],
     [/professor|docente|pedagog|escola|educador|tutor/, 'educacao'],
     [/program|desenvolv|software|sistemas|\bti\b|dados|devops|suporte|computa/, 'tecnologia'],

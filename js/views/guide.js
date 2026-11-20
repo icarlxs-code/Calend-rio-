@@ -12,7 +12,7 @@ const block = (ic, title, text) => `<div class="gitem"><span class="gitem__ic">$
 
 const MKT_PAGES = () => [
   {
-    key: 'intro', badge: welcome(), color: 'linear-gradient(135deg,#111,#3a3a44)', ic: 'sparkles',
+    key: 'intro', badge: welcome(), color: '#1C1C1E', ic: 'sparkles',
     title: 'O Lembra tem dois modos',
     lead: 'Um para o seu trabalho e outro para a sua vida pessoal. Cada um com a sua tela, seus lembretes e suas cores — e o que está em um nunca aparece no outro.',
     body: `<div class="gmodes">
@@ -22,7 +22,7 @@ const MKT_PAGES = () => [
     <p class="gnote">Para trocar de modo, toque no <b>coração</b> no topo (vai para o Pessoal) ou em <b>Trabalho</b> (volta).</p>`,
   },
   {
-    key: 'work', badge: 'Modo Trabalho', color: 'linear-gradient(135deg,#1d1d24,#41414d)', ic: 'briefcase',
+    key: 'work', badge: 'Modo Trabalho', color: '#2C2C2E', ic: 'briefcase',
     title: 'Para organizar seus clientes',
     lead: 'Feito para quem cuida das redes sociais de empresas: tudo o que precisa ser postado, gravado ou combinado, com hora marcada e lembrete.',
     body: [
@@ -34,7 +34,7 @@ const MKT_PAGES = () => [
     ].join(''),
   },
   {
-    key: 'life', badge: 'Modo Pessoal', color: 'linear-gradient(135deg,#FF7AA2,#A06BFF 55%,#6A7BFF)', ic: 'heart',
+    key: 'life', badge: 'Modo Pessoal', color: '#FF2D55', ic: 'heart',
     title: 'Para você não esquecer de nada',
     lead: 'Um espaço só seu, privado, para a vida fora do trabalho — com mensagens de amigo que te lembram e te animam ao longo do dia.',
     body: [
@@ -46,7 +46,7 @@ const MKT_PAGES = () => [
     ].join(''),
   },
   {
-    key: 'start', badge: g('Pronto para começar', 'Pronta para começar', 'Tudo pronto para começar', store.profile?.pronoun), color: 'linear-gradient(135deg,#0E9F6E,#34C759)', ic: 'check',
+    key: 'start', badge: g('Pronto para começar', 'Pronta para começar', 'Tudo pronto para começar', store.profile?.pronoun), color: '#34C759', ic: 'check',
     title: 'Três passos para começar',
     lead: 'Leva menos de 2 minutos:',
     body: [

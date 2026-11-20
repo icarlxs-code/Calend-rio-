@@ -192,7 +192,7 @@ function renderPSettings() {
       <div><strong>${esc(me?.name || 'Você')}</strong><small>${esc(store.user?.email || '')}</small></div>
       ${store.solo ? `<button class="btn btn--soft btn--sm" data-action="edit-profile" style="margin-left:auto">Editar</button>` : ''}
     </div>
-    <button class="pbig" data-action="space" data-space="work">${icon('briefcase', 22)}<div><strong>Ir para o Trabalho</strong><small>${store.team.length > 1 ? (isMarketing() ? 'Agenda da dupla, empresas e clientes' : 'Agenda compartilhada da equipe') : isMarketing() ? 'Suas empresas e clientes' : 'Seus compromissos de trabalho'}</small></div>${icon('right', 18)}</button>
+    <div class="glist"><button class="glist__row" data-action="space" data-space="work"><span class="glist__ic" style="--c:#1C1C1E">${icon('briefcase', 18)}</span><span class="glist__txt"><b>Ir para o Trabalho</b><small>${store.team.length > 1 ? (isMarketing() ? 'Agenda da dupla, empresas e clientes' : 'Agenda compartilhada da equipe') : isMarketing() ? 'Suas empresas e clientes' : 'Seus compromissos de trabalho'}</small></span>${icon('right', 16)}</button></div>
 
     ${section(`${icon('bell', 16)} Avisos no celular`, `
       <div class="pnotice ${ok ? 'is-ok' : 'is-warn'}">${ok ? '✅ Ligados neste celular.' : install ? '⚠️ No iPhone, abra o app pelo ícone da Tela de Início para receber avisos.' : perm === 'denied' ? '⚠️ Bloqueados. Ajustes do iPhone → Notificações → Lembra.' : '⚠️ Ainda não ligados neste celular.'}
@@ -200,7 +200,7 @@ function renderPSettings() {
       <form class="list" data-form="pprefs" onsubmit="return false">
         <label class="list__row"><span><b>Lembretes</b><small>1h, 30 e 20 min antes, na hora e um “já fez?” depois</small></span><input type="checkbox" class="switch" name="reminders" ${prefs.reminders ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Resumo às 8h</b><small>o que você tem hoje</small></span><input type="checkbox" class="switch" name="morning" ${prefs.morning ? 'checked' : ''}></label>
-        <label class="list__row"><span><b>Boa noite, às 21h</b><small>o que vem amanhã, pra não ser pego de surpresa</small></span><input type="checkbox" class="switch" name="night" ${prefs.night ? 'checked' : ''}></label>
+        <label class="list__row"><span><b>Boa noite, às 21h</b><small>o que vem amanhã, pra nada te pegar de surpresa</small></span><input type="checkbox" class="switch" name="night" ${prefs.night ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Mensagens de ânimo</b><small>ao longo do dia: motivação, versículos e lembretes do que você anotou</small></span><input type="checkbox" class="switch" name="nudges" ${prefs.nudges ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Frequência</b><small>das mensagens de ânimo</small></span><select class="input input--inline" name="freq"><option value="alta"${prefs.freq === 'alta' ? ' selected' : ''}>A cada 1h30</option><option value="normal"${prefs.freq === 'normal' ? ' selected' : ''}>A cada 1h30–2h30</option><option value="calma"${prefs.freq === 'calma' ? ' selected' : ''}>A cada 3–4h</option></select></label>
         <label class="list__row"><span><b>Beber água</b><small>de hora em hora, das 8h às 21h30</small></span><input type="checkbox" class="switch" name="water" ${prefs.water ? 'checked' : ''}></label>

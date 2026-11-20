@@ -111,7 +111,6 @@ function insightsHtml(users) {
 function errorsHtml(errors) {
   if (errors === null) return '';
   return `<section class="block">
-    <h2 class="block__title">${icon('alert', 16)} Erros do app ${errors.length ? `<small>(${errors.length})</small>` : ''}</h2>
     ${errors.length ? `<div class="aerrs">${errors.slice(0, 40).map((e) => `<div class="aerr">
         <div class="aerr__top"><b>${esc(e.msg)}</b><span>${e.count}×</span></div>
         <small>${esc(e.where || '—')} · ${esc(e.dev || '')} · versão ${esc(e.ver || '?')} · ${(e.users || []).length} pessoa${(e.users || []).length === 1 ? '' : 's'} · último ${esc(ago(e.last))}</small>
@@ -141,54 +140,79 @@ function cleanStat(u) {
 }
 
 export async function openAdmin() {
-  let users = null, err = null, openUid = null, q = '', plans = {}, errors = null;
+  let users = null, err = null, openUid = null, q = '', plans = {}, errors = null, tab = 'resumo';
   const html = () => {
-    if (err) return `${sheetHead('Painel do dono')}<div class="page page--sheet"><div class="empty"><h3>Não consegui carregar</h3><p>${esc(err)}</p></div></div>`;
-    if (!users) return `${sheetHead('Painel do dono')}<div class="page page--sheet"><p class="fhelp">Carregando contas…</p></div>`;
+    const head = sheetHead('Painel do dono', { right: '<button class="btn-text" data-reload>Atualizar</button>' });
+    if (err) return `${head}<div class="page page--sheet"><div class="empty"><h3>Não consegui carregar</h3><p>${esc(err)}</p></div></div>`;
+    if (!users) return `${head}<div class="page page--sheet"><p class="fhelp">Carregando…</p></div>`;
     const now = Date.now();
     const act = (days) => users.filter((u) => u.lastSeen && now - u.lastSeen < days * 864e5).length;
-    const list = users.filter((u) => !q || `${u.name} ${u.email} ${u.profile?.profession || ''}`.toLowerCase().includes(q)).sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
     const newWeek = users.filter((u) => u.createdAt && now - u.createdAt < 7 * 864e5).length;
     planOf = (uid) => plans[uid] || null;
-    const paying = Object.values(plans).filter((p) => p.plan === 'monthly' || p.plan === 'lifetime');
-    const addons = Object.values(plans).filter((p) => p.addon && p.addon.active);
-    // receita recorrente por mês: mensais + complementos de agenda compartilhada (o vitalício entra uma vez só)
-    const mrr = Object.values(plans).filter((p) => p.plan === 'monthly').length * 9.9 + addons.reduce((a, p) => a + (p.addon.plan === 'equipe' ? 14.9 : 6.9), 0);
-    // conversão: quem pagou ÷ quem já passou pelo teste (contas próprias)
-    const tried = Object.values(plans).filter((p) => p.plan !== 'none' && p.plan !== 'team').length;
-    const conv = tried ? Math.round((paying.length / tried) * 100) : 0;
-    return `${sheetHead('Painel do dono', { right: '<button class="btn-text" data-reload>Atualizar</button>' })}
-    <div class="page page--sheet">
-      <div class="akpis">
-        <div><b>${users.length}</b><small>contas</small></div>
-        <div><b>${users.filter((u) => u.lastSeen && now - u.lastSeen < 15 * 60e3).length}</b><small>usando agora</small></div>
-        <div><b>${act(1)}</b><small>ativas hoje</small></div>
-        <div><b>${act(7)}</b><small>na semana</small></div>
-        <div><b>${newWeek}</b><small>novas (7 dias)</small></div>
-        <div><b>${users.filter((u) => u.device?.installed).length}</b><small>instalaram</small></div>
-        <div><b>${users.filter((u) => u.device?.notifications === 'granted' && u.device?.registered).length}</b><small>com avisos</small></div>
-        <div><b>${users.reduce((a, u) => a + (u.counts?.myEvents || 0), 0)}</b><small>eventos criados</small></div>
-        <div><b>${paying.length}</b><small>pagantes</small></div>
-        <div><b>${Object.values(plans).filter((p) => p.plan === 'trial').length}</b><small>em teste</small></div>
-        <div><b>${Object.values(plans).filter((p) => p.plan === 'lifetime').length}</b><small>vitalícios</small></div>
-        <div><b>${addons.length}</b><small>agendas compartilhadas</small></div>
-        <div><b>${users.filter((u) => u.workspace === 'compartilhada').length}</b><small>convidados</small></div>
-        <div><b>R$ ${mrr.toFixed(2).replace('.', ',')}</b><small>por mês</small></div>
-        <div><b>R$ ${(Object.values(plans).filter((p) => p.plan === 'lifetime').length * 150).toLocaleString('pt-BR')}</b><small>vitalícios (total)</small></div>
-        <div><b>${conv}%</b><small>conversão</small></div>
+    const P = Object.values(plans);
+    const monthly = P.filter((p) => p.plan === 'monthly').length;
+    const lifetime = P.filter((p) => p.plan === 'lifetime').length;
+    const trial = P.filter((p) => p.plan === 'trial').length;
+    const addons = P.filter((p) => p.addon && p.addon.active);
+    // receita por mês: mensais + complementos (vitalício paga o complemento mais barato); o vitalício em si entra uma vez só
+    const mrr = monthly * 9.9 + addons.reduce((a, p) => a + (p.addon.plan === 'equipe' ? (p.plan === 'lifetime' ? 9.9 : 14.9) : (p.plan === 'lifetime' ? 4.9 : 6.9)), 0);
+    const tried = P.filter((p) => p.plan !== 'none' && p.plan !== 'team').length;
+    const conv = tried ? Math.round(((monthly + lifetime) / tried) * 100) : 0;
+    const money = (v) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const row = (label, value, sub = '') => `<div class="arow"><span>${label}${sub ? `<small>${sub}</small>` : ''}</span><b>${value}</b></div>`;
+    const installed = users.filter((u) => u.device?.installed).length;
+    const notif = users.filter((u) => u.device?.notifications === 'granted' && u.device?.registered).length;
+    const pct = (n) => (users.length ? ` · ${Math.round((n / users.length) * 100)}%` : '');
+    const tabs = `<div class="aseg" role="tablist">${[['resumo', 'Resumo'], ['pessoas', `Pessoas · ${users.length}`], ['erros', `Erros${errors && errors.length ? ` · ${errors.length}` : ''}`]].map(([k, l]) => `<button role="tab" class="${tab === k ? 'is-on' : ''}" data-tab-admin="${k}">${l}</button>`).join('')}</div>`;
+    let body = '';
+    if (tab === 'resumo') {
+      body = `
+      <div class="ahero">
+        <small>Receita por mês</small>
+        <b>${money(mrr)}</b>
+        <span>${monthly} ${monthly === 1 ? 'assinante mensal' : 'assinantes mensais'} · ${addons.length} agenda${addons.length === 1 ? '' : 's'} compartilhada${addons.length === 1 ? '' : 's'}</span>
       </div>
-      ${errorsHtml(errors)}
-      ${insightsHtml(users)}
-      <input class="input" type="search" placeholder="Buscar por nome, e-mail ou profissão" data-q value="${esc(q)}">
+      <div class="atiles">
+        <div><b>${act(1)}</b><small>ativas hoje</small></div>
+        <div><b>${monthly + lifetime}</b><small>pagantes</small></div>
+        <div><b>${trial}</b><small>em teste</small></div>
+      </div>
+      <h3 class="ah">Dinheiro</h3>
+      <div class="agroup">
+        ${row('Vitalícios vendidos', `${lifetime}`, `${money(lifetime * 150)} no total`)}
+        ${row('Assinantes do Mensal', `${monthly}`)}
+        ${row('Agendas compartilhadas', `${addons.length}`, `${addons.filter((p) => p.addon.plan === 'equipe').length} Equipe · ${addons.filter((p) => p.addon.plan === 'dupla').length} Dupla`)}
+        ${row('Conversão do teste', `${conv}%`, 'quem pagou ÷ quem testou')}
+      </div>
+      <h3 class="ah">Pessoas</h3>
+      <div class="agroup">
+        ${row('Contas', `${users.length}`, `${newWeek} nova${newWeek === 1 ? '' : 's'} nos últimos 7 dias`)}
+        ${row('Usando agora', `${users.filter((u) => u.lastSeen && now - u.lastSeen < 15 * 60e3).length}`)}
+        ${row('Ativas na semana', `${act(7)}`)}
+        ${row('Convidados (agenda de outra pessoa)', `${users.filter((u) => u.workspace === 'compartilhada').length}`)}
+      </div>
+      <h3 class="ah">Saúde do app</h3>
+      <div class="agroup">
+        ${row('Instalaram na tela inicial', `${installed}${pct(installed)}`)}
+        ${row('Recebem notificações', `${notif}${pct(notif)}`, notif < users.length ? 'sem isso, os lembretes não chegam' : '')}
+        ${row('Compromissos criados', `${users.reduce((a, u) => a + (u.counts?.myEvents || 0), 0)}`)}
+        <button class="arow arow--btn" data-tab-admin="erros"><span>Erros do app</span><b class="${errors && errors.length ? 'bad' : 'good'}">${errors === null ? '—' : errors.length ? `${errors.length} ›` : 'nenhum ✓'}</b></button>
+      </div>
+      ${insightsHtml(users)}`;
+    } else if (tab === 'pessoas') {
+      const list = users.filter((u) => !q || `${u.name} ${u.email} ${u.profile?.profession || ''}`.toLowerCase().includes(q)).sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+      body = `<input class="input" type="search" placeholder="Buscar por nome, e-mail ou profissão" data-q value="${esc(q)}">
       <div class="accts">${list.map((u) => card(u, u.uid === openUid)).join('') || '<p class="fhelp">Nenhuma conta encontrada.</p>'}</div>
-      <p class="fhelp">As contas aparecem aqui depois de abrirem o app atualizado pelo menos uma vez. Toque numa conta para ver os detalhes.</p>
-    </div>`;
+      <p class="fhelp">Toque numa conta para ver os detalhes. Aparecem aqui as contas que já abriram o app atualizado.</p>`;
+    } else body = errorsHtml(errors) || '<p class="fhelp">Não consegui ler os erros agora.</p>';
+    return `${head}<div class="page page--sheet apanel">${tabs}${body}</div>`;
   };
   const api = openSheet({
     className: 'sheet--tall',
     html: html(),
     onMount: (a) => {
       a.el.querySelectorAll('[data-toggle]').forEach((b) => (b.onclick = () => { openUid = openUid === b.dataset.toggle ? null : b.dataset.toggle; a.set(html()); }));
+      a.el.querySelectorAll('[data-tab-admin]').forEach((b) => (b.onclick = () => { tab = b.dataset.tabAdmin; a.set(html()); a.el.scrollTop = 0; }));
       const r = a.el.querySelector('[data-reload]');
       if (r) r.onclick = () => load();
       const ce = a.el.querySelector('[data-clear-errors]');
