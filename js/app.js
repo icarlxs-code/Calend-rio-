@@ -201,6 +201,12 @@ const actions = {
   tab: (b) => setTab(b.dataset.tab),
   space: (b) => switchSpace(b.dataset.space, b),
   'edit-profile': async () => (await import('./views/profile.js')).openProfile(),
+  support: () => {
+    const wa = String(CONFIG.supportWhatsapp || '').replace(/\D/g, '');
+    const who = store.member(store.me)?.name || '';
+    if (wa) window.open(`https://wa.me/${wa}?text=${encodeURIComponent(`Olá! Sou ${who} e uso o Lembra. Preciso de ajuda com:`)}`, '_blank');
+    else if (CONFIG.supportEmail) location.href = `mailto:${CONFIG.supportEmail}?subject=${encodeURIComponent('Ajuda com o Lembra')}`;
+  },
   'install-guide': () => showInstallGuide({ force: true }),
   plans: () => openPlans(),
   'billing-portal': () => openPortal().catch((e) => toast(e.message || 'Não consegui abrir agora')),
@@ -650,6 +656,8 @@ function showLogin(errMsg = '') {
   try { if (sessionStorage.getItem('lembra.deleted')) { sessionStorage.removeItem('lembra.deleted'); loginNotice = 'Sua conta foi excluída e seus dados foram apagados. Obrigado por ter usado o Lembra.'; } } catch { /* ok */ }
   // convidado chegando pelo link: o mais comum é ainda não ter conta
   if (invitedBy() && !showLogin.seen) { showLogin.seen = true; signupMode = true; }
+  // veio do anúncio / da página de apresentação ("Testar grátis"): abre direto em "Criar conta"
+  if (/^#\/cadastro/.test(location.hash)) { signupMode = true; history.replaceState(null, '', location.pathname + location.search); }
   const msg = errMsg || loginNotice;
   root.innerHTML = `
   <div class="login">
@@ -984,8 +992,24 @@ function watchConflicts() {
 }
 
 /* ---------- rotas ---------- */
+/* De onde a pessoa veio (anúncio, Instagram, WhatsApp…): guardado neste aparelho na 1ª visita e enviado no resumo de uso.
+   Só para o dono medir a divulgação; nenhum rastreador de terceiros. */
+function captureOrigin() {
+  try {
+    if (localStorage.getItem('lembra.origem')) return;
+    const q = new URLSearchParams(location.search);
+    const o = {};
+    for (const k of ['source', 'medium', 'campaign', 'content', 'term']) { const v = q.get(`utm_${k}`); if (v) o[k] = v.slice(0, 60); }
+    if (q.get('fbclid')) o.source = o.source || 'facebook';
+    if (q.get('gclid')) o.source = o.source || 'google';
+    if (!o.source && document.referrer) { const h = new URL(document.referrer).hostname.replace(/^www\./, ''); if (h && h !== location.hostname) o.source = h.slice(0, 60); }
+    if (o.source) localStorage.setItem('lembra.origem', JSON.stringify({ ...o, page: 'app', at: Date.now() }));
+  } catch { /* ok */ }
+}
+
 async function boot() {
   startErrorLog();
+  captureOrigin();
   // link de convite para a agenda compartilhada: guarda para depois do login
   captureInvite();
   loadInviteInfo();

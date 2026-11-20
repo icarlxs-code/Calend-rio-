@@ -111,6 +111,26 @@ function insightsHtml(users) {
   </div>`;
 }
 
+/* De onde vieram os cadastros (links com ?utm_source=…): quantos entraram e quantos pagaram, por origem e campanha */
+function originHtml(users) {
+  const solo = users.filter((u) => u.workspace === 'proprio');
+  if (!solo.length) return '';
+  const by = {};
+  for (const u of solo) {
+    const o = u.origin || {};
+    const key = o.source ? `${o.source}${o.campaign ? ' · ' + o.campaign : ''}` : 'direto / sem marcação';
+    const p = planOf(u.uid);
+    const e = (by[key] = by[key] || { n: 0, paid: 0, trial: 0 });
+    e.n++;
+    if (p && (p.plan === 'monthly' || (p.plan === 'lifetime' && !p.comp))) e.paid++;
+    if (p && p.plan === 'trial') e.trial++;
+  }
+  const rows = Object.entries(by).sort((a, b) => b[1].n - a[1].n).slice(0, 12);
+  return `<h3 class="ah">De onde vieram</h3>
+  <div class="agroup">${rows.map(([k, v]) => `<div class="arow"><span>${esc(k)}<small>${v.trial} em teste · ${v.paid} pagaram${v.n ? ` · ${Math.round((v.paid / v.n) * 100)}%` : ''}</small></span><b>${v.n}</b></div>`).join('')}</div>
+  <p class="fhelp">Use links com marcação nos anúncios, ex.: <b>…/conheca/?utm_source=instagram&amp;utm_campaign=dentistas</b>, para saber qual anúncio traz quem paga.</p>`;
+}
+
 /* Erros vindos dos aparelhos (sem conteúdo da agenda): para achar e corrigir bugs */
 function errorsHtml(errors) {
   if (errors === null) return '';
@@ -137,6 +157,7 @@ function cleanStat(u) {
     activeDays: Array.isArray(u.activeDays) ? u.activeDays.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)).slice(-40) : [],
     counts: Object.fromEntries(['companies', 'events', 'myEvents', 'thisWeek', 'done30', 'late', 'posts30', 'notes', 'personal', 'lists', 'birthdays'].map((k) => [k, N(c[k])])),
     device: { platform: S(d.platform, 20), installed: !!d.installed, notifications: S(d.notifications, 20), registered: !!d.registered },
+    origin: u.origin && typeof u.origin === 'object' ? { source: S(u.origin.source, 60), medium: S(u.origin.medium, 60), campaign: S(u.origin.campaign, 60) } : null,
     profile: p.done ? { done: true, profession: S(p.profession, 80), area: S(p.area, 80), age: S(p.age, 10), index: N(p.index), forget: N(p.forget),
       difficulties: Array.isArray(p.difficulties) ? p.difficulties.filter((x) => typeof x === 'string').slice(0, 12).map((x) => x.slice(0, 30)) : [],
       goal: S(p.goal, 30), journey: S(p.journey, 30) } : { done: false },
@@ -202,6 +223,7 @@ export async function openAdmin() {
         ${row('Compromissos criados', `${users.reduce((a, u) => a + (u.counts?.myEvents || 0), 0)}`)}
         <button class="arow arow--btn" data-tab-admin="erros"><span>Erros do app</span><b class="${errors && errors.length ? 'bad' : 'good'}">${errors === null ? '—' : errors.length ? `${errors.length} ›` : 'nenhum ✓'}</b></button>
       </div>
+      ${originHtml(users)}
       ${insightsHtml(users)}`;
     } else if (tab === 'pessoas') {
       const list = users.filter((u) => !q || `${u.name} ${u.email} ${u.profile?.profession || ''}`.toLowerCase().includes(q)).sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));

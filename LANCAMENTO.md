@@ -68,3 +68,21 @@ Hoje, Pessoal, Novo compromisso, Planos e Calendário. O Google Play aceita os m
 ## 8. Conferir depois de configurar
 - Abra o app, vá em Ajustes → Seu plano → Assinar → pague com um cartão de teste da Stripe (modo teste) e confira se volta liberado.
 - Ajustes → Painel do dono: contas, pagantes, receita, erros do app.
+
+## 9. Divulgação (redes sociais e tráfego pago)
+**Link para anúncios e bio:** `https://icarlxs-code.github.io/Calend-rio-/conheca/` (página de apresentação: explica o app, preços,
+perguntas frequentes e o botão "Testar grátis", que abre direto o cadastro). Ao compartilhar no WhatsApp/Instagram/Facebook,
+aparece a prévia com a imagem `media/og.jpg`.
+
+**Marque cada anúncio** para saber de onde vem quem paga (aparece no Painel do dono → Resumo → "De onde vieram"):
+- Instagram: `…/conheca/?utm_source=instagram&utm_campaign=NOME-DA-CAMPANHA`
+- Facebook: `…/conheca/?utm_source=facebook&utm_campaign=NOME`
+- TikTok: `…/conheca/?utm_source=tiktok&utm_campaign=NOME`
+- Google: `…/conheca/?utm_source=google&utm_campaign=NOME`
+- WhatsApp/indicação: `…/conheca/?utm_source=whatsapp`
+
+**Antes de pôr dinheiro em anúncio:**
+1. Preencha em `config.js` → `legalId` (CPF ou CNPJ/MEI) e `legalAddress` (lei do comércio eletrônico) e `supportWhatsapp`.
+2. Faça 1 compra real (cartão de verdade) e peça o reembolso pela Stripe, para ver o ciclo inteiro funcionando.
+3. Domínio próprio (lembra.com.br) passa muito mais confiança no anúncio do que `github.io` e libera e-mail profissional.
+4. Comece com orçamento pequeno (ex.: R$ 20–30/dia) por 3–5 dias por público/profissão e olhe no Painel quem paga.

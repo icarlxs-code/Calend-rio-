@@ -9,6 +9,8 @@ import { store, saveUserProfile } from '../store.js';
 import { savePrefs } from '../personal.js';
 import { routine } from '../planner.js';
 import { toast } from '../components.js';
+import { rise, tick } from '../sound.js';
+import { burst } from '../reward.js';
 import { CONFIG } from '../../config.js';
 
 /* páginas oficiais (Termos e Privacidade) */
@@ -27,7 +29,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     difficulties: [], forget: 3, lead: '', tone: 'firme', freq: '', faith: true, water: true, meals: true, goal: 'lembrar', consent: false,
     ...initial,
   };
-  let step = initial.onboardedAt ? 1 : 0, q = '', err = '';
+  let step = initial.onboardedAt ? 1 : 0, q = '', err = '', sub = 0, calcDone = false;
   // rascunho: se o app fechar ou recarregar no meio da ficha, ela continua de onde parou (fica só neste aparelho, até terminar)
   const DRAFT = `lembra.ficha.${store.user?.uid || 'x'}`;
   try { const d = JSON.parse(sessionStorage.getItem(DRAFT) || 'null'); if (d && d.f) { Object.assign(f, d.f); step = Math.min(d.step || 0, STEPS.length - 1); } } catch { /* ok */ }
@@ -114,28 +116,111 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       <label class="flabel">Seu principal objetivo</label>
       <div class="ficha__chips">${GOALS.map((g) => `<button class="ficha__chip${f.goal === g.id ? ' is-on' : ''}" data-goal="${g.id}">${esc(g.label)}</button>`).join('')}</div>${nav('Ver meu Lembra')}`,
     resumo: () => {
-      const p = computePersona(f);
-      const arch = archOf(f.profession);
-      const a = ARCHETYPES[arch];
-      return `<h2>${g('Pronto', 'Pronta', 'Tudo pronto', f.pronoun)}, ${esc(f.nickname || f.name.split(' ')[0] || '')}! Este é o seu Lembra</h2>
-      <div class="ficha__score"><div class="ficha__gauge" style="--v:${p.index}"><b>${p.index}</b><small>/100</small></div><div><b>Índice de esquecimento</b><small>Calculado pelas suas respostas. Quanto maior, mais o Lembra cuida de você.</small></div></div>
-      <div class="ficha__box"><b>${icon('briefcase', 15)} Trabalho: ${esc(f.profession)}</b><p>Aba “${esc(a.entity.many)}” · compromissos: ${a.types.map((t) => esc(TYPE_DEFS[t].label)).join(', ')}.</p></div>
-      <div class="ficha__box"><b>${icon('bell', 15)} Como o Lembra vai trabalhar para você</b><ul>${p.why.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div>
+      const pages = conquests();
+      const nick = esc(f.nickname || f.name.split(' ')[0] || '');
+      // 1) o cálculo: o círculo sobe de 0 a 100% (vermelho → verde) com som crescendo
+      if (sub === 0) return `<div class="rv rv--calc">
+        <div class="rgauge" data-rgauge><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="rgauge__bg" cx="60" cy="60" r="52"/><circle class="rgauge__fg" data-arc cx="60" cy="60" r="52"/></svg>
+          <div class="rgauge__num"><b data-num>${calcDone ? 100 : 0}</b><small>%</small></div></div>
+        <h2 data-rtitle>${calcDone ? `${g('Pronto', 'Pronta', 'Tudo pronto', f.pronoun)}, ${nick}! Seu Lembra está montado` : 'Montando o seu Lembra…'}</h2>
+        <p class="rv__sub" data-rsub>${calcDone ? `Veja o que ele vai fazer por você, passo a passo.` : 'Lendo as suas respostas'}</p>
+        <div class="rv__chips" data-rchips ${calcDone ? '' : 'hidden'}><span>${icon('sparkles', 14)} Nível de cuidado <b>${computePersona(f).index}/100</b></span><span>${icon('bell', 14)} ${pages.length} coisas feitas para você</span></div>
+      </div>${nav('Ver o que ele faz por mim')}`;
+      // 2) uma conquista por página
+      if (sub <= pages.length) {
+        const c = pages[sub - 1];
+        return `<div class="rv rv--card" style="--c:${c.c}">
+          <span class="rv__ic">${icon(c.ic, 34)}</span>
+          <small class="rv__k">${sub} de ${pages.length} · ${esc(c.k)}</small>
+          <h2>${esc(c.title)}</h2>
+          ${c.big ? `<div class="rv__big">${esc(c.big)}</div>` : ''}
+          <p>${esc(c.text)}</p>
+          <div class="rv__dots">${pages.map((_, i) => `<i class="${i === sub - 1 ? 'is-on' : i < sub - 1 ? 'is-done' : ''}"></i>`).join('')}</div>
+        </div>${nav(sub === pages.length ? 'Quero começar' : 'Próximo')}`;
+      }
+      // 3) último passo: concordância
+      return `<div class="rv rv--card" style="--c:#34C759"><span class="rv__ic">${icon('check', 34)}</span><small class="rv__k">Último passo</small>
+        <h2>${g('Tudo certo', 'Tudo certo', 'Tudo certo', f.pronoun)}, ${nick}. Bora começar?</h2>
+        <p>Seu Lembra já está calculado. Só falta você concordar com as regras de uso dos seus dados.</p></div>
       <label class="consent consent--ficha"><input type="checkbox" data-chk="consent" ${f.consent ? 'checked' : ''}><span class="consent__dot" aria-hidden="true">${icon('check', 14)}</span>
         <span>Li e concordo com os <a href="${pageUrl('termos')}" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="${pageUrl('privacidade')}" target="_blank" rel="noopener">Política de Privacidade</a>, e autorizo o uso das respostas desta ficha — inclusive as opcionais sobre saúde e fé — só para personalizar o meu Lembra (LGPD, art. 11). Posso mudar ou apagar quando quiser.</span></label>
       ${nav('Começar a usar')}`;
     },
   };
 
+  /* Cada coisa que o Lembra vai fazer, calculada pela ficha (uma página para cada) */
+  const conquests = () => {
+    const p = computePersona(f);
+    const a = ARCHETYPES[archOf(f.profession)];
+    const off = (o) => (o >= 1440 ? `${Math.round(o / 1440)} dia antes` : o >= 60 ? `${o / 60}h antes` : `${o} min antes`);
+    const hhmm = (t) => String(t || '').replace(/^0/, '').replace(':00', 'h').replace(':', 'h');
+    const dur = (m) => (m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? String(m % 60).padStart(2, '0') : ''}` : `${m} min`);
+    const tone = TONES.find((t) => t.id === p.tone)?.label || 'Coach firme';
+    const method = METHODS.find((m) => m.id === f.method);
+    const vol = VOLUMES.find((v) => v.id === f.volume);
+    const jour = JOURNEYS.find((j) => j.id === f.journey) || JOURNEYS[0];
+    const list = [
+      { k: 'Trabalho', ic: profStyle(f.profession).icon || a.entity.icon || 'briefcase', c: '#0A84FF', title: `Uma agenda com a cara de ${f.profession}`, big: `${a.types.length} tipos de compromisso`, text: `Aba “${a.entity.many}” e os compromissos do seu dia a dia: ${a.types.map((t) => TYPE_DEFS[t].label).join(', ')}.` },
+      { k: 'Avisos', ic: 'bell', c: '#FF9500', title: `${p.offsets.length + 1} avisos para cada compromisso`, big: p.offsets.map(off).join(' · '), text: `E uma pergunta na hora exata. Calculado pelo seu nível de cuidado (${p.index}/100): quanto mais você esquece, mais o Lembra te protege.` },
+    ];
+    if (method && method.w) list.push({ k: 'Cabeça leve', ic: 'sparkles', c: '#AF52DE', title: 'Você não precisa mais guardar tudo de cabeça', big: '', text: `Hoje você lembra ${method.id === 'cabeca' ? 'de cabeça' : method.id === 'outros' ? 'porque alguém te lembra' : 'no papel'}. A partir de agora esse trabalho é do Lembra.` });
+    list.push(
+      { k: 'Atrasos', ic: 'clock', c: '#FF3B30', title: 'Atrasou? A gente te puxa', big: `a cada ${p.lateEvery} min · até ${dur(p.lateMax)}`, text: `No tom “${tone}”, até você marcar como feito. Nunca de madrugada.` },
+      { k: 'Seu ritmo', ic: 'moon', c: '#5856D6', title: `Mensagens só entre ${hhmm(p.nudges.wake)} e ${hhmm(p.nudges.sleep)}`, big: '', text: `${p.nudges.freq === 'alta' ? 'Com bastante frequência' : p.nudges.freq === 'calma' ? 'Com calma, sem excesso' : 'Num ritmo equilibrado'}${p.nudges.water ? ', lembrete de beber água' : ''}${p.nudges.meals ? ` e de comer perto das ${hhmm(p.nudges.lunch)}` : ''}. No seu horário de acordar e dormir.` },
+      { k: 'Pessoal', ic: 'heart', c: '#FF2D55', title: 'Um modo Pessoal só seu', big: '', text: 'Aniversários, consultas, contas e listas — com sugestões feitas para a sua idade e o seu jeito. Ninguém mais vê.' },
+      { k: 'Equilíbrio', ic: 'target', c: '#34C759', title: `Até ${vol ? vol.max : jour.max} compromissos por dia`, big: '', text: `Jornada “${jour.label}”: quando passar disso, o Lembra avisa para você não se sobrecarregar.` },
+    );
+    return list;
+  };
+
+  /* Animação do cálculo: 0 → 100% em ~2 s, cor do vermelho ao verde, número subindo, som crescendo e comemoração */
+  const runCalc = () => {
+    const el = wrap.querySelector('[data-rgauge]');
+    if (!el || calcDone) return;
+    const arc = el.querySelector('[data-arc]'), num = el.querySelector('[data-num]');
+    const next = wrap.querySelector('[data-next]');
+    const sub0 = wrap.querySelector('[data-rsub]');
+    const L = 2 * Math.PI * 52;
+    arc.style.strokeDasharray = `${L}`;
+    const MS = matchMedia('(prefers-reduced-motion: reduce)').matches ? 200 : 2100;
+    const msgs = ['Lendo as suas respostas', 'Calculando seus avisos', 'Ajustando o tom das mensagens', 'Montando a sua agenda', 'Quase pronto…'];
+    if (next) next.disabled = true;
+    rise(MS);
+    const t0 = performance.now();
+    const frame = (now) => {
+      if (!el.isConnected) return;
+      const t = Math.min(1, (now - t0) / MS);
+      const p = 1 - Math.pow(1 - t, 3);
+      const v = Math.round(p * 100);
+      arc.style.strokeDashoffset = `${L * (1 - p)}`;
+      arc.style.stroke = `hsl(${Math.round(p * 135)} 78% ${48 - p * 6}%)`;
+      num.textContent = v;
+      if (sub0) sub0.textContent = msgs[Math.min(msgs.length - 1, Math.floor(p * msgs.length))];
+      if (t < 1) return requestAnimationFrame(frame);
+      calcDone = true;
+      el.classList.add('is-done');
+      try { navigator.vibrate && navigator.vibrate([14, 50, 20]); } catch { /* ok */ }
+      burst(el, { big: true });
+      const nick = esc(f.nickname || f.name.split(' ')[0] || '');
+      wrap.querySelector('[data-rtitle]').innerHTML = `${g('Pronto', 'Pronta', 'Tudo pronto', f.pronoun)}, ${nick}! Seu Lembra está montado`;
+      if (sub0) sub0.textContent = 'Veja o que ele vai fazer por você, passo a passo.';
+      const chips = wrap.querySelector('[data-rchips]'); if (chips) chips.hidden = false;
+      if (next) next.disabled = false;
+    };
+    requestAnimationFrame(frame);
+  };
+
   // desenha a ETAPA inteira só quando muda de etapa; dentro dela, cada toque atualiza só o que mudou (sem piscar)
-  let shownStep = -1;
+  let shownStep = '';
   const render = () => {
-    if (STEPS[step] === 'trabalho' && shownStep !== step) q = f.profession || '';
-    wrap.innerHTML = `<div class="ficha__inner">${!required ? `<button class="ficha__x" data-quit aria-label="Fechar">${icon('x', 20)}</button>` : ''}${step > 0 ? prog() : ''}<div class="ficha__step${shownStep !== step ? ' is-new' : ''}">${views[STEPS[step]]()}</div></div>`;
+    const key = `${step}.${STEPS[step] === 'resumo' ? sub : 0}`;
+    if (STEPS[step] === 'trabalho' && shownStep !== key) q = f.profession || '';
+    wrap.innerHTML = `<div class="ficha__inner${STEPS[step] === 'resumo' ? ' ficha__inner--rv' : ''}">${!required ? `<button class="ficha__x" data-quit aria-label="Fechar">${icon('x', 20)}</button>` : ''}${step > 0 ? prog() : ''}<div class="ficha__step${shownStep !== key ? ' is-new' : ''}">${views[STEPS[step]]()}</div></div>`;
     bind();
     saveDraft();
-    if (shownStep !== step) wrap.scrollTop = 0;
-    shownStep = step;
+    if (shownStep !== key) wrap.scrollTop = 0;
+    shownStep = key;
+    if (STEPS[step] === 'resumo' && sub === 0) runCalc();
   };
   const showErr = () => {
     const e = wrap.querySelector('.ficha__err');
@@ -160,7 +245,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     }
     if (s === 'trabalho' && !f.profession.trim()) return 'Escolha ou escreva a sua profissão.';
     if (s === 'rotina' && !f.workDays.length) return 'Marque pelo menos um dia de trabalho.';
-    if (s === 'resumo' && !f.consent) return 'Para continuar, marque a bolinha de concordância com os Termos e a Política de Privacidade.';
+    if (s === 'resumo' && sub > conquests().length && !f.consent) return 'Para continuar, marque a bolinha de concordância com os Termos e a Política de Privacidade.';
     return '';
   };
   const bind = () => {
@@ -213,12 +298,14 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     $('[data-goal]').forEach((b) => (b.onclick = () => pickOne('goal', b.dataset.goal, (v) => { f.goal = v; })));
     $('[data-chk]').forEach((c) => (c.onchange = () => { f[c.dataset.chk] = c.checked; }));
     const back = wrap.querySelector('[data-back]');
-    if (back) back.onclick = () => { err = ''; step--; render(); };
+    if (back) back.onclick = () => { err = ''; if (STEPS[step] === 'resumo' && sub > 0) { sub--; render(); return; } step--; sub = 0; calcDone = false; render(); };
     $('[data-quit]').forEach((b) => (b.onclick = () => close()));
     wrap.querySelector('[data-next]').onclick = async () => {
       err = validate();
       if (err) return showErr();
-      if (step < STEPS.length - 1) { step++; render(); return; }
+      if (step < STEPS.length - 1) { step++; sub = 0; calcDone = false; render(); return; }
+      // resumo: cálculo → uma conquista por página → concordância
+      if (sub <= conquests().length) { sub++; if (sub <= conquests().length) tick(sub); render(); return; }
       const btn = wrap.querySelector('[data-next]');
       btn.disabled = true; btn.textContent = 'Preparando…';
       const arch = archOf(f.profession);

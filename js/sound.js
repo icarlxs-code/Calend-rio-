@@ -39,3 +39,30 @@ export function pop(big = false) {
   note(a, 880, t, 0.22, 0.05);
   if (big) { note(a, 1108.73, t + 0.08, 0.26, 0.05); note(a, 1318.51, t + 0.16, 0.34, 0.05); }
 }
+
+/* o iPhone só libera som depois de um toque: destrava no 1º toque em qualquer lugar */
+if (typeof document !== 'undefined') {
+  const unlock = () => { audio(); document.removeEventListener('pointerdown', unlock, true); document.removeEventListener('touchend', unlock, true); };
+  document.addEventListener('pointerdown', unlock, true);
+  document.addEventListener('touchend', unlock, true);
+}
+/* "subindo": batidinhas cada vez mais agudas acompanhando uma barra que enche (mesma curva da animação),
+   e um acorde no final. ms = duração da subida. */
+export function rise(ms = 2000, steps = 24) {
+  const a = audio();
+  if (!a) return;
+  const t0 = a.currentTime + 0.03;
+  for (let i = 1; i <= steps; i++) {
+    const p = i / steps;
+    const t = 1 - Math.cbrt(1 - p); // inversa da curva easeOutCubic usada no círculo
+    note(a, 330 * Math.pow(3, p), t0 + t * (ms / 1000), 0.09, 0.03 + p * 0.02);
+  }
+  const end = t0 + ms / 1000 + 0.05;
+  note(a, 783.99, end, 0.6, 0.06); note(a, 987.77, end + 0.07, 0.6, 0.06); note(a, 1174.66, end + 0.14, 0.9, 0.07);
+}
+/* virar a página de uma conquista: um "tic" curtinho */
+export function tick(up = 0) {
+  const a = audio();
+  if (!a) return;
+  note(a, 660 * Math.pow(1.12, up), a.currentTime + 0.01, 0.16, 0.04);
+}

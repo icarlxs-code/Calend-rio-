@@ -14,6 +14,12 @@ export const CONFIG = {
   // LGPD: quem responde pelos dados (aparece nos Termos e na Política de Privacidade).
   // Se abrir empresa, coloque a razão social e o CNPJ, ex.: 'Lembra Tecnologia LTDA (CNPJ 00.000.000/0001-00)'.
   legalName: 'Lembra',
+  // Lei do comércio eletrônico (Decreto 7.962/2013): quem vende online mostra CPF ou CNPJ e um endereço.
+  // Preencha antes de anunciar, ex.: legalId: 'CNPJ 00.000.000/0001-00', legalAddress: 'Rua X, 100 — Rio de Janeiro/RJ'.
+  legalId: '',
+  legalAddress: '',
+  // WhatsApp de atendimento (só números, com DDI e DDD), ex.: '5521999998888'. Aparece na página de apresentação e nos Ajustes.
+  supportWhatsapp: '',
   supportEmail: 'icarlxs@gmail.com',
   // versão dos Termos/Privacidade: ao mudar, o app pede o aceite de novo
   termsVersion: '1.0',

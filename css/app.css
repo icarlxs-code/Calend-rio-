@@ -1887,3 +1887,40 @@ button:active:not(:disabled), .btn:active, .pbig:active, .pchip:active, .prow:ac
 .spaceveil.is-in .spaceveil__badge { animation: svBadge .7s var(--ease) both; }
 @keyframes svBadge { 0% { transform: scale(.7); } 45% { transform: scale(1.12); } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .sv-from, .sv-to, .spaceveil strong, .spaceveil small, .spaceveil.is-in .spaceveil__badge { animation: none; } .sv-from { opacity: 0; } .sv-to { opacity: 1; } }
+
+/* ---------- Final da ficha: cálculo animado e uma conquista por página ---------- */
+.ficha__inner--rv { min-height: 100%; }
+.rv { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; padding: 18px 4px 8px; }
+.rv h2 { font-size: 26px; line-height: 1.15; letter-spacing: -0.025em; font-weight: 800; max-width: 340px; }
+.rv p, .rv__sub { font-size: 16px; color: var(--text-2); line-height: 1.45; max-width: 340px; }
+.rv__sub { min-height: 1.5em; color: var(--text-3); transition: opacity .2s; }
+.rgauge { position: relative; width: 196px; height: 196px; margin: 8px 0 6px; }
+.rgauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.rgauge circle { fill: none; stroke-width: 10; stroke-linecap: round; }
+.rgauge__bg { stroke: var(--surface-3); }
+.rgauge__fg { stroke: hsl(0 78% 48%); filter: drop-shadow(0 0 10px color-mix(in srgb, currentColor 0%, transparent)); }
+.rgauge__num { position: absolute; inset: 0; display: flex; align-items: baseline; justify-content: center; padding-top: 70px; }
+.rgauge__num b { font-size: 54px; font-weight: 800; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.rgauge__num small { font-size: 20px; font-weight: 700; color: var(--text-3); margin-left: 2px; }
+.rgauge.is-done { animation: rgDone .6s cubic-bezier(.2, .9, .25, 1.3); }
+.rgauge.is-done .rgauge__fg { stroke: #34C759 !important; }
+@keyframes rgDone { 0% { transform: scale(1); } 40% { transform: scale(1.08); } 100% { transform: scale(1); } }
+.rv__chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; animation: svText .4s var(--ease) both; }
+.rv__chips[hidden] { display: none; }
+.rv__chips span { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow); font-size: 14px; color: var(--text-2); }
+.rv__chips b { color: var(--text); }
+.rv--card { padding-top: 34px; }
+.rv__ic { width: 84px; height: 84px; border-radius: 24px; display: grid; place-items: center; background: var(--c); color: #fff; box-shadow: 0 14px 34px color-mix(in srgb, var(--c) 40%, transparent); animation: rvPop .55s cubic-bezier(.2, .9, .25, 1.35) both; }
+.rv__k { font-size: 13px; font-weight: 700; color: var(--c); text-transform: uppercase; letter-spacing: .05em; animation: svText .35s var(--ease) .1s both; }
+.rv--card h2 { animation: svText .4s var(--ease) .15s both; }
+.rv__big { font-size: 17px; font-weight: 700; color: var(--text); padding: 10px 16px; border-radius: 14px; background: color-mix(in srgb, var(--c) 12%, var(--surface)); animation: svText .4s var(--ease) .22s both; max-width: 100%; }
+.rv--card p { animation: svText .4s var(--ease) .28s both; }
+.rv__dots { display: flex; gap: 6px; margin-top: 14px; }
+.rv__dots i { width: 7px; height: 7px; border-radius: 99px; background: var(--surface-3); transition: width .25s var(--ease), background .25s; }
+.rv__dots i.is-done { background: var(--text-3); }
+.rv__dots i.is-on { width: 22px; background: var(--c); }
+@keyframes rvPop { 0% { opacity: 0; transform: scale(.4) rotate(-12deg); } 70% { opacity: 1; transform: scale(1.08) rotate(2deg); } 100% { transform: none; } }
+.ficha [data-next]:disabled { opacity: .45; }
+/* a entrada de cada etapa só mexe na transparência: com "transform", os botões fixos do rodapé pulavam para o meio da tela */
+@keyframes fichaFade { from { opacity: 0; } to { opacity: 1; } }
+.ficha__step.is-new { animation: fichaFade .26s ease; }

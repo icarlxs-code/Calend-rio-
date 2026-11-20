@@ -44,6 +44,8 @@ export function reportStats({ open = false, force = false } = {}) {
     space: document.documentElement.dataset.space || 'work',
     // ficha (sem dados sensíveis: nada de CPF, telefone ou data exata de nascimento)
     profile: profileSummary(),
+    // de onde veio (anúncio, Instagram…): para o dono medir a divulgação
+    origin: (() => { try { const o = JSON.parse(localStorage.getItem('lembra.origem') || 'null'); return o ? { source: String(o.source || '').slice(0, 60), medium: String(o.medium || '').slice(0, 60), campaign: String(o.campaign || '').slice(0, 60), content: String(o.content || '').slice(0, 60) } : null; } catch { return null; } })(),
     counts: {
       companies: store.state.companies.length,
       events: evs.length,
