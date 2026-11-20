@@ -147,7 +147,20 @@ async function stripe(env, path, params, fetchImpl = fetch, method = 'POST') {
     body: form(params).toString(),
   });
   const j = await r.json();
-  if (!r.ok) throw Object.assign(new Error(j?.error?.message || 'A Stripe recusou o pedido.'), { status: 502 });
+  if (!r.ok) {
+    const raw = j?.error?.message || 'A Stripe recusou o pedido.';
+    console.log('stripe', path, raw);
+    // o dono vê o motivo técnico no Painel (erros do app); a pessoa vê uma mensagem clara
+    try {
+      const list = (await env.CAL.get('errors', 'json')) || [];
+      const sig = `Stripe: ${raw}`.slice(0, 300);
+      const hit = list.find((x) => x.sig === sig);
+      if (hit) { hit.count++; hit.last = Date.now(); } else list.unshift({ sig, msg: sig, where: `stripe/${path.split('/')[0]}`, count: 1, first: Date.now(), last: Date.now(), users: [] });
+      await env.CAL.put('errors', JSON.stringify(list.slice(0, 150)));
+    } catch { /* ok */ }
+    const friendly = /payment method/i.test(raw) ? 'O pagamento por cartão ainda está sendo ativado. Tente de novo em alguns minutos.' : /No such customer/i.test(raw) ? 'Não encontrei seu cadastro de pagamento. Tente de novo.' : 'O pagamento está temporariamente indisponível. Tente de novo em alguns minutos.';
+    throw Object.assign(new Error(friendly), { status: 502, raw });
+  }
   return j;
 }
 
@@ -185,12 +198,21 @@ export async function createCheckout(env, me, { plan, returnUrl }, fetchImpl = f
     locale: 'pt-BR',
     allow_promotion_codes: 'true',
     line_items: { 0: { quantity: 1, price_data: price } },
+    // cartão de crédito (funciona com assinatura e com pagamento único)
+    payment_method_types: { 0: 'card' },
     metadata: { uid: me.ws, plan },
   };
   if (b.customer) params.customer = b.customer; else params.customer_email = me.email;
   if (p.mode === 'subscription') params.subscription_data = { metadata: { uid: me.ws, plan } };
   else params.payment_intent_data = { metadata: { uid: me.ws, plan } };
-  const s = await stripe(env, 'checkout/sessions', params, fetchImpl);
+  let s;
+  try { s = await stripe(env, 'checkout/sessions', params, fetchImpl); }
+  catch (e) {
+    // cliente antigo que não existe mais na Stripe (ex.: trocou de conta/modo): cria de novo pelo e-mail
+    if (!/No such customer/i.test(e.raw || '') || !params.customer) throw e;
+    delete params.customer; params.customer_email = me.email;
+    s = await stripe(env, 'checkout/sessions', params, fetchImpl);
+  }
   return { url: s.url };
 }
 

@@ -394,6 +394,7 @@ async function handle(req, env) {
 
   // Uso de hoje (para a pessoa saber se está dentro do limite grátis)
   if (url.pathname === '/usage') {
+    if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
     const dayStart = Date.parse(new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10) + 'T00:00:00-03:00');
     const [ss, ps, pc, co] = await Promise.all(['schedule-sent', 'personal-sent', 'pcoach', 'coach'].map((k) => env.CAL.get(k, 'json')));
     const today = (o) => Object.values(o || {}).filter((t) => t >= dayStart).length;

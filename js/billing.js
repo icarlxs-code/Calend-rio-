@@ -86,7 +86,7 @@ export function openPlans({ blocking = false } = {}) {
       <li>${icon('check', 15)} Notificações, lembretes e mensagens de ânimo</li>
       <li>${icon('check', 15)} Assistente que organiza a agenda por você</li>
     </ul>
-    <p class="paywall__addon">${icon('users', 14)} Quer dividir a agenda com sócio ou equipe? A <b>agenda compartilhada</b> é um complemento à parte, a partir de R$ 6,90/mês (não incluso no vitalício).</p>
+    <p class="paywall__addon">${icon('users', 14)}<span>Quer dividir a agenda com sócio ou equipe? A <b>agenda compartilhada</b> é um complemento à parte, a partir de R$ 6,90/mês (não incluso no vitalício).</span></p>
     <p class="paywall__safe">${icon('lock', 13)} Pagamento seguro pela Stripe (cartão de crédito).</p>
     <p class="paywall__err" data-err hidden></p>
     <div class="paywall__foot">
@@ -106,14 +106,14 @@ export function openPlans({ blocking = false } = {}) {
       markBuying(btn.dataset.plan);
       location.href = r.url; // página de pagamento da Stripe
     } catch (e) {
-      err.textContent = e.message || 'Não consegui abrir o pagamento agora. Tente de novo.';
+      err.textContent = /[a-z]{3,} [a-z]{3,} [a-z]{3,}/.test(e.message || '') && !/[ãçéêóõí]/.test(e.message || '') ? 'O pagamento está temporariamente indisponível. Tente de novo em alguns minutos.' : e.message || 'Não consegui abrir o pagamento agora. Tente de novo.';
       err.hidden = false;
       btn.classList.remove('is-busy');
     }
   }));
   const close = w.querySelector('[data-pclose]');
   if (close) close.onclick = () => { w.classList.remove('is-open'); setTimeout(() => w.remove(), 250); };
-  w.querySelector('[data-paid]').onclick = () => confirmPayment();
+  w.querySelector('[data-paid]').onclick = () => confirmPayment({ manual: true });
   return w;
 }
 
@@ -126,7 +126,7 @@ export const buying = () => {
 export const clearBuying = () => { try { localStorage.removeItem('lembra.buying'); } catch { /* ok */ } };
 
 /* Voltou da Stripe: confere até liberar (o aviso da Stripe chega em segundos) */
-export async function confirmPayment({ quiet = false } = {}) {
+export async function confirmPayment({ quiet = false, manual = false } = {}) {
   const what = buying();
   // voltou ao app sem ter certeza se pagou: confere em silêncio; só aparece se confirmou
   if (quiet) {
@@ -145,7 +145,7 @@ export async function confirmPayment({ quiet = false } = {}) {
   w.className = 'paywall is-open';
   w.innerHTML = `<div class="paywall__inner"><div class="brandwrap">${brand('simbolo', { h: 64, on: 'dark' })}</div><h1>Confirmando seu pagamento…</h1><p>Leva só alguns segundos.</p><div class="spinner"></div></div>`;
   document.body.appendChild(w);
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0, n = manual ? 3 : 15; i < n; i++) {
     const st = await checkBilling();
     // Pix ou boleto: a Stripe confirma depois (Pix em minutos, boleto em até 3 dias úteis)
     if (st.pending && st.plan !== 'lifetime') {
@@ -158,12 +158,12 @@ export async function confirmPayment({ quiet = false } = {}) {
       w.querySelector('[data-go]').onclick = () => { w.remove(); window.__calRender && window.__calRender(); };
       return true;
     }
-    await new Promise((r) => setTimeout(r, 3000));
+    await new Promise((r) => setTimeout(r, 2000));
   }
   w.remove();
   openPlans({ blocking: !(store.billing && store.billing.active) });
   const e = document.querySelector('.paywall [data-err]');
-  if (e) { e.textContent = 'Ainda não recebemos a confirmação. Se você pagou, espere 1 minuto e toque em “Já paguei — verificar”.'; e.hidden = false; }
+  if (e) { e.textContent = manual ? 'Não encontramos pagamento nesta conta ainda. Se você acabou de pagar, espere 1 minuto e toque de novo.' : 'Ainda não recebemos a confirmação. Se você pagou, espere 1 minuto e toque em “Já paguei — verificar”.'; e.hidden = false; }
   return false;
 }
 

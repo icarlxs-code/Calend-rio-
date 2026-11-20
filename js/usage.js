@@ -1,9 +1,12 @@
+import { CONFIG } from '../config.js';
 /* "Uso de hoje": mostra o que o servidor grátis já enviou e quanto da IA grátis foi usada */
 import { store } from './store.js';
 import { server, api } from './avisos.js';
 import { esc } from './utils.js';
 
-export const usagePlaceholder = () => (store.mode === 'cloud' && server() ? `<div class="list" data-usage><div class="list__row"><span><small>Conferindo o uso de hoje…</small></span></div></div>` : '');
+// números de uso do servidor (avisos de TODAS as contas): só o dono do app vê
+const isOwner = () => !!store.user && !!CONFIG.adminEmail && (store.user.email || '').toLowerCase() === CONFIG.adminEmail.toLowerCase();
+export const usagePlaceholder = () => (store.mode === 'cloud' && server() && isOwner() ? `<div class="list" data-usage><div class="list__row"><span><small>Conferindo o uso de hoje…</small></span></div></div>` : '');
 export async function fillUsage(root = document) {
   const box = root.querySelector('[data-usage]');
   if (!box) return;

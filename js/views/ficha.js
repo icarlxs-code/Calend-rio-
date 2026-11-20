@@ -28,6 +28,11 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     ...initial,
   };
   let step = initial.onboardedAt ? 1 : 0, q = '', err = '';
+  // rascunho: se o app fechar ou recarregar no meio da ficha, ela continua de onde parou (fica só neste aparelho, até terminar)
+  const DRAFT = `lembra.ficha.${store.user?.uid || 'x'}`;
+  try { const d = JSON.parse(sessionStorage.getItem(DRAFT) || 'null'); if (d && d.f) { Object.assign(f, d.f); step = Math.min(d.step || 0, STEPS.length - 1); } } catch { /* ok */ }
+  const saveDraft = () => { try { sessionStorage.setItem(DRAFT, JSON.stringify({ f, step })); } catch { /* ok */ } };
+  const dropDraft = () => { try { sessionStorage.removeItem(DRAFT); } catch { /* ok */ } };
   const wrap = document.createElement('div');
   wrap.className = 'ficha';
   document.body.appendChild(wrap);
@@ -37,6 +42,18 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
   const nav = (next = 'Continuar') => `<p class="ficha__err" ${err ? '' : 'hidden'}>${esc(err)}</p>
     <div class="ficha__nav">${step > 0 ? '<button class="btn btn--soft" data-back>Voltar</button>' : !required ? '<button class="btn-text" data-quit>Agora não</button>' : '<span></span>'}<button class="btn btn--primary" data-next>${next}</button></div>`;
 
+  const listHtml = () => {
+    const list = searchProfessions(q, 30);
+    const own = q.trim() && !list.some((p) => p.name.toLowerCase() === q.trim().toLowerCase());
+    return list.map((p) => `<button class="ficha__opt${f.profession === p.name ? ' is-on' : ''}" data-prof="${esc(p.name)}"><span class="ficha__optic">${icon(profStyle(p.name).icon || ARCHETYPES[p.arch]?.entity.icon || 'briefcase', 18)}</span><span><b>${esc(p.name)}</b><small>${esc(p.area)}</small></span></button>`).join('')
+      + (own ? `<button class="ficha__opt ficha__opt--own" data-prof="${esc(q.trim())}"><span class="ficha__optic">${icon('plus', 18)}</span><span><b>Usar “${esc(q.trim())}”</b><small>Minha profissão não está na lista</small></span></button>` : '')
+      || '<p class="fhelp" style="padding:12px 14px">Nada encontrado. Escreva sua profissão e toque em “Usar”.</p>';
+  };
+  const pickHtml = () => {
+    if (!f.profession) return '';
+    const a = ARCHETYPES[archOf(f.profession)];
+    return `<div class="ficha__pick">${icon(profStyle(f.profession).icon || a.entity.icon || 'check', 20)} <div><b>${esc(f.profession)}</b><small>Sua agenda vai organizar por <b>${esc(a.entity.many.toLowerCase())}</b>, com: ${a.types.slice(0, 5).map((t) => esc(TYPE_DEFS[t].label)).join(', ')}…</small></div></div>`;
+  };
   const views = {
     inicio: () => `<div class="ficha__hero">
         <div class="brandwrap">${brand('completa', { h: 118 })}</div>
@@ -57,15 +74,10 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       <label class="flabel" for="fi-phone">Celular (opcional)</label><input id="fi-phone" class="input" type="tel" inputmode="tel" data-f="phone" value="${esc(f.phone)}" placeholder="(00) 00000-0000" maxlength="20">
       <p class="fhelp">O CPF serve só para identificar sua conta e garantir um teste grátis por pessoa. Ele não aparece para ninguém.</p>${nav()}`,
     trabalho: () => {
-      // já escolheu e não está buscando: mostra a escolhida (e as parecidas) em vez do começo da lista
-      const list = searchProfessions(q || f.profession, 30);
-      const arch = archOf(f.profession);
-      const a = ARCHETYPES[arch];
       return `<h2>Com o que você trabalha?</h2><p class="ficha__sub">O Lembra se adapta à sua profissão: nomes, tipos de compromisso, dicas e cobranças.</p>
-      <div class="ficha__search">${icon('search', 18)}<input class="input" data-q placeholder="Busque: enfermeiro, professor, sargento, vendedor…" value="${esc(q || f.profession)}" autocomplete="off"></div>
-      <div class="ficha__list">${list.map((p) => `<button class="ficha__opt${f.profession === p.name ? ' is-on' : ''}" data-prof="${esc(p.name)}"><span class="ficha__optic">${icon(profStyle(p.name).icon || ARCHETYPES[p.arch]?.entity.icon || 'briefcase', 18)}</span><span><b>${esc(p.name)}</b><small>${esc(p.area)}</small></span></button>`).join('')}
-        ${q && !list.some((p) => p.name.toLowerCase() === q.toLowerCase()) ? `<button class="ficha__opt ficha__opt--own" data-prof="${esc(q)}"><b>Usar “${esc(q)}”</b><small>Minha profissão não está na lista</small></button>` : ''}</div>
-      ${f.profession ? `<div class="ficha__pick">${icon(profStyle(f.profession).icon || a.entity.icon || 'check', 20)} <div><b>${esc(f.profession)}</b><small>Sua agenda vai organizar por <b>${esc(a.entity.many.toLowerCase())}</b>, com: ${a.types.slice(0, 5).map((t) => esc(TYPE_DEFS[t].label)).join(', ')}…</small></div></div>` : ''}
+      <div class="ficha__search">${icon('search', 18)}<input class="input" data-q type="search" enterkeyhint="done" placeholder="Busque: enfermeiro, professor, sargento…" value="${esc(q)}" autocomplete="off" autocorrect="off" spellcheck="false"></div>
+      <div class="ficha__list" data-list>${listHtml()}</div>
+      <div data-pick>${pickHtml()}</div>
       <div class="row2"><div><label class="flabel" for="fi-role">Cargo ou função (opcional)</label><input id="fi-role" class="input" data-f="role" value="${esc(f.role)}" placeholder="Ex.: Sargento, Residente" maxlength="40"></div>
       <div><label class="flabel" for="fi-place">Onde trabalha (opcional)</label><input id="fi-place" class="input" data-f="workplace" value="${esc(f.workplace)}" maxlength="60"></div></div>${nav()}`;
     },
@@ -112,10 +124,25 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     },
   };
 
+  // desenha a ETAPA inteira só quando muda de etapa; dentro dela, cada toque atualiza só o que mudou (sem piscar)
+  let shownStep = -1;
   const render = () => {
-    wrap.innerHTML = `<div class="ficha__inner">${!required ? `<button class="ficha__x" data-quit aria-label="Fechar">${icon('x', 20)}</button>` : ''}${step > 0 ? prog() : ''}<div class="ficha__step">${views[STEPS[step]]()}</div></div>`;
+    if (STEPS[step] === 'trabalho' && shownStep !== step) q = f.profession || '';
+    wrap.innerHTML = `<div class="ficha__inner">${!required ? `<button class="ficha__x" data-quit aria-label="Fechar">${icon('x', 20)}</button>` : ''}${step > 0 ? prog() : ''}<div class="ficha__step${shownStep !== step ? ' is-new' : ''}">${views[STEPS[step]]()}</div></div>`;
     bind();
-    wrap.scrollTop = 0;
+    saveDraft();
+    if (shownStep !== step) wrap.scrollTop = 0;
+    shownStep = step;
+  };
+  const showErr = () => {
+    const e = wrap.querySelector('.ficha__err');
+    if (!e) return render();
+    e.textContent = err; e.hidden = !err;
+    if (err) e.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  };
+  const pickOne = (attr, value, set) => {
+    set(value);
+    wrap.querySelectorAll(`[data-${attr}]`).forEach((x) => x.classList.toggle('is-on', x.dataset[attr] === String(value)));
   };
   const validate = () => {
     const s = STEPS[step];
@@ -142,35 +169,49 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       else f[k] = el.value;
     }));
     const qi = wrap.querySelector('[data-q]');
-    if (qi) qi.oninput = () => { q = qi.value; const pos = qi.selectionStart; render(); const n = wrap.querySelector('[data-q]'); n.focus(); n.setSelectionRange(pos, pos); };
-    $('[data-prof]').forEach((b) => (b.onclick = () => { f.profession = b.dataset.prof.trim().slice(0, 80); q = ''; render(); }));
-    $('[data-journey]').forEach((b) => (b.onclick = () => {
-      f.journey = b.dataset.journey;
-      if (f.journey === 'plantao') { f.workStart = '07:00'; f.workEnd = '19:00'; }
-      render();
+    const listEl = wrap.querySelector('[data-list]');
+    const bindProfs = () => listEl.querySelectorAll('[data-prof]').forEach((b) => (b.onclick = () => {
+      f.profession = b.dataset.prof.trim().slice(0, 80);
+      q = f.profession; qi.value = f.profession; qi.blur();
+      if (err) { err = ''; showErr(); }
+      listEl.innerHTML = listHtml(); bindProfs();
+      wrap.querySelector('[data-pick]').innerHTML = pickHtml();
     }));
-    $('[data-wd]').forEach((b) => (b.onclick = () => { const d = +b.dataset.wd; f.workDays = f.workDays.includes(d) ? f.workDays.filter((x) => x !== d) : [...f.workDays, d].sort(); render(); }));
+    if (qi) {
+      qi.oninput = () => { q = qi.value; listEl.innerHTML = listHtml(); listEl.scrollTop = 0; bindProfs(); };
+      qi.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); qi.blur(); } };
+      bindProfs();
+    }
+    $('[data-journey]').forEach((b) => (b.onclick = () => pickOne('journey', b.dataset.journey, (v) => {
+      f.journey = v;
+      if (v === 'plantao') {
+        f.workStart = '07:00'; f.workEnd = '19:00';
+        const ws = wrap.querySelector('[data-f="workStart"]'), we = wrap.querySelector('[data-f="workEnd"]');
+        if (ws) ws.value = f.workStart; if (we) we.value = f.workEnd;
+      }
+    })));
+    $('[data-wd]').forEach((b) => (b.onclick = () => { const d = +b.dataset.wd; f.workDays = f.workDays.includes(d) ? f.workDays.filter((x) => x !== d) : [...f.workDays, d].sort(); b.classList.toggle('is-on', f.workDays.includes(d)); }));
     $('[data-diff]').forEach((b) => (b.onclick = () => { const d = b.dataset.diff; f.difficulties = f.difficulties.includes(d) ? f.difficulties.filter((x) => x !== d) : [...f.difficulties, d]; b.classList.toggle('is-on'); }));
-    $('[data-lead]').forEach((b) => (b.onclick = () => { f.lead = b.dataset.lead === '' ? '' : +b.dataset.lead; render(); }));
-    $('[data-tone]').forEach((b) => (b.onclick = () => { f.tone = b.dataset.tone; render(); }));
+    $('[data-lead]').forEach((b) => (b.onclick = () => pickOne('lead', b.dataset.lead, (v) => { f.lead = v === '' ? '' : +v; })));
+    $('[data-tone]').forEach((b) => (b.onclick = () => pickOne('tone', b.dataset.tone, (v) => { f.tone = v; })));
     // escolhas de uma opção só (sem redesenhar a tela inteira: não perde o que está digitado)
     for (const k of ['pronoun', 'volume', 'method']) $(`[data-${k}]`).forEach((b) => (b.onclick = () => { f[k] = b.dataset[k]; $(`[data-${k}]`).forEach((x) => x.classList.toggle('is-on', x === b)); }));
-    $('[data-freq]').forEach((b) => (b.onclick = () => { f.freq = b.dataset.freq; render(); }));
-    $('[data-goal]').forEach((b) => (b.onclick = () => { f.goal = b.dataset.goal; render(); }));
+    $('[data-freq]').forEach((b) => (b.onclick = () => pickOne('freq', b.dataset.freq, (v) => { f.freq = v; })));
+    $('[data-goal]').forEach((b) => (b.onclick = () => pickOne('goal', b.dataset.goal, (v) => { f.goal = v; })));
     $('[data-chk]').forEach((c) => (c.onchange = () => { f[c.dataset.chk] = c.checked; }));
     const back = wrap.querySelector('[data-back]');
     if (back) back.onclick = () => { err = ''; step--; render(); };
     $('[data-quit]').forEach((b) => (b.onclick = () => close()));
     wrap.querySelector('[data-next]').onclick = async () => {
       err = validate();
-      if (err) return render();
+      if (err) return showErr();
       if (step < STEPS.length - 1) { step++; render(); return; }
       const btn = wrap.querySelector('[data-next]');
       btn.disabled = true; btn.textContent = 'Preparando…';
       const arch = archOf(f.profession);
       const area = PROFESSIONS.find((p) => p.name === f.profession)?.area || 'Outra';
-      try { await onDone({ ...f, arch, area, persona: computePersona(f) }); close(true); }
-      catch (e) { btn.disabled = false; btn.textContent = 'Começar a usar'; err = 'Não consegui salvar agora. Verifique a internet e tente de novo.'; render(); }
+      try { await onDone({ ...f, arch, area, persona: computePersona(f) }); dropDraft(); close(true); }
+      catch (e) { btn.disabled = false; btn.textContent = 'Começar a usar'; err = 'Não consegui salvar agora. Verifique a internet e tente de novo.'; showErr(); }
     };
   };
   const close = (done = false) => { wrap.classList.remove('is-open'); setTimeout(() => wrap.remove(), 250); if (!done && onClose) onClose(); };
