@@ -21,9 +21,8 @@ const lastKnown = () => { try { const j = JSON.parse(localStorage.getItem(LS_LAS
 export async function checkBilling() {
   if (!store.solo || store.mode !== 'cloud' || !server()) return (store.billing = { plan: 'team', active: true });
   try {
-    let st = await api('/billing/status', {});
-    // 1º acesso: começa o teste (um por aparelho, por rede e por CPF)
-    if (st.plan === 'none') st = await api('/billing/trial', { deviceId: deviceId(), cpf: store.profile?.cpf || '' });
+    // o teste grátis NÃO começa sozinho: a pessoa escolhe começar (botão na tela de planos)
+    const st = await api('/billing/status', {});
     store.billing = st;
     saveLast(st);
   } catch (e) {
@@ -51,14 +50,23 @@ export function trialBanner() {
   </button>`;
 }
 
-/* Tela de planos. blocking = o teste acabou (não dá para fechar) */
+/* Começa o teste grátis (só quando a pessoa toca no botão) */
+export async function startTrialNow() {
+  const st = await api('/billing/trial', { deviceId: deviceId(), cpf: store.profile?.cpf || '' });
+  store.billing = st;
+  saveLast(st);
+  return st;
+}
+
+/* Tela de planos. blocking = sem plano ativo (não dá para fechar: o app fica bloqueado até começar o teste ou assinar) */
 export function openPlans({ blocking = false } = {}) {
   document.querySelector('.paywall')?.remove();
   const b = store.billing || {};
-  const title = !blocking ? 'Escolha seu plano'
+  const canTrial = b.plan === 'none';
+  const title = canTrial ? 'Experimente o Lembra grátis por 24 horas' : !blocking ? 'Escolha seu plano'
     : b.plan === 'blocked' ? (b.reason === 'cpf' ? 'Este CPF já usou o teste grátis' : b.reason === 'rede' ? 'O teste grátis já foi usado nesta conexão' : 'O teste grátis já foi usado neste aparelho')
       : 'Seu teste grátis terminou';
-  const sub = !blocking ? 'Continue usando tudo do Lembra, sem limites.'
+  const sub = canTrial ? 'Tudo liberado, sem cartão e sem compromisso. Depois, escolha o plano que preferir.' : !blocking ? 'Continue usando tudo do Lembra, sem limites.'
     : b.plan === 'blocked' ? 'O teste grátis é um por pessoa. Para usar o Lembra com esta conta, escolha um plano abaixo.'
       : 'Gostou? Escolha um plano para continuar usando tudo: sua agenda de trabalho, lembretes calculados para você, assistente e o modo Pessoal.';
   const w = document.createElement('div');
@@ -67,6 +75,7 @@ export function openPlans({ blocking = false } = {}) {
     <div class="brandwrap">${brand('completa', { h: 104, on: 'dark' })}</div>
     <h1>${esc(title)}</h1>
     <p>${esc(sub)}</p>
+    ${canTrial ? `<button class="btn btn--trial btn--block" data-trial>${icon('sparkles', 18)} Começar meu teste grátis de 24h</button><p class="paywall__or">ou assine agora</p>` : ''}
     <div class="plans">
       <button class="plan" data-plan="mensal">
         <span class="plan__name">Mensal</span>
@@ -114,6 +123,23 @@ export function openPlans({ blocking = false } = {}) {
   const close = w.querySelector('[data-pclose]');
   if (close) close.onclick = () => { w.classList.remove('is-open'); setTimeout(() => w.remove(), 250); };
   w.querySelector('[data-paid]').onclick = () => confirmPayment({ manual: true });
+  const tb = w.querySelector('[data-trial]');
+  if (tb) tb.onclick = async () => {
+    tb.disabled = true; tb.textContent = 'Liberando…';
+    try {
+      const st = await startTrialNow();
+      if (st.active) {
+        w.classList.remove('is-open'); setTimeout(() => w.remove(), 250);
+        window.__calRender && window.__calRender();
+        window.dispatchEvent(new Event('lembra:trial'));
+        return;
+      }
+      openPlans({ blocking: true }); // teste já usado (CPF, aparelho ou conexão): mostra o motivo
+    } catch (e) {
+      tb.disabled = false; tb.textContent = 'Começar meu teste grátis de 24h';
+      err.textContent = 'Não consegui liberar agora. Verifique a internet e tente de novo.'; err.hidden = false;
+    }
+  };
   return w;
 }
 

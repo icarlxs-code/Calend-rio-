@@ -314,10 +314,15 @@ const actions = {
   logout: async () => {
     if (await confirmDialog({ title: 'Sair da conta?', ok: 'Sair' })) {
       await cloudApi.signOut();
+      purgeAuth();
+      try { localStorage.removeItem(LS_UID); } catch { /* ok */ }
       location.reload();
     }
   },
 };
+
+// rede de segurança: nenhum formulário do app pode "enviar" a página (isso recarregaria o app)
+document.addEventListener('submit', (ev) => ev.preventDefault(), true);
 
 document.addEventListener('click', (ev) => {
   const b = ev.target.closest('[data-action]');
@@ -578,6 +583,12 @@ let loginName = '', loginPass = ''; // não perde o que foi digitado quando apar
 let loginNotice = '';
 let signupMode = false;
 let pendingProfile = null;
+/* qual conta entrou por último neste aparelho (protege contra sessão antiga de outra conta) */
+const LS_UID = 'lembra.uid';
+function purgeAuth() {
+  try { Object.keys(localStorage).filter((k) => /^firebase:authUser:/.test(k)).forEach((k) => localStorage.removeItem(k)); } catch { /* ok */ }
+  try { indexedDB.deleteDatabase('firebaseLocalStorageDb'); } catch { /* ok */ }
+}
 let loginConsent = false;
 /* endereço oficial (páginas de termos e privacidade) */
 const siteBase = () => (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) || !CONFIG.siteUrl ? location.pathname.replace(/[^/]*$/, '') : CONFIG.siteUrl.replace(/\/?$/, '/'));
@@ -646,8 +657,10 @@ function showLogin(errMsg = '') {
     go.textContent = signupMode ? 'Criando…' : 'Entrando…';
     try {
       if (signupMode) pendingProfile = { name, consentAt: Date.now(), termsVersion: CONFIG.termsVersion || '1.0' };
+      // vai entrar outra conta: esquece qualquer sessão guardada antes
+      try { localStorage.removeItem(LS_UID); } catch { /* ok */ }
       await Promise.race([
-        signupMode ? cloudApi.signUp(email, pass, name) : cloudApi.signIn(email, pass),
+        (signupMode ? cloudApi.signUp(email, pass, name) : cloudApi.signIn(email, pass)).then((cred) => { try { localStorage.setItem(LS_UID, cred.user.uid); } catch { /* ok */ } return cred; }),
         new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), 20000)),
       ]);
       // deu certo: a tela muda sozinha quando o Firebase confirmar o login
@@ -691,6 +704,15 @@ function loading(msg = 'Carregando…') {
   root.innerHTML = `<div class="splash"><div class="brandwrap">${brand('simbolo', { h: 64 })}</div><p>${esc(msg)}</p></div>`;
 }
 
+async function showGuideSoon() {
+  const { guideSeen, openGuide } = await import('./views/guide.js');
+  if (guideSeen()) return;
+  const showGuide = (n = 0) => {
+    if (document.querySelector('.sheet-wrap.is-open, .paywall, .iguide, .ob, .ficha') && n < 40) return setTimeout(() => showGuide(n + 1), 1500);
+    openGuide();
+  };
+  setTimeout(showGuide, 1200);
+}
 async function startBilling() {
   // voltou para o app depois de pagar (no iPhone o pagamento abre numa janela à parte): confere sozinho
   let checking = false;
@@ -708,15 +730,14 @@ async function startBilling() {
   render();
   // agenda compartilhada do dono: liga/desliga conforme o complemento pago
   startTeam().catch((e) => console.warn('equipe', e));
-  if (!st.active) return openPlans({ blocking: true });
+  if (!st.active) {
+    // sem plano: tudo bloqueado até começar o teste grátis ou assinar; ao começar o teste, mostra o guia
+    window.addEventListener('lembra:trial', () => { toast('Seu teste grátis de 24h começou ✓', { ms: 3500 }); showGuideSoon(); }, { once: true });
+    return openPlans({ blocking: true });
+  }
   if (/^#\/planos/.test(location.hash)) { history.replaceState(null, '', location.pathname + location.search); openPlans(); }
   // 1º acesso: explica os dois modos
-  const { guideSeen, openGuide } = await import('./views/guide.js');
-  const showGuide = (n = 0) => {
-    if (document.querySelector('.sheet-wrap.is-open, .paywall, .iguide, .ob, .ficha') && n < 40) return setTimeout(() => showGuide(n + 1), 1500);
-    openGuide();
-  };
-  if (!guideSeen()) setTimeout(showGuide, 1200);
+  showGuideSoon();
   // confere o tempo do teste a cada minuto; acabou → tela de planos
   setInterval(async () => {
     const b = store.billing;
@@ -967,7 +988,19 @@ async function boot() {
       if (started) return location.reload();
       return showLogin();
     }
-    if (started) return;
+    // PROTEÇÃO: o login só pode ser o da última pessoa que entrou NESTE aparelho.
+    // Uma sessão antiga guardada (de outra conta) nunca pode "voltar" sozinha.
+    const expected = (() => { try { return localStorage.getItem(LS_UID); } catch { return null; } })();
+    if (expected && expected !== user.uid) {
+      try { await cloudApi.signOut(); } catch { /* ok */ }
+      purgeAuth();
+      loginNotice = 'Por segurança, entre de novo com a sua conta.';
+      if (started) return location.reload();
+      return showLogin();
+    }
+    try { localStorage.setItem(LS_UID, user.uid); } catch { /* ok */ }
+    // trocou de conta com o app aberto: recomeça do zero (nunca mistura uma conta com a outra)
+    if (started) { if (store.user && store.user.uid !== user.uid) location.reload(); return; }
     // qualquer conta entra: a dupla vê o espaço dela; contas novas, o próprio espaço (vazio no começo)
     started = true;
     try {

@@ -4,10 +4,25 @@
 <link rel="icon" href="../icons/favicon-64.png">
 <style>{{STYLE}}</style></head>
 <body><main class="center">
-  <div class="brandc"><picture><source srcset="../media/marca/simbolo-branco.png" media="(prefers-color-scheme: dark)"><img class="" src="../media/marca/simbolo-preto.png" alt="{{APP}}" style="height:56px;width:auto;display:block"></picture></div>
-  <div class="ok">✓</div>
-  <h1>Pagamento recebido!</h1>
-  <p>Obrigado por assinar o {{APP}}. Em alguns segundos tudo fica liberado na sua conta.</p>
-  <a class="btn" href="../#/pago">Voltar para o {{APP}}</a>
-  <p class="small">Se o {{APP}} já estiver aberto no seu celular, é só voltar para ele: a confirmação aparece sozinha.<br>O recibo foi enviado para o seu e-mail pela Stripe.</p>
-</main></body></html>
+  <div class="brandc"><picture><source srcset="../media/marca/simbolo-branco.png" media="(prefers-color-scheme: dark)"><img src="../media/marca/simbolo-preto.png" alt="{{APP}}" style="height:56px;width:auto;display:block"></picture></div>
+  <div class="ok" id="ok">✓</div>
+  <h1 id="t">Pagamento recebido!</h1>
+  <p id="d">Obrigado por assinar o {{APP}}. Em alguns segundos tudo fica liberado na sua conta.</p>
+  <p id="ios" class="card" hidden><b>Para voltar ao app:</b> toque em <b>OK</b> (ou <b>Concluído</b>) no canto de cima desta janela. O {{APP}} confere o pagamento sozinho.</p>
+  <a class="btn" id="go" href="../#/pago" hidden>Voltar para o {{APP}}</a>
+  <p class="small" id="r">O recibo foi enviado para o seu e-mail pela Stripe.</p>
+</main>
+<script>
+  var cancel = /cancelado=1/.test(location.search);
+  if (cancel) {
+    document.getElementById('ok').style.display = 'none';
+    document.getElementById('t').textContent = 'Pagamento não concluído';
+    document.getElementById('d').textContent = 'Nada foi cobrado. Você pode escolher um plano quando quiser.';
+    document.getElementById('r').style.display = 'none';
+    document.getElementById('go').href = '../#/planos';
+  }
+  // iPhone: o pagamento abre numa janela à parte; abrir o app aqui dentro usaria outro login.
+  var ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  document.getElementById(ios ? 'ios' : 'go').hidden = false;
+</script>
+</body></html>

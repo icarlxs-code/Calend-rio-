@@ -112,7 +112,7 @@ test('volta do pagamento só para o site oficial; Pix/boleto confirmam depois; r
   await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { client_reference_id: OWNER, mode: 'payment', payment_status: 'paid', customer: 'cus_x', payment_intent: 'pi_card', metadata: { uid: OWNER, plan: 'vitalicio' } } } });
   await createCheckout(env, user(GUEST), { plan: 'mensal', returnUrl: 'https://lembra.test/' }, fakeFetch(calls));
   assert.equal(calls[0].get('success_url'), 'https://lembra.test/pago/?p=mensal');
-  assert.equal(calls[0].get('cancel_url'), 'https://lembra.test/#/planos');
+  assert.equal(calls[0].get('cancel_url'), 'https://lembra.test/pago/?cancelado=1');
   // Pix: a sessão termina sem pagamento confirmado; confirma depois
   await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { client_reference_id: GUEST, mode: 'payment', payment_status: 'unpaid', customer: 'cus_g', metadata: { uid: GUEST, plan: 'vitalicio' } } } });
   let b = JSON.parse(env.kv[`bill:${GUEST}`]);

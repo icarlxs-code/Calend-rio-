@@ -220,9 +220,10 @@ export const personalTabbar = () => `
 
 export function bindPersonal(view) {
   const f = view.querySelector('[data-form="pquick"]');
-  if (f) f.onsubmit = () => {
+  if (f) f.onsubmit = (ev) => {
+    if (ev) ev.preventDefault(); // nunca deixa o navegador "enviar" o formulário (isso recarregava o app)
     const q = f.q.value.trim();
-    if (!q) return openPersonalEditor();
+    if (!q) { openPersonalEditor(); return false; }
     f.q.value = '';
     const it = savePersonal({ ...parseQuick(q), remind: 'auto' });
     toast(`Anotado: ${dayLabel(it.date)}${it.time ? ' às ' + fmtTime(it.time) : ''}`, { action: 'Ajustar', onAction: () => openPersonalEditor(it.id), ms: 4000 });

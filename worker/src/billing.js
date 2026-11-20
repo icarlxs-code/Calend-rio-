@@ -194,7 +194,7 @@ export async function createCheckout(env, me, { plan, returnUrl }, fetchImpl = f
     client_reference_id: me.ws,
     // volta da Stripe: página oficial "Pagamento recebido" (funciona em qualquer navegador, inclusive no iPhone)
     success_url: `${back}pago/?p=${plan}`,
-    cancel_url: `${back}#/planos`,
+    cancel_url: `${back}pago/?cancelado=1`,
     locale: 'pt-BR',
     allow_promotion_codes: 'true',
     line_items: { 0: { quantity: 1, price_data: price } },

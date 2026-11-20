@@ -1542,3 +1542,10 @@ a.list__row { color: inherit; text-decoration: none; }
 .ficha__hero .brandwrap, .termsgate .brandwrap { margin-bottom: 6px; }
 
 .paywall__addon > span { flex: 1; min-width: 0; }
+/* tipos de compromisso: 4 colunas que nunca passam da tela; nomes longos quebram certinho */
+.typegrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.typebtn { min-width: 0; padding: 12px 4px 10px; }
+.typebtn span { display: block; max-width: 100%; text-align: center; line-height: 1.15; overflow-wrap: anywhere; hyphens: auto; font-size: 12.5px; }
+@media (max-width: 380px) { .typegrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.btn--trial { min-height: 56px; font-size: 17px; border: 0; color: #fff; background: linear-gradient(135deg, #FF7AA2, #A06BFF 55%, #6A7BFF); box-shadow: 0 10px 30px rgba(160, 107, 255, .35); display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; }
+.paywall__or { font-size: 13px !important; color: rgba(255,255,255,.55) !important; margin: 2px 0 -4px; }
