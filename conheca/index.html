@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Lembra · Nunca mais esqueça um compromisso</title>
-<meta name="description" content="A agenda que se adapta à sua profissão e lembra de tudo por você: avisos calculados, modo Pessoal e assistente. Teste grátis por 24 horas, sem cartão.">
+<meta name="description" content="A agenda que se adapta à sua profissão, calcula quantos avisos você precisa e cobra você quando atrasa. Trabalho e vida pessoal num lugar só. Teste grátis por 24 horas, sem cartão.">
 <link rel="canonical" href="https://icarlxs-code.github.io/Calend-rio-/conheca/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Lembra">
@@ -13,121 +13,331 @@
 <meta property="og:locale" content="pt_BR">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://icarlxs-code.github.io/Calend-rio-/media/og.jpg">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#0B0B0F">
 <link rel="icon" href="../icons/favicon-64.png">
 <link rel="apple-touch-icon" href="../icons/icon-180.png">
+<link rel="preload" as="image" href="../media/lp/hoje.jpg">
 <style>:root{--bg:#F2F2F7;--card:#fff;--text:#121216;--muted:#5b5b66;--line:rgba(0,0,0,.08);--accent:#0A84FF;color-scheme:light dark}@media (prefers-color-scheme:dark){:root{--bg:#000;--card:#16161A;--text:#F4F4F6;--muted:#a1a1ab;--line:rgba(255,255,255,.1)}}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Arial,sans-serif;-webkit-text-size-adjust:100%}main{max-width:720px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 28px) 18px 48px}.top{display:flex;align-items:center;gap:10px;margin-bottom:18px}h1{font-size:28px;line-height:1.15;letter-spacing:-.02em;margin:6px 0 8px}h2{font-size:19px;margin:28px 0 6px}h3{font-size:16px;margin:18px 0 4px}p,li{color:var(--muted)}b,strong{color:var(--text)}a{color:var(--accent)}ul{padding-left:20px}.card{background:var(--card);border-radius:20px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 6px 20px rgba(0,0,0,.06)}.center{text-align:center}.center img.logo{width:96px;height:96px;border-radius:26px;box-shadow:0 10px 30px rgba(0,0,0,.15)}.btn{display:block;width:100%;padding:16px;border-radius:16px;border:0;background:var(--text);color:var(--bg);font:600 17px/1 inherit;text-align:center;text-decoration:none;margin-top:16px}.small{font-size:13px}.ok{width:64px;height:64px;border-radius:50%;background:#34C759;color:#fff;display:grid;place-items:center;margin:0 auto 10px;font-size:34px}.toc{columns:2;font-size:14px}@media(max-width:520px){.toc{columns:1}}.brandc{display:flex;justify-content:center;margin:8px 0 14px}
-:root{--bg:#fff;--soft:#F2F2F7;--card:#fff;--text:#0B0B0F;--muted:#6E6E73;--line:rgba(0,0,0,.08);--accent:#FF2D55}
-@media (prefers-color-scheme:dark){:root{--bg:#000;--soft:#111113;--card:#1C1C1E;--text:#fff;--muted:#A1A1AA;--line:rgba(255,255,255,.1)}}
-body{background:var(--bg)}
-main{max-width:1040px;padding-top:calc(env(safe-area-inset-top,0px) + 18px)}
-.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
-.nav a.in{font-weight:700;color:var(--text);text-decoration:none;font-size:15px;padding:9px 14px;border-radius:999px;background:var(--soft)}
-.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:36px;align-items:center;padding:12px 0 36px}
-.hero h1{font-size:54px;line-height:1.02;letter-spacing:-.035em;font-weight:800;margin:0 0 16px;color:var(--text)}
-.hero p.lead{font-size:20px;line-height:1.45;margin:0 0 24px}
-.cta{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:58px;padding:0 28px;border-radius:16px;background:var(--text);color:var(--bg);font-weight:800;font-size:18px;text-decoration:none;transition:transform .15s}
-.cta:active{transform:scale(.97)}
-.under{font-size:14px;margin-top:10px}
-.phone{justify-self:center;width:300px;max-width:78vw;aspect-ratio:1290/2796;border-radius:46px;background:#1C1C1E;padding:9px;box-shadow:0 40px 90px rgba(255,45,85,.22),0 10px 30px rgba(0,0,0,.25)}
-.phone img{width:100%;height:100%;object-fit:cover;object-position:top;border-radius:38px;display:block}
-.trust{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
-.trust span{font-size:13.5px;font-weight:600;color:var(--muted);background:var(--soft);padding:7px 12px;border-radius:999px}
-section{padding:34px 0;border-top:1px solid var(--line)}
-section h2{font-size:32px;letter-spacing:-.03em;line-height:1.1;margin:0 0 8px;color:var(--text)}
-section>p{font-size:17px;margin:0 0 22px}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.f{background:var(--soft);border-radius:20px;padding:20px}
-.f i{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#fff;font-style:normal;margin-bottom:12px}
-.f i svg{width:24px;height:24px}
-.f b{display:block;font-size:18px;margin-bottom:4px;color:var(--text)}
-.f p{margin:0;font-size:15px}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.chips span{font-size:15px;font-weight:600;padding:8px 14px;border-radius:999px;background:var(--soft);color:var(--text)}
-.prices{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:720px}
-.pr{border-radius:22px;padding:22px;background:var(--soft);position:relative}
-.pr.best{background:var(--text);color:var(--bg)}
-.pr.best p,.pr.best li{color:inherit;opacity:.8}
-.pr.best b,.pr.best .v{color:inherit}
-.pr .tag{position:absolute;top:-11px;left:18px;background:#30D158;color:#00210B;font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px}
-.pr b.n{font-size:15px;font-weight:700;opacity:.8}
-.pr .v{font-size:40px;font-weight:800;letter-spacing:-.03em;margin:4px 0}
-.pr .v small{font-size:16px;font-weight:600}
-.pr ul{padding-left:18px;margin:10px 0 0;font-size:15px}
-.note{font-size:14px;margin-top:14px;max-width:720px}
-details{background:var(--soft);border-radius:16px;padding:16px 18px;margin-bottom:10px}
-summary{font-weight:700;cursor:pointer;color:var(--text);font-size:16px;list-style:none}
+:root{--ink:#0B0B0F;--ink2:#3A3A40;--mute:#6E6E76;--soft:#F4F4F7;--line:rgba(11,11,15,.09);--pink:#FF2D55;--green:#16A34A;--blue:#0A84FF;--amber:#F59E0B;--r:22px;color-scheme:light}
+html,body{background:#fff;color:var(--ink)}
+body{font:17px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,Arial,sans-serif;overflow-x:hidden}
+main{max-width:none;padding:0}
+.wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+h1,h2,h3{color:var(--ink);letter-spacing:-.03em;margin:0}
+p{color:var(--ink2)}
+b,strong{color:var(--ink)}
+a{color:inherit}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--pink)}
+.eyebrow::before{content:'';width:18px;height:2px;background:currentColor;border-radius:2px}
+
+/* navegação */
+.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.82);backdrop-filter:saturate(1.6) blur(18px);-webkit-backdrop-filter:saturate(1.6) blur(18px);border-bottom:1px solid transparent;transition:border-color .2s}
+.nav.is-scrolled{border-color:var(--line)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:68px;padding-top:env(safe-area-inset-top,0px)}
+.nav img{height:46px;width:auto;display:block}
+.nav .links{display:flex;align-items:center;gap:6px}
+.nav .links a{font-size:15px;font-weight:600;text-decoration:none;padding:9px 14px;border-radius:999px;color:var(--ink2)}
+.nav .links a.go{background:var(--ink);color:#fff}
+@media(max-width:640px){.nav .links a.hide{display:none}.nav img{height:34px}}
+
+/* botões */
+.cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:60px;padding:0 30px;border-radius:16px;background:var(--pink);color:#fff;font-weight:800;font-size:18px;text-decoration:none;box-shadow:0 14px 34px rgba(255,45,85,.32);transition:transform .15s,box-shadow .15s}
+.cta:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(255,45,85,.38)}
+.cta:active{transform:scale(.98)}
+.cta svg{width:20px;height:20px}
+.cta--dark{background:var(--ink);box-shadow:0 14px 34px rgba(0,0,0,.22)}
+.micro{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:14px;font-size:14px;color:var(--mute)}
+.micro span{display:inline-flex;align-items:center;gap:6px}
+.micro svg{width:16px;height:16px;color:var(--green)}
+
+/* topo */
+.hero{position:relative;padding:56px 0 40px;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:-20% -10% auto;height:620px;background:radial-gradient(50% 50% at 70% 40%,rgba(255,45,85,.14),transparent 70%),radial-gradient(40% 40% at 20% 30%,rgba(10,132,255,.08),transparent 70%);pointer-events:none}
+.hero .wrap{position:relative;display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
+.hero h1{font-size:clamp(40px,6vw,68px);line-height:1.0;font-weight:850;margin:14px 0 18px}
+.hero h1 em{font-style:normal;color:var(--pink)}
+.hero .lead{font-size:clamp(18px,2vw,21px);line-height:1.5;margin:0 0 28px;max-width:560px}
+.stage{position:relative;height:620px;perspective:1400px}
+.device{position:absolute;left:50%;top:50%;width:290px;aspect-ratio:620/1343;margin:-310px 0 0 -145px;border-radius:48px;background:#111;padding:10px;box-shadow:0 50px 100px rgba(11,11,15,.28),0 0 0 1px rgba(0,0,0,.6),inset 0 0 0 2px #2a2a2e;transform:rotateY(-14deg) rotateX(6deg);transform-style:preserve-3d;will-change:transform}
+.device img{width:100%;height:100%;object-fit:cover;object-position:top;border-radius:39px;display:block}
+.device::after{content:'';position:absolute;top:20px;left:50%;width:92px;height:26px;margin-left:-46px;border-radius:20px;background:#000}
+.float{position:absolute;display:flex;align-items:center;gap:12px;padding:12px 16px 12px 12px;border-radius:18px;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);box-shadow:0 18px 40px rgba(11,11,15,.16),0 0 0 1px rgba(11,11,15,.05);font-size:14px;line-height:1.3;will-change:transform;white-space:nowrap}
+.float i{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;flex:none}
+.float i svg{width:20px;height:20px}
+.float b{display:block;font-size:14.5px}
+.float small{color:var(--mute)}
+.f1{top:70px;left:-6px}.f2{top:250px;right:-18px}.f3{bottom:70px;left:10px}
+@media(max-width:900px){.hero .wrap{grid-template-columns:1fr;text-align:center}.hero .lead{margin-left:auto;margin-right:auto}.micro{justify-content:center}.stage{height:560px}.f1{left:0}.f2{right:0}.cta{width:100%;max-width:420px}}
+@media(max-width:420px){.float{font-size:12.5px;padding:10px 12px 10px 10px}.float i{width:32px;height:32px}.f2{top:230px}}
+
+/* faixa de confiança */
+.strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--soft)}
+.strip .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding-top:22px;padding-bottom:22px}
+.strip div{display:flex;align-items:center;gap:12px;font-size:15px;font-weight:600;color:var(--ink)}
+.strip svg{width:24px;height:24px;color:var(--pink);flex:none}
+@media(max-width:820px){.strip .wrap{grid-template-columns:1fr 1fr}}
+
+/* seções */
+section{padding:96px 0}
+.head{max-width:740px;margin-bottom:44px}
+.head.c{margin-left:auto;margin-right:auto;text-align:center}
+.head h2{font-size:clamp(32px,4.4vw,50px);line-height:1.05;font-weight:850;margin:12px 0 14px}
+.head p{font-size:19px;margin:0}
+
+/* dor */
+.pain{background:#0B0B0F;color:#fff}
+.pain h2,.pain b{color:#fff}.pain p{color:#B4B4BC}
+.pain .eyebrow{color:#FF6B85}
+.cards4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.pc{background:#16161B;border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:24px}
+.pc .ic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:rgba(255,45,85,.14);color:#FF6B85;margin-bottom:16px}
+.pc .ic svg{width:24px;height:24px}
+.pc b{display:block;font-size:19px;margin-bottom:6px}
+.pc p{margin:0;font-size:15.5px}
+.verdict{margin-top:34px;padding:26px 28px;border-radius:var(--r);background:linear-gradient(135deg,rgba(255,45,85,.16),rgba(255,45,85,.04));border:1px solid rgba(255,45,85,.3);font-size:20px;line-height:1.45;color:#fff}
+@media(max-width:900px){.cards4{grid-template-columns:1fr 1fr}}@media(max-width:560px){.cards4{grid-template-columns:1fr}}
+
+/* como funciona */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;counter-reset:s}
+.st{position:relative;padding:28px;border-radius:var(--r);background:var(--soft)}
+.st::before{counter-increment:s;content:'0' counter(s);font-size:14px;font-weight:800;color:var(--pink);letter-spacing:.06em}
+.st .ic{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;color:#fff;margin:16px 0 18px;box-shadow:0 12px 26px rgba(0,0,0,.14)}
+.st .ic svg{width:28px;height:28px}
+.st b{display:block;font-size:21px;margin-bottom:8px}
+.st p{margin:0;font-size:16px}
+@media(max-width:900px){.steps{grid-template-columns:1fr}}
+
+/* recursos em destaque */
+.feat{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;padding:40px 0}
+.feat.rev .txt{order:2}
+.feat h3{font-size:clamp(28px,3.4vw,40px);line-height:1.08;font-weight:850;margin:10px 0 14px}
+.feat p{font-size:18px;margin:0 0 18px}
+.ticks{list-style:none;padding:0;margin:0;display:grid;gap:12px}
+.ticks li{display:flex;gap:12px;font-size:16.5px;color:var(--ink2)}
+.ticks svg{width:22px;height:22px;color:var(--green);flex:none;margin-top:1px}
+.shot{position:relative;display:grid;place-items:center;min-height:640px;padding:40px 0;border-radius:32px;background:linear-gradient(160deg,#F7F7FA,#ECECF2);overflow:hidden}
+.shot .device{position:relative;left:auto;top:auto;margin:0;width:250px;transform:rotate(-3deg)}
+.shot .badge{position:absolute;display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:16px;background:#fff;box-shadow:0 14px 34px rgba(11,11,15,.14);font-size:14px;font-weight:700;will-change:transform}
+.shot .badge i{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff}
+.shot .badge i svg{width:17px;height:17px}
+@media(max-width:900px){.feat{grid-template-columns:1fr;gap:28px}.feat.rev .txt{order:0}.shot{min-height:600px}.shot .device{width:230px}}
+
+/* profissões em movimento */
+.marq{overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.marq .row{display:flex;gap:10px;width:max-content;animation:mq 46s linear infinite;margin-bottom:10px}
+.marq .row.b{animation-direction:reverse;animation-duration:52s}
+.marq span{display:inline-flex;align-items:center;gap:8px;font-size:16px;font-weight:650;padding:12px 18px;border-radius:999px;background:#fff;border:1px solid var(--line);white-space:nowrap}
+.marq span i{width:8px;height:8px;border-radius:50%}
+@keyframes mq{to{transform:translateX(-50%)}}
+
+/* comparação */
+.cmp{border-radius:var(--r);border:1px solid var(--line);overflow:hidden;background:#fff}
+.cmp .r{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;align-items:center;border-top:1px solid var(--line)}
+.cmp .r:first-child{border-top:0;background:var(--soft);font-weight:800;font-size:14px}
+.cmp .r>*{padding:16px 18px}
+.cmp .r>:not(:first-child){text-align:center}
+.cmp .r>:nth-child(2){background:rgba(255,45,85,.05);font-weight:700}
+.cmp .y{color:var(--green)}.cmp .n{color:#C2C2CA}
+.cmp svg{width:22px;height:22px;vertical-align:middle}
+@media(max-width:640px){.cmp .r{grid-template-columns:1.4fr .8fr .8fr .8fr;font-size:14px}.cmp .r>*{padding:12px 8px}}
+
+/* preço */
+.priceband{background:var(--soft)}
+.prices{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:860px;margin:0 auto}
+.pr{position:relative;border-radius:26px;padding:30px;background:#fff;border:1px solid var(--line)}
+.pr.best{background:var(--ink);color:#fff;border-color:var(--ink);box-shadow:0 30px 70px rgba(11,11,15,.25)}
+.pr.best p,.pr.best li{color:#C9C9D1}.pr.best b,.pr.best .v,.pr.best .n{color:#fff}
+.pr .tag{position:absolute;top:-13px;left:24px;background:var(--pink);color:#fff;font-size:12.5px;font-weight:800;padding:5px 12px;border-radius:999px;letter-spacing:.02em}
+.pr .n{font-size:16px;font-weight:700;color:var(--mute)}
+.pr .v{font-size:52px;font-weight:850;letter-spacing:-.04em;margin:6px 0 2px;color:var(--ink)}
+.pr .v small{font-size:17px;font-weight:600;letter-spacing:0}
+.pr ul{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:10px}
+.pr li{display:flex;gap:10px;font-size:15.5px}
+.pr li svg{width:20px;height:20px;color:var(--green);flex:none}
+.anchor{max-width:860px;margin:26px auto 0;display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;padding:22px 24px;border-radius:20px;background:#fff;border:1px dashed rgba(11,11,15,.18)}
+.anchor .ic{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;background:#FFF3D6;color:var(--amber)}
+.anchor .ic svg{width:26px;height:26px}
+.anchor p{margin:0;font-size:16.5px}
+.guar{max-width:860px;margin:16px auto 0;display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.guar span{display:inline-flex;align-items:center;gap:8px;font-size:14.5px;font-weight:650;padding:10px 14px;border-radius:999px;background:#fff;border:1px solid var(--line)}
+.guar svg{width:18px;height:18px;color:var(--green)}
+@media(max-width:760px){.prices{grid-template-columns:1fr}}
+
+/* perguntas */
+.faq{max-width:820px;margin:0 auto}
+details{border-bottom:1px solid var(--line);padding:20px 4px}
+summary{font-weight:750;cursor:pointer;color:var(--ink);font-size:18px;list-style:none;display:flex;justify-content:space-between;gap:16px}
 summary::-webkit-details-marker{display:none}
-summary::after{content:'+';float:right;font-weight:400;font-size:22px;line-height:1;color:var(--muted)}
-details[open] summary::after{content:'–'}
-details p{margin:10px 0 0;font-size:15px}
-.final{text-align:center;padding:46px 0 30px}
-.final h2{font-size:36px}
-footer{border-top:1px solid var(--line);padding:22px 0 10px;font-size:13.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between}
-footer a{color:var(--muted)}
+summary::after{content:'+';font-weight:400;font-size:26px;line-height:1;color:var(--mute);transition:transform .2s}
+details[open] summary::after{transform:rotate(45deg)}
+details p{margin:12px 0 0;font-size:16.5px}
+
+/* chamada final */
+.final{position:relative;overflow:hidden;background:#0B0B0F;color:#fff;text-align:center;padding:110px 0}
+.final::before{content:'';position:absolute;inset:0;background:radial-gradient(50% 60% at 50% 100%,rgba(255,45,85,.35),transparent 70%)}
+.final .wrap{position:relative}
+.final h2{color:#fff;font-size:clamp(34px,5vw,58px);line-height:1.04;font-weight:850;margin:0 0 16px}
+.final p{color:#C9C9D1;font-size:19px;margin:0 0 30px}
+.final .micro{justify-content:center;color:#A1A1AA}
+
+footer{background:#0B0B0F;color:#8E8E96;border-top:1px solid rgba(255,255,255,.08);padding:26px 0 calc(env(safe-area-inset-bottom,0px) + 96px);font-size:14px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between}
+footer a{color:#B4B4BC}
 footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;text-decoration:none;font-weight:700;margin-right:6px}
-@media(max-width:820px){.hero{grid-template-columns:1fr;text-align:center}.hero h1{font-size:40px}.hero p.lead{font-size:18px}.trust{justify-content:center}.grid{grid-template-columns:1fr}.prices{grid-template-columns:1fr}.cta{width:100%}.phone{width:260px}}
+
+/* barra fixa no celular */
+.sticky{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:60;display:none;transform:translateY(140%);transition:transform .3s}
+.sticky.show{transform:none}
+.sticky .cta{width:100%;min-height:56px;font-size:17px}
+@media(max-width:900px){.sticky{display:block}}
+
+/* animações ao rolar */
+.rv{opacity:0;transform:translateY(28px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.rv.in{opacity:1;transform:none}
+.rv.d1{transition-delay:.08s}.rv.d2{transition-delay:.16s}.rv.d3{transition-delay:.24s}
+.pop{transform:scale(.6) rotate(-12deg);opacity:0;transition:transform .7s cubic-bezier(.3,1.6,.5,1),opacity .4s}
+.in .pop,.pop.in{transform:none;opacity:1}
+@media (prefers-reduced-motion:reduce){.rv,.pop{opacity:1;transform:none;transition:none}.marq .row{animation:none}}
 </style></head>
-<body><main>
-  <div class="nav">
-    <picture><source srcset="../media/marca/completa-branco.png" media="(prefers-color-scheme: dark)"><img src="../media/marca/completa-preto.png" alt="Lembra" style="height:56px;width:auto;display:block"></picture>
-    <a class="in" href="../" data-keep>Entrar</a>
+<body>
+<nav class="nav" id="nav"><div class="wrap">
+  <img src="../media/marca/completa-preto.png" alt="Lembra">
+  <div class="links"><a class="hide" href="#como">Como funciona</a><a class="hide" href="#preco">Preço</a><a href="../" data-keep>Entrar</a><a class="go" href="../#/cadastro" data-keep>Testar grátis</a></div>
+</div></nav>
+
+<main>
+<!-- TOPO -->
+<header class="hero"><div class="wrap">
+  <div class="rv">
+    <span class="eyebrow">Agenda inteligente para profissionais</span>
+    <h1>Pare de depender da memória. <em>Comece a depender do Lembra.</em></h1>
+    <p class="lead">Cada compromisso esquecido custa um cliente, uma multa ou uma pessoa decepcionada. O Lembra se adapta à sua profissão, calcula quantos avisos <b>você</b> precisa e cobra você quando atrasa — até que esquecer deixe de ser uma opção.</p>
+    <a class="cta" href="../#/cadastro" data-keep>Começar meu teste grátis <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    <div class="micro"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>24 horas com tudo liberado</span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Sem cartão de crédito</span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Pronto em 2 minutos</span></div>
   </div>
-
-  <div class="hero">
-    <div>
-      <h1>Nunca mais esqueça um compromisso.</h1>
-      <p class="lead">O Lembra é a agenda que se adapta à <b>sua profissão</b>, calcula quantos avisos <b>você</b> precisa e lembra de tudo por você — no trabalho e na vida pessoal.</p>
-      <a class="cta" href="../#/cadastro" data-keep>Testar grátis por 24 horas</a>
-      <p class="under">Sem cartão de crédito · cancele quando quiser</p>
-      <div class="trust"><span>🔒 Pagamento seguro pela Stripe</span><span>🛡️ Dados protegidos (LGPD)</span><span>↩︎ 7 dias de garantia</span></div>
-    </div>
-    <div class="phone"><img src="../media/screens/hoje.jpg" alt="Tela Hoje do Lembra" width="540" height="1170" loading="eager" fetchpriority="high"></div>
+  <div class="stage" id="stage">
+    <div class="device" data-tilt><img src="../media/lp/hoje.jpg" alt="Tela Hoje do Lembra" width="620" height="1343" fetchpriority="high"></div>
+    <div class="float f1" data-par="-0.18"><i style="background:#F59E0B"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></i><div><b>Consulta em 30 min</b><small>Ana Paula · Limpeza</small></div></div>
+    <div class="float f2" data-par="0.22"><i style="background:#16A34A"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></i><div><b>Dia 100% concluído</b><small>7 dias seguidos em dia</small></div></div>
+    <div class="float f3" data-par="-0.1"><i style="background:#FF2D55"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-8H4v8M2 13h20M12 13v8M12 8a3 3 0 1 0-3-3c0 1.7 3 3 3 3s3-1.3 3-3a3 3 0 1 0-3 3"/></svg></i><div><b>Amanhã: aniversário da mãe</b><small>Já pensou no presente?</small></div></div>
   </div>
+</div></header>
 
-  <section>
-    <h2>Feito para quem não pode esquecer nada</h2>
-    <p>Você responde uma ficha de 2 minutos. O Lembra transforma as suas respostas em lembretes calculados para você.</p>
-    <div class="grid">
-      <div class="f"><i style="background:#0A84FF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></i><b>Com a cara da sua profissão</b><p>Mais de 230 profissões: consultas para dentista, encomendas para confeiteira, aulas para professor, plantões para enfermagem.</p></div>
-      <div class="f"><i style="background:#FF9500"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></i><b>Avisos na medida certa</b><p>Quem esquece mais recebe mais avisos. Se atrasar, o Lembra te puxa — no tom que você escolher, nunca de madrugada.</p></div>
-      <div class="f"><i style="background:#FF2D55"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></i><b>Um modo Pessoal só seu</b><p>Aniversários, consultas, contas e listas, com sugestões para a sua idade e o seu jeito. Ninguém mais vê.</p></div>
-    </div>
-  </section>
+<div class="strip"><div class="wrap">
+  <div class="rv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Mais de 230 profissões</div>
+  <div class="rv d1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>Avisos calculados para você</div>
+  <div class="rv d2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Dados protegidos (LGPD)</div>
+  <div class="rv d3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>7 dias de garantia</div>
+</div></div>
 
-  <section>
-    <h2>Para a sua profissão</h2>
-    <p>Escolha a sua na ficha e o app inteiro muda: nomes, tipos de compromisso, dicas e cores.</p>
-    <div class="chips"><span>Dentista</span><span>Enfermeira</span><span>Confeiteira</span><span>Professor</span><span>Barbeiro</span><span>Manicure</span><span>Engenheiro civil</span><span>Advogada</span><span>Personal trainer</span><span>Eletricista</span><span>Social media</span><span>Corretor de imóveis</span><span>Motorista</span><span>Estudante</span><span>+ 220 profissões</span></div>
-  </section>
-
-  <section>
-    <h2>Preço justo, sem pegadinha</h2>
-    <p>Comece com 24 horas grátis. Depois, escolha:</p>
-    <div class="prices">
-      <div class="pr"><b class="n">Mensal</b><div class="v">R$ 9,90<small>/mês</small></div><p>Cancele quando quiser, direto no app.</p></div>
-      <div class="pr best"><span class="tag">Melhor valor</span><b class="n">Vitalício</b><div class="v">R$ 150<small> uma vez</small></div><ul><li>Sem mensalidade, para sempre</li><li>Todas as novidades incluídas</li><li>Agenda compartilhada mais barata</li></ul></div>
-    </div>
-    <p class="note">Quer dividir a agenda com sócio, equipe ou família? A agenda compartilhada é um complemento à parte: Dupla R$ 6,90/mês ou Equipe R$ 14,90/mês (no Vitalício, R$ 4,90 e R$ 9,90). Quem você convida não paga.</p>
-  </section>
-
-  <section>
-    <h2>Perguntas frequentes</h2>
-    <details><summary>Preciso de cartão para testar?</summary><p>Não. Você cria a conta, responde a ficha e toca em “Começar meu teste grátis”. São 24 horas com tudo liberado.</p></details>
-    <details><summary>Funciona no iPhone e no Android?</summary><p>Sim. Abra o link no celular e toque em “Adicionar à Tela de Início” (iPhone: Safari → Compartilhar). Ele vira um app, com ícone e notificações.</p></details>
-    <details><summary>Como cancelo o Mensal?</summary><p>No app: Ajustes → Seu plano → Gerenciar. O acesso continua até o fim do mês já pago.</p></details>
-    <details><summary>E se eu me arrepender?</summary><p>Você tem 7 dias para pedir o dinheiro de volta, sem precisar explicar.</p></details>
-    <details><summary>Meus dados estão seguros?</summary><p>Sim. Cada conta só acessa os próprios dados, o pagamento é feito pela Stripe (não vemos o seu cartão) e seguimos a LGPD: você pode baixar ou apagar tudo quando quiser.</p></details>
-  </section>
-
-  <div class="final">
-    <h2>Sua cabeça mais leve a partir de hoje.</h2>
-    <p>2 minutos para montar. 24 horas grátis para testar.</p>
-    <a class="cta" href="../#/cadastro" data-keep>Criar minha conta grátis</a>
+<!-- DOR -->
+<section class="pain"><div class="wrap">
+  <div class="head rv"><span class="eyebrow">O custo invisível</span><h2>Esquecer nunca sai de graça.</h2><p>Você não percebe na hora. Mas cada esquecimento cobra a conta depois — em dinheiro, em reputação ou em relacionamentos.</p></div>
+  <div class="cards4">
+    <div class="pc rv"><div class="ic pop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5m0-5-5 5"/></svg></div><b>O cliente que não volta</b><p>Um horário esquecido é suficiente para ele procurar outro profissional. E ele não avisa que foi embora.</p></div>
+    <div class="pc rv d1"><div class="ic pop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M7 15h4"/></svg></div><b>Juros, multas e taxas</b><p>Boleto vencido, imposto atrasado, documento fora do prazo. Dinheiro perdido por um lembrete que não existiu.</p></div>
+    <div class="pc rv d2"><div class="ic pop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></div><b>Quem você ama</b><p>O aniversário que passou, a consulta do filho, a promessa feita no fim de semana. Isso não se compra de volta.</p></div>
+    <div class="pc rv d3"><div class="ic pop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z"/><path d="M9 21h6"/></svg></div><b>A cabeça que nunca desliga</b><p>Tentar lembrar de tudo sozinho cansa. A ansiedade de “estou esquecendo alguma coisa” não deixa você descansar.</p></div>
   </div>
+  <div class="verdict rv">Agendas comuns guardam compromissos. <b>O Lembra garante que eles aconteçam.</b> A diferença está em quem toma a iniciativa: no Lembra, é ele que vai atrás de você.</div>
+</div></section>
 
-  <footer><span>© Lembra</span><span> <a href="../termos/">Termos de Uso</a> · <a href="../privacidade/">Privacidade</a> · <a href="mailto:icarlxs@gmail.com">icarlxs@gmail.com</a></span></footer>
+<!-- COMO FUNCIONA -->
+<section id="como"><div class="wrap">
+  <div class="head c rv"><span class="eyebrow">Como funciona</span><h2>Três passos. Nenhum esquecimento.</h2><p>Você configura uma vez. O Lembra trabalha todos os dias.</p></div>
+  <div class="steps">
+    <div class="st rv"><div class="ic pop" style="background:#0A84FF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></div><b>Responda a ficha de 2 minutos</b><p>Sua profissão, sua rotina e o quanto você costuma esquecer. O app inteiro se molda a você: nomes, tipos de compromisso, cores e dicas.</p></div>
+    <div class="st rv d1"><div class="ic pop" style="background:#F59E0B"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div><b>Receba os avisos na medida certa</b><p>Quem esquece mais recebe mais avisos — 1 dia antes, 2 horas antes, 30 minutos antes. Tudo calculado para você, nunca de madrugada.</p></div>
+    <div class="st rv d2"><div class="ic pop" style="background:#FF2D55"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><b>Seja cobrado quando atrasar</b><p>Passou do horário? O Lembra insiste com firmeza até você resolver. Concluiu? Ele comemora com você.</p></div>
+  </div>
+</div></section>
+
+<!-- RECURSOS -->
+<section style="padding-top:20px"><div class="wrap">
+  <div class="feat">
+    <div class="txt rv"><span class="eyebrow">Trabalho</span><h3>Uma agenda que fala a língua da sua profissão.</h3><p>Dentista marca consultas e retornos. Confeiteira marca encomendas e entregas. Professor marca aulas e provas. O Lembra já vem pronto para o seu dia a dia.</p>
+      <ul class="ticks"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Tipos de compromisso e campos próprios da sua área</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Avisa quando algo foi marcado duas vezes</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Assistente que organiza e reorganiza a agenda por você</li></ul></div>
+    <div class="shot rv d1"><div class="device" data-tilt><img src="../media/lp/novo.jpg" alt="Novo compromisso no Lembra" loading="lazy" width="620" height="1343"></div>
+      <div class="badge" data-par="-0.12" style="top:60px;right:24px"><i style="background:#FF3B30"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></i>Isso já foi marcado</div>
+      <div class="badge" data-par="0.14" style="bottom:70px;left:22px"><i style="background:#0A84FF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6l-4.9 3.6 1.9-5.8L4 8.8h6.1Z"/></svg></i>Assistente</div></div>
+  </div>
+  <div class="feat rev">
+    <div class="txt rv"><span class="eyebrow">Vida pessoal</span><h3>E um modo Pessoal só seu, com um toque.</h3><p>Aniversários, contas, consultas, listas de compras e cuidados com você. Separado do trabalho e visível só para você.</p>
+      <ul class="ticks"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Sugestões pensadas para a sua idade e o seu momento</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Mensagens de ânimo, versículos e lembretes de cuidado ao longo do dia</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Coisas que se repetem: o Lembra lembra sozinho, para sempre</li></ul></div>
+    <div class="shot rv d1" style="background:linear-gradient(160deg,#FFF1F4,#FFE3EA)"><div class="device" data-tilt><img src="../media/lp/pessoal.jpg" alt="Modo Pessoal do Lembra" loading="lazy" width="620" height="1343"></div>
+      <div class="badge" data-par="0.12" style="top:70px;left:22px"><i style="background:#FF2D55"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></i>Só você vê</div>
+      <div class="badge" data-par="-0.14" style="bottom:80px;right:22px"><i style="background:#8B5CF6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/></svg></i>Versículo do dia</div></div>
+  </div>
+  <div class="feat">
+    <div class="txt rv"><span class="eyebrow">Equipe</span><h3>Divida a agenda com quem trabalha com você.</h3><p>Sócio, equipe ou família no mesmo calendário. Cada um vê o que precisa, recebe os próprios avisos e é notificado na hora quando algo muda.</p>
+      <ul class="ticks"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Bilhetes com marcação de pessoas</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Quem você convida não paga nada</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Calendário do mês inteiro, com quem está onde</li></ul></div>
+    <div class="shot rv d1" style="background:linear-gradient(160deg,#EEF6FF,#E1EEFF)"><div class="device" data-tilt><img src="../media/lp/calendario.jpg" alt="Calendário do Lembra" loading="lazy" width="620" height="1343"></div>
+      <div class="badge" data-par="-0.12" style="top:80px;right:20px"><i style="background:#16A34A"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></i>Agenda da equipe</div></div>
+  </div>
+</div></section>
+
+<!-- PROFISSÕES -->
+<section style="padding:70px 0;background:var(--soft)">
+  <div class="wrap"><div class="head c rv"><span class="eyebrow">Para a sua profissão</span><h2>Feito para quem trabalha de verdade.</h2><p>Escolha a sua na ficha. O Lembra muda por inteiro.</p></div></div>
+  <div class="marq">
+    <div class="row"><span><i style="background:#0A84FF"></i>Dentista</span><span><i style="background:#FF2D55"></i>Confeiteira</span><span><i style="background:#8B5CF6"></i>Barbeiro</span><span><i style="background:#F59E0B"></i>Engenheiro civil</span><span><i style="background:#16A34A"></i>Professora</span><span><i style="background:#FF3B30"></i>Enfermeira</span><span><i style="background:#0EA5E9"></i>Advogado</span><span><i style="background:#EC4899"></i>Manicure</span><span><i style="background:#14B8A6"></i>Personal trainer</span><span><i style="background:#6366F1"></i>Social media</span><span><i style="background:#0A84FF"></i>Dentista</span><span><i style="background:#FF2D55"></i>Confeiteira</span><span><i style="background:#8B5CF6"></i>Barbeiro</span><span><i style="background:#F59E0B"></i>Engenheiro civil</span><span><i style="background:#16A34A"></i>Professora</span><span><i style="background:#FF3B30"></i>Enfermeira</span><span><i style="background:#0EA5E9"></i>Advogado</span><span><i style="background:#EC4899"></i>Manicure</span><span><i style="background:#14B8A6"></i>Personal trainer</span><span><i style="background:#6366F1"></i>Social media</span></div>
+    <div class="row b"><span><i style="background:#F97316"></i>Eletricista</span><span><i style="background:#0EA5E9"></i>Corretor de imóveis</span><span><i style="background:#84CC16"></i>Nutricionista</span><span><i style="background:#A855F7"></i>Psicóloga</span><span><i style="background:#EF4444"></i>Fisioterapeuta</span><span><i style="background:#22C55E"></i>Motorista</span><span><i style="background:#3B82F6"></i>Contador</span><span><i style="background:#E11D48"></i>Cabeleireira</span><span><i style="background:#0891B2"></i>Estudante</span><span><i style="background:#6B7280"></i>+ 220 profissões</span><span><i style="background:#F97316"></i>Eletricista</span><span><i style="background:#0EA5E9"></i>Corretor de imóveis</span><span><i style="background:#84CC16"></i>Nutricionista</span><span><i style="background:#A855F7"></i>Psicóloga</span><span><i style="background:#EF4444"></i>Fisioterapeuta</span><span><i style="background:#22C55E"></i>Motorista</span><span><i style="background:#3B82F6"></i>Contador</span><span><i style="background:#E11D48"></i>Cabeleireira</span><span><i style="background:#0891B2"></i>Estudante</span><span><i style="background:#6B7280"></i>+ 220 profissões</span></div>
+  </div>
+</section>
+
+<!-- COMPARAÇÃO -->
+<section><div class="wrap">
+  <div class="head c rv"><span class="eyebrow">Comparação</span><h2>Não é mais uma agenda.</h2><p>É a diferença entre anotar e realmente fazer.</p></div>
+  <div class="cmp rv">
+    <div class="r"><span>Recurso</span><span>Lembra</span><span>Agenda comum</span><span>Papel</span></div>
+    <div class="r"><span>Adapta-se à sua profissão</span><span class="y">✓</span><span class="n">—</span><span class="n">—</span></div>
+    <div class="r"><span>Quantidade de avisos calculada para você</span><span class="y">✓</span><span class="n">—</span><span class="n">—</span></div>
+    <div class="r"><span>Cobra você quando atrasa</span><span class="y">✓</span><span class="n">—</span><span class="n">—</span></div>
+    <div class="r"><span>Detecta compromissos repetidos</span><span class="y">✓</span><span class="n">—</span><span class="n">—</span></div>
+    <div class="r"><span>Trabalho e vida pessoal separados</span><span class="y">✓</span><span class="n">—</span><span class="n">—</span></div>
+    <div class="r"><span>Assistente que organiza por você</span><span class="y">✓</span><span class="n">—</span><span class="n">—</span></div>
+    <div class="r"><span>Avisos no celular</span><span class="y">✓</span><span class="y">✓</span><span class="n">—</span></div>
+  </div>
+</div></section>
+
+<!-- PREÇO -->
+<section class="priceband" id="preco"><div class="wrap">
+  <div class="head c rv"><span class="eyebrow">Preço</span><h2>Menos que um compromisso perdido.</h2><p>Teste 24 horas com tudo liberado, sem cartão. Depois, escolha como continuar.</p></div>
+  <div class="prices">
+    <div class="pr rv"><span class="n">Mensal</span><div class="v">R$ 9,90<small>/mês</small></div><p>Cancele quando quiser, direto no app.</p>
+      <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Todos os recursos do Lembra</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Ranking semanal: o nº 1 do mês ganha o mês seguinte grátis</li></ul></div>
+    <div class="pr best rv d1"><span class="tag">Melhor escolha</span><span class="n">Vitalício</span><div class="v">R$ 150<small> uma única vez</small></div><p>Pague uma vez. Use para sempre.</p>
+      <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Sem mensalidade, nunca mais</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Todas as novidades incluídas</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Preço travado e selo Vitalício</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Agenda compartilhada mais barata</li></ul></div>
+  </div>
+  <div class="anchor rv"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><p><b>Faça a conta:</b> um único cliente que não volta, uma multa ou um boleto com juros já custa mais do que um ano inteiro de Lembra. O Vitalício se paga em 15 meses — e continua funcionando depois disso.</p></div>
+  <div class="guar rv"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>7 dias de garantia: devolvemos o seu dinheiro</span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Pagamento seguro pela Stripe</span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>Cancele o mensal quando quiser</span></div>
+  <p class="rv" style="text-align:center;max-width:760px;margin:22px auto 0;font-size:15px;color:var(--mute)">Agenda compartilhada é um complemento à parte: Dupla R$ 6,90/mês ou Equipe R$ 14,90/mês (no Vitalício, R$ 4,90 e R$ 9,90). Quem você convida não paga.</p>
+</div></section>
+
+<!-- PERGUNTAS -->
+<section><div class="wrap">
+  <div class="head c rv"><span class="eyebrow">Dúvidas</span><h2>Perguntas frequentes</h2></div>
+  <div class="faq rv">
+    <details><summary>Preciso de cartão para testar?</summary><p>Não. Você cria a conta, responde a ficha e começa o teste: 24 horas com tudo liberado, sem informar nenhum dado de pagamento.</p></details>
+    <details><summary>Funciona no iPhone e no Android?</summary><p>Sim. Abra o link no celular e adicione à tela de início (no iPhone: Safari → Compartilhar → Adicionar à Tela de Início). Ele funciona como um aplicativo, com ícone e notificações.</p></details>
+    <details><summary>E se eu esquecer de abrir o app?</summary><p>É exatamente para isso que o Lembra existe. Ele avisa você no celular, na hora certa, mesmo com o app fechado. E, se você ficar horas sem abrir, ele pergunta se há algo novo para anotar.</p></details>
+    <details><summary>Como cancelo o plano mensal?</summary><p>No próprio app: Ajustes → Seu plano → Gerenciar. O acesso continua até o fim do período já pago.</p></details>
+    <details><summary>E se eu não gostar?</summary><p>Você tem 7 dias para pedir o dinheiro de volta, sem precisar justificar.</p></details>
+    <details><summary>Meus dados estão seguros?</summary><p>Sim. Cada conta acessa apenas os próprios dados, o pagamento é processado pela Stripe (nós nunca vemos o seu cartão) e seguimos a LGPD: você pode baixar ou apagar tudo quando quiser.</p></details>
+  </div>
+</div></section>
+
+<!-- CHAMADA FINAL -->
+<section class="final"><div class="wrap rv">
+  <h2>O próximo compromisso esquecido<br>pode ser o último.</h2>
+  <p>Leve 2 minutos para configurar. Teste por 24 horas. Decida depois.</p>
+  <a class="cta" href="../#/cadastro" data-keep>Começar meu teste grátis <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+  <div class="micro"><span>Sem cartão</span><span>·</span><span>Cancele quando quiser</span><span>·</span><span>7 dias de garantia</span></div>
+</div></section>
 </main>
+<footer><div class="wrap"><span>© Lembra</span><span> <a href="../termos/">Termos de Uso</a> · <a href="../privacidade/">Privacidade</a> · <a href="mailto:icarlxs@gmail.com">icarlxs@gmail.com</a></span></div></footer>
+<div class="sticky" id="sticky"><a class="cta" href="../#/cadastro" data-keep>Testar grátis por 24 horas</a></div>
+
 <script>
   // de onde a pessoa veio (anúncio, Instagram, WhatsApp…): guardado só neste aparelho e enviado junto com o cadastro.
   // Sem rastreadores de terceiros.
@@ -140,6 +350,38 @@ footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;t
       if (!o.source && document.referrer && !/github\.io|lembra/.test(document.referrer)) { try { o.source = new URL(document.referrer).hostname.replace(/^www\./, '').slice(0, 60); } catch (e) {} }
       if (o.source && !localStorage.getItem('lembra.origem')) localStorage.setItem('lembra.origem', JSON.stringify(Object.assign(o, { page: 'conheca', at: Date.now() })));
     } catch (e) {}
+  })();
+  // animações ao rolar: elementos aparecem, ícones "saltam", cartões flutuantes andam em velocidades diferentes
+  (function () {
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var els = document.querySelectorAll('.rv');
+    if (reduce || !('IntersectionObserver' in window)) { els.forEach(function (e) { e.classList.add('in'); }); }
+    else {
+      var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { threshold: .15, rootMargin: '0px 0px -40px 0px' });
+      els.forEach(function (e) { io.observe(e); });
+    }
+    var nav = document.getElementById('nav'), sticky = document.getElementById('sticky');
+    var par = document.querySelectorAll('[data-par]'), tilt = document.querySelectorAll('[data-tilt]');
+    var ticking = false;
+    function frame() {
+      ticking = false;
+      var y = window.scrollY, vh = window.innerHeight;
+      nav.classList.toggle('is-scrolled', y > 8);
+      sticky.classList.toggle('show', y > vh * 0.8 && y < document.body.scrollHeight - vh * 1.6);
+      if (reduce) return;
+      par.forEach(function (el) {
+        var r = el.parentElement.getBoundingClientRect(), c = (r.top + r.height / 2 - vh / 2);
+        el.style.transform = 'translate3d(0,' + (c * parseFloat(el.dataset.par)).toFixed(1) + 'px,0)';
+      });
+      tilt.forEach(function (el, i) {
+        var r = el.getBoundingClientRect(), k = Math.max(-1, Math.min(1, (r.top + r.height / 2 - vh / 2) / vh));
+        var base = el.closest('.hero') ? 'rotateY(' + (-14 + k * 10).toFixed(2) + 'deg) rotateX(' + (6 - k * 6).toFixed(2) + 'deg)' : 'rotate(' + (-2 + k * 2.5).toFixed(2) + 'deg) translateY(' + (k * -18).toFixed(1) + 'px)';
+        el.style.transform = base;
+      });
+    }
+    window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(frame); } }, { passive: true });
+    window.addEventListener('resize', frame);
+    frame();
   })();
 </script>
 </body></html>
