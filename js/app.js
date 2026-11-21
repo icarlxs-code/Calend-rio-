@@ -208,6 +208,7 @@ const actions = {
     if (wa) window.open(`https://wa.me/${wa}?text=${encodeURIComponent(`Olá! Sou ${who} e uso o Lembra. Preciso de ajuda com:`)}`, '_blank');
     else if (CONFIG.supportEmail) location.href = `mailto:${CONFIG.supportEmail}?subject=${encodeURIComponent('Ajuda com o Lembra')}`;
   },
+  ranking: async () => (await import('./views/ranking.js')).openRanking(),
   'install-guide': () => showInstallGuide({ force: true }),
   plans: () => openPlans(),
   'billing-portal': () => openPortal().catch((e) => toast(e.message || 'Não consegui abrir agora')),
@@ -364,7 +365,7 @@ const lockGuard = (ev) => {
   const inApp = ev.target.closest && ev.target.closest('#view, .tabbar');
   if (!inApp || ev.target.closest('[data-allow-locked], [data-action="logout"]')) return;
   // modo "só olhar": trocar de aba e ver a agenda é livre; criar/editar/concluir abre os planos
-  if (ev.target.closest('[data-action="tab"], [data-action="ptab"], [data-action="space"], [data-action="switch-space"], [data-action="support"]')) return;
+  if (ev.target.closest('[data-action="tab"], [data-action="ptab"], [data-action="space"], [data-action="switch-space"], [data-action="support"], [data-action="ranking"]')) return;
   if (ev.type === 'focusin' && !ev.target.matches('input, textarea, select, [contenteditable]')) return;
   if (ev.type === 'click' && !ev.target.closest('button, a, input, textarea, select, label, [data-action], [role="button"], [data-id]')) return;
   ev.preventDefault();
@@ -403,6 +404,7 @@ document.addEventListener('submit', async (ev) => {
   const note = { id: uid('n_'), date: ui.date, text, author: store.me, mentions, createdAt: Date.now() };
   await store.upsert('notes', note);
   onNoteAdded(note);
+  import('./rank.js').then((r) => r.rankAct('note', note.id));
   toast(mentions.length ? `Bilhete enviado para ${mentions.map((id) => store.member(id)?.name || '').filter(Boolean).join(' e ')}` : store.team.length > 1 ? 'Bilhete adicionado — a equipe foi avisada' : 'Bilhete adicionado');
 });
 
@@ -641,6 +643,7 @@ function askReinstall() {
 
 /* Abre o lugar certo quando a pessoa toca numa notificação (#/e/ID ou #/d/DATA) */
 function openDeepLink(hash = location.hash, tries = 0) {
+  if (/^#\/ranking$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./views/ranking.js').then((m) => m.openRanking()); return true; }
   if (/^#\/suporte(-dono)?$/.test(hash || '')) {
     history.replaceState(null, '', location.pathname + location.search);
     import('./views/support.js').then((m) => (/dono/.test(hash) ? m.openSupportInbox() : m.openSupport()));
@@ -882,6 +885,7 @@ function startApp() {
   render();
   store.on(rerenderAll);
   startPersonal();
+  personal.onSaved = (b, a) => import('./rank.js').then((r) => r.rankPersonal(b, a));
   setTimeout(askReinstall, 2500); // aviso de instalar a versão nova (só para quem precisa)
   setTimeout(requirePhoto, 3500);
   startPresence();
@@ -910,7 +914,7 @@ function startApp() {
   });
   // servidor gratuito de avisos: aviso ao parceiro na hora + lembretes no horário + chat
   if (store.mode === 'cloud' && push.server()) {
-    store.hooks.eventChange = onEventChange;
+    store.hooks.eventChange = (b, a) => { onEventChange(b, a); import('./rank.js').then((r) => r.rankEvent(b, a)); };
     // mostra na tela quem recebeu o aviso (e quem ainda não ativou as notificações)
     setNotifyFeedback(({ ok, missing, error }) => {
       if (error) return toast(`Aviso não enviado: ${error}`, { ms: 6000 });
@@ -1182,7 +1186,7 @@ navigator.serviceWorker?.addEventListener('message', (ev) => {
 window.addEventListener('hashchange', () => {
   // abriu um convite com o app já aberto
   if (/^#\/convite\//.test(location.hash)) { captureInvite(); return maybeAcceptInvite(); }
-  if (/^#\/((e|d|p)\/|suporte)/.test(location.hash)) return openDeepLink();
+  if (/^#\/((e|d|p)\/|suporte|ranking)/.test(location.hash)) return openDeepLink();
   if (/^#\/(c|v)\//.test(location.hash)) location.reload();
 });
 

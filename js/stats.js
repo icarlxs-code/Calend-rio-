@@ -90,6 +90,7 @@ export function startPresence() {
     clearInterval(beat);
     beat = setInterval(() => send({ online: true, lastPing: Date.now() }), 60e3);
     seenServer();
+    import('./rank.js').then((r) => r.rankAct('open', 'app')).catch(() => {});
   };
   const off = () => { clearInterval(beat); send({ online: false, closedAt: Date.now(), lastPing: Date.now() }); };
   document.addEventListener('visibilitychange', () => (document.visibilityState === 'visible' ? on() : off()));

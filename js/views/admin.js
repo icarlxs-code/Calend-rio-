@@ -234,6 +234,7 @@ export async function openAdmin() {
         ${row('Instalaram na tela inicial', `${installed}${pct(installed)}`)}
         ${row('Recebem notificações', `${notif}${pct(notif)}`, notif < users.length ? 'sem isso, os lembretes não chegam' : '')}
         ${row('Compromissos criados', `${users.reduce((a, u) => a + (u.counts?.myEvents || 0), 0)}`)}
+        <button class="arow arow--btn" data-rank-admin><span>🏆 Ranking (pontos e suspeitas)</span><b>abrir ›</b></button>
         <button class="arow arow--btn" data-support-inbox><span>💬 Mensagens de suporte</span><b>abrir ›</b></button>
         <button class="arow arow--btn" data-tab-admin="erros"><span>Erros do app</span><b class="${errors && errors.length ? 'bad' : 'good'}">${errors === null ? '—' : errors.length ? `${errors.length} ›` : 'nenhum ✓'}</b></button>
       </div>
@@ -252,6 +253,14 @@ export async function openAdmin() {
     html: html(),
     onMount: (a) => {
       a.el.querySelectorAll('[data-toggle]').forEach((b) => (b.onclick = () => { openUid = openUid === b.dataset.toggle ? null : b.dataset.toggle; a.set(html()); }));
+      const rk = a.el.querySelector('[data-rank-admin]');
+      if (rk) rk.onclick = async () => {
+        const { api } = await import('../avisos.js');
+        const r = await api('/rank/admin', {}).catch((e) => ({ error: e.message }));
+        openSheet({ className: 'sheet--tall', html: `${sheetHead('Ranking · semana de ' + esc((r.week || '').split('-').reverse().join('/')), { left: '<button class="btn-text" data-close>Fechar</button>' })}<div class="page page--sheet">
+          ${r.error ? `<p class="fhelp">${esc(r.error)}</p>` : (r.rows || []).map((x, i) => `<div class="arow"><span>${i + 1}. ${esc(x.i)} · <small>${esc(x.ws)}</small>${x.flag ? `<br><small class="bad">⚠️ fora do ranking: ${esc(x.flag.why)}</small>` : ''}</span><b>${x.pts} pts</b></div>`).join('') || '<p class="fhelp">Ninguém pontuou esta semana.</p>'}
+          <h4>Campeões (mês grátis)</h4>${(r.winners || []).map((w) => `<div class="arow"><span>${esc(w.month)} · ${esc(w.i)} <small>${esc(w.ws)}</small></span><b>${w.applied ? 'cupom aplicado ✓' : 'não aplicado'}</b></div>`).join('') || '<p class="fhelp">Ainda nenhum.</p>'}</div>` });
+      };
       const sup = a.el.querySelector('[data-support-inbox]');
       if (sup) sup.onclick = async () => (await import('./support.js')).openSupportInbox();
       a.el.querySelectorAll('[data-tab-admin]').forEach((b) => (b.onclick = () => { tab = b.dataset.tabAdmin; a.set(html()); a.el.scrollTop = 0; }));

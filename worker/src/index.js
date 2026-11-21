@@ -8,6 +8,8 @@ import { generateVapid, sendPush } from './webpush.js';
 import { verifyIdToken } from './auth.js';
 import { runCoach } from './coach.js';
 import { runPersonalCoach } from './pcoach.js';
+import { recordAct, getBoard, adminBoard, monthlyAward } from './rank.js';
+import { getBill, putBill, stripe as stripeApi } from './billing.js';
 import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling, untilOf, statusOf, grantComp } from './billing.js';
 
 const SUBJECT = 'mailto:avisos@calendario.app';
@@ -233,7 +235,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/admin/grant': 30, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30 };
+const LIMITS = { '/admin/grant': 30, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -523,6 +525,19 @@ async function handle(req, env) {
     }
     return reply(env, req, { error: 'não encontrado' }, 404);
   }
+  // ---------- ranking semanal (só plano mensal; pontos contados aqui, com anti-fraude) ----------
+  if (url.pathname === '/rank/act') {
+    const st = await billingStatus(env, me);
+    return reply(env, req, await recordAct(env, me, st, { type: clean(body.type, 20), ref: clean(body.ref, 80) }));
+  }
+  if (url.pathname === '/rank/board') {
+    const st = await billingStatus(env, me);
+    return reply(env, req, { ...(await getBoard(env, me)), eligible: st.plan === 'monthly' && st.active });
+  }
+  if (url.pathname === '/rank/admin') {
+    if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
+    return reply(env, req, { ok: true, ...(await adminBoard(env)) });
+  }
   // a pessoa abriu o app: o "amigo" do Pessoal sabe há quanto tempo ela não entra
   if (url.pathname === '/seen') {
     await env.CAL.put(`seen:${me.id}`, String(Date.now()), { expirationTtl: 60 * 864e2 });
@@ -625,6 +640,7 @@ export default {
       safe('coach', runCoach(env, sendToMember, team)),
       safe('amigo', runPersonalCoach(env, sendToMember, team)),
       safe('aviso único', oneShot(env)),
+      safe('ranking', monthlyAward(env, { stripe: stripeApi, getBill, putBill, notify: (id, msg) => sendToMember(env, id, msg) })),
     ])));
   },
 };

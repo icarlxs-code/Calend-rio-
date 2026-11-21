@@ -34,6 +34,7 @@ export function renderSettings() {
         ${cloud && store.solo ? grow({ cls: 'pbig--share', attrs: 'data-action="share"', ic: 'users', c: '#34C759', t: 'Agenda compartilhada', s: store.shared ? `Você está na agenda de ${esc(store.shared.ownerName)}` : store.billing?.addon?.active ? `Plano ${store.billing.addon.plan === 'equipe' ? 'Equipe' : 'Dupla'} ativo · convide e gerencie` : 'Divida a agenda com sócio ou equipe · à parte' }) : ''}
         ${grow({ attrs: 'data-action="guide"', ic: 'sparkles', c: '#5856D6', t: 'Como funciona o Lembra', s: 'Trabalho e Pessoal em 1 minuto' })}
         ${cloud ? grow({ cls: 'pbig--privacy', attrs: 'data-action="privacy"', ic: 'lock', c: '#8E8E93', t: 'Privacidade e dados', s: 'Termos, baixar ou apagar meus dados' }) : ''}
+        ${cloud && store.solo ? grow({ attrs: 'data-action="ranking"', ic: 'trophy', c: '#FF9F0A', t: 'Ranking da semana', s: store.billing?.plan === 'monthly' ? 'O nº 1 do mês ganha o próximo mês grátis' : 'Exclusivo do plano mensal · mês grátis para o nº 1' }) : ''}
         ${cloud ? grow({ attrs: 'data-action="support" data-allow-locked', ic: 'headset', c: '#0A84FF', t: 'Falar com o suporte', s: 'Chat com a equipe do Lembra · respondemos em até 24h' }) : CONFIG.supportWhatsapp || CONFIG.supportEmail ? grow({ attrs: 'data-action="support"', ic: CONFIG.supportWhatsapp ? 'phone' : 'mail', c: CONFIG.supportWhatsapp ? '#25D366' : '#0A84FF', t: 'Ajuda e atendimento', s: CONFIG.supportWhatsapp ? 'Fale com a gente no WhatsApp' : 'Fale com a gente por e-mail' }) : ''}
       </div>
     </section>

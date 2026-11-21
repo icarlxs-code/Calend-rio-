@@ -39,8 +39,8 @@ async function sha(text) {
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('').slice(0, 32);
 }
-const getBill = async (env, uid) => (await env.CAL.get(`bill:${uid}`, 'json')) || null;
-const putBill = (env, uid, b) => env.CAL.put(`bill:${uid}`, JSON.stringify(b));
+export const getBill = async (env, uid) => (await env.CAL.get(`bill:${uid}`, 'json')) || null;
+export const putBill = (env, uid, b) => env.CAL.put(`bill:${uid}`, JSON.stringify(b));
 
 /* Complemento "Agenda compartilhada" (Dupla/Equipe): ativo enquanto a assinatura dele estiver em dia */
 export function addonOf(b, now = Date.now()) {
@@ -172,7 +172,7 @@ const form = (obj, prefix = '', out = new URLSearchParams()) => {
   }
   return out;
 };
-async function stripe(env, path, params, fetchImpl = fetch, method = 'POST') {
+export async function stripe(env, path, params, fetchImpl = fetch, method = 'POST') {
   if (!env.STRIPE_SECRET_KEY) throw Object.assign(new Error('O pagamento ainda não foi configurado (falta a chave da Stripe no servidor).'), { status: 412 });
   const r = await fetchImpl(`https://api.stripe.com/v1/${path}`, {
     method,

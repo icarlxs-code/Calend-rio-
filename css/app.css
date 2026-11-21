@@ -1965,3 +1965,15 @@ button:active:not(:disabled), .btn:active, .pbig:active, .pchip:active, .prow:ac
 .sinbox strong { display: block; } .sinbox small { color: var(--muted, #8E8E93); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
 .sinbox__r { text-align: right; flex: none; } .sinbox__r time { font-size: 12px; color: var(--muted, #8E8E93); display: block; }
 .sinbox__n { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 11px; background: #FF3B30; color: #fff; font-size: 12px; font-weight: 800; margin-top: 4px; }
+
+/* ---------- Ranking ---------- */
+.rank__hero { display: flex; gap: 14px; align-items: center; padding: 16px; border-radius: 20px; background: linear-gradient(135deg, #FFB800, #FF7A00); color: #fff; margin-bottom: 14px; }
+.rank__hero strong { display: block; font-size: 17px; } .rank__hero small { opacity: .95; }
+.rank__me { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 18px; background: var(--card, #fff); margin-bottom: 14px; }
+.rank__me b { font-size: 30px; } .rank__me small { color: var(--muted, #8E8E93); } .rank__me .btn { align-self: flex-start; margin-top: 6px; }
+.rank__row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line, rgba(0,0,0,.06)); }
+.rank__row.is-me { background: color-mix(in srgb, #FF9F0A 14%, transparent); }
+.rank__pos { width: 34px; font-weight: 800; text-align: center; }
+.rank__ini { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: #3A3A3C; color: #fff; font-weight: 800; }
+.rank__name { flex: 1; color: var(--muted, #8E8E93); }
+.rank__rules { padding-left: 18px; line-height: 1.7; }

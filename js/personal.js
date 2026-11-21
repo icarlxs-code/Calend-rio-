@@ -86,6 +86,7 @@ export function savePersonal(it) {
   if (!it.id) it.id = uid('p_');
   if (!it.createdAt) it.createdAt = Date.now();
   const i = items.findIndex((x) => x.id === it.id);
+  if (personal.onSaved) try { personal.onSaved(i >= 0 ? items[i] : null, it); } catch { /* ok */ }
   items = i >= 0 ? items.map((x) => (x.id === it.id ? it : x)) : [...items, it];
   const c = cloud();
   if (c) c.writePersonal(it).catch(writeFailed); else saveLocal();
