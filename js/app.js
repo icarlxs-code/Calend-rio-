@@ -29,6 +29,7 @@ import { captureInvite, maybeAcceptInvite, startTeam, openShare, pendingInvite }
 import { personaOf } from './notifier.js';
 import { applyProfTheme, applyThemePref, setThemePref } from './theme.js';
 import { startErrorLog } from './errlog.js';
+import { track, startTracking } from './track.js';
 import { computePersona, cleanEmail, validEmail, emailTypo, tidyName, validNameChars } from './persona.js';
 import { reportStats, loadStatsDays, reportSoon, startPresence } from './stats.js';
 import { ensureSeedCompanies, ensureMatheusLogo, ensureNotifyOwners } from './seed-companies.js';
@@ -1094,7 +1095,12 @@ function startApp() {
   startPersonal();
   personal.onSaved = (b, a) => { import('./rank.js').then((r) => r.rankPersonal(b, a)); import('./game.js').then((gm) => gm.onPersonal(b, a)).catch(() => {}); };
   // conquistas: XP, níveis e emblemas (concluir, marcar, bilhetes); começa depois que a agenda carregou
-  store.hooks.game = (b, a) => import('./game.js').then((gm) => gm.onEvent(b, a)).catch(() => {});
+  store.hooks.game = (b, a) => {
+    // uso (só contagem): compromisso criado / concluído
+    if (a && !b) track('compromisso:criado');
+    if (a && a.status === 'feito' && (!b || b.status !== 'feito')) track('compromisso:concluido');
+    import('./game.js').then((gm) => gm.onEvent(b, a)).catch(() => {});
+  };
   store.hooks.note = (n) => import('./game.js').then((gm) => gm.onNote(n)).catch(() => {});
   setTimeout(() => import('./game.js').then((gm) => { gm.startGame(); gm.onGame(() => refreshLevelRings()); refreshLevelRings(); }).catch((e) => console.warn('conquistas', e)), 1800);
   setTimeout(askReinstall, 2500); // aviso de instalar a versão nova (só para quem precisa)
@@ -1310,6 +1316,7 @@ function captureOrigin() {
 
 async function boot() {
   startErrorLog();
+  startTracking();
   captureOrigin();
   // link de convite para a agenda compartilhada: guarda para depois do login
   captureInvite();

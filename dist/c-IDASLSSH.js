@@ -1,0 +1,1 @@
+var e=Object.defineProperty;var n=(s,o)=>{for(var a in o)e(s,a,{get:o[a],enumerable:!0})};var m=["Assinatura no cart\xE3o voltou a funcionar normalmente","Novo emblema lend\xE1rio: Vital\xEDcio","Quando os avisos est\xE3o desligados, o Lembra mostra como ligar"];export{n as a,m as b};

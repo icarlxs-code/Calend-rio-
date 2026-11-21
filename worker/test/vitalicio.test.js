@@ -111,3 +111,35 @@ test('tirar o acesso apaga o cartão; o número não volta a ser usado', async (
   const r = await call('/admin/grant', { ...DONO, body: { uid: JOAO.uid, on: true } });
   assert.equal(r.data.status.vip.no, 3);
 });
+
+test('quem ganhou o "para sempre" antes da surpresa existir recebe número e aviso (uma vez só)', async () => {
+  const { vipMigrate } = await import('../src/billing.js');
+  const old = { uid: 'lorenaUid0000001', lifetime: true, comp: true, lifetimeAt: Date.now() - 3600e3 };
+  kv.set('bill:lorenaUid0000001', JSON.stringify(old));
+  kv.set('bill:pagouUid00000001', JSON.stringify({ uid: 'pagouUid00000001', lifetime: true, lifetimeAt: Date.now() - 7200e3 })); // pagou: não é presente
+  const reg = JSON.parse(kv.get('users') || '{}');
+  reg.ulorenaUid0000001 = { ws: 'lorenaUid0000001' }; reg.upagouUid00000001 = { ws: 'pagouUid00000001' };
+  kv.set('users', JSON.stringify(reg));
+  const told = [];
+  const n = await vipMigrate(env, async (uid) => { told.push(uid); return 1; });
+  assert.equal(n, 1);
+  assert.deepEqual(told, ['lorenaUid0000001']);
+  const b = JSON.parse(kv.get('bill:lorenaUid0000001'));
+  assert.ok(b.vip.no >= 1);
+  assert.equal(b.vip.sent, 1);
+  assert.equal(JSON.parse(kv.get('bill:pagouUid00000001')).vip, undefined, 'quem pagou não vira presente');
+  // rodar de novo não repete
+  assert.equal(await vipMigrate(env, async (uid) => { told.push(uid); return 1; }), 0);
+  assert.equal(told.length, 1);
+  const st = (await call('/billing/status', { email: 'lorena@teste.local', uid: 'lorenaUid0000001', name: 'Lorena' })).data;
+  assert.equal(st.vip.no, b.vip.no);
+});
+
+test('o painel guarda se o aviso chegou no celular', async () => {
+  const r = await call('/admin/grant', { ...DONO, body: { uid: 'semAvisoUid00001', on: true } });
+  assert.equal(r.data.sent, 0);
+  assert.equal(r.data.status.vip.sent, 0);
+  const reg = JSON.parse(kv.get('users') || '{}'); reg.usemAvisoUid00001 = { ws: 'semAvisoUid00001' }; kv.set('users', JSON.stringify(reg));
+  const all = (await call('/billing/all', DONO)).data;
+  assert.equal(all.byWs.semAvisoUid00001.vip.sent, 0, 'o painel sabe que o aviso não chegou');
+});

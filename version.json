@@ -1,13 +1,13 @@
 {
-  "version": "2.0.1",
-  "build": "d5yw5anh",
+  "version": "2.0.2",
+  "build": "y7tsmhkv",
   "date": "2026-11-21",
   "min": "",
-  "title": "Ajustes e correções",
+  "title": "Correções e melhorias",
   "notes": [
+    "Assinatura no cartão voltou a funcionar normalmente",
     "Novo emblema lendário: Vitalício",
-    "Colocar a foto não troca mais o seu nome completo pelo apelido",
     "Quando os avisos estão desligados, o Lembra mostra como ligar"
   ],
-  "builtAt": "2026-11-21T21:09:43.608Z"
+  "builtAt": "2026-11-21T21:21:01.985Z"
 }

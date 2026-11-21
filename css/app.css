@@ -2458,3 +2458,39 @@ html.has-vip, html.has-vip body { overflow: hidden; }
 .vip__sheet .vip__btn { margin-top: 0; }
 @media (max-height: 700px) { .vip__s { padding-top: calc(env(safe-area-inset-top) + 4vh); } .vcard { margin-top: 3vh; } .vip__rare { margin-top: 3.5vh; } .vip__medal .bdg { width: 160px !important; height: 160px !important; } }
 @media (prefers-reduced-motion: reduce) { .vip *, .vip { animation-duration: .01s !important; animation-delay: 0s !important; } .vcard__sheen { display: none; } }
+.vip__terms { margin: 14px 0 0; font-size: 12px; color: #8E8E93; } .vip__terms a { color: #AEAEB2; }
+.vip__md .vip__terms + .vip__btn { margin-top: auto; }
+
+/* ---------- Painel do dono: abas em grade 3×2, Vitalícios e Dados ---------- */
+.aseg--6 { grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; border-radius: 12px; }
+.aseg--6 button { display: flex; align-items: center; justify-content: center; gap: 5px; min-width: 0; padding: 8px 4px; font-size: 13px; }
+.aseg--6 button span { overflow: hidden; text-overflow: ellipsis; }
+.aseg--6 button .ic { flex: none; opacity: .75; }
+.aseg--6 button em { flex: none; font-style: normal; font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; display: grid; place-items: center; background: var(--surface-3); color: var(--text-2); }
+.aseg--6 button.is-on em { background: var(--text); color: var(--bg); }
+.aseg--6 button.is-bad em { background: var(--danger); color: #fff; }
+.acrown { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #111; color: #fff; font-style: normal; box-shadow: 0 0 0 1.5px #C7C7CC; vertical-align: middle; }
+:root[data-theme="dark"] .acrown { background: #fff; color: #000; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .acrown { background: #fff; color: #000; } }
+.ahero--vip { background: #000; color: #fff; }
+.ahero--vip small { color: rgba(255,255,255,.6); display: inline-flex; align-items: center; gap: 5px; }
+.ahero--vip span { color: rgba(255,255,255,.6); }
+.avip { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #000; color: #fff; margin-bottom: 8px; }
+.avip > .ic { flex: none; width: 36px; height: 36px; padding: 8px; border-radius: 50%; background: #fff; color: #000; }
+.avip b { display: block; font-size: 15px; } .avip small { display: block; font-size: 12.5px; color: rgba(255,255,255,.65); margin-top: 2px; }
+.grantbox { display: flex; flex-direction: column; gap: 8px; }
+.grantdate { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; padding-top: 12px; border-top: .5px solid var(--sep, rgba(128,128,128,.25)); }
+.avrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; border: 0; background: none; font: inherit; color: inherit; text-align: left; border-bottom: .5px solid var(--sep, rgba(128,128,128,.2)); }
+.avrow:last-child { border-bottom: 0; }
+.avrow__id { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.avrow__id b { font-size: 15px; display: flex; align-items: center; gap: 6px; }
+.avrow__id small { font-size: 12.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.avrow > .ic:last-child { color: var(--text-3); flex: none; }
+.ah2 { font-size: 13px; font-weight: 600; color: var(--text-2); margin: 8px 4px -4px; }
+.ainsights h4 { font-size: 13px; margin: 10px 0 4px; color: var(--text-2); }
+.abars li { grid-template-columns: minmax(0, 1fr) 70px auto; }
+.abars li b { font-size: 12.5px; white-space: nowrap; min-width: 24px; }
+.abars--use li span { display: flex; flex-direction: column; }
+.abars--use li span small { font-size: 11px; color: var(--text-3); }
+.aerr__steps { color: var(--text-2) !important; }
+.aerr__why { color: var(--text-2) !important; background: var(--surface-2); padding: 6px 8px; border-radius: 8px; margin-top: 6px !important; }

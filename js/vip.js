@@ -110,6 +110,7 @@ export async function openVipReveal({ cardOnly = false } = {}) {
         <li><span>${icon('user', 18)}</span><div><b>Anel Vitalício na sua foto</b><small>Quem divide a agenda com você vê</small></div></li>
         <li><span>#</span><div><b>Membro ${memberNo(v.no)}</b><small>Seu número nunca vai se repetir</small></div></li>
       </ul>
+      <p class="vip__terms">Presente de cortesia do Lembra, nas regras dos <a href="termos/" target="_blank" rel="noopener">Termos de Uso</a>.</p>
       <button class="vip__btn" data-next>${askNotif ? 'Continuar' : 'Entrar no Lembra'}</button>
     </section>`}
     ${askNotif ? `<section class="vip__s vip__nf" data-step="notif">

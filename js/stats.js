@@ -8,6 +8,7 @@ import { platform } from './install.js';
 import * as push from './avisos.js';
 import { ageOf } from './persona.js';
 import { appInfo } from './version.js';
+import { usage30 } from './track.js';
 
 let lastFull = 0;
 const ageBand = (birth) => {
@@ -21,6 +22,7 @@ function profileSummary() {
   return {
     done: true, profession: p.profession || '', area: p.area || '', arch: p.arch || '', age: ageBand(p.birth), index: Number(p.index) || 0,
     forget: Number(p.forget) || 0, difficulties: Array.isArray(p.difficulties) ? p.difficulties.slice(0, 12) : [], goal: p.goal || '', journey: p.journey || '', tone: p.tone || '',
+    gender: p.gender || '', volume: p.volume || '', method: p.method || '',
     at: p.onboardedAt,
   };
 }
@@ -61,7 +63,23 @@ export function reportStats({ open = false, force = false } = {}) {
       personal: pEvents.length,
       lists: (personal.lists || []).length,
       birthdays: birthdays().length,
+      // atraso ao concluir (últimos 30 dias): quanto tempo depois do horário marcado a pessoa concluiu
+      ...(() => {
+        const done = mine.filter((e) => e.status === 'feito' && e.date >= monthAgo && e.doneAt && /^\d{2}:\d{2}$/.test(e.time || ''));
+        let sum = 0, onTime = 0;
+        for (const e of done) {
+          const [h, m] = e.time.split(':').map(Number);
+          const [y, mo, d] = e.date.split('-').map(Number);
+          const late = Math.max(0, Math.round((e.doneAt - new Date(y, mo - 1, d, h, m).getTime()) / 60e3));
+          sum += Math.min(late, 1440);
+          if (late <= 30) onTime++;
+        }
+        return { timed30: done.length, delaySum30: sum, onTime30: onTime };
+      })(),
     },
+    // botões e telas mais usados (só contagem)
+    usage: usage30(),
+    vipSeen: (() => { try { return !!localStorage.getItem('lembra.vip.seen'); } catch { return false; } })(),
   };
   const day = t;
   const prevDays = (store.statsDays || []).filter((d) => d >= monthAgo);

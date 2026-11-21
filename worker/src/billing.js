@@ -73,7 +73,7 @@ export function statusOf(b, me, now = Date.now()) {
   if (!b) return { plan: 'none', active: false };
   const addon = addonOf(b, now);
   const extra = addon ? { addon } : {};
-  if (b.lifetime) return { plan: 'lifetime', active: true, tier: 'pro', ...(b.founder ? { founder: true } : {}), ...(b.comp ? { comp: true } : {}), ...(b.comp && b.vip ? { vip: { no: b.vip.no, at: b.vip.at } } : {}), ...extra };
+  if (b.lifetime) return { plan: 'lifetime', active: true, tier: 'pro', ...(b.founder ? { founder: true } : {}), ...(b.comp ? { comp: true } : {}), ...(b.comp && b.vip ? { vip: { no: b.vip.no, at: b.vip.at, ...(Number.isFinite(b.vip.sent) ? { sent: b.vip.sent } : {}) } } : {}), ...extra };
   if (b.subActive && (!b.paidUntil || b.paidUntil > now - 3 * 864e5)) return { plan: 'monthly', active: true, tier: b.tier || 'pro', interval: b.interval || 'month', paidUntil: b.paidUntil || null, cancelAt: b.cancelAt || null, ...extra };
   // 12 meses pagos no Pix (sem renovação automática)
   if (b.prepaidUntil && b.prepaidUntil > now) return { plan: 'monthly', active: true, tier: b.prepaidTier || b.tier || 'pro', interval: 'year', paidUntil: b.prepaidUntil, prepaid: true, ...extra };
@@ -408,6 +408,39 @@ export async function grantComp(env, uid, on, now = Date.now(), until = 0) {
   b.updatedAt = now;
   await putBill(env, uid, b);
   return { ...statusOf(b, { ws: uid }, now), ...(gifted ? { gifted: true } : {}) };
+}
+
+/* resultado do aviso "Você recebeu algo raro." (o painel mostra se chegou no celular) */
+export async function markVipSent(env, uid, sent) {
+  const b = await getBill(env, uid);
+  if (!b || !b.vip) return;
+  b.vip.sent = Number(sent) || 0;
+  await putBill(env, uid, b);
+}
+
+/* Uma vez só: quem ganhou o acesso para sempre ANTES de existir a surpresa do Vitalício ganha agora
+   o número de membro (na ordem em que recebeu) e o aviso no celular. */
+export async function vipMigrate(env, notify, now = Date.now()) {
+  if (await env.CAL.get('vip-migrated-1')) return 0;
+  await env.CAL.put('vip-migrated-1', String(now));
+  const reg = (await env.CAL.get('users', 'json')) || {};
+  const seen = new Set(), olds = [];
+  for (const u of Object.values(reg)) {
+    if (!u || !u.ws || seen.has(u.ws) || !/^[A-Za-z0-9]{6,64}$/.test(u.ws)) continue;
+    seen.add(u.ws);
+    const b = await getBill(env, u.ws);
+    if (b && b.lifetime && b.comp && !b.vip) olds.push(b);
+  }
+  olds.sort((a, b) => (a.lifetimeAt || 0) - (b.lifetimeAt || 0));
+  for (const b of olds) {
+    const no = Number(await env.CAL.get('vip-count') || 0) + 1;
+    await env.CAL.put('vip-count', String(no));
+    b.vip = { no, at: b.lifetimeAt || now };
+    b.vip.sent = await notify(b.uid).catch(() => 0);
+    b.updatedAt = now;
+    await putBill(env, b.uid, b);
+  }
+  return olds.length;
 }
 
 /* Para o Painel do dono: situação de cada conta */

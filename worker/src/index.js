@@ -10,7 +10,7 @@ import { runCoach } from './coach.js';
 import { runPersonalCoach } from './pcoach.js';
 import { recordAct, getBoard, adminBoard, monthlyAward, eligible as rankEligible, standing as rankStanding, weekKey as rankWeek } from './rank.js';
 import { getBill, putBill, stripe as stripeApi } from './billing.js';
-import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling, untilOf, statusOf, grantComp } from './billing.js';
+import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling, untilOf, statusOf, grantComp, markVipSent, vipMigrate } from './billing.js';
 
 const SUBJECT = 'mailto:avisos@calendario.app';
 
@@ -406,7 +406,7 @@ async function handle(req, env) {
       await refreshUntil(env, uid);
       // presente vitalício: aviso no celular da pessoa (sem dizer o que é: a surpresa fica para quando ela abrir)
       let sent = 0;
-      if (gifted) sent = await sendToMember(env, 'u' + uid.replace(/[^A-Za-z0-9]/g, '').slice(0, 24), { title: 'Você recebeu algo raro.', body: 'Poucas pessoas no mundo vão ver o que está esperando por você no Lembra.', tag: 'vitalicio', url: './#/vitalicio' }).catch(() => 0);
+      if (gifted) { sent = await vipNotify(env, uid); await markVipSent(env, uid, sent); st.vip = { ...st.vip, sent }; }
       return reply(env, req, { ok: true, status: st, ...(gifted ? { gifted: true, sent } : {}) });
     } catch (e) { return reply(env, req, { error: e.message }, e.status || 500); }
   }
@@ -426,7 +426,7 @@ async function handle(req, env) {
 
   // ---------- erros do app (para o Painel do dono) ----------
   if (url.pathname === '/log') {
-    const e = { msg: clean(body.msg, 300), where: clean(body.where, 160), ver: clean(body.ver, 40), dev: clean(body.dev, 40), space: clean(body.space, 20) };
+    const e = { msg: clean(body.msg, 300), where: clean(body.where, 160), ver: clean(body.ver, 40), dev: clean(body.dev, 40), space: clean(body.space, 20), steps: clean(body.steps, 160) };
     if (!e.msg) return reply(env, req, { ok: true });
     const list = (await env.CAL.get('errors', 'json')) || [];
     const sig = `${e.msg}|${e.where}`.slice(0, 400);
@@ -434,7 +434,7 @@ async function handle(req, env) {
     const hit = list.find((x) => x.sig === sig);
     // o mesmo erro da mesma pessoa na última hora não gasta outra gravação
     if (hit && now - hit.last < 3600e3 && (hit.users || []).includes(me.id)) return reply(env, req, { ok: true });
-    if (hit) { hit.count++; hit.last = now; hit.ver = e.ver || hit.ver; hit.users = [...new Set([...(hit.users || []), me.id])].slice(-20); }
+    if (hit) { hit.count++; hit.last = now; hit.ver = e.ver || hit.ver; hit.steps = e.steps || hit.steps; hit.dev = e.dev || hit.dev; hit.users = [...new Set([...(hit.users || []), me.id])].slice(-20); }
     else list.unshift({ sig, ...e, count: 1, first: now, last: now, users: [me.id] });
     await env.CAL.put('errors', JSON.stringify(list.sort((a, b) => b.last - a.last).slice(0, 150)));
     return reply(env, req, { ok: true });
@@ -716,6 +716,9 @@ async function oneShot(env) {
   }
 }
 
+/* aviso do presente Vitalício: não diz o que é nem quem deu (a surpresa fica para quando a pessoa abrir) */
+const vipNotify = (env, uid) => sendToMember(env, 'u' + String(uid).replace(/[^A-Za-z0-9]/g, '').slice(0, 24), { title: 'Você recebeu algo raro.', body: 'Poucas pessoas no mundo vão ver o que está esperando por você no Lembra.', tag: 'vitalicio', url: './#/vitalicio' }).catch(() => 0);
+
 export default {
   fetch: (req, env) => handle(req, env).catch((e) => reply(env, req, { error: 'erro interno: ' + e.message }, 500)),
   scheduled: (_event, env, ctx) => {
@@ -737,6 +740,7 @@ export default {
         return runPersonalCoach(env, sendToMember, team, rankInfo);
       })()),
       safe('aviso único', oneShot(env)),
+      safe('vitalício (quem ganhou antes da surpresa)', vipMigrate(env, (uid) => vipNotify(env, uid))),
       safe('ranking', monthlyAward(env, { stripe: stripeApi, getBill, putBill, notify: (id, msg) => sendToMember(env, id, msg) })),
     ])));
   },
