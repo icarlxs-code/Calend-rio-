@@ -1,10 +1,10 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-nudv6weg'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-amg5wlj3'/*CACHE*/;
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster5.jpg',
   ...Array.from({ length: 67 }, (_, i) => `media/intro5/f${String(i + 1).padStart(3, '0')}.webp`),
   'media/logos/pura-vida.jpg', 'media/lembra-logo.jpg', 'media/marca/completa-preto.png', 'media/marca/completa-branco.png', 'media/marca/simbolo-preto.png', 'media/marca/simbolo-branco.png', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/c-BMMIDE33.js', 'dist/c-ACQBAYWC.js', 'dist/c-URYKMPA6.js', 'dist/c-O24LJCHZ.js', 'dist/a-NUDV6WEG.js', 'dist/c-FIN47OOP.js', 'dist/c-UL2LDEZV.js', 'dist/c-HY3LI2KY.js', 'dist/c-LOL4QLOL.js', 'dist/c-JQZGUAQZ.js', 'dist/c-WMVIU2OE.js', 'dist/c-6XQSVF63.js', 'dist/c-IB7LZREB.js', 'dist/c-QQDDAYQI.js', 'dist/c-6ZK6KJM3.js', 'dist/c-QGCP777H.js', 'dist/c-YGVPVHL5.js', 'dist/c-5EWYQU6K.js', 'dist/c-WOSZLS7G.js', 'dist/c-35C24GZ6.js', 'dist/c-4WJ4TYVF.js', 'dist/c-E5A4TQYE.js', 'dist/c-EIA4XOOJ.js', 'dist/c-JKA3WHR5.js', 'dist/c-CIJP7VMQ.js', 'dist/c-YEARXB46.js', 'dist/c-MYDFTVQQ.js', 'dist/c-U53RW4YL.js', 'dist/c-VHNSBD2M.js',
+  /*FILES*/ 'dist/c-3BGEHEV6.js', 'dist/c-ACQBAYWC.js', 'dist/c-QPW6QJPT.js', 'dist/c-LULFKHZG.js', 'dist/a-AMG5WLJ3.js', 'dist/c-AHNRO2YL.js', 'dist/c-UL2LDEZV.js', 'dist/c-WG3DANCP.js', 'dist/c-TMQWKYFW.js', 'dist/c-IZSYLQRG.js', 'dist/c-WMVIU2OE.js', 'dist/c-64NOZWNM.js', 'dist/c-O5AK2FX3.js', 'dist/c-5N4LCNH3.js', 'dist/c-QHR3K5EC.js', 'dist/c-JN7M7GKS.js', 'dist/c-YGVPVHL5.js', 'dist/c-5EWYQU6K.js', 'dist/c-7Q3LVWSR.js', 'dist/c-KKGHPKNC.js', 'dist/c-4WJ4TYVF.js', 'dist/c-DVKBBQA3.js', 'dist/c-PFDKJC2I.js', 'dist/c-JKA3WHR5.js', 'dist/c-CIJP7VMQ.js', 'dist/c-YEARXB46.js', 'dist/c-MYDFTVQQ.js', 'dist/c-U53RW4YL.js', 'dist/c-VHNSBD2M.js',
 ];
 
 self.addEventListener('install', (e) => {

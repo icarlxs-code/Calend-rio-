@@ -362,6 +362,10 @@ const lockGuard = (ev) => {
   // (gravar continua bloqueado no store, para qualquer caminho)
   const inApp = ev.target.closest && ev.target.closest('#view, .tabbar');
   if (!inApp || ev.target.closest('[data-allow-locked], [data-action="logout"]')) return;
+  // modo "só olhar": trocar de aba e ver a agenda é livre; criar/editar/concluir abre os planos
+  if (ev.target.closest('[data-action="tab"], [data-action="ptab"], [data-action="space"], [data-action="switch-space"]')) return;
+  if (ev.type === 'focusin' && !ev.target.matches('input, textarea, select, [contenteditable]')) return;
+  if (ev.type === 'click' && !ev.target.closest('button, a, input, textarea, select, label, [data-action], [role="button"], [data-id]')) return;
   ev.preventDefault();
   ev.stopPropagation();
   if (ev.type === 'focusin' && ev.target.blur) ev.target.blur();

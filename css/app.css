@@ -1580,8 +1580,11 @@ a.list__row { color: inherit; text-decoration: none; }
 @media (max-width: 370px) { .cmp__row { grid-template-columns: minmax(0, 1fr) 52px 52px; font-size: 12.5px; } .plan__price b { font-size: 19px; } }
 
 /* ---------- Conta sem plano ativo: tudo apagado e travado ---------- */
-html.is-locked #view .page > *:not(.trialbar--lock), html.is-locked #view > *:not(.page):not(.trialbar--lock) { filter: grayscale(1); opacity: .38; pointer-events: none; user-select: none; }
-html.is-locked .tabbar { filter: grayscale(1); opacity: .45; }
+/* sem plano: dá para olhar tudo (rolar e trocar de aba); qualquer ação abre os planos */
+html.is-locked #view .page > *:not(.trialbar--lock), html.is-locked #view > *:not(.page):not(.trialbar--lock) { user-select: none; }
+html.is-locked .tabbar__fab { filter: grayscale(1); opacity: .5; }
+/* confirmações (ex.: "Sair da conta?") precisam abrir POR CIMA da tela de planos */
+body:has(.paywall) #sheets { z-index: 500; }
 .trialbar--lock { background: linear-gradient(135deg, #6A4BFF, #C13FD9); position: relative; z-index: 2; }
 .trialbar--lock .trialbar__go { color: #6A4BFF; }
 .paywall .btn--primary { background: linear-gradient(135deg, #8B5CFF, #D946EF); color: #fff; box-shadow: 0 10px 28px rgba(160, 107, 255, .35); border: 0; }
