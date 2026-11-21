@@ -34,7 +34,7 @@ import { reportStats, loadStatsDays, reportSoon } from './stats.js';
 import { ensureSeedCompanies, ensureMatheusLogo, ensureNotifyOwners } from './seed-companies.js';
 import { ensureMatheusJG } from './seed-matheus.js';
 import { ensureSeedRoutine } from './seed-routine.js';
-import { onEventChange, onActivity, syncSchedule, setNotifyFeedback } from './notifier.js';
+import { onEventChange, onActivity, syncSchedule, setNotifyFeedback, onNoteAdded } from './notifier.js';
 import { buildContext } from '../functions/context.js';
 import { routine } from './planner.js';
 import * as push from './avisos.js';
@@ -398,8 +398,11 @@ document.addEventListener('submit', async (ev) => {
     toast('Escolha quem você é em Ajustes');
     return;
   }
-  await store.upsert('notes', { id: uid('n_'), date: ui.date, text, author: store.me });
-  toast('Bilhete adicionado');
+  const mentions = [...f.querySelectorAll('[name="mention"]:checked')].map((x) => x.value);
+  const note = { id: uid('n_'), date: ui.date, text, author: store.me, mentions, createdAt: Date.now() };
+  await store.upsert('notes', note);
+  onNoteAdded(note);
+  toast(mentions.length ? `Bilhete enviado para ${mentions.map((id) => store.member(id)?.name || '').filter(Boolean).join(' e ')}` : store.team.length > 1 ? 'Bilhete adicionado — a equipe foi avisada' : 'Bilhete adicionado');
 });
 
 /* ---------- gestos: deslizar semana/mês ---------- */

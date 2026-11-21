@@ -420,7 +420,15 @@ h1, h2, h3, h4, p { margin: 0; }
 .note:nth-child(even) { transform: rotate(0.3deg); }
 .note footer { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; font-weight: 600; opacity: 0.85; }
 .note__del { margin-left: auto; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; opacity: 0.6; }
-.note-add { display: flex; gap: 8px; align-items: center; }
+.note-add { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.note__time { font-weight: 500; opacity: .7; margin-left: 2px; }
+.note__time::before { content: '· '; }
+.note__to { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.note__to span { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: color-mix(in srgb, var(--note-text) 14%, transparent); }
+.note-to { flex-basis: 100%; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted, #8E8E93); }
+.note-to__chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px 5px 5px; border-radius: 99px; border: 1px solid var(--note-line); cursor: pointer; font-weight: 600; color: var(--note-text); }
+.note-to__chip input { position: absolute; opacity: 0; pointer-events: none; }
+.note-to__chip:has(input:checked) { background: var(--note-text); color: var(--note); border-color: var(--note-text); }
 .note-add input { flex: 1; min-width: 0; height: 46px; padding: 0 14px; border-radius: 14px; border: 1px dashed var(--note-line); background: color-mix(in srgb, var(--note) 55%, transparent); font-size: 16px; outline: none; }
 .note-add .iconbtn { width: 46px; height: 46px; border-radius: 14px; }
 

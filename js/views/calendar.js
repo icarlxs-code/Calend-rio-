@@ -174,19 +174,27 @@ export function renderToday() {
     if (!nowPlaced && date === today) timeline += `<div class="nowline nowline--end"><span>Agora · ${fmtTime(`${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`)} · fim da agenda</span></div>`;
   }
 
-  // Bilhetes
+  // Bilhetes: hora em que foi escrito (e o dia, se não foi hoje)
+  const noteWhen = (n) => {
+    if (!n.createdAt) return '';
+    const d = new Date(n.createdAt), hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return `<time class="note__time">${k === today ? `às ${hm}` : `${k.slice(8, 10)}/${k.slice(5, 7)} às ${hm}`}</time>`;
+  };
   const notes = store.notesOn(date);
   const notesHtml = `<section class="block">
     <h2 class="block__title">${icon('note', 16)} Bilhetes do dia</h2>
     <div class="notes">
       ${notes.map((n) => `<div class="note">
+        ${(n.mentions || []).length ? `<div class="note__to">${(n.mentions || []).map((id) => `<span>@${esc(store.member(id)?.name || '')}</span>`).join('')}</div>` : ''}
         <p>${esc(n.text)}</p>
-        <footer>${avatar(n.author, 18)}<span>${esc(store.member(n.author)?.name || '')}</span>
+        <footer>${avatar(n.author, 18)}<span>${esc(store.member(n.author)?.name || '')}</span>${noteWhen(n)}
           ${store.canEdit('notes', n) ? `<button class="note__del" data-action="del-note" data-id="${n.id}" aria-label="Apagar bilhete">${icon('x', 14)}</button>` : ''}</footer>
       </div>`).join('')}
       <form class="note-add" data-form="note">
         <input name="text" placeholder="${store.team.length > 1 ? `Escreva um bilhete para a ${crew()}…` : 'Escreva um bilhete para você…'}" autocomplete="off" maxlength="280">
         <button class="iconbtn iconbtn--accent" aria-label="Adicionar bilhete">${icon('plus', 18)}</button>
+        ${store.team.length > 1 ? `<div class="note-to"><small>Marcar:</small>${store.team.filter((m) => m.id !== store.me).map((m) => `<label class="note-to__chip"><input type="checkbox" name="mention" value="${esc(m.id)}">${avatar(m.id, 18)}<span>${esc(m.name)}</span></label>`).join('')}</div>` : ''}
       </form>
     </div>
   </section>`;

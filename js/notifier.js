@@ -69,6 +69,19 @@ export function onEventChange(before, after) {
   syncSchedule();
 }
 
+/* bilhete novo: quem foi marcado recebe "fulano marcou você"; sem marcação, a dupla/equipe toda recebe */
+export function onNoteAdded(n) {
+  if (!active() || !n) return;
+  const me = nameOf(store.me);
+  const team = store.team.map((m) => m.id).filter((id) => id !== store.me);
+  const marked = (n.mentions || []).filter((id) => team.includes(id));
+  const day = n.date === todayKey() ? 'hoje' : `${n.date.slice(8, 10)}/${n.date.slice(5, 7)}`;
+  const body = n.text.length > 140 ? n.text.slice(0, 137) + '…' : n.text;
+  if (marked.length) notify(marked, { title: `${me} marcou você num bilhete (${day})`, body }, `note-${n.id}`, './');
+  const rest = team.filter((id) => !marked.includes(id));
+  if (rest.length) notify(rest, { title: `Bilhete de ${me} (${day})`, body }, `note-${n.id}`, './');
+}
+
 export function onActivity(a) {
   if (!active()) return;
   const co = a.sample?.companyId || a.events?.[0]?.companyId;

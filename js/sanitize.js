@@ -66,7 +66,7 @@ export function sanitizeItem(col, x) {
   if (col === 'notes') {
     const date = safeDate(x.date);
     if (!date) return null;
-    return { ...x, date, text: str(x.text, 500), author: str(x.author, 40) };
+    return { ...x, date, text: str(x.text, 500), author: str(x.author, 40), mentions: Array.isArray(x.mentions) ? x.mentions.filter((m) => typeof m === 'string' && m.length <= 40).slice(0, 10) : [] };
   }
   if (col === 'settings') {
     if (/^seed-[\w-]{1,40}$/.test(x.id)) return { id: x.id, done: ids(x.done), updatedAt: x.updatedAt };
