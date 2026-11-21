@@ -1012,7 +1012,7 @@ async function showNewPassword(code) {
         toast('Senha nova salva ✓ Entrando…', { ms: 3000 });
         loginEmail = email;
         try { localStorage.removeItem(LS_UID); } catch { /* ok */ }
-        await cloudApi.signIn(email, pass).then((cred) => { try { localStorage.setItem(LS_UID, cred.user.uid); } catch { /* ok */ } });
+        await cloudApi.signIn(email, pass).then((cred) => { try { localStorage.setItem(LS_UID, cred.user.uid); sessionStorage.setItem('lembra.sess', '1'); } catch { /* ok */ } });
         // já entrou: abre o app normalmente (a tela de senha nova abriu antes do app começar)
         setTimeout(() => location.replace(location.pathname), 600);
       } catch (err) {

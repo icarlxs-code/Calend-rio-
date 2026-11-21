@@ -44,11 +44,6 @@ export function vipBanner() {
     </button>`;
   }
   return ''; // a faixa "Lembra Vitalício" não fica repetindo: o cartão está nos Ajustes
-  return `<button class="trialbar vipbar" data-action="vip-card">
-    <span class="vipbar__sym" aria-hidden="true"></span>
-    <span><b>Lembra Vitalício</b><small>Membro ${memberNo(v.no)} · tudo liberado para sempre</small></span>
-    <span class="vipbar__inf">∞</span>
-  </button>`;
 }
 
 function cardHtml(v) {

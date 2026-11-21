@@ -1,9 +1,10 @@
 /* Modo Pessoal: um "outro app" dentro do Calendário. Visual, telas e menu próprios,
    mesmo login. Só o dono vê o que está aqui (nem o parceiro, nem o trabalho). */
+import { itemLook } from '../itemicons.js';
 import { okFx } from '../okfx.js';
 import {
   personal, CATS, REPEATS, LIST_PRESETS, occurrences, overdue, savePersonal, removePersonal, toggleDone, parseQuick,
-  doneOn, birthdays, phraseOfDay, addMemo, newList, addEntry, toggleEntry, removeEntry, clearDone, savePrefs, LIST_ICONS, listIcon,
+  doneOn, birthdays, phraseOfDay, addMemo, guessCat, newList, addEntry, toggleEntry, removeEntry, clearDone, savePrefs, LIST_ICONS, listIcon,
 } from '../personal.js';
 import { openSheet, sheetHead, toast, confirmDialog, avatar, meRing } from '../components.js';
 import { isMarketing } from '../constants.js';
@@ -20,6 +21,8 @@ const firstName = () => store.member(store.me)?.name || '';
 /* Ícone profissional num bloco em degradê (estilo iOS) */
 export const tile = (ic, g, size = 40, cls = '') => `<span class="ptile ${cls}" style="--s:${size}px;--g1:${g[0]};--g2:${g[1]}">${icon(ic, Math.round(size * 0.52))}</span>`;
 const catTile = (cat, size = 40) => { const c = CATS[cat] || CATS.lembrete; return tile(c.ic, c.g, size); };
+/* ícone de cada coisa pelo que está escrito (cabelo → secador, conta de luz → lâmpada…); senão, o da categoria */
+const itemTile = (it, size = 40) => { const l = it.cat !== 'aniversario' && itemLook(it.title || '', it.note || ''); return l ? tile(l.ic, l.g, size) : catTile(it.cat, size); };
 const listTile = (l, size = 40) => { const k = listIcon(l); return tile(k, LIST_ICONS[k].g, size); };
 
 /* ---------- peças ---------- */
@@ -28,7 +31,7 @@ const row = (it, date, done, { showDate = false } = {}) => {
   const age = it.cat === 'aniversario' && it.birthYear ? ` · faz ${+date.slice(0, 4) - it.birthYear} anos` : '';
   const when = showDate ? `${dayLabel(date)}${it.time ? ' · ' + fmtTime(it.time) : ''}` : it.time ? fmtTime(it.time) : 'Qualquer hora';
   return `<div class="prow${done ? ' is-done' : ''}" style="--pc:${c.color}" data-action="p-open" data-id="${it.id}" data-date="${date}">
-    ${catTile(it.cat, 40)}
+    ${itemTile(it, 40)}
     <div class="prow__body"><strong>${esc(it.title)}</strong><small>${esc(when)}${esc(age)}${it.repeat && it.repeat !== 'none' ? ` · ${icon('repeat', 11)}` : ''}${it.note ? ' · ' + esc(it.note.slice(0, 40)) : ''}</small></div>
     <button class="prow__check${done ? ' is-on' : ''}" data-action="p-done" data-id="${it.id}" data-date="${date}" aria-label="${done ? 'Desmarcar' : 'Feito'}">${icon('check', 15)}</button>
   </div>`;
@@ -107,7 +110,7 @@ function forYou() {
     <h2 class="block__title"><span class="ptitle">${tile('sparkles', ['#C78BFF', '#7C5CFF'], 26)}Feito para você</span></h2>
     <p class="foryou__lead">${esc(forYouLead())}</p>
     <div class="foryou__list">${list.map((x) => `<div class="foryou__item">
-      <button class="foryou__add" data-action="p-sug" data-id="${x.id}">${x.ic ? tile(x.ic, x.g, 36) : catTile(x.cat, 36)}<span><b>${esc(x.title)}</b><small>${esc(x.why)}</small></span><i>${icon('plus', 16)}</i></button>
+      <button class="foryou__add" data-action="p-sug" data-id="${x.id}">${itemLook(x.title || '') ? itemTile({ title: x.title, cat: x.cat }, 36) : x.ic ? tile(x.ic, x.g, 36) : catTile(x.cat, 36)}<span><b>${esc(x.title)}</b><small>${esc(x.why)}</small></span><i>${icon('plus', 16)}</i></button>
       <button class="foryou__x" data-action="p-sug-x" data-id="${x.id}" aria-label="Não quero esta sugestão">${icon('x', 14)}</button>
     </div>`).join('')}</div>
   </section>`;
@@ -456,7 +459,7 @@ export function openPersonalEditor(id = null, preset = {}) {
       <div class="fgroup"><label class="flabel">Tipo</label><div class="pcats">
         ${Object.entries(CATS).map(([k, c]) => `<button type="button" class="pcat${d.cat === k ? ' is-on' : ''}" style="--pc:${c.color}" data-cat="${k}">${tile(c.ic, c.g, 30)}<span>${esc(c.label)}</span></button>`).join('')}
       </div></div>
-      <div class="fgroup"><label class="flabel" for="p-title" data-title-label>${d.cat === 'aniversario' ? 'De quem?' : 'O quê?'}</label><input id="p-title" class="input" name="title" value="${esc(d.title)}" placeholder="${d.cat === 'aniversario' ? 'Ex.: Aniversário da Maria' : 'Ex.: Buscar a Ana no trabalho'}" maxlength="120" autocomplete="off"></div>
+      <div class="fgroup"><label class="flabel" for="p-title" data-title-label>${d.cat === 'aniversario' ? 'De quem?' : 'O quê?'}</label><div class="ptitlerow"><span data-tprev>${itemTile(d, 38)}</span><input id="p-title" class="input" name="title" value="${esc(d.title)}" placeholder="${d.cat === 'aniversario' ? 'Ex.: Aniversário da Maria' : 'Ex.: Fazer cabelo, pagar conta de luz…'}" maxlength="120" autocomplete="off"></div></div>
       <div class="fgroup row2">
         <div><label class="flabel" for="p-date">Dia</label><input id="p-date" class="input" type="date" name="date" value="${d.date}"></div>
         <div><label class="flabel" for="p-time">Horário (opcional)</label><input id="p-time" class="input" type="time" name="time" value="${d.time || ''}" step="300"></div>
@@ -472,12 +475,21 @@ export function openPersonalEditor(id = null, preset = {}) {
     </form>`,
     onMount: (a) => {
       const el = a.el, form = el.querySelector('form');
+      // o ícone muda enquanto a pessoa escreve (cabelo → secador, conta de luz → lâmpada…)
+      let catPicked = !!old;
+      const prev = () => { const p = el.querySelector('[data-tprev]'); if (p) p.innerHTML = itemTile({ ...d, title: form.title.value }, 38); };
+      form.title.addEventListener('input', () => {
+        if (!catPicked && d.cat !== 'aniversario') { const g = guessCat(form.title.value); if (g !== d.cat && g !== 'lembrete') { d.cat = g; el.querySelectorAll('[data-cat]').forEach((x) => x.classList.toggle('is-on', x.dataset.cat === g)); } }
+        prev();
+      });
       el.querySelectorAll('[data-cat]').forEach((b) => (b.onclick = () => {
+        catPicked = true;
         d.cat = b.dataset.cat;
         el.querySelectorAll('[data-cat]').forEach((x) => x.classList.toggle('is-on', x === b));
         el.querySelector('[data-by]').hidden = d.cat !== 'aniversario';
         el.querySelector('[data-title-label]').textContent = d.cat === 'aniversario' ? 'De quem?' : 'O quê?';
         if (d.cat === 'aniversario' && form.repeat.value === 'none') form.repeat.value = 'yearly';
+        prev();
       }));
       el.querySelector('[data-save]').onclick = () => {
         const title = form.title.value.trim();

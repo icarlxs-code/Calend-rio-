@@ -5,16 +5,17 @@ import { store } from './store.js';
 import { todayKey, addDays, fromKey, pad, uid } from './utils.js';
 import { server, api } from './avisos.js';
 import { streak } from './reward.js';
+import { itemLook } from './itemicons.js';
 
 export const CATS = {
   lembrete: { label: 'Lembrete', emoji: '📝', ic: 'note', g: ['#8E9AAF', '#5B6478'], color: '#6B7489', words: [] },
   aniversario: { label: 'Aniversário', emoji: '🎂', ic: 'cake', g: ['#FF7A9C', '#E8326A'], color: '#F0457A', words: ['aniversário', 'aniversario', 'niver', 'aniver'] },
   compromisso: { label: 'Compromisso', emoji: '📍', ic: 'mappin', g: ['#5AA8FF', '#2F6BFF'], color: '#2F7BFF', words: ['ir ao', 'ir na', 'ir no', 'ir para', 'ir pra', 'reunião', 'encontro', 'evento', 'festa', 'casamento', 'igreja', 'culto', 'missa'] },
   buscar: { label: 'Buscar / levar', emoji: '🚗', ic: 'car', g: ['#FFB547', '#FF7A1A'], color: '#FF8A1F', words: ['buscar', 'levar', 'pegar ', 'carona'] },
-  beleza: { label: 'Cabelo / beleza', emoji: '💈', ic: 'sparkles', g: ['#C78BFF', '#8A4DFF'], color: '#9B5CFF', words: ['cabelo', 'barba', 'barbeiro', 'unha', 'manicure', 'sobrancelha', 'salão'] },
-  saude: { label: 'Saúde', emoji: '🩺', ic: 'pulse', g: ['#4BD88B', '#16A35A'], color: '#1FB566', words: ['médico', 'medico', 'dentista', 'exame', 'consulta', 'remédio', 'remedio', 'academia', 'treino', 'vacina'] },
-  pagar: { label: 'Pagar conta', emoji: '💸', ic: 'card', g: ['#3FD0E0', '#0E8FB0'], color: '#14A3C2', words: ['pagar', 'conta de', 'boleto', 'fatura', 'aluguel', 'pix'] },
-  compras: { label: 'Compras', emoji: '🛒', ic: 'cart', g: ['#8B8CFF', '#5146E5'], color: '#5E5CF0', words: ['comprar', 'mercado', 'farmácia', 'farmacia'] },
+  beleza: { label: 'Cabelo / beleza', emoji: '💇', ic: 'hairdryer', g: ['#FF8FB8', '#D9367A'], color: '#E0457F', words: ['cabelo', 'escova', 'progressiva', 'hidratação', 'hidratacao', 'luzes', 'mechas', 'tintura', 'trança', 'penteado', 'barba', 'barbeiro', 'unha', 'manicure', 'pedicure', 'esmalte', 'sobrancelha', 'cílios', 'cilios', 'maquiagem', 'make', 'depilação', 'depilacao', 'limpeza de pele', 'estética', 'estetica', 'massagem', 'salão', 'salao'] },
+  saude: { label: 'Saúde', emoji: '🩺', ic: 'stethoscope', g: ['#4BD88B', '#16A35A'], color: '#1FB566', words: ['médico', 'medico', 'médica', 'dentista', 'exame', 'consulta', 'remédio', 'remedio', 'academia', 'treino', 'vacina', 'terapia', 'psicólogo', 'psicologo', 'fisioterapia', 'pilates', 'yoga', 'hospital', 'farmácia', 'farmacia', 'nutricionista'] },
+  pagar: { label: 'Pagar conta', emoji: '🧾', ic: 'receipt', g: ['#3FD0E0', '#0E8FB0'], color: '#14A3C2', words: ['pagar', 'conta de', 'boleto', 'fatura', 'aluguel', 'pix', 'condomínio', 'condominio', 'iptu', 'ipva', 'internet', 'mensalidade', 'parcela', 'imposto'] },
+  compras: { label: 'Compras', emoji: '🛒', ic: 'cart', g: ['#8B8CFF', '#5146E5'], color: '#5E5CF0', words: ['comprar', 'mercado', 'supermercado', 'feira', 'shopping', 'padaria'] },
 };
 export const REPEATS = { none: 'Não repete', daily: 'Todo dia', weekly: 'Toda semana', biweekly: 'A cada 2 semanas', monthly: 'Todo mês', yearly: 'Todo ano' };
 export const LIST_ICONS = {
@@ -301,7 +302,9 @@ const TITLES = { m60: 'Daqui a 1 hora', m30: 'Daqui a 30 min', m20: 'Daqui a 20 
 /* ---------- avisos no celular (só para o dono) ---------- */
 const at = (date, time) => Date.parse(`${date}T${time}:00-03:00`);
 const hm = (t) => t.replace(/^0/, '').replace(':00', 'h').replace(':', 'h');
-const short = (o) => `${(CATS[o.item.cat] || CATS.lembrete).emoji} ${o.item.time ? hm(o.item.time) + ' ' : ''}${o.item.title}`;
+/* emoji do aviso: o do assunto (💇 cabelo, 💡 conta de luz…) e, se não reconhecer, o da categoria */
+export const emojiOf = (it) => itemLook(it.title || '', it.note || '')?.emoji || (CATS[it.cat] || CATS.lembrete).emoji;
+const short = (o) => `${emojiOf(o.item)} ${o.item.time ? hm(o.item.time) + ' ' : ''}${o.item.title}`;
 export function buildPersonalSchedule(now = Date.now()) {
   const t = todayKey();
   const prefs = personal.prefs;
@@ -311,7 +314,7 @@ export function buildPersonalSchedule(now = Date.now()) {
   if (prefs.reminders) {
     for (const { item: it, date, done } of occ) {
       if (done || it.remind === 'none') continue;
-      const c = CATS[it.cat] || CATS.lembrete;
+      const c = { emoji: emojiOf(it) };
       const name = `${c.emoji} ${it.title}`;
       const url = `./#/p/${it.id}`, tag = `p-${it.id}`;
       const k = (s) => `p-${it.id}-${date}-${s}`;
