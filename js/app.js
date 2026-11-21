@@ -77,9 +77,10 @@ function applySpaceMeta(personalMode) {
   const [l, d] = personalMode ? SPACE_BAR.personal : [WORK.theme?.bg || SPACE_BAR.work[0], SPACE_BAR.work[1]];
   if (document.documentElement.classList.contains('intro-done')) setBarColor(l, d); // durante a abertura fica preta
   const set = (sel, attr, val) => { const el = document.querySelector(sel); if (el) el.setAttribute(attr, val); };
-  set('link[rel="manifest"]', 'href', personalMode ? 'pessoal.webmanifest' : 'manifest.webmanifest');
-  set('link[rel="apple-touch-icon"]', 'href', personalMode ? 'icons/pessoal-180.png' : 'icons/icon-180.png');
-  set('meta[name="apple-mobile-web-app-title"]', 'content', personalMode ? 'Pessoal' : 'Lembra');
+  // ícone e nome na tela inicial: sempre a marca principal (Lembra), em qualquer modo
+  set('link[rel="manifest"]', 'href', 'manifest.webmanifest');
+  set('link[rel="apple-touch-icon"]', 'href', 'icons/icon-180.png');
+  set('meta[name="apple-mobile-web-app-title"]', 'content', 'Lembra');
   document.title = personalMode ? 'Pessoal · Lembra' : 'Lembra · Sua agenda';
 }
 /* Troca entre Trabalho e Pessoal com uma transição de "outro app" */
@@ -1317,6 +1318,8 @@ function captureOrigin() {
 async function boot() {
   startErrorLog();
   startTracking();
+  // versão: confere já na abertura (também na tela de entrar); versão antiga → atualiza ou mostra o botão "Atualizar"
+  import('./version.js').then((v) => v.startVersionWatch()).catch(() => {});
   captureOrigin();
   // link de convite para a agenda compartilhada: guarda para depois do login
   captureInvite();

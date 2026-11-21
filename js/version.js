@@ -65,7 +65,7 @@ export async function checkVersion({ force = false } = {}) {
   // versão nova: recarrega sozinho quando estiver livre (uma vez por versão, nunca em sequência)
   let tried = '';
   try { tried = sessionStorage.getItem('cal.updTried') || ''; } catch { /* ok */ }
-  if (tried === j.build || busy()) return j;
+  if (tried === j.build || busy()) { showUpdPill(j); return j; }
   try { sessionStorage.setItem('cal.updTried', j.build); } catch { /* ok */ }
   location.replace(`${location.pathname}?u=${encodeURIComponent(j.build)}${location.hash}`);
   return j;
@@ -106,6 +106,16 @@ export function openNews() {
       </div>`,
   });
 }
+/* versão antiga: botãozinho no topo "Atualizar" — um toque e atualiza na hora; some quando estiver em dia */
+function showUpdPill(j) {
+  if (document.querySelector('.updpill') || !j || j.build === APP_BUILD) return;
+  const b = document.createElement('button');
+  b.className = 'updpill';
+  b.innerHTML = `<span>Versão nova ${String(j.version).replace(/[^0-9.]/g, '')}</span><b>Atualizar</b>`;
+  b.onclick = () => { b.classList.add('is-busy'); b.querySelector('b').textContent = 'Atualizando…'; hardReload(); };
+  document.body.appendChild(b);
+}
+
 /* Ajustes → "Procurar atualização agora" */
 export async function updateNow() {
   let j = null;
