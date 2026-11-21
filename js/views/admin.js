@@ -201,7 +201,7 @@ export async function openAdmin() {
     const installed = users.filter((u) => u.device?.installed).length;
     const notif = users.filter((u) => u.device?.notifications === 'granted' && u.device?.registered).length;
     const pct = (n) => (users.length ? ` · ${Math.round((n / users.length) * 100)}%` : '');
-    const tabs = `<div class="aseg" role="tablist">${[['resumo', 'Resumo'], ['pessoas', `Pessoas · ${users.length}`], ['erros', `Erros${errors && errors.length ? ` · ${errors.length}` : ''}`]].map(([k, l]) => `<button role="tab" class="${tab === k ? 'is-on' : ''}" data-tab-admin="${k}">${l}</button>`).join('')}</div>`;
+    const tabs = `<div class="aseg" role="tablist">${[['resumo', 'Resumo'], ['pessoas', `Pessoas · ${users.length}`], ['ranking', '🏆 Ranking'], ['erros', `Erros${errors && errors.length ? ` · ${errors.length}` : ''}`]].map(([k, l]) => `<button role="tab" class="${tab === k ? 'is-on' : ''}" data-tab-admin="${k}">${l}</button>`).join('')}</div>`;
     let body = '';
     if (tab === 'resumo') {
       body = `
@@ -245,8 +245,27 @@ export async function openAdmin() {
       body = `<input class="input" type="search" placeholder="Buscar por nome, e-mail ou profissão" data-q value="${esc(q)}">
       <div class="accts">${list.map((u) => card(u, u.uid === openUid)).join('') || '<p class="fhelp">Nenhuma conta encontrada.</p>'}</div>
       <p class="fhelp">Toque numa conta para ver os detalhes. Aparecem aqui as contas que já abriram o app atualizado.</p>`;
+    } else if (tab === 'ranking') {
+      const r = rankData;
+      const day = (k) => (k || '').split('-').reverse().join('/');
+      body = !r ? '<p class="fhelp">Carregando o ranking…</p>' : r.error ? `<p class="fhelp">Não consegui ler o ranking: ${esc(r.error)}</p>` : `
+      <h3 class="ah">Semana de ${esc(day(r.week))}</h3>
+      <div class="agroup">${(r.rows || []).length ? r.rows.map((x, i) => {
+        const u = users.find((y) => y.uid === x.ws);
+        return `<div class="arow"><span><b>${x.flag ? '—' : i + 1 + 'º'}</b> ${esc(u?.name || x.i)} <small>${esc(u?.email || x.ws)}</small>${x.flag ? `<br><small class="bad">⚠️ fora do ranking: ${esc(x.flag.why)}</small>` : ''}</span><b>${x.pts} pts</b></div>`;
+      }).join('') : '<p class="fhelp" style="padding:12px 16px">Ninguém pontuou esta semana ainda. Só contas no plano mensal participam.</p>'}</div>
+      <h3 class="ah">Campeões do mês (mês grátis)</h3>
+      <div class="agroup">${(r.winners || []).length ? r.winners.map((w) => { const u = users.find((y) => y.uid === w.ws); return `<div class="arow"><span>${esc(w.month.split('-').reverse().join('/'))} · ${esc(u?.name || w.i)} <small>${w.pts} pts</small></span><b class="${w.applied ? 'good' : 'bad'}">${w.applied ? 'cupom aplicado ✓' : 'cupom não aplicado'}</b></div>`; }).join('') : '<p class="fhelp" style="padding:12px 16px">Ainda nenhum campeão. O prêmio é calculado no dia 1º de cada mês.</p>'}</div>
+      <p class="fhelp">Aqui você vê nome e e-mail. Os participantes só veem a inicial uns dos outros.</p>`;
+      if (!rankData) loadRank();
     } else body = errorsHtml(errors) || '<p class="fhelp">Não consegui ler os erros agora.</p>';
     return `${head}<div class="page page--sheet apanel">${tabs}${body}</div>`;
+  };
+  let rankData = null;
+  const loadRank = async () => {
+    const { api: call } = await import('../avisos.js');
+    rankData = await call('/rank/admin', {}).catch((e) => ({ error: e.message }));
+    if (tab === 'ranking') api.set(html());
   };
   const api = openSheet({
     className: 'sheet--tall',

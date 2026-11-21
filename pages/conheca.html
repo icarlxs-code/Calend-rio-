@@ -101,6 +101,31 @@ a{color:inherit}
 .shake{animation:shake .5s}
 @keyframes shake{20%,60%{transform:translateX(-3px) rotate(-1deg)}40%,80%{transform:translateX(3px) rotate(1deg)}}
 .pc:hover .ic{animation:shake .5s}
+/* ---------- CENA 3D DO TOPO (presa na tela enquanto a pessoa rola) ---------- */
+.scene{height:300vh;position:relative;background:#fff}
+.scene__pin{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;display:flex;flex-direction:column;align-items:center;padding-top:calc(env(safe-area-inset-top,0px) + 92px);perspective:1200px}
+.scene__txt{text-align:center;position:relative;z-index:5;padding:0 20px;will-change:transform,opacity}
+.scene h1{font-size:clamp(38px,7vw,84px);line-height:.98;font-weight:850;letter-spacing:-.045em;margin:12px 0 10px}
+.split .w{display:inline-block;overflow:hidden;vertical-align:bottom;padding-bottom:.06em}
+.split .w>span{display:inline-block;transform:translateY(105%);will-change:transform}
+.scene__sub{font-size:clamp(19px,2.6vw,28px);font-weight:750;letter-spacing:-.02em;color:var(--ink);margin:0}
+.scene__sub b{color:var(--pink);border-right:3px solid var(--pink);padding-right:3px;animation:caret 1s steps(1) infinite}
+.scene__3d{position:relative;flex:1;width:100%;display:grid;place-items:center;transform-style:preserve-3d}
+.scene__3d .device{--dw:min(300px,62vw,31vh);transform-origin:50% 80%;will-change:transform}
+.tile{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;transform-style:preserve-3d;will-change:transform,opacity;opacity:0}
+.tile__f,.tile__b{position:absolute;inset:0;border-radius:18px;backface-visibility:hidden}
+.tile__f{display:grid;place-items:center;color:#fff;background:linear-gradient(145deg,color-mix(in srgb,var(--c) 75%,#fff),var(--c));box-shadow:inset 0 2px 0 rgba(255,255,255,.35);transform:translateZ(9px)}
+.tile__f svg{width:30px;height:30px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.2))}
+.tile__b{background:color-mix(in srgb,var(--c) 55%,#000);transform:translateZ(-9px);box-shadow:0 30px 40px rgba(0,0,0,.25)}
+.scene__cta{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 28px);text-align:center;padding:0 22px;opacity:0;transform:translateY(40px);z-index:6;will-change:transform,opacity}
+.scene__cta .lead{max-width:640px;margin:0 auto 18px;font-size:clamp(16px,2vw,19px);background:rgba(255,255,255,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:16px;padding:10px 14px}
+.scene__cta .micro{justify-content:center}
+.scene__hint{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);font-size:14px;font-weight:700;color:var(--mute);z-index:7}
+.scene__hint span{display:inline-block;animation:bob 1.4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(5px)}}
+@media(max-width:900px){.scene__pin{padding-top:calc(env(safe-area-inset-top,0px) + 84px)}.tile{width:50px;height:50px;margin:-25px 0 0 -25px}.tile__f svg{width:24px;height:24px}.scene__cta .cta{width:100%;max-width:420px}}
+/* textos que sobem acompanhando o dedo */
+[data-rise]{will-change:transform}
 /* faixa de confiança */
 .strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--soft)}
 .strip .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding-top:22px;padding-bottom:22px}
@@ -237,22 +262,23 @@ footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;t
 </div></nav>
 
 <main>
-<!-- TOPO -->
-<header class="hero"><div class="wrap">
-  <div class="rv">
+<!-- TOPO: cena 3D que acompanha a rolagem -->
+<header class="scene" id="scene"><div class="scene__pin">
+  <div class="scene__txt">
     <span class="eyebrow">Agenda inteligente para profissionais</span>
-    <h1>Pare de depender da memória. <em>Comece a depender do {{APP}}.</em></h1>
-    <span class="rot" aria-hidden="true">Nunca mais esqueça <b id="rot">o cliente das 9h</b></span>
-    <p class="lead">Cada compromisso esquecido custa um cliente, uma multa ou uma pessoa decepcionada. O {{APP}} se adapta à sua profissão, calcula quantos avisos <b>você</b> precisa e cobra você quando atrasa — até que esquecer deixe de ser uma opção.</p>
+    <h1 class="split" data-split>Pare de depender da memória.</h1>
+    <p class="scene__sub" data-fade>Nunca mais esqueça <b id="rot">o cliente das 9h</b></p>
+  </div>
+  <div class="scene__3d">
+    <div class="device" id="heroDev"><div class="scr"><img src="../media/lp/hoje.jpg" alt="Tela Hoje do {{APP}}" width="645" height="1398" fetchpriority="high"><div class="drop" id="drop"><i style="background:#FF2D55"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></i><div><b>LEMBRA · agora</b><span id="dropB">Consulta com Ana Paula em 30 min</span></div></div><i class="island"></i><i class="glare"></i></div></div>
+    <div class="tile" data-x="-1.0" data-y="-0.55" style="--c:#0A84FF"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3c-2 0-3.5 1.6-3.5 4 0 3 1.5 4 2 7s1 7 2.5 7 1.5-4 2.5-6c.3-.6.7-1 1.5-1s1.2.4 1.5 1c1 2 1 6 2.5 6s2-4 2.5-7 2-4 2-7c0-2.4-1.5-4-3.5-4-1.8 0-3 1-5 1S8.8 3 7 3Z"/></svg></div></div><div class="tile" data-x="1.05" data-y="-0.62" style="--c:#FF2D55"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-8H4v8M2 21h20M12 13v-3M12 7a1.5 1.5 0 0 1-1.5-1.5C10.5 4 12 3 12 3s1.5 1 1.5 2.5A1.5 1.5 0 0 1 12 7Z"/></svg></div></div><div class="tile" data-x="-1.18" data-y="0.12" style="--c:#8B5CF6"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></div></div><div class="tile" data-x="1.2" data-y="0.05" style="--c:#F59E0B"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h20M4 18v-3a8 8 0 0 1 16 0v3M10 7V5h4v2"/></svg></div></div><div class="tile" data-x="-0.92" data-y="0.72" style="--c:#16A34A"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8M12 16v4"/></svg></div></div><div class="tile" data-x="0.95" data-y="0.78" style="--c:#FF3B30"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z"/></svg></div></div><div class="tile" data-x="0.0" data-y="-1.05" style="--c:#FF9F0A"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div></div><div class="tile" data-x="0.05" data-y="1.05" style="--c:#EC4899"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></div></div>
+  </div>
+  <div class="scene__cta" data-fade2>
+    <p class="lead">O {{APP}} se adapta à sua profissão, calcula quantos avisos <b>você</b> precisa e cobra você quando atrasa — até que esquecer deixe de ser uma opção.</p>
     <a class="cta" href="../#/cadastro" data-keep>Começar meu teste grátis <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-    <div class="micro"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>24 horas com tudo liberado</span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Sem cartão de crédito</span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Pronto em 2 minutos</span></div>
+    <div class="micro"><span>✓ 24 horas com tudo liberado</span><span>✓ Sem cartão</span><span>✓ Pronto em 2 minutos</span></div>
   </div>
-  <div class="stage" id="stage">
-    <div class="device" data-tilt><div class="scr"><div class="drop" id="drop"><i style="background:#FF2D55"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></i><div><b id="dropT">LEMBRA · agora</b><span id="dropB">Consulta com Ana Paula em 30 min</span></div></div><img src="../media/lp/hoje.jpg" alt="Tela Hoje do {{APP}}" width="620" height="1343" fetchpriority="high"><i class="island"></i><i class="glare"></i></div></div>
-    <div class="float f1" data-par="-0.18"><i style="background:#F59E0B"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></i><div><b>Consulta em 30 min</b><small>Ana Paula · Limpeza</small></div></div>
-    <div class="float f2" data-par="0.22"><i style="background:#16A34A"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></i><div><b>Dia 100% concluído</b><small>7 dias seguidos em dia</small></div></div>
-    <div class="float f3" data-par="-0.1"><i style="background:#FF2D55"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-8H4v8M2 13h20M12 13v8M12 8a3 3 0 1 0-3-3c0 1.7 3 3 3 3s3-1.3 3-3a3 3 0 1 0-3 3"/></svg></i><div><b>Amanhã: aniversário da mãe</b><small>Já pensou no presente?</small></div></div>
-  </div>
+  <div class="scene__hint" id="hint">Role para ver <span>↓</span></div>
 </div></header>
 
 <div class="strip"><div class="wrap">
@@ -278,7 +304,7 @@ footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;t
 
 <!-- DOR -->
 <section class="pain"><div class="wrap">
-  <div class="head rv"><span class="eyebrow">O custo invisível</span><h2>Esquecer nunca sai de graça.<br>E a conta sempre chega.</h2><p>Você não percebe na hora. Mas cada esquecimento cobra a conta depois — em dinheiro, em reputação ou em relacionamentos.</p></div>
+  <div class="head rv" data-rise><span class="eyebrow">O custo invisível</span><h2>Esquecer nunca sai de graça.<br>E a conta sempre chega.</h2><p>Você não percebe na hora. Mas cada esquecimento cobra a conta depois — em dinheiro, em reputação ou em relacionamentos.</p></div>
   <div class="cards4">
     <div class="pc rv"><div class="ic pop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5m0-5-5 5"/></svg></div><b>O cliente que não volta</b><p>Um horário esquecido é suficiente para ele procurar outro profissional. E ele não avisa que foi embora.</p></div>
     <div class="pc rv d1"><div class="ic pop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M7 15h4"/></svg></div><b>Juros, multas e taxas</b><p>Boleto vencido, imposto atrasado, documento fora do prazo. Dinheiro perdido por um lembrete que não existiu.</p></div>
@@ -290,7 +316,7 @@ footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;t
 
 <!-- COMO FUNCIONA -->
 <section id="como"><div class="wrap">
-  <div class="head c rv"><span class="eyebrow">Como funciona</span><h2>Três passos. Nenhum esquecimento.</h2><p>Você configura uma vez. O {{APP}} trabalha todos os dias.</p></div>
+  <div class="head c rv" data-rise><span class="eyebrow">Como funciona</span><h2>Três passos. Nenhum esquecimento.</h2><p>Você configura uma vez. O {{APP}} trabalha todos os dias.</p></div>
   <div class="steps">
     <div class="st rv"><div class="ic pop" style="background:#0A84FF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></div><b>Responda a ficha de 2 minutos</b><p>Sua profissão, sua rotina e o quanto você costuma esquecer. O app inteiro se molda a você: nomes, tipos de compromisso, cores e dicas.</p></div>
     <div class="st rv d1"><div class="ic pop" style="background:#F59E0B"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div><b>Receba os avisos na medida certa</b><p>Quem esquece mais recebe mais avisos — 1 dia antes, 2 horas antes, 30 minutos antes. Tudo calculado para você, nunca de madrugada.</p></div>
@@ -324,7 +350,7 @@ footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;t
 
 <!-- PROFISSÕES -->
 <section style="padding:70px 0;background:var(--soft)">
-  <div class="wrap"><div class="head c rv"><span class="eyebrow">Para a sua profissão</span><h2>Feito para quem trabalha de verdade.</h2><p>Escolha a sua na ficha. O {{APP}} muda por inteiro.</p></div></div>
+  <div class="wrap"><div class="head c rv" data-rise><span class="eyebrow">Para a sua profissão</span><h2>Feito para quem trabalha de verdade.</h2><p>Escolha a sua na ficha. O {{APP}} muda por inteiro.</p></div></div>
   <div class="marq">
     <div class="row"><span><i style="background:#0A84FF"></i>Dentista</span><span><i style="background:#FF2D55"></i>Confeiteira</span><span><i style="background:#8B5CF6"></i>Barbeiro</span><span><i style="background:#F59E0B"></i>Engenheiro civil</span><span><i style="background:#16A34A"></i>Professora</span><span><i style="background:#FF3B30"></i>Enfermeira</span><span><i style="background:#0EA5E9"></i>Advogado</span><span><i style="background:#EC4899"></i>Manicure</span><span><i style="background:#14B8A6"></i>Personal trainer</span><span><i style="background:#6366F1"></i>Social media</span><span><i style="background:#0A84FF"></i>Dentista</span><span><i style="background:#FF2D55"></i>Confeiteira</span><span><i style="background:#8B5CF6"></i>Barbeiro</span><span><i style="background:#F59E0B"></i>Engenheiro civil</span><span><i style="background:#16A34A"></i>Professora</span><span><i style="background:#FF3B30"></i>Enfermeira</span><span><i style="background:#0EA5E9"></i>Advogado</span><span><i style="background:#EC4899"></i>Manicure</span><span><i style="background:#14B8A6"></i>Personal trainer</span><span><i style="background:#6366F1"></i>Social media</span></div>
     <div class="row b"><span><i style="background:#F97316"></i>Eletricista</span><span><i style="background:#0EA5E9"></i>Corretor de imóveis</span><span><i style="background:#84CC16"></i>Nutricionista</span><span><i style="background:#A855F7"></i>Psicóloga</span><span><i style="background:#EF4444"></i>Fisioterapeuta</span><span><i style="background:#22C55E"></i>Motorista</span><span><i style="background:#3B82F6"></i>Contador</span><span><i style="background:#E11D48"></i>Cabeleireira</span><span><i style="background:#0891B2"></i>Estudante</span><span><i style="background:#6B7280"></i>+ 220 profissões</span><span><i style="background:#F97316"></i>Eletricista</span><span><i style="background:#0EA5E9"></i>Corretor de imóveis</span><span><i style="background:#84CC16"></i>Nutricionista</span><span><i style="background:#A855F7"></i>Psicóloga</span><span><i style="background:#EF4444"></i>Fisioterapeuta</span><span><i style="background:#22C55E"></i>Motorista</span><span><i style="background:#3B82F6"></i>Contador</span><span><i style="background:#E11D48"></i>Cabeleireira</span><span><i style="background:#0891B2"></i>Estudante</span><span><i style="background:#6B7280"></i>+ 220 profissões</span></div>
@@ -333,7 +359,7 @@ footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;t
 
 <!-- COMPARAÇÃO -->
 <section><div class="wrap">
-  <div class="head c rv"><span class="eyebrow">Comparação</span><h2>Não é mais uma agenda.</h2><p>É a diferença entre anotar e realmente fazer.</p></div>
+  <div class="head c rv" data-rise><span class="eyebrow">Comparação</span><h2>Não é mais uma agenda.</h2><p>É a diferença entre anotar e realmente fazer.</p></div>
   <div class="cmp rv">
     <div class="r"><span>Recurso</span><span>{{APP}}</span><span>Agenda comum</span><span>Papel</span></div>
     <div class="r"><span>Adapta-se à sua profissão</span><span class="y">✓</span><span class="n">—</span><span class="n">—</span></div>
@@ -348,7 +374,7 @@ footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;t
 
 <!-- PREÇO -->
 <section class="priceband" id="preco"><div class="wrap">
-  <div class="head c rv"><span class="eyebrow">Preço</span><h2>Menos que um compromisso perdido.</h2><p>Teste 24 horas com tudo liberado, sem cartão. Depois, escolha como continuar.</p></div>
+  <div class="head c rv" data-rise><span class="eyebrow">Preço</span><h2>Menos que um compromisso perdido.</h2><p>Teste 24 horas com tudo liberado, sem cartão. Depois, escolha como continuar.</p></div>
   <div class="prices">
     <div class="pr rv"><span class="n">Mensal</span><div class="v">R$ 9,90<small>/mês</small></div><p>Cancele quando quiser, direto no app.</p>
       <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Todos os recursos do {{APP}}</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Ranking semanal: o nº 1 do mês ganha o mês seguinte grátis</li></ul></div>
@@ -362,7 +388,7 @@ footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;t
 
 <!-- PERGUNTAS -->
 <section><div class="wrap">
-  <div class="head c rv"><span class="eyebrow">Dúvidas</span><h2>Perguntas frequentes</h2></div>
+  <div class="head c rv" data-rise><span class="eyebrow">Dúvidas</span><h2>Perguntas frequentes</h2></div>
   <div class="faq rv">
     <details><summary>Preciso de cartão para testar?</summary><p>Não. Você cria a conta, responde a ficha e começa o teste: 24 horas com tudo liberado, sem informar nenhum dado de pagamento.</p></details>
     <details><summary>Funciona no iPhone e no Android?</summary><p>Sim. Abra o link no celular e adicione à tela de início (no iPhone: Safari → Compartilhar → Adicionar à Tela de Início). Ele funciona como um aplicativo, com ícone e notificações.</p></details>
@@ -398,6 +424,46 @@ footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;t
     } catch (e) {}
   })();
 
+
+  // CENA 3D DO TOPO: tudo é amarrado à rolagem (acompanha o dedo, para e volta junto)
+  (function () {
+    var sc = document.getElementById('scene'); if (!sc) return;
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var h1 = sc.querySelector('[data-split]');
+    h1.innerHTML = h1.textContent.split(' ').map(function (w) { return '<span class="w"><span>' + w + '</span></span>'; }).join(' ');
+    var words = h1.querySelectorAll('.w>span'), dev = document.getElementById('heroDev'), tiles = sc.querySelectorAll('.tile');
+    var txt = sc.querySelector('.scene__txt'), cta = sc.querySelector('[data-fade2]'), hint = document.getElementById('hint'), sub = sc.querySelector('[data-fade]');
+    var cl = function (v) { return Math.max(0, Math.min(1, v)); }, ease = function (x) { return 1 - Math.pow(1 - x, 3); };
+    var intro = 0, t0 = performance.now();
+    function draw() {
+      var r = sc.getBoundingClientRect(), total = sc.offsetHeight - window.innerHeight;
+      var p = reduce ? 1 : cl(-r.top / total);           // 0 → 1 enquanto a cena está presa
+      var it = ease(cl((performance.now() - t0) / 1100)); // entrada automática do título
+      words.forEach(function (w, i) { var k = ease(cl(it * 1.6 - i * 0.12)); w.style.transform = 'translateY(' + ((1 - k) * 105) + '%)'; });
+      sub.style.opacity = cl(it * 1.4 - 0.4);
+      // celular: começa deitado e longe, levanta e vem para frente
+      var a = ease(cl(p / 0.45));
+      var vw = window.innerWidth, small = vw < 700;
+      dev.style.transform = 'translate3d(0,' + ((1 - a) * 120 - (small ? 0 : 10)) + 'px,' + (-260 * (1 - a)) + 'px) rotateX(' + (62 * (1 - a) + 4) + 'deg) rotateY(' + (-18 * (1 - a) + Math.sin(p * 6) * 6 * a) + 'deg) rotateZ(' + (8 * (1 - a)) + 'deg) scale(' + (0.78 + 0.22 * a) + ')';
+      // título sobe e some quando o celular chega
+      txt.style.transform = 'translateY(' + (-a * 70) + 'px) scale(' + (1 - a * 0.12) + ')';
+      txt.style.opacity = 1 - cl((p - 0.35) / 0.25) * 0.85;
+      // blocos 3D saem de dentro da tela e orbitam
+      var o = ease(cl((p - 0.3) / 0.4)), R = (small ? Math.min(vw * 0.29, 140) : 250);
+      tiles.forEach(function (t, i) {
+        var x = +t.dataset.x, y = +t.dataset.y, ry = Math.sin(p * 9 + i) * 28 - x * 18, rx = Math.cos(p * 7 + i) * 18 + y * 14;
+        t.style.opacity = cl(o * 3);
+        t.style.transform = 'translate3d(' + (x * R * o) + 'px,' + (y * R * 1.15 * o) + 'px,' + (o * 180 + Math.sin(p * 8 + i) * 30) + 'px) rotateX(' + rx + 'deg) rotateY(' + ry + 'deg) scale(' + (0.4 + 0.6 * o) + ')';
+      });
+      var c = ease(cl((p - 0.62) / 0.25));
+      cta.style.opacity = c; cta.style.transform = 'translateY(' + ((1 - c) * 40) + 'px)';
+      hint.style.opacity = 1 - cl(p / 0.08);
+      // textos das outras seções sobem um pouco mais rápido que a página (profundidade)
+      document.querySelectorAll('[data-rise]').forEach(function (el) { var b = el.getBoundingClientRect(); var k = (b.top + b.height / 2 - window.innerHeight / 2) / window.innerHeight; el.style.transform = 'translateY(' + (k * 60).toFixed(1) + 'px)'; });
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  })();
   // frase que se reescreve no topo
   (function () {
     var el = document.getElementById('rot'); if (!el) return;
@@ -448,7 +514,7 @@ footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;t
       ticking = false;
       var y = window.scrollY, vh = window.innerHeight;
       nav.classList.toggle('is-scrolled', y > 8);
-      sticky.classList.toggle('show', y > vh * 0.8 && y < document.body.scrollHeight - vh * 1.6);
+      var sc = document.getElementById('scene'); sticky.classList.toggle('show', y > (sc ? sc.offsetHeight - vh * 0.5 : vh * 0.8) && y < document.body.scrollHeight - vh * 1.6);
       if (reduce) return;
       par.forEach(function (el) {
         var r = el.parentElement.getBoundingClientRect(), c = (r.top + r.height / 2 - vh / 2);
