@@ -1,12 +1,12 @@
 {
-  "version": "2.0.3",
-  "build": "qgsv7asf",
+  "version": "2.0.4",
+  "build": "xmwbtk2s",
   "date": "2026-11-21",
   "min": "",
-  "title": "Ícone e atualização",
+  "title": "Notas no Pessoal",
   "notes": [
-    "O ícone na tela inicial agora é sempre o do Lembra",
-    "Versão antiga? Um botão no topo atualiza na hora"
+    "Nova aba Notas no Pessoal: anote o que fez ou onde deixou as coisas, com dia e hora",
+    "Pergunte ao assistente: “onde deixei o tênis?” ou “o que anotei hoje?”"
   ],
-  "builtAt": "2026-11-21T21:24:19.675Z"
+  "builtAt": "2026-11-21T22:21:10.423Z"
 }

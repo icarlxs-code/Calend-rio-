@@ -15,7 +15,8 @@ Formato da resposta (siga sempre):
 - Comece com uma frase curta (ex.: "Amanhã você tem 2 compromissos:").
 - Depois, um item por compromisso, assim: "- **7h às 14h** — CEASA (Garcia Hortifruti)" ou "- **13h** — Feed da Pura Vida".
 - Não mostre duração em minutos, nem palavras técnicas como "Tarefa", "a fazer", "status" ou "local:".
-- No máximo 8 itens e, se precisar, uma dica final curta em uma linha.`;
+- No máximo 8 itens e, se precisar, uma dica final curta em uma linha.
+- ANOTAÇÕES PESSOAIS: perguntas como "onde deixei o tênis?", "o que anotei hoje?", "quando foi que eu…" respondem-se pelas anotações, sempre com dia e horário (ex.: "Hoje às 14h32 você anotou: deixei o tênis em cima da mesa."). Se houver mais de uma parecida, mostre a mais recente primeiro. Se não achar, diga que não tem nada anotado sobre isso.`;
 
 export async function askClaude(env, { question, history, context, me }) {
   if (!question.trim()) throw Object.assign(new Error('Escreva uma pergunta.'), { status: 400 });

@@ -2499,3 +2499,14 @@ html.has-vip, html.has-vip body { overflow: hidden; }
 .updpill b { background: #fff; color: #0A84FF; padding: 5px 12px; border-radius: 999px; font-size: 13px; }
 .updpill.is-busy { opacity: .8; }
 @keyframes updin { from { opacity: 0; transform: translate(-50%, -12px); } }
+/* Pessoal com 6 itens na barra (Início, Agenda, +, Listas, Notas, Ajustes) */
+.tabbar:has(> :nth-child(6)) { grid-template-columns: repeat(6, 1fr); }
+.memoadd { display: flex; flex-direction: column; gap: 8px; background: var(--surface); border-radius: var(--radius, 16px); box-shadow: var(--shadow); padding: 12px; }
+.memoadd textarea { width: 100%; border: 0; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 16px; color: var(--text); resize: none; }
+.memosearch { margin-top: 4px; }
+.memos { background: var(--surface); border-radius: var(--radius, 16px); box-shadow: var(--shadow); overflow: hidden; }
+.memo { display: flex; align-items: flex-start; gap: 12px; padding: 12px 10px 12px 14px; border-bottom: .5px solid var(--line); }
+.memo:last-child { border-bottom: 0; }
+.memo__t { flex: none; min-width: 44px; font-size: 13px; font-weight: 700; color: var(--text-3); padding-top: 2px; }
+.memo p { flex: 1; margin: 0; font-size: 15.5px; line-height: 1.4; word-break: break-word; }
+.memo__x { flex: none; color: var(--text-3); }

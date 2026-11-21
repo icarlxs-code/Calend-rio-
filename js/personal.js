@@ -45,6 +45,8 @@ const isEvent = (x) => !x.kind || x.kind === 'event';
 export const personal = {
   get items() { return items; },
   get events() { return items.filter(isEvent); },
+  // anotações do dia a dia ("deixei o tênis em cima da mesa"): mais novas primeiro
+  get memos() { return items.filter((x) => x.kind === 'memo').sort((a, b) => (b.at || 0) - (a.at || 0)); },
   get lists() { return items.filter((x) => x.kind === 'list').sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)); },
   get prefs() { return { ...DEFAULT_PREFS, ...(items.find((x) => x.kind === 'prefs') || {}) }; },
   ready: false,
@@ -101,6 +103,15 @@ export function removePersonal(id) {
   emit();
 }
 export const savePrefs = (p) => savePersonal({ ...personal.prefs, ...p, id: 'prefs', kind: 'prefs' });
+
+/* ---------- anotações: o que fiz / onde deixei (com dia e hora) ---------- */
+export function addMemo(text, at = Date.now()) {
+  const t = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 500);
+  if (!t) return null;
+  const d = new Date(at);
+  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return savePersonal({ kind: 'memo', text: t, at, date, time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` });
+}
 
 /* ---------- listas (mercado, coisas para fazer...) ---------- */
 export const newList = (name, ic = 'note') => savePersonal({ kind: 'list', name, ic: LIST_ICONS[ic] ? ic : 'note', entries: [] });

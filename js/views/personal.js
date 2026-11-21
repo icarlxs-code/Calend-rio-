@@ -3,7 +3,7 @@
 import { okFx } from '../okfx.js';
 import {
   personal, CATS, REPEATS, LIST_PRESETS, occurrences, overdue, savePersonal, removePersonal, toggleDone, parseQuick,
-  doneOn, birthdays, phraseOfDay, newList, addEntry, toggleEntry, removeEntry, clearDone, savePrefs, LIST_ICONS, listIcon,
+  doneOn, birthdays, phraseOfDay, addMemo, newList, addEntry, toggleEntry, removeEntry, clearDone, savePrefs, LIST_ICONS, listIcon,
 } from '../personal.js';
 import { openSheet, sheetHead, toast, confirmDialog, avatar, meRing } from '../components.js';
 import { isMarketing } from '../constants.js';
@@ -178,6 +178,27 @@ function renderLists() {
   </div>`;
 }
 
+/* ---------- Notas: o que eu fiz / onde deixei (com dia e hora) ---------- */
+function renderMemos() {
+  const q = (ui.memoQ || '').trim().toLowerCase();
+  const all = personal.memos;
+  const list = q ? all.filter((m) => m.text.toLowerCase().includes(q)) : all;
+  const days = [];
+  for (const m of list) { const d = days[days.length - 1]; if (d && d.date === m.date) d.items.push(m); else days.push({ date: m.date, items: [m] }); }
+  return `${header(`${icon('lock', 11)} Só você vê`, 'Notas')}
+  <div class="page ppage">
+    <form class="memoadd" data-form="memo" autocomplete="off">
+      <textarea name="t" rows="2" maxlength="500" placeholder="O que você fez ou onde deixou? Ex.: deixei o tênis em cima da mesa"></textarea>
+      <button class="btn btn--primary" type="submit">${icon('plus', 18)} Anotar agora</button>
+    </form>
+    <p class="fhelp">Guarda com o dia e a hora. Depois é só perguntar ao assistente: “onde deixei o tênis?”</p>
+    ${all.length > 3 ? `<input class="input memosearch" type="search" placeholder="Procurar nas notas" data-memoq value="${esc(ui.memoQ || '')}">` : ''}
+    ${days.length ? days.map((d) => section(esc(dayLabel(d.date)), `<div class="memos">${d.items.map((m) => `<div class="memo"><span class="memo__t">${esc(m.time ? fmtTime(m.time) : '')}</span><p>${esc(m.text)}</p><button class="iconbtn memo__x" data-action="memo-del" data-id="${esc(m.id)}" aria-label="Apagar">${icon('trash', 16)}</button></div>`).join('')}</div>`)).join('')
+      : q ? '<p class="fhelp">Nada encontrado.</p>' : emptyCard('note', 'Suas notas do dia a dia', 'Anote o que fez ou onde deixou as coisas. Ex.: “deixei a chave na gaveta da cozinha”, “paguei a conta de luz”.')}
+    <div style="height:28px"></div>
+  </div>`;
+}
+
 /* ---------- Ajustes do Pessoal ---------- */
 function renderPSettings() {
   const me = store.member(store.me);
@@ -225,6 +246,7 @@ export function renderPersonalSpace() {
   const tab = ui.ptab || 'p-hoje';
   if (tab === 'p-agenda') return renderAgenda();
   if (tab === 'p-listas') return renderLists();
+  if (tab === 'p-notas') return renderMemos();
   if (tab === 'p-ajustes') return renderPSettings();
   return renderHome();
 }
@@ -235,6 +257,7 @@ export const personalTabbar = () => `
   ${ptabBtn('p-agenda', 'calendar', 'Agenda')}
   <button class="tabbar__fab" data-action="p-new" aria-label="Anotar">${icon('plus', 28)}</button>
   ${ptabBtn('p-listas', 'list', 'Listas')}
+  ${ptabBtn('p-notas', 'note', 'Notas')}
   ${ptabBtn('p-ajustes', 'settings', 'Ajustes')}`;
 
 export function bindPersonal(view) {
@@ -250,6 +273,17 @@ export function bindPersonal(view) {
     setTimeout(() => toast(`${it.title}`, { action: 'Ajustar', onAction: () => openPersonalEditor(it.id), ms: 3500 }), 1600);
     return false;
   };
+  const mf = view.querySelector('[data-form="memo"]');
+  if (mf) mf.onsubmit = (ev) => {
+    ev.preventDefault();
+    const it = addMemo(mf.t.value);
+    if (!it) { mf.t.focus(); return false; }
+    mf.t.value = '';
+    okFx({ title: 'Anotado!', sub: `Hoje às ${fmtTime(it.time)}` });
+    return false;
+  };
+  const mq = view.querySelector('[data-memoq]');
+  if (mq) mq.oninput = () => { ui.memoQ = mq.value; const pos = mq.selectionStart; window.__calRender && window.__calRender(); const n = document.querySelector('[data-memoq]'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } };
   if (view.querySelector('[data-usage]')) fillUsage(view);
   const pf = view.querySelector('[data-form="pprefs"]');
   if (pf) pf.onchange = () => {
@@ -282,6 +316,11 @@ export const personalActions = {
     window.__calRender && window.__calRender();
   },
   'p-open': (b) => openPersonalEditor(b.dataset.id),
+  'memo-del': async (b) => {
+    const m = personal.item(b.dataset.id);
+    if (!m || !(await confirmDialog({ title: 'Apagar esta nota?', text: m.text, ok: 'Apagar', danger: true }))) return;
+    removePersonal(m.id);
+  },
   'p-done': (b) => {
     const it = personal.item(b.dataset.id);
     if (!it) return;
@@ -296,6 +335,7 @@ export const personalActions = {
   },
   'p-new': (b) => {
     if (b.classList.contains('tabbar__fab') && ui.ptab === 'p-listas') return openListForm();
+    if (b.classList.contains('tabbar__fab') && ui.ptab === 'p-notas') { const t = document.querySelector('[data-form="memo"] textarea'); if (t) { t.focus(); t.scrollIntoView({ block: 'center' }); } return; }
     openPersonalEditor(null, { cat: b.dataset.cat, date: b.dataset.date || (ui.ptab === 'p-agenda' ? ui.pSel : null) });
   },
   'p-list': (b) => openList(b.dataset.id),

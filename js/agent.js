@@ -5,7 +5,7 @@ import { store } from './store.js';
 import { TYPES, TYPE_ORDER, isMarketing, ent } from './constants.js';
 import { uid, todayKey, addDays, fromKey, toMin, fromMin, fmtTime, dayLabel, fmtDayShort } from './utils.js';
 import { tidyTitle } from './tidy.js';
-import { savePersonal, removePersonal, personal, CATS, guessCat } from './personal.js';
+import { savePersonal, removePersonal, personal, CATS, guessCat, addMemo } from './personal.js';
 
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 const isDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '');
@@ -140,6 +140,11 @@ export function planAction(a) {
     if (!title) return { ok: false, text: 'Faltou dizer o que anotar no Pessoal.' };
     return { ok: true, text: `Anotar no seu Pessoal: “${title}” · ${dayLabel(date)}${T(a.inicio || a.hora) ? ' às ' + fmtTime(T(a.inicio || a.hora)) : ''}${rep !== 'none' ? ' · repete' : ''}`,
       run: async () => { savePersonal({ title, date, time: T(a.inicio || a.hora), cat, repeat: rep, note: String(a.descricao || '').slice(0, 500), remind: 'auto' }); return 1; } };
+  }
+  if (kind === 'anotacao' || kind === 'anotação') {
+    const text = String(a.texto || a.titulo || '').slice(0, 500);
+    if (!text) return { ok: false, text: 'Faltou o que anotar.' };
+    return { ok: true, text: `Guardar nas suas Notas: “${text}” (agora)`, run: async () => { addMemo(text); return 1; } };
   }
   if (kind === 'excluir pessoal' || kind === 'excluir_pessoal') {
     const it = personal.item(a.id);

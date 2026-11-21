@@ -1,1 +1,0 @@
-var n=Object.defineProperty;var r=(e,a)=>{for(var o in a)n(e,o,{get:a[o],enumerable:!0})};var m=["O \xEDcone na tela inicial agora \xE9 sempre o do Lembra","Vers\xE3o antiga? Um bot\xE3o no topo atualiza na hora"];export{r as a,m as b};

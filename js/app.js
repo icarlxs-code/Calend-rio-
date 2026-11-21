@@ -1160,6 +1160,7 @@ function startApp() {
         team: store.team, me: store.me, now: { date: todayKey(), minutes: d.getHours() * 60 + d.getMinutes() },
         withIds: true,
         work: { profession: WORK.profession, entity: WORK.entity, marketing: isMarketing(), types: TYPE_ORDER.map((id) => ({ id, label: TYPES[id]?.label || id })) },
+        memos: personal.memos.map((m) => ({ date: m.date, time: m.time, text: m.text })),
         personal: occurrences(todayKey(), addDays(todayKey(), 30)).map((o) => ({ id: o.item.id, date: o.date, time: o.item.time, title: o.item.title, cat: o.item.cat, done: o.done })),
       });
       const r = await push.api('/ask', { question, history, context, today: todayKey() });

@@ -19,6 +19,7 @@ FORMATO DAS AÇÕES: depois do texto, uma linha com <acoes> e um JSON (lista) e 
 <acoes>[{"acao":"editar","id":"e_abc123","titulo":"Novo título","responsaveis":["henrique","matheus"]}]</acoes>
 <acoes>[{"acao":"pessoal","titulo":"Cortar cabelo","data":"2026-11-21","inicio":"15:00","categoria":"beleza"}]</acoes>
 <acoes>[{"acao":"bilhete","data":"2026-11-20","texto":"Levar o tripé amanhã"}]</acoes>
+<acoes>[{"acao":"anotacao","texto":"Deixei o tênis em cima da mesa"}]</acoes>  (para "anota que deixei…", "guarda que eu fiz…": vai para as Notas com a hora de agora)
 Campos:
 - tipo: use SEMPRE um dos ids da lista "Tipos de compromisso desta agenda" (ex.: consulta, plantao, aula, prova, visita, servico, feed, reels…). Se nada combinar, "outro".
 - empresa: o nome do grupo de trabalho (Empresa, Local, Turma, Obra…) que já existe nos dados. Para profissões que não são de marketing pode ficar vazio ("").
@@ -26,7 +27,8 @@ Campos:
 - datas: use "data" para um dia só; para repetir use "datas":{"de","ate","dias_semana"} com 0=domingo, 1=segunda … 6=sábado. "Até o fim do mês" = último dia do mês atual.
 - categoria do pessoal: lembrete, aniversario, compromisso, buscar, beleza, saude, pagar, compras. Coisas particulares (cabelo, médico, buscar alguém, aniversário) vão para "pessoal"; compromissos do trabalho vão para "criar".
 - Para mover/editar/concluir/excluir use o [id ...] que aparece na agenda. Só o mesmo id, nunca invente.
-- Se não houver nada para alterar, não escreva <acoes>.`;
+- Se não houver nada para alterar, não escreva <acoes>.
+- ANOTAÇÕES PESSOAIS: perguntas como "onde deixei o tênis?", "o que anotei hoje?", "quando foi que eu…" respondem-se pelas anotações, sempre com dia e horário (ex.: "Hoje às 14h32 você anotou: deixei o tênis em cima da mesa."). Se houver mais de uma parecida, mostre a mais recente primeiro. Se não achar, diga que não tem nada anotado sobre isso.`;
 /* Ajuda de calendário para a IA não errar datas */
 export function calendarHelp(today) {
   const t = /^\d{4}-\d{2}-\d{2}$/.test(today || '') ? today : new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
