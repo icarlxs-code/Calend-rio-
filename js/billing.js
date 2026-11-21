@@ -5,6 +5,7 @@ import { server, api } from './avisos.js';
 import { icon } from './icons.js';
 import { brand } from './brand.js';
 import { esc } from './utils.js';
+import { vipBanner } from './vip.js';
 
 const LS_DEV = 'lembra.device', LS_LAST = 'lembra.plan';
 export function deviceId() {
@@ -71,6 +72,7 @@ export const fmtLeft = (ms) => {
 /* Faixa do teste grátis (vai no topo das telas) */
 export function trialBanner() {
   const b = store.billing;
+  if (b && b.plan === 'lifetime' && b.vip) return vipBanner();
   // anual pago no Pix: faltando 10 dias ou menos, lembra de renovar (o Pix não renova sozinho)
   if (b && b.plan === 'monthly' && b.prepaid && b.paidUntil && b.paidUntil - Date.now() < 10 * 864e5) {
     const d = Math.max(0, Math.ceil((b.paidUntil - Date.now()) / 864e5));

@@ -73,7 +73,7 @@ export function statusOf(b, me, now = Date.now()) {
   if (!b) return { plan: 'none', active: false };
   const addon = addonOf(b, now);
   const extra = addon ? { addon } : {};
-  if (b.lifetime) return { plan: 'lifetime', active: true, tier: 'pro', ...(b.founder ? { founder: true } : {}), ...(b.comp ? { comp: true } : {}), ...extra };
+  if (b.lifetime) return { plan: 'lifetime', active: true, tier: 'pro', ...(b.founder ? { founder: true } : {}), ...(b.comp ? { comp: true } : {}), ...(b.comp && b.vip ? { vip: { no: b.vip.no, at: b.vip.at } } : {}), ...extra };
   if (b.subActive && (!b.paidUntil || b.paidUntil > now - 3 * 864e5)) return { plan: 'monthly', active: true, tier: b.tier || 'pro', interval: b.interval || 'month', paidUntil: b.paidUntil || null, cancelAt: b.cancelAt || null, ...extra };
   // 12 meses pagos no Pix (sem renovação automática)
   if (b.prepaidUntil && b.prepaidUntil > now) return { plan: 'monthly', active: true, tier: b.prepaidTier || b.tier || 'pro', interval: 'year', paidUntil: b.prepaidUntil, prepaid: true, ...extra };
@@ -395,14 +395,18 @@ export async function handleStripeEvent(env, ev) {
 export async function grantComp(env, uid, on, now = Date.now(), until = 0) {
   if (!/^[A-Za-z0-9]{6,64}$/.test(uid || '')) throw Object.assign(new Error('conta inválida'), { status: 400 });
   const b = (await getBill(env, uid)) || { uid, createdAt: now };
+  let gifted = false;
   if (on && until) {
     if (!(until > now) || until > now + 5 * 365 * 864e5) throw Object.assign(new Error('data inválida'), { status: 400 });
     b.compUntil = until;
-  } else if (on) { if (!b.lifetime) { b.lifetime = true; b.comp = true; b.lifetimeAt = now; } }
-  else { if (b.comp) { b.lifetime = false; b.comp = false; } delete b.compUntil; }
+  } else if (on) {
+    if (!b.lifetime) { b.lifetime = true; b.comp = true; b.lifetimeAt = now; }
+    // presente "Vitalício": número de membro único (nunca se repete, nem se o acesso for retirado)
+    if (b.comp && !b.vip) { const no = Number(await env.CAL.get('vip-count') || 0) + 1; await env.CAL.put('vip-count', String(no)); b.vip = { no, at: now }; gifted = true; }
+  } else { if (b.comp) { b.lifetime = false; b.comp = false; delete b.vip; } delete b.compUntil; }
   b.updatedAt = now;
   await putBill(env, uid, b);
-  return statusOf(b, { ws: uid }, now);
+  return { ...statusOf(b, { ws: uid }, now), ...(gifted ? { gifted: true } : {}) };
 }
 
 /* Para o Painel do dono: situação de cada conta */

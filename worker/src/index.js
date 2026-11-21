@@ -373,6 +373,7 @@ async function handle(req, env) {
   if (url.pathname === '/billing/status') {
     await announceNewUser(env, me).catch((e) => console.log('aviso de cadastro', e.message));
     const st = { ...(await billingStatus(env, me)), foundersLeft: Math.max(0, 200 - Number(await env.CAL.get('founders-count') || 0)) };
+    if (st.vip) st.vip.total = Math.max(st.vip.no, Number(await env.CAL.get('vip-count') || 0));
     // mantém o prazo do relógio em dia (ex.: o teste acabou, o mensal renovou)
     if (me.ws !== 'main') { const reg = (await env.CAL.get('users', 'json')) || {}; if (reg[me.id] && reg[me.id].until !== untilOf(st)) await registerUser(env, me, st); }
     return reply(env, req, st);
@@ -400,9 +401,13 @@ async function handle(req, env) {
   if (url.pathname === '/admin/grant') {
     if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
     try {
-      const st = await grantComp(env, clean(body.uid, 64), body.on === true, Date.now(), Number(body.until) || 0);
-      await refreshUntil(env, clean(body.uid, 64));
-      return reply(env, req, { ok: true, status: st });
+      const uid = clean(body.uid, 64);
+      const { gifted, ...st } = await grantComp(env, uid, body.on === true, Date.now(), Number(body.until) || 0);
+      await refreshUntil(env, uid);
+      // presente vitalício: aviso no celular da pessoa (sem dizer o que é: a surpresa fica para quando ela abrir)
+      let sent = 0;
+      if (gifted) sent = await sendToMember(env, 'u' + uid.replace(/[^A-Za-z0-9]/g, '').slice(0, 24), { title: 'Você recebeu algo raro.', body: 'Poucas pessoas no mundo vão ver o que está esperando por você no Lembra.', tag: 'vitalicio', url: './#/vitalicio' }).catch(() => 0);
+      return reply(env, req, { ok: true, status: st, ...(gifted ? { gifted: true, sent } : {}) });
     } catch (e) { return reply(env, req, { error: e.message }, e.status || 500); }
   }
   // dono do app pede para uma pessoa atualizar (notificação que abre o app já na versão nova)

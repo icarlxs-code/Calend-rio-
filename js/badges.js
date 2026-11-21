@@ -146,7 +146,7 @@ export const crest = (level, size = 96, opts = {}) => {
   return medal({ shape: 'crest', hue: t.hue, metal: t.metal, text: String(level), laurel: t.laurel, rays: t.rays, crown: t.crown, sparkles: t.sparkles, rainbow: t.rainbow }, size, opts);
 };
 
-/* ---------- os 104 emblemas ---------- */
+/* ---------- os 105 emblemas ---------- */
 export const CATS = {
   inicio: { name: 'Primeiros passos', hue: '#0A84FF', shape: 'circle' },
   pontual: { name: 'Pontualidade', hue: '#1FAD55', shape: 'shield' },
@@ -250,6 +250,8 @@ one('especial', 'xp10k', 'xp', 10000, 'Dez mil XP', 'gem', 'Juntou 10.000 XP.', 
 one('especial', 'xp50k', 'xp', 50000, 'Cinquenta mil XP', 'gem', 'Juntou 50.000 XP.', 'lendario');
 add({ id: 'fundador', cat: 'especial', metric: 'founder', goal: 1, name: gp('Fundador', 'Fundadora', 'Desde o começo'), icon: 'crown', rarity: 'lendario',
   desc: () => g('Entrou no Lembra como Fundador: está aqui desde o começo.', 'Entrou no Lembra como Fundadora: está aqui desde o começo.', 'Entrou no Lembra no grupo dos Fundadores: está aqui desde o começo.', pr()) });
+add({ id: 'vitalicio', cat: 'especial', metric: 'vip', goal: 1, name: () => 'Vitalício', icon: 'infinity', rarity: 'lendario', shape: 'rosette', hue: '#1C1C1E',
+  desc: () => 'Recebeu o Lembra para sempre: um dos poucos membros Vitalícios do mundo.' });
 
 export { BADGES };
 export const badgeById = (id) => BADGES.find((b) => b.id === id);

@@ -344,6 +344,7 @@ const actions = {
   'clear-all': () => settingsActions.clearAll(),
   ics: (b) => settingsActions.ics(b),
   'notify-enable': () => settingsActions.notifyEnable(),
+  'vip-card': () => import('./vip.js').then((v) => v.openVipReveal({ cardOnly: true })),
   'notify-test': () => settingsActions.notifyTest(),
   'coach-test': () => settingsActions.coachTest(),
   'onboarding-again': () => settingsActions.onboardingAgain(),
@@ -627,19 +628,26 @@ function requirePhoto(tries = 0) {
     try {
       const photo = await resizeImage(f, 256);
       w.querySelector('[data-pic]').innerHTML = `<img src="${photo}" alt="">`;
-      await saveMyProfile({ name: me.name, photo, color: me.color });
+      // não mexe no nome: o "me.name" é o apelido e apagaria o nome completo da ficha
+      await saveMyProfile({ ...(store.profile?.name ? {} : { name: me.name }), photo, color: me.color });
       toast('Foto salva ✓');
       setTimeout(() => { w.classList.remove('is-open'); setTimeout(() => w.remove(), 300); render(); }, 600);
     } catch (x) { err.textContent = 'Não consegui usar essa foto. Tente outra.'; err.hidden = false; }
   };
 }
 
-/* Avisos desligados: o Lembra não consegue te alcançar. Pede de novo, com jeito (no máximo a cada 3 dias). */
+/* Avisos desligados: o Lembra não consegue te alcançar. Pede de novo, com jeito (no máximo a cada 3 dias).
+   Quem ganhou o Vitalício: nos 3 primeiros dias pede toda vez que abrir o app; depois, uma vez por dia
+   (e a faixa no topo fica até ativar). */
+let askedThisOpen = false;
 function askNotifications() {
-  if (store.mode !== 'cloud' || typeof Notification === 'undefined' || Notification.permission === 'granted') return;
-  if (document.querySelector('.sheet-wrap.is-open, .paywall.is-open, .photogate, .ficha')) { setTimeout(askNotifications, 8000); return; }
+  if (store.mode !== 'cloud' || typeof Notification === 'undefined' || Notification.permission === 'granted' || askedThisOpen || window.__vipAskedNotif) return;
+  if (document.querySelector('.sheet-wrap.is-open, .paywall.is-open, .photogate, .ficha, .vip, .gx')) { setTimeout(askNotifications, 8000); return; }
   let last = 0; try { last = Number(localStorage.getItem('lembra.askNotif') || 0); } catch { /* ok */ }
-  if (Date.now() - last < 3 * 864e5) return;
+  const vip = store.billing?.plan === 'lifetime' && store.billing?.vip;
+  const every = vip ? (Date.now() - (vip.at || 0) < 3 * 864e5 ? 0 : 20 * 3600e3) : 3 * 864e5;
+  if (Date.now() - last < every) return;
+  askedThisOpen = true;
   try { localStorage.setItem('lembra.askNotif', String(Date.now())); } catch { /* ok */ }
   const denied = Notification.permission === 'denied';
   const s = openSheet({
@@ -679,6 +687,12 @@ function askReinstall() {
 
 /* Abre o lugar certo quando a pessoa toca numa notificação (#/e/ID ou #/d/DATA) */
 function openDeepLink(hash = location.hash, tries = 0) {
+  // veio do aviso "Você recebeu algo raro.": confere o plano de novo e mostra a revelação (uma vez)
+  if (/^#\/vitalicio$/.test(hash || '')) {
+    history.replaceState(null, '', location.pathname + location.search);
+    if (store.solo && store.mode === 'cloud') checkBilling().then(() => { render(); import('./vip.js').then((v) => v.maybeShowVip()); }).catch(() => {});
+    return true;
+  }
   if (/^#\/ranking$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./views/ranking.js').then((m) => m.openRanking()); return true; }
   if (/^#\/suporte(-dono)?$/.test(hash || '')) {
     history.replaceState(null, '', location.pathname + location.search);
@@ -1049,6 +1063,8 @@ async function startBilling() {
     return openPlans({ blocking: true });
   }
   if (/^#\/planos/.test(location.hash)) { history.replaceState(null, '', location.pathname + location.search); openPlans(); }
+  // presente Vitalício: a revelação aparece uma vez, assim que a pessoa abre o app
+  if (st.vip) import('./vip.js').then((v) => v.maybeShowVip()).catch(() => {});
   // 1º acesso: explica os dois modos
   showGuideSoon();
   // confere o tempo do teste a cada minuto; acabou → tela de planos
@@ -1090,6 +1106,12 @@ function startApp() {
   }).catch(() => {});
   setTimeout(requirePhoto, 3500);
   setTimeout(askNotifications, 12000);
+  // voltou para o app depois de um tempo (o app não fecha de verdade no celular): conta como "abrir de novo"
+  let hiddenAt = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { hiddenAt = Date.now(); return; }
+    if (hiddenAt && Date.now() - hiddenAt > 30 * 60e3) { askedThisOpen = false; window.__vipAskedNotif = false; setTimeout(askNotifications, 3000); }
+  });
   startPresence();
   personal.on(() => { if (ui.space === 'personal') rerenderAll(); });
   store.onDenied = (msg) => toast(msg, { ms: 5000 });
@@ -1396,7 +1418,7 @@ navigator.serviceWorker?.addEventListener('message', (ev) => {
 window.addEventListener('hashchange', () => {
   // abriu um convite com o app já aberto
   if (/^#\/convite\//.test(location.hash)) { captureInvite(); return maybeAcceptInvite(); }
-  if (/^#\/((e|d|p)\/|suporte|ranking)/.test(location.hash)) return openDeepLink();
+  if (/^#\/((e|d|p)\/|suporte|ranking|vitalicio)/.test(location.hash)) return openDeepLink();
   if (/^#\/(c|v)\//.test(location.hash)) location.reload();
 });
 

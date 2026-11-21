@@ -1,6 +1,6 @@
 /* Painel do dono: quem usa o app, com detalhes de cada conta (só números, nunca o conteúdo pessoal) */
 import { store } from '../store.js';
-import { openSheet, sheetHead, toast } from '../components.js';
+import { openSheet, sheetHead, toast, confirmDialog } from '../components.js';
 import { icon } from '../icons.js';
 import { esc, todayKey, addDays } from '../utils.js';
 import { CONFIG } from '../../config.js';
@@ -33,7 +33,7 @@ function last30(u) {
   return Array.from({ length: 30 }, (_, i) => addDays(t, i - 29)).map((d) => `<i class="${set.has(d) ? 'on' : ''}" title="${d.split('-').reverse().join('/')}"></i>`).join('');
 }
 let planOf = () => null;
-const planLabel = (p) => (!p ? 'Conta própria' : p.plan === 'comp' ? `Liberado até ${new Date(p.compUntil).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : p.comp ? 'Cortesia' : { trial: 'Teste grátis', monthly: 'Mensal', lifetime: 'Vitalício', expired: 'Teste acabou', blocked: 'Sem plano', none: 'Sem plano' }[p.plan] || 'Conta própria');
+const planLabel = (p) => (!p ? 'Conta própria' : p.plan === 'comp' ? `Liberado até ${new Date(p.compUntil).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : p.vip ? `Vitalício Nº ${String(p.vip.no).padStart(3, '0')}` : p.comp ? 'Cortesia' : { trial: 'Teste grátis', monthly: 'Mensal', lifetime: 'Vitalício', expired: 'Teste acabou', blocked: 'Sem plano', none: 'Sem plano' }[p.plan] || 'Conta própria');
 /* versão do app da pessoa comparada com a última publicada */
 let latestVer = null;
 const cmpV = (a, b) => { const A = String(a || '0').split('.').map(Number), B = String(b || '0').split('.').map(Number); for (let i = 0; i < 3; i++) if ((A[i] || 0) !== (B[i] || 0)) return (A[i] || 0) > (B[i] || 0) ? 1 : -1; return 0; };
@@ -113,14 +113,16 @@ function card(u, open) {
       <div class="adays">${last30(u)}</div>
       ${u.workspace === 'proprio' ? `<h4>Acesso</h4>
       ${planOf(u.uid)?.plan === 'comp' ? `<p class="fhelp">✅ Liberado até <b>${esc(when(planOf(u.uid).compUntil))}</b>. Depois disso a pessoa precisa assinar.</p>` : ''}
-      ${planOf(u.uid)?.comp && planOf(u.uid)?.plan !== 'comp' ? `<button class="btn btn--soft btn--block" data-grant="${esc(u.uid)}" data-on="0">Tirar o acesso cortesia</button>`
+      ${planOf(u.uid)?.vip ? `<p class="fhelp">👑 Vitalício: membro <b>Nº ${String(planOf(u.uid).vip.no).padStart(3, '0')}</b> desde ${esc(when(planOf(u.uid).vip.at))}.</p>` : ''}
+      ${planOf(u.uid)?.comp && planOf(u.uid)?.plan !== 'comp' ? `<button class="btn btn--soft btn--block" data-grant="${esc(u.uid)}" data-on="0">${planOf(u.uid)?.vip ? 'Tirar o acesso vitalício' : 'Tirar o acesso cortesia'}</button>`
         : planOf(u.uid)?.plan === 'lifetime' || planOf(u.uid)?.plan === 'monthly' ? '<p class="fhelp">Conta paga.</p>'
           : `<div class="grantbox">
-              <label class="fhelp">Liberar tudo, sem pagar, até:</label>
+              <button class="btn btn--primary btn--block" data-grant="${esc(u.uid)}" data-on="1" data-vip="1">👑 Dar acesso vitalício</button>
+              <p class="fhelp">A pessoa recebe um aviso no celular e, ao abrir o app, vê a surpresa: cartão de membro com número único, emblema lendário e anel na foto.</p>
+              <label class="fhelp">Ou liberar tudo, sem pagar, só até:</label>
               <input type="datetime-local" class="input" data-until="${esc(u.uid)}" value="${(() => { const d = new Date(Date.now() + 7 * 864e5); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); })()}">
               <button class="btn btn--primary btn--block" data-grant="${esc(u.uid)}" data-on="1" data-dated="1">${planOf(u.uid)?.plan === 'comp' ? 'Mudar a data' : 'Liberar até essa data'}</button>
               ${planOf(u.uid)?.plan === 'comp' ? `<button class="btn btn--soft btn--block" data-grant="${esc(u.uid)}" data-on="0">Tirar o acesso agora</button>` : ''}
-              <button class="btn-text btn--block" data-grant="${esc(u.uid)}" data-on="1">Liberar para sempre (cortesia: revisor da loja, parceiro)</button>
             </div>`}` : ''}
     </div>` : ''}
   </div>`;
@@ -307,6 +309,7 @@ export async function openAdmin() {
       if (sup) sup.onclick = async () => (await import('./support.js')).openSupportInbox();
       a.el.querySelectorAll('[data-tab-admin]').forEach((b) => (b.onclick = () => { tab = b.dataset.tabAdmin; a.set(html()); a.el.scrollTop = 0; }));
       a.el.querySelectorAll('[data-grant]').forEach((b) => (b.onclick = async () => {
+        if (b.dataset.vip && !(await confirmDialog({ title: 'Dar acesso vitalício?', text: 'A pessoa fica com tudo do Profissional para sempre, sem pagar, e recebe a surpresa do Vitalício.', ok: 'Dar acesso vitalício' }))) return;
         b.disabled = true;
         try {
           const { api } = await import('../avisos.js');
@@ -314,7 +317,9 @@ export async function openAdmin() {
           const until = inp ? new Date(inp.value).getTime() : 0;
           if (inp && !(until > Date.now())) { toast('Escolha uma data e hora no futuro'); return; }
           const r = await api('/admin/grant', { uid: b.dataset.grant, on: b.dataset.on === '1', until });
-          plans[b.dataset.grant] = r.status; toast(b.dataset.on !== '1' ? 'Acesso retirado' : until ? `Liberado até ${when(until)} ✓` : 'Acesso cortesia liberado ✓'); a.set(html());
+          plans[b.dataset.grant] = r.status;
+          toast(b.dataset.on !== '1' ? 'Acesso retirado' : until ? `Liberado até ${when(until)} ✓` : r.gifted ? (r.sent ? `👑 Vitalício Nº ${String(r.status.vip.no).padStart(3, '0')} entregue. O aviso já chegou no celular da pessoa.` : `👑 Vitalício Nº ${String(r.status.vip.no).padStart(3, '0')} entregue. A pessoa está sem avisos ligados: ela vê a surpresa quando abrir o app.`) : 'Acesso liberado ✓', { ms: r.gifted ? 6000 : 2600 });
+          a.set(html());
         } catch (e) { b.disabled = false; toast(e.message || 'Não consegui agora.'); }
       }));
       a.el.querySelectorAll('[data-nudge-upd]').forEach((b) => (b.onclick = async () => {

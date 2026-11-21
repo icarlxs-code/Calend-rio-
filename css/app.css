@@ -2364,3 +2364,97 @@ button:active:not(:disabled), .btn:active, .pbig:active, .pchip:active, .prow:ac
 
 .gxmini__stack { display: flex; }
 .gxmini__stack .bdg + .bdg { margin-left: -22px; }
+
+/* ---------- Lembra Vitalício: revelação no preto e branco da marca ---------- */
+.vipbar__sym, .vip__sym, .vcard__sym { display: block; background: #fff; -webkit-mask: url(../media/marca/simbolo-branco.png) center / contain no-repeat; mask: url(../media/marca/simbolo-branco.png) center / contain no-repeat; }
+.vipbar__sym { width: 32px; height: 29px; flex: none; }
+.vipbar__inf { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: #000; font-weight: 800; font-size: 15px; }
+.lvring.is-vip { background: conic-gradient(from 210deg, #fff, #8E8E93, #fff, #C7C7CC, #fff) !important; }
+.lvring.is-vip .lvring__n { background: #fff; color: #000; }
+.avatar--vip { box-shadow: 0 0 0 1.5px var(--bg), 0 0 0 3px #C7C7CC; }
+.lvring > .avatar--vip { box-shadow: 0 0 0 2.5px var(--bg); }
+html.has-vip, html.has-vip body { overflow: hidden; }
+
+.vip { position: fixed; inset: 0; z-index: 9800; background: #000; color: #fff; overflow: hidden; opacity: 0; transition: opacity .5s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; -webkit-user-select: none; user-select: none; }
+.vip.is-in { opacity: 1; } .vip.is-out { opacity: 0; }
+.vip__glow { position: absolute; inset: 0; background: radial-gradient(60% 34% at 50% 36%, rgba(255,255,255,.10), transparent 72%); pointer-events: none; }
+.vip__dust i { position: absolute; width: var(--s); height: var(--s); border-radius: 50%; background: #fff; box-shadow: 0 0 6px 1px rgba(255,255,255,.5); opacity: 0; animation: vipdust 5s ease-in-out var(--d) infinite; }
+@keyframes vipdust { 0%, 100% { opacity: 0; transform: translateY(6px); } 50% { opacity: .7; transform: translateY(-6px); } }
+.vip__x { position: absolute; z-index: 3; top: calc(env(safe-area-inset-top) + 12px); right: 14px; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(255,255,255,.12); color: #fff; display: grid; place-items: center; }
+.vip__s { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: calc(env(safe-area-inset-top) + 7vh) 24px calc(env(safe-area-inset-bottom) + 28px); opacity: 0; visibility: hidden; transition: opacity .7s ease, visibility 0s .7s; }
+.vip__s.is-on { opacity: 1; visibility: visible; transition: opacity .7s ease .15s, visibility 0s; }
+.vip__kick { font-size: 12px; letter-spacing: .42em; font-weight: 600; color: rgba(255,255,255,.5); padding-left: .42em; }
+.vip__btn { margin-top: auto; width: 100%; max-width: 420px; height: 54px; flex: none; border: 0; border-radius: 16px; background: #fff; color: #000; font: inherit; font-size: 17px; font-weight: 700; }
+.vip__btn:active { transform: scale(.98); }
+.vip__later { margin-top: 10px; border: 0; background: none; color: var(--accent, #0A84FF); font: inherit; font-size: 16px; padding: 8px 16px; }
+
+/* 1) o símbolo do app acende */
+.vip__intro { justify-content: center; cursor: pointer; }
+.vip__halo { position: absolute; left: 50%; top: 36%; width: 280px; height: 280px; margin: -140px 0 0 -140px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.16), transparent 65%); opacity: 0; }
+.vip__intro .vip__sym { width: 150px; height: 136px; margin-top: -8vh; filter: drop-shadow(0 0 28px rgba(255,255,255,.35)); opacity: 0; transform: scale(.85); }
+.vip__nm { margin-top: 13vh; font-size: 14px; letter-spacing: .42em; padding-left: .42em; font-weight: 600; color: rgba(255,255,255,.55); opacity: 0; }
+.vip__ln { margin-top: 16px; font-size: 30px; font-weight: 300; line-height: 1.25; letter-spacing: -.01em; opacity: 0; }
+.vip__tap { position: absolute; bottom: calc(env(safe-area-inset-bottom) + 48px); left: 0; right: 0; font-size: 12px; letter-spacing: .3em; color: rgba(255,255,255,.35); opacity: 0; }
+.vip__intro.is-on .vip__halo { animation: vipin 2.4s ease .2s forwards; }
+.vip__intro.is-on .vip__sym { animation: vipsym 1.8s cubic-bezier(.2,.8,.2,1) .3s forwards; }
+.vip__intro.is-on .vip__nm { animation: vipin 1s ease 1.4s forwards; }
+.vip__intro.is-on .vip__ln { animation: vipup 1.1s ease 1.9s forwards; }
+.vip__intro.is-on .vip__tap { animation: vipin 1s ease 3s forwards; }
+@keyframes vipin { to { opacity: 1; } }
+@keyframes vipsym { 0% { opacity: 0; transform: scale(.85); filter: drop-shadow(0 0 0 rgba(255,255,255,0)) blur(6px); } 100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 28px rgba(255,255,255,.35)) blur(0); } }
+@keyframes vipup { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+/* 2) o cartão de membro */
+.vip__h1 { margin: 12px 0 0; font-size: clamp(32px, 9.5vw, 42px); font-weight: 300; letter-spacing: -.02em; line-height: 1.1; }
+.vip__h1 b { font-weight: 700; }
+.vcard { --rx: 13deg; --ry: -15deg; margin: 6vh 0 0; width: min(360px, 86vw); aspect-ratio: 1.586; perspective: 1100px; flex: none; touch-action: none; }
+.vcard__in { position: relative; width: 100%; height: 100%; border-radius: 22px; overflow: hidden; transform: rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(2deg); transition: transform .25s ease-out;
+  background: linear-gradient(150deg, #fff 0%, #ececef 38%, #f8f8fa 62%, #dedee3 100%); color: #111; text-align: left;
+  box-shadow: 0 50px 90px rgba(0,0,0,.95), 0 0 80px rgba(255,255,255,.10), inset 0 0 0 1px rgba(255,255,255,.7); }
+.vcard__in::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(0,0,0,.018) 0 1px, transparent 1px 2px); }
+.vip__rv.is-on .vcard__in { animation: vipcard 1.6s cubic-bezier(.16,1,.3,1) both; }
+@keyframes vipcard { 0% { opacity: 0; transform: translateY(60px) rotateX(62deg) rotateY(-30deg) rotateZ(-6deg) scale(.86); } 100% { opacity: 1; transform: rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(2deg); } }
+.vcard__sheen { position: absolute; inset: -40%; background: linear-gradient(115deg, transparent 42%, rgba(255,255,255,.95) 48%, rgba(255,255,255,.25) 52%, transparent 58%); transform: translateX(-60%); animation: vipsheen 4.5s ease-in-out 1.2s infinite; }
+@keyframes vipsheen { 0% { transform: translateX(-60%); } 45%, 100% { transform: translateX(60%); } }
+.vcard__word { position: absolute; left: 7%; top: 11%; width: 27%; height: 10%; background: #111; -webkit-mask: url(../media/marca/palavra-branco.png) left center / contain no-repeat; mask: url(../media/marca/palavra-branco.png) left center / contain no-repeat; }
+.vcard__tier { position: absolute; right: 7%; top: 13%; font-size: 10.5px; letter-spacing: .4em; font-weight: 700; }
+.vcard .vcard__sym { position: absolute; left: 7%; top: 35%; width: 14.5%; aspect-ratio: 1.1; background: #111; }
+.vcard__nm { position: absolute; left: 7%; right: 7%; bottom: 20%; font-size: clamp(12px, 4vw, 15px); letter-spacing: .28em; font-weight: 600; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1c1c1e; }
+.vcard__no, .vcard__ed { position: absolute; bottom: 9.5%; font-size: 10.5px; letter-spacing: .26em; color: rgba(0,0,0,.45); }
+.vcard__no { left: 7%; } .vcard__ed { right: 7%; }
+.vip__rare { margin-top: 7vh; opacity: 0; }
+.vip__rv.is-on .vip__rare { animation: vipup 1s ease 1.2s forwards; }
+.vip__n { font-size: clamp(44px, 13vw, 56px); font-weight: 200; letter-spacing: -.02em; line-height: 1.05; }
+.vip__t { margin-top: 4px; font-size: 14px; color: #AEAEB2; }
+.vip__p { margin: 3.5vh 0 0; font-size: 16px; line-height: 1.55; color: #AEAEB2; opacity: 0; }
+.vip__rv.is-on .vip__p { animation: vipup 1s ease 1.6s forwards; }
+
+/* 3) o emblema */
+.vip__medal { margin-top: 3vh; filter: drop-shadow(0 20px 40px rgba(180,170,255,.18)); }
+.vip__md.is-on .vip__medal { animation: vipmedal 1.3s cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes vipmedal { from { opacity: 0; transform: scale(.6) rotate(-12deg); } to { opacity: 1; transform: none; } }
+.vip__medal .bdg { width: min(220px, 52vw) !important; height: min(220px, 52vw) !important; }
+.vip__h2 { margin: 2vh 0 0; font-size: 30px; font-weight: 700; }
+.vip__rar { margin-top: 6px; font-size: 12.5px; letter-spacing: .28em; font-weight: 700; color: #9B7BFF; }
+.vip__list { list-style: none; margin: 3.5vh 0 0; padding: 0 16px; width: 100%; max-width: 420px; background: #1C1C1E; border-radius: 16px; text-align: left; }
+.vip__list li { display: flex; align-items: center; gap: 14px; padding: 13px 0; border-bottom: .5px solid rgba(255,255,255,.1); }
+.vip__list li:last-child { border-bottom: 0; }
+.vip__list li > span { flex: none; width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: #2C2C2E; font-weight: 700; }
+.vip__list b { display: block; font-size: 16px; font-weight: 600; }
+.vip__list small { display: block; margin-top: 2px; font-size: 13.5px; color: #8E8E93; }
+.vip__md .vip__btn { margin-top: auto; }
+
+/* 4) avisos */
+.vip__nf { justify-content: flex-end; padding: 0; }
+.vip__sheet { width: 100%; padding: 34px 24px calc(env(safe-area-inset-bottom) + 24px); border-radius: 28px 28px 0 0; background: #1C1C1E; display: flex; flex-direction: column; align-items: center; transform: translateY(100%); }
+.vip__nf.is-on .vip__sheet { animation: vipsheet .6s cubic-bezier(.2,.9,.3,1) .1s forwards; }
+@keyframes vipsheet { to { transform: none; } }
+.vip__bell { width: 86px; height: 86px; border-radius: 22px; background: #000; display: grid; place-items: center; box-shadow: 0 0 0 1px rgba(255,255,255,.12); }
+.vip__sym--sm { width: 54px; height: 49px; }
+.vip__sheet h3 { margin: 18px 0 0; font-size: 24px; font-weight: 700; letter-spacing: -.01em; }
+.vip__sheet p { margin: 10px 0 24px; font-size: 15.5px; line-height: 1.5; color: #AEAEB2; }
+.vip__sheet .vip__btn { margin-top: 0; }
+@media (max-height: 700px) { .vip__s { padding-top: calc(env(safe-area-inset-top) + 4vh); } .vcard { margin-top: 3vh; } .vip__rare { margin-top: 3.5vh; } .vip__medal .bdg { width: 160px !important; height: 160px !important; } }
+@media (prefers-reduced-motion: reduce) { .vip *, .vip { animation-duration: .01s !important; animation-delay: 0s !important; } .vcard__sheen { display: none; } }

@@ -1,0 +1,1 @@
+var l=Object.defineProperty;var i=(e,o)=>{for(var a in o)l(e,a,{get:o[a],enumerable:!0})};var t=["Novo emblema lend\xE1rio: Vital\xEDcio","Colocar a foto n\xE3o troca mais o seu nome completo pelo apelido","Quando os avisos est\xE3o desligados, o Lembra mostra como ligar"];export{i as a,t as b};

@@ -193,14 +193,14 @@ const backend = {
     await batch.commit();
   },
   /* Nível de conquistas no placar da equipe: o dono grava no próprio documento; o convidado só no próprio nome */
-  async setMyTeamLevel(owner, uid, level) {
+  async setMyTeamLevel(owner, uid, level, vip = false) {
     const lv = Math.max(0, Math.min(100, Math.round(Number(level) || 0)));
     if (!owner || owner === uid) {
       const s = await fs.getDoc(fs.doc(db, 'teams', uid));
-      if (s.exists()) await fs.updateDoc(fs.doc(db, 'teams', uid), { ownerLevel: lv });
+      if (s.exists()) await fs.updateDoc(fs.doc(db, 'teams', uid), { ownerLevel: lv, ownerVip: !!vip });
       return;
     }
-    await fs.updateDoc(fs.doc(db, 'teams', owner), { [`names.${uid}.level`]: lv });
+    await fs.updateDoc(fs.doc(db, 'teams', owner), { [`names.${uid}.level`]: lv, [`names.${uid}.vip`]: !!vip });
   },
   /* ---------- excluir conta (LGPD) ---------- */
   async deleteTeam(owner) {

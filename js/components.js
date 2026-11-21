@@ -9,13 +9,15 @@ import { platformIcons } from './platforms.js';
 export function avatar(id, size = 26) {
   const m = store.member(id);
   if (!m) return '';
-  if (m.photo) return `<span class="avatar avatar--photo" style="--s:${size}px;background:${m.color}" title="${esc(m.name)}"><img src="${m.photo}" alt="" loading="lazy"></span>`;
-  return `<span class="avatar" style="--s:${size}px;background:${m.color}" title="${esc(m.name)}">${esc(m.name[0])}</span>`;
+  const vip = m.vip || (id === store.me && store.billing?.plan === 'lifetime' && store.billing?.vip) ? ' avatar--vip' : '';
+  if (m.photo) return `<span class="avatar avatar--photo${vip}" style="--s:${size}px;background:${m.color}" title="${esc(m.name)}"><img src="${m.photo}" alt="" loading="lazy"></span>`;
+  return `<span class="avatar${vip}" style="--s:${size}px;background:${m.color}" title="${esc(m.name)}">${esc(m.name[0])}</span>`;
 }
 /* foto da pessoa com o anel de nível (progresso até o próximo nível) e o número do nível, como nas redes sociais */
 export function meRing(id, size = 34) {
   const L = typeof window !== 'undefined' ? window.__lvl : null;
-  return `<span class="lvring${L ? '' : ' is-off'}" data-lvring style="--s:${size}px;--p:${L ? L.deg : 0}deg;--h:${L ? L.hue : '#8E8E93'}">${avatar(id, size)}<i class="lvring__n">${L ? L.level : ''}</i></span>`;
+  const vip = store.billing?.plan === 'lifetime' && store.billing?.vip ? ' is-vip' : '';
+  return `<span class="lvring${L ? '' : ' is-off'}${vip}" data-lvring style="--s:${size}px;--p:${L ? L.deg : 0}deg;--h:${L ? L.hue : '#8E8E93'}">${avatar(id, size)}<i class="lvring__n">${L ? L.level : ''}</i></span>`;
 }
 /* atualiza os anéis já desenhados (sem redesenhar a tela) */
 export function refreshLevelRings() {

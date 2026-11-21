@@ -1,4 +1,4 @@
-/* Conquistas do Lembra: XP, níveis 0–100 e 104 emblemas.
+/* Conquistas do Lembra: XP, níveis 0–100 e 105 emblemas.
    Pensado para quem tem dificuldade de manter o hábito (inclusive TDAH): recompensa NA HORA, metas pequenas,
    nada de perder o que conquistou, e quem volta depois de uns dias ganha um emblema ("Volta por cima") em vez de culpa.
 
@@ -157,6 +157,8 @@ export function metrics() {
     goodMonths: Object.values(S.mon || {}).filter((n) => n >= 20).length,
     accountYears: created ? Math.floor((Date.now() - created) / (365.25 * 864e5)) : 0,
     founder: store.billing?.founder ? 1 : 0,
+    // só conta depois que a pessoa viu a revelação do presente (ela mesma mostra o emblema)
+    vip: store.billing?.plan === 'lifetime' && store.billing?.vip && (() => { try { return localStorage.getItem('lembra.vip.seen') === String(store.billing.vip.no); } catch { return false; } })() ? 1 : 0,
   };
 }
 export function progressOf(b) {
@@ -251,6 +253,8 @@ export function onNote(note) {
   if (S.d.notes <= CAPS.noteXp) gain(XP.note, 'bilhete', { fly: false });
   settle();
 }
+/* entrega emblemas pendentes sem comemoração (ex.: Vitalício, que já tem a própria revelação) */
+export function quietSettle() { settle({ quiet: true }); }
 export function onInvite() { load(); S.c.invites = (S.c.invites || 0) + 1; settle(); }
 /* ranking: guarda a melhor liga e pódios (vem da tela do ranking) */
 export function onRank(board) {
@@ -303,12 +307,12 @@ function seed() {
 }
 
 /* ---------- placar da equipe: o nível de cada um aparece para os colegas ---------- */
-let lastTeamLvl = -1;
+let lastTeamLvl = '';
 function teamLevel() {
-  const L = levelOf(S.xp);
-  if (L === lastTeamLvl || !store.backendApi?.setMyTeamLevel) return;
-  lastTeamLvl = L;
-  store.backendApi.setMyTeamLevel(store.shared?.owner || null, store.user?.uid, L).catch(() => {});
+  const L = levelOf(S.xp), vip = !!(store.billing?.plan === 'lifetime' && store.billing?.vip), key = `${L}:${vip}`;
+  if (key === lastTeamLvl || !store.backendApi?.setMyTeamLevel) return;
+  lastTeamLvl = key;
+  store.backendApi.setMyTeamLevel(store.shared?.owner || null, store.user?.uid, L, vip).catch(() => {});
 }
 
 /* ---------- "+20 XP" subindo na tela ---------- */

@@ -42,9 +42,9 @@ const hex = (c, d) => (/^#[0-9a-fA-F]{6}$/.test(c || '') ? c : d);
 const nm = (n, d) => (typeof n === 'string' && n.trim() ? n.trim().slice(0, 40) : d);
 export function teamPeople(t, owner, mine = null) {
   const lv = (v) => (Number.isFinite(v) && v >= 0 && v <= 100 ? Math.round(v) : null); // nível de conquistas (placar da equipe)
-  const out = [{ id: idOf(owner), name: nm(t.ownerName, 'Dono'), color: hex(t.ownerColor, '#7C5CFF'), photo: null, uid: owner, owner: true, level: lv(t.ownerLevel) }];
+  const out = [{ id: idOf(owner), name: nm(t.ownerName, 'Dono'), color: hex(t.ownerColor, '#7C5CFF'), photo: null, uid: owner, owner: true, level: lv(t.ownerLevel), vip: t.ownerVip === true }];
   (t.members || []).filter((uid) => typeof uid === 'string' && /^[A-Za-z0-9]{6,64}$/.test(uid))
-    .forEach((uid, i) => out.push({ id: idOf(uid), name: nm(t.names?.[uid]?.name, 'Convidado'), color: hex(t.names?.[uid]?.color, COLORS[i % COLORS.length]), photo: null, uid, level: lv(t.names?.[uid]?.level) }));
+    .forEach((uid, i) => out.push({ id: idOf(uid), name: nm(t.names?.[uid]?.name, 'Convidado'), color: hex(t.names?.[uid]?.color, COLORS[i % COLORS.length]), photo: null, uid, level: lv(t.names?.[uid]?.level), vip: t.names?.[uid]?.vip === true }));
   // a própria pessoa aparece com a foto e a cor do perfil dela
   return mine ? out.map((p) => (p.id === mine.id ? { ...p, ...mine, uid: p.uid, owner: p.owner } : p)) : out;
 }
@@ -138,8 +138,8 @@ export async function startTeam() {
     teamDoc = t;
     const mine = store.member(store.me) || soloMember(store.user, store.profile || {});
     const people = t && t.active && (t.members || []).length ? teamPeople(t, uid, mine) : [mine];
-    const sig = people.map((p) => p.id + p.name + (p.level ?? '')).join('|');
-    if (sig !== store.team.map((p) => p.id + p.name + (p.level ?? '')).join('|')) { store.team = people; store.emit(); }
+    const sig = people.map((p) => p.id + p.name + (p.level ?? '') + (p.vip ? '*' : '')).join('|');
+    if (sig !== store.team.map((p) => p.id + p.name + (p.level ?? '') + (p.vip ? '*' : '')).join('|')) { store.team = people; store.emit(); }
     // o servidor confere as vagas pagas e libera os avisos para os convidados
     const syncSig = JSON.stringify([t?.active, t?.members, t?.names]);
     if (t && server() && syncSig !== lastSync) {
