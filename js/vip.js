@@ -9,8 +9,13 @@ import { levelUp, softOk } from './sound.js';
 
 const LS = 'lembra.vip.seen';
 export const vipOf = () => (store.billing && store.billing.plan === 'lifetime' && store.billing.vip) || null;
-export const vipSeen = () => { const v = vipOf(); if (!v) return false; try { return localStorage.getItem(LS) === String(v.no); } catch { return false; } };
-const markSeen = () => { const v = vipOf(); if (!v) return; try { localStorage.setItem(LS, String(v.no)); } catch { /* ok */ } };
+export const vipSeen = () => { const v = vipOf(); if (!v) return false; if (Number(store.profile?.vipSeen) === v.no) return true; try { return localStorage.getItem(LS) === String(v.no); } catch { return false; } };
+const markSeen = () => {
+  const v = vipOf(); if (!v) return;
+  try { localStorage.setItem(LS, String(v.no)); } catch { /* ok */ }
+  // guardado na conta: em outro celular, reinstalando ou saindo e entrando, não aparece de novo
+  import('./store.js').then((m) => m.saveProfileQuiet && m.saveProfileQuiet({ vipSeen: v.no })).catch(() => {});
+};
 export const memberNo = (n) => `Nº ${String(n || 0).padStart(3, '0')}`;
 export const notifOk = () => push.permission() === 'granted' && push.deviceRegistered();
 
@@ -38,7 +43,7 @@ export function vipBanner() {
       <span class="trialbar__go">Ativar</span>
     </button>`;
   }
-  if (Date.now() - (v.at || 0) > 7 * 864e5) return '';
+  return ''; // a faixa "Lembra Vitalício" não fica repetindo: o cartão está nos Ajustes
   return `<button class="trialbar vipbar" data-action="vip-card">
     <span class="vipbar__sym" aria-hidden="true"></span>
     <span><b>Lembra Vitalício</b><small>Membro ${memberNo(v.no)} · tudo liberado para sempre</small></span>

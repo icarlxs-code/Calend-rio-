@@ -79,7 +79,7 @@ export function reportStats({ open = false, force = false } = {}) {
     },
     // botões e telas mais usados (só contagem)
     usage: usage30(),
-    vipSeen: (() => { try { return !!localStorage.getItem('lembra.vip.seen'); } catch { return false; } })(),
+    vipSeen: !!store.profile?.vipSeen || (() => { try { return !!localStorage.getItem('lembra.vip.seen'); } catch { return false; } })(),
   };
   const day = t;
   const prevDays = (store.statsDays || []).filter((d) => d >= monthAgo);

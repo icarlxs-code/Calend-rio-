@@ -1,0 +1,1 @@
+var c=Object.defineProperty;var i=(o,a)=>{for(var e in a)c(o,e,{get:a[e],enumerable:!0})};var s=["\u201CLembrar de mim\u201D: voc\xEA continua conectado e, se sair, o e-mail j\xE1 vem preenchido","Som novo, suave, a cada conquista","A surpresa do Vital\xEDcio aparece uma vez s\xF3, em qualquer celular"];export{i as a,s as b};

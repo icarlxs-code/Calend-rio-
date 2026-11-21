@@ -158,7 +158,7 @@ export function metrics() {
     accountYears: created ? Math.floor((Date.now() - created) / (365.25 * 864e5)) : 0,
     founder: store.billing?.founder ? 1 : 0,
     // só conta depois que a pessoa viu a revelação do presente (ela mesma mostra o emblema)
-    vip: store.billing?.plan === 'lifetime' && store.billing?.vip && (() => { try { return localStorage.getItem('lembra.vip.seen') === String(store.billing.vip.no); } catch { return false; } })() ? 1 : 0,
+    vip: store.billing?.plan === 'lifetime' && store.billing?.vip && (Number(store.profile?.vipSeen) === store.billing.vip.no || (() => { try { return localStorage.getItem('lembra.vip.seen') === String(store.billing.vip.no); } catch { return false; } })()) ? 1 : 0,
   };
 }
 export function progressOf(b) {
@@ -353,7 +353,7 @@ function pumpMini() {
   else el.innerHTML = `<span class="gxmini__m">${badgeArt(b, 50)}</span><span class="gxmini__t"><small>Conquista desbloqueada</small><b>${esc(b.name())}</b></span><span class="gxmini__xp">+${RARITY[b.rarity].xp} XP</span>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('is-in')));
-  import('./sound.js').then((s) => s.pop(true)).catch(() => {});
+  import('./sound.js').then((s) => (b.level ? s.pop(true) : s.achievement())).catch(() => {});
   try { navigator.vibrate && navigator.vibrate([10, 40, 14]); } catch { /* ok */ }
   const close = () => { el.classList.remove('is-in'); setTimeout(() => { el.remove(); miniOn = false; setTimeout(pumpMini, 250); }, 320); };
   const t = setTimeout(close, 3600);
@@ -411,7 +411,7 @@ function show(it, done) {
     </div>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('is-in'));
-  import('./sound.js').then((s) => (it.type === 'level' || it.type === 'welcome' ? s.levelUp() : s.fanfare())).catch(() => {});
+  import('./sound.js').then((s) => (it.type === 'level' || it.type === 'welcome' ? s.levelUp() : s.achievement())).catch(() => {});
   try { navigator.vibrate && navigator.vibrate([18, 60, 26, 60, 40]); } catch { /* ok */ }
   setTimeout(() => import('./reward.js').then((r) => { const m = el.querySelector('.gx__medal'); if (m) r.burst(m, { big: true }); }).catch(() => {}), 650);
   let closed = false;

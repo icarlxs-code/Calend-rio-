@@ -753,7 +753,12 @@ const LOGIN_ERRORS = {
   'auth/invalid-login-credentials': 'E-mail ou senha incorretos. Confira a senha (toque no olho para ver o que digitou).',
   'auth/password-does-not-meet-requirements': 'Senha fraca: use pelo menos 8 caracteres, com letras e números.',
 };
-let loginEmail = '';
+// "Lembrar de mim": o e-mail fica salvo neste celular e a tela já abre em "Entrar" (a senha quem guarda é o
+// cofre de senhas do celular — Chaves do iCloud / Google —, nunca o Lembra)
+const LS_REMEMBER = 'lembra.lembrar';
+const remembered = () => { try { return JSON.parse(localStorage.getItem(LS_REMEMBER) || 'null'); } catch { return null; } };
+let loginEmail = remembered()?.email || '';
+let rememberMe = remembered() ? !!remembered().on : true;
 let loginName = '', loginPass = ''; // não perde o que foi digitado quando aparece um aviso
 let loginNotice = '';
 let loginTypo = '', typoAsked = ''; // sugestão de correção do e-mail (gmial.com → gmail.com)
@@ -783,6 +788,8 @@ async function loadInviteInfo() {
   if (box && inviteInfo?.ownerName) box.textContent = inviteInfo.ownerName;
 }
 function showLogin(errMsg = '') {
+  // já entrou antes neste celular: abre direto em "Entrar", com o e-mail lembrado
+  if (remembered()?.email && !showLogin.rem && !invitedBy()) { showLogin.rem = true; signupMode = false; }
   try { if (sessionStorage.getItem('lembra.deleted')) { sessionStorage.removeItem('lembra.deleted'); loginNotice = 'Sua conta foi excluída e seus dados foram apagados. Obrigado por ter usado o Lembra.'; } } catch { /* ok */ }
   // convidado chegando pelo link: o mais comum é ainda não ter conta
   if (invitedBy() && !showLogin.seen) { showLogin.seen = true; signupMode = true; }
@@ -808,6 +815,8 @@ function showLogin(errMsg = '') {
       ${loginTypo ? `<div class="login__typo">Você quis dizer <b>${esc(loginTypo)}</b>? <button class="btn-text btn-text--sm" type="button" data-fixmail>Corrigir</button></div>` : ''}
       ${msg ? `<p class="login__err" role="alert">${esc(msg)}</p>` : ''}
       <button class="btn btn--primary btn--block" type="submit" data-go>${signupMode ? 'Criar minha conta' : 'Entrar'}</button>
+      <label class="consent consent--remember"><input type="checkbox" name="remember" ${rememberMe ? 'checked' : ''}><span class="consent__dot" aria-hidden="true">${icon('check', 14)}</span>
+        <span>Lembrar de mim neste celular<small>Você continua conectado e, se sair, o e-mail já vem preenchido. A senha fica no cofre de senhas do celular, nunca com o Lembra.</small></span></label>
       ${signupMode ? '' : '<button class="btn-text btn-text--sm" type="button" data-reset>Esqueci minha senha</button>'}
       ${isStandalone() ? '' : `<button class="btn btn--soft btn--block login__install" type="button" data-installguide>${icon('phone', 16)} Instalar na tela inicial do celular</button>`}
       <div class="login__switch">${signupMode ? 'Já tem conta?' : 'Ainda não tem conta?'} <button class="btn-text btn-text--sm" type="button" data-mode>${signupMode ? 'Entrar' : 'Criar conta'}</button></div>
@@ -848,7 +857,7 @@ function showLogin(errMsg = '') {
       // vai entrar outra conta: esquece qualquer sessão guardada antes
       try { localStorage.removeItem(LS_UID); } catch { /* ok */ }
       await Promise.race([
-        (signupMode ? cloudApi.signUp(email, pass, name) : cloudApi.signIn(email, pass)).then((cred) => { try { localStorage.setItem(LS_UID, cred.user.uid); } catch { /* ok */ } return cred; }),
+        (signupMode ? cloudApi.signUp(email, pass, name) : cloudApi.signIn(email, pass)).then((cred) => { try { localStorage.setItem(LS_UID, cred.user.uid); rememberMe = !!f.remember?.checked; sessionStorage.setItem('lembra.sess', '1'); localStorage.setItem(LS_REMEMBER, JSON.stringify(rememberMe ? { on: true, email } : { on: false })); } catch { /* ok */ } return cred; }),
         new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), 20000)),
       ]);
       // deu certo: a tela muda sozinha quando o Firebase confirmar o login
@@ -1392,6 +1401,13 @@ async function boot() {
       if (started) return location.reload();
       return showLogin();
     }
+    // escolheu NÃO ser lembrado: a sessão vale só enquanto o app está aberto (fechou o app → pede login de novo)
+    if (!started && remembered() && remembered().on === false && !(() => { try { return sessionStorage.getItem('lembra.sess'); } catch { return '1'; } })()) {
+      try { await cloudApi.signOut(); } catch { /* ok */ }
+      purgeAuth();
+      return showLogin();
+    }
+    try { sessionStorage.setItem('lembra.sess', '1'); } catch { /* ok */ }
     try { localStorage.setItem(LS_UID, user.uid); } catch { /* ok */ }
     // trocou de conta com o app aberto: recomeça do zero (nunca mistura uma conta com a outra)
     if (started) { if (store.user && store.user.uid !== user.uid) location.reload(); return; }

@@ -2515,3 +2515,4 @@ html.has-vip, html.has-vip body { overflow: hidden; }
 .pmemocard > .ic:last-child { color: var(--text-3); flex: none; }
 .pback { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); display: inline-flex; align-items: center; gap: 2px; font-size: 14px; font-weight: 600; }
 .pmemocard > .ptile { flex: none; width: var(--s); height: var(--s); }
+.consent--remember small { display: block; font-size: 12px; color: var(--text-3); margin-top: 2px; line-height: 1.35; }

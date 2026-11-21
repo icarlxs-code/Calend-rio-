@@ -103,3 +103,13 @@ export function levelUp() {
   [392, 523.25, 659.25, 783.99, 1046.5, 1318.51].forEach((f, i) => note(a, f, t + i * 0.06, 0.26, 0.04));
   [523.25, 659.25, 783.99, 1046.5].forEach((f) => soft(a, f, t + 0.42, 1.8, 0.03));
 }
+
+/* conquista nova: sininhos suaves subindo + um brilho no fim (agradável, ~1,6s, volume baixo) */
+export function achievement() {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + 0.02;
+  [659.25, 830.61, 987.77].forEach((f, i) => soft(a, f, t + i * 0.11, 1.1, 0.035)); // mi, sol#, si
+  soft(a, 1318.51, t + 0.38, 1.4, 0.03); // mi agudo, segura
+  soft(a, 1975.53, t + 0.46, 0.9, 0.012); // brilho bem leve
+}
