@@ -174,7 +174,7 @@ test('retorno: sequência em risco no horário em que costuma abrir; queda no ra
 });
 
 test('cada pessoa recebe as próprias mensagens: perfil, religião, quantidade e água diferentes', () => {
-  const run = (prof) => { let st = {}, out = []; for (let t = at('07:00'); t <= at('22:30'); t += 60e3) { const r = nextNudge(prof, st, t); if (r) { st = r.state; out.push([t, r.msg]); } } return out; };
+  const run = (prof) => { let seed = 7; const rnd = () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; let st = {}, out = []; for (let t = at('07:00'); t <= at('22:30'); t += 60e3) { const r = nextNudge(prof, st, t, rnd); if (r) { st = r.state; out.push([t, r.msg]); } } return out; };
   const ana = run({ uid: 'u_ana', name: 'Ana', prefs: { pronoun: 'f', religion: 'budista', perDay: 14, waterEvery: 90 }, mind: { anxiety: 'muita', selfesteem: 'baixa', motivation: 'baixa', traits: ['perfeccionista'], focus: ['ansiedade'] }, today: [] });
   const beto = run({ uid: 'u_beto', name: 'Beto', prefs: { pronoun: 'm', religion: 'ateu', perDay: 4, waterEvery: 0 }, mind: { motivation: 'alta', traits: ['competitivo'] }, today: [] });
   const body = (l) => l.map(([, m]) => m.body);

@@ -141,6 +141,23 @@ async function registerUser(env, me, st = null) {
   reg[me.id] = { name: me.name, ws: me.ws, at: cur?.at || Date.now(), ...(until !== undefined ? { until } : {}) };
   await env.CAL.put('users', JSON.stringify(reg));
 }
+/* Conta nova abriu o app pela primeira vez: avisa o dono do app no celular (nome e e-mail).
+   Quem já existia (já tem cobrança ou já está no registro) é só marcado, sem aviso. */
+async function announceNewUser(env, me) {
+  if (me.ws === 'main' || me.guest || !me.id) return;
+  const key = `known:${me.id}`;
+  if (await env.CAL.get(key)) return;
+  await env.CAL.put(key, String(Date.now()));
+  const reg = (await env.CAL.get('users', 'json')) || {};
+  if (reg[me.id] || (await env.CAL.get(`bill:${me.ws}`))) return; // conta antiga
+  const em = (env.ADMIN_EMAIL || JSON.parse(env.TEAM || '[]')[0]?.email || '').toLowerCase();
+  if ((me.email || '').toLowerCase() === em) return;
+  const owner = JSON.parse(env.TEAM || '[]').find((m) => (m.email || '').toLowerCase() === em)?.id;
+  if (!owner) return;
+  const total = Number(await env.CAL.get('signups-count') || 0) + 1;
+  await env.CAL.put('signups-count', String(total));
+  await sendToMember(env, owner, { title: `🎉 Novo cadastro: ${me.name || 'Sem nome'}`, body: `${me.email || ''} acabou de criar uma conta no Lembra. Total: ${total} cadastros.`, tag: `novo-${me.id}`, url: './' });
+}
 /* Plano mudou (pagou, renovou, cancelou, reembolso, teste começou): atualiza até quando a conta tem direito */
 async function refreshUntil(env, ws) {
   if (!ws || ws === 'main') return;
@@ -354,6 +371,7 @@ async function handle(req, env) {
 
   // ---------- cobrança e teste grátis ----------
   if (url.pathname === '/billing/status') {
+    await announceNewUser(env, me).catch((e) => console.log('aviso de cadastro', e.message));
     const st = { ...(await billingStatus(env, me)), foundersLeft: Math.max(0, 200 - Number(await env.CAL.get('founders-count') || 0)) };
     // mantém o prazo do relógio em dia (ex.: o teste acabou, o mensal renovou)
     if (me.ws !== 'main') { const reg = (await env.CAL.get('users', 'json')) || {}; if (reg[me.id] && reg[me.id].until !== untilOf(st)) await registerUser(env, me, st); }
