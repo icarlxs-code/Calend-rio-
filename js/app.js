@@ -201,7 +201,8 @@ const actions = {
   tab: (b) => setTab(b.dataset.tab),
   space: (b) => switchSpace(b.dataset.space, b),
   'edit-profile': async () => (await import('./views/profile.js')).openProfile(),
-  support: () => {
+  support: async () => {
+    if (store.mode === 'cloud' && store.user) return (await import('./views/support.js')).openSupport();
     const wa = String(CONFIG.supportWhatsapp || '').replace(/\D/g, '');
     const who = store.member(store.me)?.name || '';
     if (wa) window.open(`https://wa.me/${wa}?text=${encodeURIComponent(`Olá! Sou ${who} e uso o Lembra. Preciso de ajuda com:`)}`, '_blank');
@@ -363,7 +364,7 @@ const lockGuard = (ev) => {
   const inApp = ev.target.closest && ev.target.closest('#view, .tabbar');
   if (!inApp || ev.target.closest('[data-allow-locked], [data-action="logout"]')) return;
   // modo "só olhar": trocar de aba e ver a agenda é livre; criar/editar/concluir abre os planos
-  if (ev.target.closest('[data-action="tab"], [data-action="ptab"], [data-action="space"], [data-action="switch-space"]')) return;
+  if (ev.target.closest('[data-action="tab"], [data-action="ptab"], [data-action="space"], [data-action="switch-space"], [data-action="support"]')) return;
   if (ev.type === 'focusin' && !ev.target.matches('input, textarea, select, [contenteditable]')) return;
   if (ev.type === 'click' && !ev.target.closest('button, a, input, textarea, select, label, [data-action], [role="button"], [data-id]')) return;
   ev.preventDefault();
@@ -640,6 +641,11 @@ function askReinstall() {
 
 /* Abre o lugar certo quando a pessoa toca numa notificação (#/e/ID ou #/d/DATA) */
 function openDeepLink(hash = location.hash, tries = 0) {
+  if (/^#\/suporte(-dono)?$/.test(hash || '')) {
+    history.replaceState(null, '', location.pathname + location.search);
+    import('./views/support.js').then((m) => (/dono/.test(hash) ? m.openSupportInbox() : m.openSupport()));
+    return true;
+  }
   const m = /^#\/(e|d|p)\/([\w-]+)/.exec(hash || '');
   if (!m) return false;
   window.PautaIntro && window.PautaIntro.finish(); // veio de uma notificação: vai direto ao ponto
@@ -1176,7 +1182,7 @@ navigator.serviceWorker?.addEventListener('message', (ev) => {
 window.addEventListener('hashchange', () => {
   // abriu um convite com o app já aberto
   if (/^#\/convite\//.test(location.hash)) { captureInvite(); return maybeAcceptInvite(); }
-  if (/^#\/(e|d|p)\//.test(location.hash)) return openDeepLink();
+  if (/^#\/((e|d|p)\/|suporte)/.test(location.hash)) return openDeepLink();
   if (/^#\/(c|v)\//.test(location.hash)) location.reload();
 });
 

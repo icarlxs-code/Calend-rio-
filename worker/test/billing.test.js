@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { startTrial, billingStatus, createCheckout, verifyStripe, handleStripeEvent, statusOf, TRIAL_MS } from '../src/billing.js';
+import { startTrial, billingStatus, createCheckout, verifyStripe, handleStripeEvent, statusOf, untilOf, TRIAL_MS } from '../src/billing.js';
 
 const mkEnv = (extra = {}) => {
   const kv = {};
@@ -118,4 +118,13 @@ test('cortesia do dono: libera e tira o acesso (para revisores das lojas), sem m
   st = await grantComp(env, 'PAGOU1', false);
   assert.equal(st.plan, 'lifetime');
   await assert.rejects(grantComp(env, '../x', true), /inválida/);
+});
+
+test('dono libera até uma data: tudo liberado até lá, depois precisa assinar', () => {
+  const now = Date.parse('2026-11-21T10:00:00-03:00');
+  const b = { compUntil: now + 3 * 864e5, trialEndsAt: now - 864e5 };
+  const st = statusOf(b, { ws: 'abc' }, now);
+  assert.equal(st.plan, 'comp'); assert.equal(st.active, true); assert.equal(untilOf(st, now), b.compUntil);
+  const later = statusOf(b, { ws: 'abc' }, now + 4 * 864e5);
+  assert.equal(later.active, false); assert.equal(later.plan, 'expired');
 });

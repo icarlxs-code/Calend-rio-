@@ -34,7 +34,7 @@ export function renderSettings() {
         ${cloud && store.solo ? grow({ cls: 'pbig--share', attrs: 'data-action="share"', ic: 'users', c: '#34C759', t: 'Agenda compartilhada', s: store.shared ? `Você está na agenda de ${esc(store.shared.ownerName)}` : store.billing?.addon?.active ? `Plano ${store.billing.addon.plan === 'equipe' ? 'Equipe' : 'Dupla'} ativo · convide e gerencie` : 'Divida a agenda com sócio ou equipe · à parte' }) : ''}
         ${grow({ attrs: 'data-action="guide"', ic: 'sparkles', c: '#5856D6', t: 'Como funciona o Lembra', s: 'Trabalho e Pessoal em 1 minuto' })}
         ${cloud ? grow({ cls: 'pbig--privacy', attrs: 'data-action="privacy"', ic: 'lock', c: '#8E8E93', t: 'Privacidade e dados', s: 'Termos, baixar ou apagar meus dados' }) : ''}
-        ${CONFIG.supportWhatsapp || CONFIG.supportEmail ? grow({ attrs: 'data-action="support"', ic: CONFIG.supportWhatsapp ? 'phone' : 'mail', c: CONFIG.supportWhatsapp ? '#25D366' : '#0A84FF', t: 'Ajuda e atendimento', s: CONFIG.supportWhatsapp ? 'Fale com a gente no WhatsApp' : 'Fale com a gente por e-mail' }) : ''}
+        ${cloud ? grow({ attrs: 'data-action="support" data-allow-locked', ic: 'headset', c: '#0A84FF', t: 'Falar com o suporte', s: 'Chat com a equipe do Lembra · respondemos em até 24h' }) : CONFIG.supportWhatsapp || CONFIG.supportEmail ? grow({ attrs: 'data-action="support"', ic: CONFIG.supportWhatsapp ? 'phone' : 'mail', c: CONFIG.supportWhatsapp ? '#25D366' : '#0A84FF', t: 'Ajuda e atendimento', s: CONFIG.supportWhatsapp ? 'Fale com a gente no WhatsApp' : 'Fale com a gente por e-mail' }) : ''}
       </div>
     </section>
     ${cloud && (store.user?.email || '').toLowerCase() === (CONFIG.adminEmail || '').toLowerCase() ? `<section class="block"><div class="glist">${grow({ attrs: 'data-action="admin"', ic: 'chart', c: '#0A84FF', t: 'Painel do dono', s: 'Receita, pessoas e saúde do app' })}</div></section>` : ''}
@@ -203,6 +203,7 @@ function planSection() {
   const detail = b.plan === 'trial' ? `Termina em ${fmtLeft(b.trialEndsAt - Date.now())}`
     : b.plan === 'monthly' ? (b.cancelAt ? `Cancelada: vale até ${new Date(b.cancelAt).toLocaleDateString('pt-BR')}` : b.paidUntil ? `Renova em ${new Date(b.paidUntil).toLocaleDateString('pt-BR')}` : 'Ativa')
       : b.plan === 'lifetime' ? (b.comp ? 'Acesso cortesia liberado pelo Lembra.' : 'Pago uma vez, para sempre. Obrigado!')
+        : b.plan === 'comp' ? `Acesso liberado pelo Lembra até ${new Date(b.compUntil).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}. Depois disso, é só escolher um plano.`
         : b.plan === 'shared' ? `Liberado pela agenda de ${store.shared?.ownerName || b.ownerName || 'quem te convidou'}. Você não paga nada.` : '';
   const ap = (k) => (b.plan === 'lifetime' ? { dupla: '4,90', equipe: '9,90' } : { dupla: '6,90', equipe: '14,90' })[k];
   const addon = b.addon && b.addon.active ? `<div class="card card--row"><div><strong>+ Agenda compartilhada ${b.addon.plan === 'equipe' ? `Equipe · R$ ${ap('equipe')}/mês` : `Dupla · R$ ${ap('dupla')}/mês`}</strong><small>${b.addon.cancelAt ? `Cancelada: vale até ${new Date(b.addon.cancelAt).toLocaleDateString('pt-BR')}` : 'Complemento mensal, cobrado à parte'}</small></div><button class="btn btn--soft btn--sm" data-action="share">Ver</button></div>` : '';

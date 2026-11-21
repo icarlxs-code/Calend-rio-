@@ -19,6 +19,7 @@ const saveLast = (st) => { try { localStorage.setItem(LS_LAST, JSON.stringify({ 
 const stillValid = (b, now = Date.now()) => !!b && !!b.active && (
   b.plan === 'lifetime' || b.plan === 'team'
   || (b.plan === 'trial' && b.trialEndsAt > now)
+  || (b.plan === 'comp' && b.compUntil > now)
   || (b.plan === 'monthly' && (!b.paidUntil || b.paidUntil + 3 * 864e5 > now) && now - (b.at || 0) < 35 * 864e5)
   || (b.plan === 'shared' && now - (b.at || 0) < 3 * 864e5));
 export const lastKnown = () => { try { const j = JSON.parse(localStorage.getItem(LS_LAST) || 'null'); return j && j.ws === store.workspace && stillValid(j) ? j : null; } catch { return null; } };
@@ -29,6 +30,7 @@ export function hasAccess() {
   const b = store.billing;
   if (!b || !b.active) return false;
   if (b.plan === 'trial' && !(b.trialEndsAt > Date.now())) return false;
+  if (b.plan === 'comp' && !(b.compUntil > Date.now())) return false;
   return true;
 }
 /* Tentou mexer sem plano: não deixa e mostra os planos */

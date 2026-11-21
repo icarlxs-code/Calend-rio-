@@ -33,7 +33,7 @@ function last30(u) {
   return Array.from({ length: 30 }, (_, i) => addDays(t, i - 29)).map((d) => `<i class="${set.has(d) ? 'on' : ''}" title="${d.split('-').reverse().join('/')}"></i>`).join('');
 }
 let planOf = () => null;
-const planLabel = (p) => (!p ? 'Conta própria' : p.comp ? 'Cortesia' : { trial: 'Teste grátis', monthly: 'Mensal', lifetime: 'Vitalício', expired: 'Teste acabou', blocked: 'Sem plano', none: 'Sem plano' }[p.plan] || 'Conta própria');
+const planLabel = (p) => (!p ? 'Conta própria' : p.plan === 'comp' ? `Liberado até ${new Date(p.compUntil).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : p.comp ? 'Cortesia' : { trial: 'Teste grátis', monthly: 'Mensal', lifetime: 'Vitalício', expired: 'Teste acabou', blocked: 'Sem plano', none: 'Sem plano' }[p.plan] || 'Conta própria');
 function card(u, open) {
   const c = u.counts || {};
   const d = u.device || {};
@@ -95,9 +95,16 @@ function card(u, open) {
       <h4>Uso nos últimos 30 dias</h4>
       <div class="adays">${last30(u)}</div>
       ${u.workspace === 'proprio' ? `<h4>Acesso</h4>
-      ${planOf(u.uid)?.comp ? `<button class="btn btn--soft btn--block" data-grant="${esc(u.uid)}" data-on="0">Tirar o acesso cortesia</button>`
+      ${planOf(u.uid)?.plan === 'comp' ? `<p class="fhelp">✅ Liberado até <b>${esc(when(planOf(u.uid).compUntil))}</b>. Depois disso a pessoa precisa assinar.</p>` : ''}
+      ${planOf(u.uid)?.comp && planOf(u.uid)?.plan !== 'comp' ? `<button class="btn btn--soft btn--block" data-grant="${esc(u.uid)}" data-on="0">Tirar o acesso cortesia</button>`
         : planOf(u.uid)?.plan === 'lifetime' || planOf(u.uid)?.plan === 'monthly' ? '<p class="fhelp">Conta paga.</p>'
-          : `<button class="btn btn--primary btn--block" data-grant="${esc(u.uid)}" data-on="1">Liberar acesso cortesia (revisor da loja, parceiro)</button>`}` : ''}
+          : `<div class="grantbox">
+              <label class="fhelp">Liberar tudo, sem pagar, até:</label>
+              <input type="datetime-local" class="input" data-until="${esc(u.uid)}" value="${(() => { const d = new Date(Date.now() + 7 * 864e5); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); })()}">
+              <button class="btn btn--primary btn--block" data-grant="${esc(u.uid)}" data-on="1" data-dated="1">${planOf(u.uid)?.plan === 'comp' ? 'Mudar a data' : 'Liberar até essa data'}</button>
+              ${planOf(u.uid)?.plan === 'comp' ? `<button class="btn btn--soft btn--block" data-grant="${esc(u.uid)}" data-on="0">Tirar o acesso agora</button>` : ''}
+              <button class="btn-text btn--block" data-grant="${esc(u.uid)}" data-on="1">Liberar para sempre (cortesia: revisor da loja, parceiro)</button>
+            </div>`}` : ''}
     </div>` : ''}
   </div>`;
 }
@@ -227,6 +234,7 @@ export async function openAdmin() {
         ${row('Instalaram na tela inicial', `${installed}${pct(installed)}`)}
         ${row('Recebem notificações', `${notif}${pct(notif)}`, notif < users.length ? 'sem isso, os lembretes não chegam' : '')}
         ${row('Compromissos criados', `${users.reduce((a, u) => a + (u.counts?.myEvents || 0), 0)}`)}
+        <button class="arow arow--btn" data-support-inbox><span>💬 Mensagens de suporte</span><b>abrir ›</b></button>
         <button class="arow arow--btn" data-tab-admin="erros"><span>Erros do app</span><b class="${errors && errors.length ? 'bad' : 'good'}">${errors === null ? '—' : errors.length ? `${errors.length} ›` : 'nenhum ✓'}</b></button>
       </div>
       ${originHtml(users)}
@@ -244,13 +252,18 @@ export async function openAdmin() {
     html: html(),
     onMount: (a) => {
       a.el.querySelectorAll('[data-toggle]').forEach((b) => (b.onclick = () => { openUid = openUid === b.dataset.toggle ? null : b.dataset.toggle; a.set(html()); }));
+      const sup = a.el.querySelector('[data-support-inbox]');
+      if (sup) sup.onclick = async () => (await import('./support.js')).openSupportInbox();
       a.el.querySelectorAll('[data-tab-admin]').forEach((b) => (b.onclick = () => { tab = b.dataset.tabAdmin; a.set(html()); a.el.scrollTop = 0; }));
       a.el.querySelectorAll('[data-grant]').forEach((b) => (b.onclick = async () => {
         b.disabled = true;
         try {
           const { api } = await import('../avisos.js');
-          const r = await api('/admin/grant', { uid: b.dataset.grant, on: b.dataset.on === '1' });
-          plans[b.dataset.grant] = r.status; toast(b.dataset.on === '1' ? 'Acesso cortesia liberado ✓' : 'Acesso cortesia retirado'); a.set(html());
+          const inp = b.dataset.dated ? a.el.querySelector(`[data-until="${b.dataset.grant}"]`) : null;
+          const until = inp ? new Date(inp.value).getTime() : 0;
+          if (inp && !(until > Date.now())) { toast('Escolha uma data e hora no futuro'); return; }
+          const r = await api('/admin/grant', { uid: b.dataset.grant, on: b.dataset.on === '1', until });
+          plans[b.dataset.grant] = r.status; toast(b.dataset.on !== '1' ? 'Acesso retirado' : until ? `Liberado até ${when(until)} ✓` : 'Acesso cortesia liberado ✓'); a.set(html());
         } catch (e) { b.disabled = false; toast(e.message || 'Não consegui agora.'); }
       }));
       const r = a.el.querySelector('[data-reload]');

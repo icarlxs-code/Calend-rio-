@@ -233,7 +233,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/admin/grant': 30, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20 };
+const LIMITS = { '/admin/grant': 30, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -336,7 +336,7 @@ async function handle(req, env) {
   if (url.pathname === '/admin/grant') {
     if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
     try {
-      const st = await grantComp(env, clean(body.uid, 64), body.on === true);
+      const st = await grantComp(env, clean(body.uid, 64), body.on === true, Date.now(), Number(body.until) || 0);
       await refreshUntil(env, clean(body.uid, 64));
       return reply(env, req, { ok: true, status: st });
     } catch (e) { return reply(env, req, { error: e.message }, e.status || 500); }
@@ -467,6 +467,62 @@ async function handle(req, env) {
     return reply(env, req, { ok: true });
   }
 
+  // ---------- suporte: chat da pessoa com o dono do app ----------
+  if (url.pathname.startsWith('/support/')) {
+    const ownerMember = () => { const em = (env.ADMIN_EMAIL || JSON.parse(env.TEAM || '[]')[0]?.email || '').toLowerCase(); return JSON.parse(env.TEAM || '[]').find((m) => (m.email || '').toLowerCase() === em)?.id || null; };
+    const key = (id) => `support:${id}`;
+    const AUTO = 'Recebemos sua mensagem! 💜 Nós responderemos em até 24h, aqui mesmo neste chat. Você vai receber uma notificação quando chegar a resposta.';
+    if (url.pathname === '/support/send') {
+      const text = clean(body.text, 1000).trim();
+      if (!text) return reply(env, req, { error: 'mensagem vazia' }, 400);
+      const now = Date.now();
+      const th = (await env.CAL.get(key(me.id), 'json')) || { id: me.id, name: me.name, email: me.email, msgs: [] };
+      th.name = me.name; th.email = me.email; th.member = me.id;
+      th.msgs.push({ from: 'user', text, at: now });
+      // resposta automática na primeira mensagem e sempre que ficou mais de 24h sem resposta automática
+      const lastAuto = [...th.msgs].reverse().find((m) => m.from === 'auto');
+      if (!lastAuto || now - lastAuto.at > 864e5) th.msgs.push({ from: 'auto', text: AUTO, at: now + 1 });
+      th.msgs = th.msgs.slice(-200);
+      th.updatedAt = now; th.unread = (th.unread || 0) + 1; th.userUnread = 0;
+      await env.CAL.put(key(me.id), JSON.stringify(th));
+      const idx = (await env.CAL.get('support-index', 'json')) || {};
+      idx[me.id] = { name: me.name, email: me.email, at: now, unread: th.unread, last: text.slice(0, 80) };
+      await env.CAL.put('support-index', JSON.stringify(idx));
+      const owner = ownerMember();
+      if (owner) await sendToMember(env, owner, { title: `💬 Suporte · ${me.name || me.email}`, body: text.slice(0, 160), tag: `sup-${me.id}`, url: './#/suporte-dono' }).catch(() => 0);
+      return reply(env, req, { ok: true, thread: th.msgs });
+    }
+    if (url.pathname === '/support/thread') {
+      const th = await env.CAL.get(key(me.id), 'json');
+      if (th && th.userUnread) { th.userUnread = 0; await env.CAL.put(key(me.id), JSON.stringify(th)); }
+      return reply(env, req, { ok: true, thread: th ? th.msgs : [] });
+    }
+    if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
+    if (url.pathname === '/support/inbox') {
+      const idx = (await env.CAL.get('support-index', 'json')) || {};
+      const id = clean(body.id, 80);
+      if (id) {
+        const th = await env.CAL.get(key(id), 'json');
+        if (th && th.unread) { th.unread = 0; await env.CAL.put(key(id), JSON.stringify(th)); if (idx[id]) { idx[id].unread = 0; await env.CAL.put('support-index', JSON.stringify(idx)); } }
+        return reply(env, req, { ok: true, thread: th ? th.msgs : [], name: th?.name, email: th?.email });
+      }
+      return reply(env, req, { ok: true, inbox: Object.entries(idx).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.at - a.at) });
+    }
+    if (url.pathname === '/support/reply') {
+      const id = clean(body.id, 80), text = clean(body.text, 1000).trim();
+      const th = await env.CAL.get(key(id), 'json');
+      if (!th || !text) return reply(env, req, { error: 'conversa não encontrada' }, 404);
+      const now = Date.now();
+      th.msgs.push({ from: 'owner', text, at: now });
+      th.msgs = th.msgs.slice(-200); th.unread = 0; th.userUnread = (th.userUnread || 0) + 1; th.updatedAt = now;
+      await env.CAL.put(key(id), JSON.stringify(th));
+      const idx = (await env.CAL.get('support-index', 'json')) || {};
+      if (idx[id]) { idx[id].unread = 0; idx[id].answered = now; await env.CAL.put('support-index', JSON.stringify(idx)); }
+      await sendToMember(env, th.member || id, { title: '💬 Resposta do suporte Lembra', body: text.slice(0, 160), tag: 'suporte', url: './#/suporte' }).catch(() => 0);
+      return reply(env, req, { ok: true, thread: th.msgs });
+    }
+    return reply(env, req, { error: 'não encontrado' }, 404);
+  }
   // a pessoa abriu o app: o "amigo" do Pessoal sabe há quanto tempo ela não entra
   if (url.pathname === '/seen') {
     await env.CAL.put(`seen:${me.id}`, String(Date.now()), { expirationTtl: 60 * 864e2 });
