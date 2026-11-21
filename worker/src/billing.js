@@ -8,17 +8,29 @@
    Chaves (segredos do Worker, configurados no painel da Cloudflare):
      STRIPE_SECRET_KEY (sk_live_... ou sk_test_...) e STRIPE_WEBHOOK_SECRET (whsec_...). */
 
-export const TRIAL_MS = 24 * 3600e3;
+export const TRIAL_MS = 7 * 864e5; // 7 dias grátis, sem cartão
+/* Planos (nov/2026):
+   - Essencial: agenda, modo Pessoal e avisos calculados. R$ 12,90/mês ou R$ 119,90/ano.
+   - Profissional: tudo do Essencial + assistente com IA, cobrança de atraso e ranking. R$ 19,90/mês ou R$ 179,90/ano.
+   - Fundadores: Profissional para sempre, pagamento único de R$ 199, só para as primeiras 200 contas.
+   - Planos antigos (mensal R$ 9,90 e vitalício R$ 150) continuam valendo para quem já tem (equivalem ao Profissional). */
+export const FOUNDERS_MAX = 200;
 export const PLANS = {
-  mensal: { name: 'Lembra mensal', amount: 990, mode: 'subscription' },
-  vitalicio: { name: 'Lembra vitalício', amount: 15000, mode: 'payment' },
-  // Agenda compartilhada: complemento mensal, à parte (não vem no mensal nem no vitalício)
-  dupla: { name: 'Lembra · Agenda compartilhada Dupla (você + 1 pessoa)', amount: 690, mode: 'subscription', addon: true, seats: 1 },
-  equipe: { name: 'Lembra · Agenda compartilhada Equipe (você + até 4 pessoas)', amount: 1490, mode: 'subscription', addon: true, seats: 4 },
+  essencial_mes: { name: 'Lembra Essencial · mensal', amount: 1290, mode: 'subscription', interval: 'month', tier: 'essencial' },
+  essencial_ano: { name: 'Lembra Essencial · anual', amount: 11990, mode: 'subscription', interval: 'year', tier: 'essencial' },
+  pro_mes: { name: 'Lembra Profissional · mensal', amount: 1990, mode: 'subscription', interval: 'month', tier: 'pro' },
+  pro_ano: { name: 'Lembra Profissional · anual', amount: 17990, mode: 'subscription', interval: 'year', tier: 'pro' },
+  fundador: { name: 'Lembra Fundadores · Profissional para sempre', amount: 19900, mode: 'payment', tier: 'pro', founder: true },
+  // antigos: só para quem já assinou (não aparecem mais na tela de planos)
+  mensal: { name: 'Lembra mensal', amount: 990, mode: 'subscription', interval: 'month', tier: 'pro', legacy: true },
+  vitalicio: { name: 'Lembra vitalício', amount: 15000, mode: 'payment', tier: 'pro', legacy: true },
+  // Agenda compartilhada: complemento mensal, à parte, cobrado por pessoa
+  dupla: { name: 'Lembra · Agenda compartilhada (+1 pessoa)', amount: 790, mode: 'subscription', interval: 'month', addon: true, seats: 1 },
+  equipe: { name: 'Lembra · Agenda compartilhada (+4 pessoas)', amount: 2990, mode: 'subscription', interval: 'month', addon: true, seats: 4 },
 };
 const isAddon = (plan) => !!PLANS[plan]?.addon;
 /* Vantagem do vitalício: a agenda compartilhada sai mais barata (Dupla R$ 4,90 · Equipe R$ 9,90) */
-export const LIFETIME_ADDON = { dupla: 490, equipe: 990 };
+export const LIFETIME_ADDON = { dupla: 490, equipe: 1990 };
 export const addonPrice = (plan, b) => (b && b.lifetime && LIFETIME_ADDON[plan]) || PLANS[plan]?.amount || 0;
 const IP_WINDOW = 30 * 864e5; // o mesmo endereço de internet só ganha UM teste a cada 30 dias
 const IP_MAX = 1;
@@ -58,12 +70,12 @@ export function statusOf(b, me, now = Date.now()) {
   if (!b) return { plan: 'none', active: false };
   const addon = addonOf(b, now);
   const extra = addon ? { addon } : {};
-  if (b.lifetime) return { plan: 'lifetime', active: true, ...(b.comp ? { comp: true } : {}), ...extra };
-  if (b.subActive && (!b.paidUntil || b.paidUntil > now - 3 * 864e5)) return { plan: 'monthly', active: true, paidUntil: b.paidUntil || null, cancelAt: b.cancelAt || null, ...extra };
+  if (b.lifetime) return { plan: 'lifetime', active: true, tier: 'pro', ...(b.founder ? { founder: true } : {}), ...(b.comp ? { comp: true } : {}), ...extra };
+  if (b.subActive && (!b.paidUntil || b.paidUntil > now - 3 * 864e5)) return { plan: 'monthly', active: true, tier: b.tier || 'pro', interval: b.interval || 'month', paidUntil: b.paidUntil || null, cancelAt: b.cancelAt || null, ...extra };
   // acesso liberado pelo dono até uma data e hora (sem pagar); depois disso, precisa assinar
-  if (b.compUntil && b.compUntil > now) return { plan: 'comp', active: true, comp: true, compUntil: b.compUntil, ...extra };
+  if (b.compUntil && b.compUntil > now) return { plan: 'comp', active: true, tier: 'pro', comp: true, compUntil: b.compUntil, ...extra };
   if (b.pending && now - b.pending.at < 4 * 864e5) extra.pending = b.pending.plan;
-  if (b.trialEndsAt && b.trialEndsAt > now) return { plan: 'trial', active: true, trialEndsAt: b.trialEndsAt, ...extra };
+  if (b.trialEndsAt && b.trialEndsAt > now) return { plan: 'trial', active: true, tier: 'pro', trialEndsAt: b.trialEndsAt, ...extra };
   if (b.trialDenied) return { plan: 'blocked', active: false, reason: b.trialDenied, ...extra };
   return { plan: 'expired', active: false, trialEndsAt: b.trialEndsAt || null, ...extra };
 }
@@ -217,14 +229,16 @@ export async function createCheckout(env, me, { plan, returnUrl }, fetchImpl = f
   const b = (await getBill(env, me.ws)) || {};
   // nunca cobra duas vezes pela mesma coisa
   if (!p.addon && b.lifetime) throw Object.assign(new Error('Sua conta já é vitalícia: está tudo liberado para sempre.'), { status: 409 });
-  if (plan === 'mensal' && basePaid(b)) throw Object.assign(new Error('Você já assina o plano Mensal.'), { status: 409 });
+  if (p.legacy) throw Object.assign(new Error('Este plano não está mais disponível.'), { status: 400 });
+  if (!p.addon && p.mode === 'subscription' && basePaid(b)) throw Object.assign(new Error('Você já tem uma assinatura. Para trocar de plano, use “Gerenciar assinatura”.'), { status: 409 });
+  if (p.founder && Number(await env.CAL.get('founders-count') || 0) >= FOUNDERS_MAX) throw Object.assign(new Error('As vagas de Fundadores acabaram.'), { status: 409 });
   if (p.addon) {
     if (!basePaid(b)) throw Object.assign(new Error('A agenda compartilhada é um complemento: primeiro assine o plano Mensal ou o Vitalício.'), { status: 409 });
     const cur = addonOf(b);
     if (cur && cur.active) throw Object.assign(new Error(cur.plan === plan ? 'Você já tem esse plano ativo.' : 'Você já tem a agenda compartilhada. Para trocar de plano, cancele em “Gerenciar assinatura” e assine o outro.'), { status: 409 });
   }
   const price = { currency: 'brl', unit_amount: p.addon ? addonPrice(plan, b) : p.amount, product_data: { name: p.addon && b.lifetime ? `${p.name} · preço de vitalício` : p.name } };
-  if (p.mode === 'subscription') price.recurring = { interval: 'month' };
+  if (p.mode === 'subscription') price.recurring = { interval: p.interval || 'month' };
   const params = {
     mode: p.mode,
     client_reference_id: me.ws,
@@ -285,7 +299,8 @@ export async function handleStripeEvent(env, ev) {
     b.customer = o.customer || b.customer;
     // vitalício: cartão confirma na hora; Pix/boleto confirmam depois (async_payment_succeeded)
     if (o.mode === 'payment' && o.payment_status === 'paid') {
-      b.lifetime = true; b.lifetimeAt = now; b.lifetimePI = o.payment_intent || b.lifetimePI || null; b.pending = null;
+      if (!b.lifetime && PLANS[o.metadata?.plan]?.founder) { b.founder = true; await env.CAL.put('founders-count', String(Number(await env.CAL.get('founders-count') || 0) + 1)); }
+      b.lifetime = true; b.lifetimeAt = now; b.lifetimePI = o.payment_intent || b.lifetimePI || null; b.pending = null; b.tier = 'pro';
       // quem assinava o mensal e passou para o vitalício: a mensalidade é cancelada na hora
       if (b.subActive && b.subscription) {
         try { await stripe(env, `subscriptions/${b.subscription}`, {}, fetch, 'DELETE'); b.subActive = false; b.upgradedAt = now; } catch (e) { console.log('cancelar mensal após vitalício', e.message); }
@@ -294,7 +309,7 @@ export async function handleStripeEvent(env, ev) {
     else if (o.mode === 'payment' && ev.type === 'checkout.session.completed') b.pending = { plan: o.metadata?.plan || 'vitalicio', at: now };
     if (ev.type === 'checkout.session.async_payment_failed') b.pending = null;
     if (o.mode === 'subscription' && isAddon(o.metadata?.plan)) b.addon = { plan: o.metadata.plan, subscription: o.subscription, subActive: true, paidUntil: now + 32 * 864e5, since: now };
-    else if (o.mode === 'subscription') { b.subActive = true; b.subscription = o.subscription; b.paidUntil = now + 32 * 864e5; }
+    else if (o.mode === 'subscription') { const pp = PLANS[o.metadata?.plan] || PLANS.mensal; b.subActive = true; b.subscription = o.subscription; b.tier = pp.tier; b.interval = pp.interval; b.paidUntil = now + (pp.interval === 'year' ? 368 : 32) * 864e5; }
     b.updatedAt = now;
     if (b.customer) await env.CAL.put(`cust:${b.customer}`, uid);
     await putBill(env, uid, b);
@@ -314,6 +329,7 @@ export async function handleStripeEvent(env, ev) {
     } else {
       b.subscription = o.id;
       b.subActive = alive;
+      if (PLANS[o.metadata?.plan] && !PLANS[o.metadata.plan].addon) { b.tier = PLANS[o.metadata.plan].tier; b.interval = PLANS[o.metadata.plan].interval; }
       if (end) b.paidUntil = end * 1000;
       b.cancelAt = o.cancel_at ? o.cancel_at * 1000 : null;
     }

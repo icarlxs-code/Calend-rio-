@@ -213,7 +213,7 @@ export function randomGap(freq, rand = Math.random) {
 }
 const MIN_GAP = 25 * 60e3;
 /* Títulos organizados por tipo */
-export const KIND_TITLE = { checkin: '📝 Algo pra marcar?', counsel: '🫶 Conselho', social: '💬 Pessoas', habit: '✅ Hábito', water: '💧 Água', verse: '📖 Versículo', motivation: '💜 Motivação', selfcare: '🌿 Pausa', lunch: '🍽️ Almoço', dinner: '🍽️ Jantar', night: '🌙 Boa noite' };
+export const KIND_TITLE = { streak: '🔥 Sequência', rank: '🏆 Ranking', checkin: '📝 Algo pra marcar?', counsel: '🫶 Conselho', social: '💬 Pessoas', habit: '✅ Hábito', water: '💧 Água', verse: '📖 Versículo', motivation: '💜 Motivação', selfcare: '🌿 Pausa', lunch: '🍽️ Almoço', dinner: '🍽️ Jantar', night: '🌙 Boa noite' };
 /* Janela do dia de cada pessoa (da ficha): começa 30 min depois de acordar e termina 15 min antes de dormir.
    Sem ficha: 7h20 às 22h15. Funciona também para quem trabalha à noite (janela que passa da meia-noite).
    Tudo é medido em "minutos desde o começo da janela" (rel). */
@@ -285,9 +285,16 @@ export function nextNudge(p, st, now, rand = Math.random) {
       msg = { title: KIND_TITLE[anchor.key], body: fill(pick(T[anchor.key], seed), V), kind: anchor.key };
     }
   } else {
-    if (!prefs.nudges || now < (st.next || 0) || now - (st.lastAny || 0) < (st.minGap || 25) * 60e3) return null;
+    // avisos de RETORNO (sequência em risco / caiu no ranking) furam a fila: não esperam o próximo horário sorteado
+    const sn0 = p.seen || {}, today0 = br.date;
+    const usual0 = Array.isArray(sn0.hours) && sn0.hours.some((x) => x > 0) ? sn0.hours.indexOf(Math.max(...sn0.hours)) : 19;
+    const opened0 = p.seenAt && new Date(p.seenAt - 3 * 3600e3).toISOString().slice(0, 10) === today0;
+    const prio = prefs.nudges && now - (st.lastAny || 0) >= 20 * 60e3 && (
+      ((sn0.streak || 0) >= 2 && !opened0 && ((br.h >= usual0 && br.h <= usual0 + 2) || br.h >= 19) && st.streakDay !== today0)
+      || (p.rank && p.rank.pos && st.rankPos && st.rankWeek === p.rank.week && p.rank.pos > st.rankPos && st.rankDay !== today0));
+    if (!prio && (!prefs.nudges || now < (st.next || 0) || now - (st.lastAny || 0) < (st.minGap || 25) * 60e3)) return null;
     // não manda logo antes de um momento fixo
-    if (ANCHORS.some((a) => !st.done[a.key] && a.from - mins > 0 && a.from - mins < 25)) return null;
+    if (!prio && ANCHORS.some((a) => !st.done[a.key] && a.from - mins > 0 && a.from - mins < 25)) return null;
     // 2) mensagens ao longo do dia: agenda > água > fé > ânimo > autocuidado
     const agenda = agendaMessages(p, br, st).filter((m) => !st.recent.includes(m.body));
     const options = [];
@@ -295,6 +302,17 @@ export function nextNudge(p, st, now, rand = Math.random) {
     // ficou horas sem abrir o app: chama de volta para anotar (até 3 por dia, com 3h entre elas)
     const away = p.seenAt ? now - p.seenAt : 0;
     if (away > 3 * 3600e3 && (st.checkins || 0) < 3 && now - (st.lastCheckin || 0) > 3 * 3600e3 && mins > 60) options.push(['checkin', 8]);
+    // RETORNO (como no Duolingo): no horário em que a pessoa costuma abrir, usa o que mais importa para ela
+    const sn = p.seen || {}, today = br.date;
+    const usual = Array.isArray(sn.hours) && sn.hours.some((x) => x > 0) ? sn.hours.indexOf(Math.max(...sn.hours)) : 19;
+    const openedToday = p.seenAt && new Date(p.seenAt - 3 * 3600e3).toISOString().slice(0, 10) === today;
+    const nearUsual = br.h >= usual && br.h <= usual + 2;
+    if ((sn.streak || 0) >= 2 && !openedToday && (nearUsual || br.h >= 19) && st.streakDay !== today) options.push(['streak', 12]);
+    if (p.rank && p.rank.pos && st.rankPos && p.rank.pos > st.rankPos && st.rankDay !== today) options.push(['rank', 11]);
+    if (p.rank && p.rank.pos) {
+      if (st.rankWeek !== p.rank.week) { st.rankWeek = p.rank.week; st.rankPos = p.rank.pos; }
+      else if (p.rank.pos < st.rankPos) st.rankPos = p.rank.pos; // subiu: guarda a melhor posição
+    }
     if (prefs.faith && st.verses < 4) options.push(['verse', 3]);
     options.push(['motivation', 3]);
     options.push(['counsel', 3]);
@@ -302,6 +320,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
     if (habits.length) options.push(['habit', 3]);
     if (br.h >= 10 && br.h < 21) options.push(['social', 1.5]);
     if (mins > 160 && mins < L - 240) options.push(['selfcare', 1]);
+    if (prio) { const pr = options.filter(([k]) => k === 'streak' || k === 'rank'); if (pr.length) options.splice(0, options.length, ...pr); }
     const total = options.reduce((a, [, w]) => a + w, 0);
     let r = rand() * total, kind = options[0][0];
     for (const [k, w] of options) { if ((r -= w) <= 0) { kind = k; break; } }
@@ -312,6 +331,15 @@ export function nextNudge(p, st, now, rand = Math.random) {
     } else if (kind === 'water') {
       st.water++;
       msg = { title: KIND_TITLE.water, body: fill(pick(T.water, seed), V), kind: 'water' };
+    } else if (kind === 'streak') {
+      st.streakDay = br.date;
+      const n2 = p.seen.streak;
+      msg = { title: `🔥 ${n2} dias seguidos em risco`, body: fill(pick([`Sua sequência de ${n2} dias termina hoje, {n}. Conclua uma coisinha no Lembra para manter 🔥`, `Não deixa sua sequência de ${n2} dias acabar! Abre o Lembra e marca algo como feito.`, `${n2} dias seguidos sem esquecer nada. Bora fazer ${n2 + 1}? Falta só uma tarefa hoje.`], seed), V), kind: 'streak' };
+    } else if (kind === 'rank') {
+      st.rankDay = br.date;
+      const r = p.rank, ahead = r.ahead || 0;
+      msg = { title: `🏆 Você caiu para ${r.pos}º na liga ${r.leagueName}`, body: ahead > 0 ? `Faltam só ${ahead} pontos para recuperar o ${r.pos - 1}º lugar. Conclua uma tarefa no horário (+3).` : 'Conclua tarefas no horário para subir de novo no ranking da semana.', kind: 'rank', url: './#/ranking' };
+      st.rankPos = r.pos;
     } else if (kind === 'checkin') {
       st.checkins = (st.checkins || 0) + 1;
       st.lastCheckin = now;
@@ -339,7 +367,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
   st.lastAny = now;
   st.minGap = 25 + Math.round(rand() * 22); // folga mínima também varia (25 a 47 min)
   st.recent = [...(st.recent || []), msg.body].slice(-12);
-  return { msg: { ...msg, tag: 'p-amigo', url: msg.kind === 'checkin' ? './' : './#/p/hoje' }, state: st };
+  return { msg: { ...msg, tag: 'p-amigo', url: msg.url || (['checkin', 'streak'].includes(msg.kind) ? './' : './#/p/hoje') }, state: st };
 }
 
 /* Reescreve a mensagem com IA, como um amigo/conselheiro de verdade.
@@ -356,6 +384,8 @@ const KIND_TASK = {
   motivation: 'Mensagem de ânimo e autoestima, sincera e específica (não genérica), como um amigo próximo ou conselheiro que acredita muito nela.',
   counsel: 'Fale como um psicólogo/conselheiro acolhedor: uma reflexão curta e prática sobre ansiedade, foco, autoestima, gratidão ou descanso, com uma pergunta ou ação simples. Base: ',
   social: 'Incentive com carinho a pessoa a cuidar das relações (falar com um amigo, ligar para a família, elogiar alguém). Base: ',
+  streak: 'Avise com carinho e senso de urgência que a sequência de dias seguidos da pessoa no app vai acabar hoje se ela não concluir pelo menos uma tarefa. Base: ',
+  rank: 'Avise de forma motivadora e competitiva (sem ser chato) que a pessoa caiu de posição no ranking semanal e diga como recuperar. Base: ',
   checkin: 'A pessoa está há algumas horas sem abrir o app de agenda. Chame de volta com carinho e curiosidade para ela anotar algo novo de hoje (compromisso, conta, recado, promessa). Base: ',
   habit: 'Lembre com leveza deste hábito do dia a dia, como um amigo que cuida: ',
   selfcare: 'Sugira um cuidado rápido com o corpo/mente (respirar, alongar, postura, tomar um ar, descansar os olhos).',
@@ -373,7 +403,7 @@ Agora são ${String(br.h).padStart(2, '0')}h${String(br.m).padStart(2, '0')} (${
 ${today ? `Coisas de hoje na agenda pessoal: ${today}.` : 'Hoje a agenda pessoal está livre.'}
 NÃO repita nem parafraseie estas mensagens recentes: ${(recent || []).slice(-8).join(' | ') || '—'}
 Responda SÓ com JSON: {"title":"até 38 caracteres, com 1 emoji","body":"até 170 caracteres"}`;
-  const task = KIND_TASK[msg.kind] + (msg.kind === 'agenda' ? msg.fact : ['counsel', 'social', 'habit', 'checkin'].includes(msg.kind) ? msg.body : '');
+  const task = KIND_TASK[msg.kind] + (msg.kind === 'agenda' ? msg.fact : ['counsel', 'social', 'habit', 'checkin', 'streak', 'rank'].includes(msg.kind) ? msg.body : '');
   for (const model of AI_MODELS) {
     try {
       const out = await env.AI.run(model, { messages: [{ role: 'system', content: sys }, { role: 'user', content: task }], max_tokens: 220, temperature: 1.0 });
@@ -390,7 +420,7 @@ Responda SÓ com JSON: {"title":"até 38 caracteres, com 1 emoji","body":"até 1
 }
 
 /* Roda a cada minuto (cron) */
-export async function runPersonalCoach(env, sendToMember, team) {
+export async function runPersonalCoach(env, sendToMember, team, rankInfo = null) {
   const now = Date.now();
   const br = brNow(now);
   const clock = br.h * 60 + br.m;
@@ -415,7 +445,11 @@ export async function runPersonalCoach(env, sendToMember, team) {
     if (!fresh) { all[m.id] = { ...(all[m.id] || {}), ...st }; changed = true; }
     // resumo de outro dia (a pessoa não abriu o app hoje): ajusta "hoje" e "amanhã"
     const seenRaw = await env.CAL.get(`seen:${m.id}`);
-    let p = { ...prof, name: prof.name || m.name, seenAt: seenRaw ? Number(seenRaw) : 0 };
+    let sn = {}; try { sn = seenRaw && seenRaw.startsWith('{') ? JSON.parse(seenRaw) : { last: Number(seenRaw) || 0 }; } catch { sn = {}; }
+    // posição no ranking (para avisar quando cair) — só para quem participa
+    let rank = null;
+    if (m.ws && m.ws !== 'main' && rankInfo) { const b = await rankInfo(m.ws); if (b) rank = b; }
+    let p = { ...prof, name: prof.name || m.name, seenAt: sn.last || 0, seen: sn, rank };
     if (prof.date && prof.date !== br.date) {
       const yesterday = new Date(Date.parse(br.date) - 864e5).toISOString().slice(0, 10);
       p = { ...p, today: prof.date === yesterday ? prof.tomorrow || [] : [], tomorrow: [] };

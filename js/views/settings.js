@@ -34,7 +34,7 @@ export function renderSettings() {
         ${cloud && store.solo ? grow({ cls: 'pbig--share', attrs: 'data-action="share"', ic: 'users', c: '#34C759', t: 'Agenda compartilhada', s: store.shared ? `Você está na agenda de ${esc(store.shared.ownerName)}` : store.billing?.addon?.active ? `Plano ${store.billing.addon.plan === 'equipe' ? 'Equipe' : 'Dupla'} ativo · convide e gerencie` : 'Divida a agenda com sócio ou equipe · à parte' }) : ''}
         ${grow({ attrs: 'data-action="guide"', ic: 'sparkles', c: '#5856D6', t: 'Como funciona o Lembra', s: 'Trabalho e Pessoal em 1 minuto' })}
         ${cloud ? grow({ cls: 'pbig--privacy', attrs: 'data-action="privacy"', ic: 'lock', c: '#8E8E93', t: 'Privacidade e dados', s: 'Termos, baixar ou apagar meus dados' }) : ''}
-        ${cloud && store.solo ? grow({ attrs: 'data-action="ranking"', ic: 'trophy', c: '#FF9F0A', t: 'Ranking da semana', s: store.billing?.plan === 'monthly' ? 'O nº 1 do mês ganha o próximo mês grátis' : 'Exclusivo do plano mensal · mês grátis para o nº 1' }) : ''}
+        ${cloud && store.solo ? grow({ attrs: 'data-action="ranking"', ic: 'trophy', c: '#FF9F0A', t: 'Ranking da semana', s: store.billing?.plan === 'monthly' && store.billing?.tier !== 'essencial' ? 'Ligas semanais · o nº 1 do mês ganha o mês seguinte grátis' : 'Plano Profissional · ligas e meses grátis' }) : ''}
         ${cloud ? grow({ attrs: 'data-action="support" data-allow-locked', ic: 'headset', c: '#0A84FF', t: 'Falar com o suporte', s: 'Chat com a equipe do Lembra · respondemos em até 24h' }) : CONFIG.supportWhatsapp || CONFIG.supportEmail ? grow({ attrs: 'data-action="support"', ic: CONFIG.supportWhatsapp ? 'phone' : 'mail', c: CONFIG.supportWhatsapp ? '#25D366' : '#0A84FF', t: 'Ajuda e atendimento', s: CONFIG.supportWhatsapp ? 'Fale com a gente no WhatsApp' : 'Fale com a gente por e-mail' }) : ''}
       </div>
     </section>
@@ -200,20 +200,21 @@ function fillDevices() {
 
 function planSection() {
   const b = store.billing || {};
-  const label = { trial: 'Teste grátis', monthly: 'Mensal · R$ 9,90/mês', lifetime: 'Vitalício', expired: 'Teste encerrado', blocked: 'Sem plano', none: 'Sem plano', shared: 'Agenda compartilhada', checking: 'Conferindo…', offline: 'Sem conexão para conferir' }[b.plan] || '—';
+  const label = { trial: 'Teste grátis (tudo liberado)', comp: 'Acesso liberado', monthly: `${b.tier === 'essencial' ? 'Essencial' : 'Profissional'} · ${b.interval === 'year' ? 'anual' : 'mensal'}`, lifetime: b.founder ? 'Fundadores · Profissional para sempre' : 'Vitalício', expired: 'Teste encerrado', blocked: 'Sem plano', none: 'Sem plano', shared: 'Agenda compartilhada', checking: 'Conferindo…', offline: 'Sem conexão para conferir' }[b.plan] || '—';
   const detail = b.plan === 'trial' ? `Termina em ${fmtLeft(b.trialEndsAt - Date.now())}`
     : b.plan === 'monthly' ? (b.cancelAt ? `Cancelada: vale até ${new Date(b.cancelAt).toLocaleDateString('pt-BR')}` : b.paidUntil ? `Renova em ${new Date(b.paidUntil).toLocaleDateString('pt-BR')}` : 'Ativa')
       : b.plan === 'lifetime' ? (b.comp ? 'Acesso cortesia liberado pelo Lembra.' : 'Pago uma vez, para sempre. Obrigado!')
         : b.plan === 'comp' ? `Acesso liberado pelo Lembra até ${new Date(b.compUntil).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}. Depois disso, é só escolher um plano.`
         : b.plan === 'shared' ? `Liberado pela agenda de ${store.shared?.ownerName || b.ownerName || 'quem te convidou'}. Você não paga nada.` : '';
-  const ap = (k) => (b.plan === 'lifetime' ? { dupla: '4,90', equipe: '9,90' } : { dupla: '6,90', equipe: '14,90' })[k];
+  const ap = (k) => (b.plan === 'lifetime' ? { dupla: '4,90', equipe: '19,90' } : { dupla: '7,90', equipe: '29,90' })[k];
   const addon = b.addon && b.addon.active ? `<div class="card card--row"><div><strong>+ Agenda compartilhada ${b.addon.plan === 'equipe' ? `Equipe · R$ ${ap('equipe')}/mês` : `Dupla · R$ ${ap('dupla')}/mês`}</strong><small>${b.addon.cancelAt ? `Cancelada: vale até ${new Date(b.addon.cancelAt).toLocaleDateString('pt-BR')}` : 'Complemento mensal, cobrado à parte'}</small></div><button class="btn btn--soft btn--sm" data-action="share">Ver</button></div>` : '';
   return `<section class="block">
     <h2 class="block__title">${icon('card', 16)} Seu plano</h2>
     <div class="card card--row"><div><strong>${esc(label)}</strong>${detail ? `<small>${esc(detail)}</small>` : ''}</div>
       ${b.plan === 'monthly' || (b.plan === 'lifetime' && b.addon) ? '<button class="btn btn--soft btn--sm" data-action="billing-portal">Gerenciar</button>' : !['lifetime', 'shared'].includes(b.plan) ? '<button class="btn btn--primary btn--sm" data-action="plans">Assinar</button>' : ''}
     </div>
-    ${b.plan === 'monthly' ? `<button class="card card--row upgrade" data-action="plans">${icon('crown', 20)}<div><strong>Passe para o Vitalício</strong><small>Paga R$ 150 uma vez e nunca mais tem mensalidade. A mensal é cancelada na hora.</small></div>${icon('right', 16)}</button>` : ''}
+    ${b.plan === 'monthly' && b.tier === 'essencial' ? `<button class="card card--row upgrade" data-action="billing-portal">${icon('crown', 20)}<div><strong>Passe para o Profissional</strong><small>Assistente com IA, cobrança de atraso e ranking com meses grátis. Troque em “Gerenciar”.</small></div>${icon('right', 16)}</button>` : ''}
+    ${b.plan === 'monthly' && (b.foundersLeft ?? 0) > 0 ? `<button class="card card--row upgrade" data-action="plans">${icon('crown', 20)}<div><strong>Vire Fundador</strong><small>R$ 199 uma vez: o Profissional para sempre. Só ${b.foundersLeft} vagas. A assinatura é cancelada na hora.</small></div>${icon('right', 16)}</button>` : ''}
     ${addon}
   </section>`;
 }

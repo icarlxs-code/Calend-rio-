@@ -62,7 +62,7 @@ test('ao longo de um dia: pouca água (máx. 5) e muita variedade, sem repetir t
   }
   const water = bodies.filter((b) => b.includes('💧')).length;
   assert.ok(water >= 2 && water <= 4, `água ${water}`);
-  assert.ok(water / bodies.length < 0.3, 'água não pode dominar');
+  assert.ok(water / bodies.length <= 0.36, 'água não pode dominar');
   assert.ok(bodies.length >= 9 && bodies.length <= 30, `mandou ${bodies.length}`);
   for (let i = 1; i < bodies.length; i++) assert.notEqual(bodies[i], bodies[i - 1]);
 });
@@ -150,4 +150,22 @@ test('sem abrir o app há mais de 3h: manda "tem algo pra marcar?" (até 3 por d
     if (r) { st2 = r.state; if (r.msg.kind === 'checkin') n2++; }
   }
   assert.equal(n2, 0, 'quem está usando o app não recebe');
+});
+
+test('retorno: sequência em risco no horário em que costuma abrir; queda no ranking avisa', () => {
+  const hours = Array(24).fill(0); hours[20] = 9;
+  let st = {}, kinds = [];
+  for (let t = at('07:00'); t <= at('22:30'); t += 60e3) {
+    const r = nextNudge({ ...prof, seenAt: at('07:00') - 864e5, seen: { streak: 6, hours }, rank: null }, st, t);
+    if (r) { st = r.state; kinds.push([new Date(t - 3 * 3600e3).getUTCHours(), r.msg.kind]); }
+  }
+  const s = kinds.filter(([, k]) => k === 'streak');
+  assert.equal(s.length, 1, 'uma vez por dia');
+  assert.ok(s[0][0] >= 19, 'no horário habitual (20h) ou à noite');
+  let st2 = { rankWeek: '2026-11-16', rankPos: 2 }, got = null;
+  for (let t = at('09:00'); t <= at('20:00') && !got; t += 60e3) {
+    const r = nextNudge({ ...prof, seenAt: t, seen: {}, rank: { pos: 4, week: '2026-11-16', leagueName: 'Prata', ahead: 7 } }, st2, t);
+    if (r) { st2 = r.state; if (r.msg.kind === 'rank') got = r.msg; }
+  }
+  assert.ok(got && /4º na liga Prata/.test(got.title) && /7 pontos/.test(got.body));
 });

@@ -63,6 +63,7 @@ export async function checkBilling() {
 
 export const fmtLeft = (ms) => {
   if (ms <= 0) return '0 min';
+  if (ms >= 48 * 3600e3) { const d = Math.floor(ms / 864e5), hh = Math.floor((ms % 864e5) / 3600e3); return `${d} dias${hh ? ` e ${hh}h` : ''}`; }
   const h = Math.floor(ms / 3600e3), m = Math.floor((ms % 3600e3) / 60e3);
   return h ? `${h}h ${String(m).padStart(2, '0')}min` : `${m} min`;
 };
@@ -74,7 +75,7 @@ export function trialBanner() {
   const left = b.trialEndsAt - Date.now();
   return `<button class="trialbar${left < 3 * 3600e3 ? ' is-ending' : ''}" data-action="plans">
     <span class="trialbar__ic">${icon('clock', 16)}</span>
-    <span><b>Teste grátis: ${esc(fmtLeft(left))}</b><small>Depois, R$ 9,90/mês ou R$ 150 para sempre</small></span>
+    <span><b>Teste grátis: ${esc(fmtLeft(left))}</b><small>Depois, a partir de R$ 9,99/mês no plano anual</small></span>
     <span class="trialbar__go">Assinar</span>
   </button>`;
 }
@@ -90,38 +91,43 @@ export async function startTrialNow() {
 /* Tela de planos. blocking = sem plano ativo (não dá para fechar: o app fica bloqueado até começar o teste ou assinar).
    Tocar num plano só ESCOLHE; o pagamento abre no botão "Continuar". */
 const PLAN_INFO = {
-  mensal: { name: 'Mensal', price: 'R$ 9,90', per: '/mês', note: 'Cancele quando quiser', cta: 'Assinar o Mensal · R$ 9,90/mês' },
-  vitalicio: { name: 'Vitalício', price: 'R$ 150', per: ' uma vez', note: 'Pague uma vez. Use para sempre.', cta: 'Garantir o Vitalício · R$ 150' },
+  essencial_mes: { tier: 'essencial', name: 'Essencial', price: 'R$ 12,90', per: '/mês', note: 'Cobrança mensal', cta: 'Assinar o Essencial · R$ 12,90/mês' },
+  essencial_ano: { tier: 'essencial', name: 'Essencial', price: 'R$ 9,99', per: '/mês', note: 'R$ 119,90 por ano', cta: 'Assinar o Essencial · R$ 119,90/ano' },
+  pro_mes: { tier: 'pro', name: 'Profissional', price: 'R$ 19,90', per: '/mês', note: 'Cobrança mensal', cta: 'Assinar o Profissional · R$ 19,90/mês' },
+  pro_ano: { tier: 'pro', name: 'Profissional', price: 'R$ 14,99', per: '/mês', note: 'R$ 179,90 por ano', cta: 'Assinar o Profissional · R$ 179,90/ano' },
+  fundador: { tier: 'pro', name: 'Fundadores', price: 'R$ 199', per: ' uma vez', note: 'Profissional para sempre', cta: 'Garantir minha vaga de Fundador · R$ 199' },
 };
 const COMPARE = [
-  ['Agenda de trabalho com a cara da sua profissão', true, true],
-  ['Modo Pessoal: aniversários, compromissos e listas', true, true],
-  ['Lembretes e mensagens calculados para o seu ritmo', true, true],
-  ['Assistente que organiza a agenda por você', true, true],
-  ['Sem mensalidade: paga uma vez e pronto', false, true],
-  ['Preço travado: nunca paga reajuste', false, true],
-  ['Todas as novidades que vierem, sem pagar mais', false, true],
-  ['Selo Vitalício no seu perfil', false, true],
+  ['Agenda com a cara da sua profissão', true, true],
+  ['Modo Pessoal: aniversários, contas e listas', true, true],
+  ['Avisos calculados para o seu ritmo', true, true],
+  ['Mensagens de ânimo e lembretes de cuidado', true, true],
+  ['Assistente com IA que organiza a agenda por você', false, true],
+  ['Cobrança de atraso: o app insiste até você resolver', false, true],
+  ['Ranking semanal com prêmios (meses grátis)', false, true],
 ];
+/* plano com tudo (Profissional): teste, vitalício, cortesia, equipe e quem assina o Profissional */
+export const hasPro = () => { const b = store.billing || {}; return !store.solo || ['team', 'trial', 'lifetime', 'comp', 'shared'].includes(b.plan) || (b.plan === 'monthly' && b.tier !== 'essencial'); };
 export function openPlans({ blocking = false } = {}) {
   document.querySelector('.paywall')?.remove();
   const b = store.billing || {};
   const canTrial = b.plan === 'none';
   const offline = b.plan === 'offline';
   const isMonthly = b.plan === 'monthly';
+  const founders = (b.foundersLeft ?? 200) > 0 && b.plan !== 'lifetime';
   const title = offline ? 'Não consegui conferir seu plano'
-    : canTrial ? 'Experimente o Lembra grátis por 24 horas'
-      : isMonthly ? 'Passe para o Vitalício'
+    : canTrial ? 'Experimente o Lembra grátis por 7 dias'
+      : isMonthly ? 'Mude de plano quando quiser'
         : !blocking ? 'Escolha seu plano'
           : b.plan === 'blocked' ? (b.reason === 'cpf' ? 'Este CPF já usou o teste grátis' : b.reason === 'rede' ? 'O teste grátis já foi usado nesta conexão' : 'O teste grátis já foi usado neste aparelho')
             : 'Seu teste grátis terminou';
   const sub = offline ? 'Verifique a internet e toque em “Tentar de novo”. Assim que conectar, tudo volta ao normal.'
     : canTrial ? 'Tudo liberado, sem cartão e sem compromisso. Nunca mais esqueça um compromisso — depois, escolha o plano que preferir.'
-      : isMonthly ? 'Pague uma vez e nunca mais pense em mensalidade. Sua assinatura mensal é cancelada na hora, sem cobrança dupla.'
+      : isMonthly ? 'Para trocar entre Essencial e Profissional ou entre mensal e anual, use “Gerenciar assinatura” em Ajustes. Virar Fundador cancela a assinatura na hora, sem cobrança dupla.'
         : !blocking ? 'Continue com tudo liberado, sem limites.'
           : b.plan === 'blocked' ? 'O teste grátis é um por pessoa. Para usar o Lembra com esta conta, escolha um plano abaixo.'
             : 'Sua agenda, seus lembretes e o seu modo Pessoal estão guardados, esperando você. Escolha um plano e continue de onde parou.';
-  let chosen = 'vitalicio';
+  let yearly = true, chosen = 'pro_ano';
   const tick = (on) => (on ? `<span class="cmp__yes">${icon('check', 15)}</span>` : '<span class="cmp__no">—</span>');
   const w = document.createElement('div');
   w.className = 'paywall';
@@ -130,27 +136,17 @@ export function openPlans({ blocking = false } = {}) {
     <h1>${esc(title)}</h1>
     <p>${esc(sub)}</p>
     ${offline ? `<button class="btn btn--primary btn--block" data-retry>${icon('refresh', 18)} Tentar de novo</button>` : ''}
-    ${canTrial ? `<button class="btn btn--trial btn--block" data-trial>${icon('sparkles', 18)} Começar meu teste grátis de 24h</button><p class="paywall__or">ou escolha seu plano</p>` : ''}
-    <div class="plans" role="radiogroup" aria-label="Planos">
-      ${Object.entries(PLAN_INFO).map(([k, p]) => {
-        const current = isMonthly && k === 'mensal';
-        return `<button class="plan${k === 'vitalicio' ? ' plan--best' : ''}${k === chosen ? ' is-on' : ''}" data-plan="${k}" role="radio" aria-checked="${k === chosen}"${current ? ' disabled' : ''}>
-        ${k === 'vitalicio' ? '<span class="plan__tag">Melhor valor</span>' : current ? '<span class="plan__tag plan__tag--cur">Seu plano</span>' : ''}
-        <span class="plan__radio" aria-hidden="true">${icon('check', 13)}</span>
-        <span class="plan__name">${p.name}</span>
-        <span class="plan__price"><b>${p.price}</b>${p.per}</span>
-        <span class="plan__note">${p.note}</span>
-        ${k === 'vitalicio' ? '<span class="plan__save">Se paga em 15 meses</span>' : ''}
-      </button>`;
-      }).join('')}
-    </div>
+    ${canTrial ? `<button class="btn btn--trial btn--block" data-trial>${icon('sparkles', 18)} Começar meu teste grátis de 7 dias</button><p class="paywall__or">ou escolha seu plano</p>` : ''}
+    <div class="period" role="tablist"><button data-period="mes" role="tab">Mensal</button><button data-period="ano" role="tab" class="is-on">Anual <span>-25%</span></button></div>
+    <div class="plans" role="radiogroup" aria-label="Planos" data-plans></div>
+    ${founders ? `<button class="plan plan--founder" data-plan="fundador" role="radio" aria-checked="false"><span class="plan__tag">Só ${b.foundersLeft ?? 200} vagas</span><span class="plan__radio" aria-hidden="true">${icon('check', 13)}</span><span class="plan__name">${icon('crown', 14)} Fundadores</span><span class="plan__price"><b>R$ 199</b> uma única vez</span><span class="plan__note">O Profissional para sempre, sem mensalidade. Só para as primeiras 200 contas.</span></button>` : ''}
     <div class="cmp" aria-label="O que vem em cada plano">
-      <div class="cmp__row cmp__row--head"><span>O que vem</span><span>Mensal</span><span>Vitalício</span></div>
+      <div class="cmp__row cmp__row--head"><span>O que vem</span><span>Essencial</span><span>Pro</span></div>
       ${COMPARE.map(([t, m, v]) => `<div class="cmp__row"><span>${esc(t)}</span>${tick(m)}${tick(v)}</div>`).join('')}
-      <div class="cmp__row cmp__row--addon"><span>${icon('users', 14)} Agenda compartilhada (dividir com sócio, amigo ou equipe)</span><span class="cmp__price">à parte<br><b>R$&nbsp;6,90</b><br>por mês</span><span class="cmp__price">à parte<br><b>R$&nbsp;4,90</b><br>por mês</span></div>
+      <div class="cmp__row cmp__row--addon"><span>${icon('users', 14)} Agenda compartilhada com sócio ou equipe</span><span class="cmp__price">à parte<br><b>R$&nbsp;7,90</b><br>por pessoa</span><span class="cmp__price">à parte<br><b>R$&nbsp;7,90</b><br>por pessoa</span></div>
     </div>
-    <p class="paywall__addon">${icon('info', 14)}<span><b>Compartilhar a agenda não vem em nenhum plano, nem no Vitalício.</b> É um complemento mensal, contratado à parte depois: <b>Dupla</b> (você + 1 pessoa) R$ 6,90/mês ou <b>Equipe</b> (você + até 4) R$ 14,90/mês. No Vitalício sai mais barato: R$ 4,90 e R$ 9,90. Quem você convidar não paga nada.</span></p>
-    <p class="paywall__safe">${icon('lock', 13)} Pagamento seguro pela Stripe, com cartão de crédito. Arrependeu? Devolvemos em até 7 dias.</p>
+    <p class="paywall__addon">${icon('info', 14)}<span><b>Compartilhar a agenda é um complemento à parte</b>, cobrado por pessoa: +1 pessoa R$ 7,90/mês ou +4 pessoas R$ 29,90/mês (Fundadores pagam R$ 4,90 e R$ 19,90). Quem você convidar não paga nada.</span></p>
+    <p class="paywall__safe">${icon('lock', 13)} Pagamento seguro pela Stripe, com cartão de crédito. Cancele quando quiser. Arrependeu? Devolvemos em até 7 dias.</p>
     <p class="paywall__err" data-err hidden></p>
     <div class="paywall__foot">
       <button class="btn-text btn-text--sm" data-paid>Já paguei — verificar</button>
@@ -162,15 +158,32 @@ export function openPlans({ blocking = false } = {}) {
   requestAnimationFrame(() => w.classList.add('is-open'));
   const err = w.querySelector('[data-err]');
   const buy = w.querySelector('[data-buy]');
-  // tocar no plano só marca a escolha (não abre o pagamento)
-  w.querySelectorAll('[data-plan]').forEach((btn) => (btn.onclick = () => {
-    if (btn.disabled) return;
-    chosen = btn.dataset.plan;
-    w.querySelectorAll('[data-plan]').forEach((x) => { const on = x === btn; x.classList.toggle('is-on', on); x.setAttribute('aria-checked', String(on)); });
+  // tocar no plano só marca a escolha (não abre o pagamento); Mensal/Anual troca os preços
+  const box = w.querySelector('[data-plans]');
+  const card = (k) => { const p = PLAN_INFO[k]; const cur = isMonthly && b.tier === p.tier;
+    return `<button class="plan${p.tier === 'pro' ? ' plan--best' : ''}${k === chosen ? ' is-on' : ''}" data-plan="${k}" role="radio" aria-checked="${k === chosen}"${cur ? ' disabled' : ''}>
+      ${p.tier === 'pro' ? '<span class="plan__tag">Mais escolhido</span>' : cur ? '<span class="plan__tag plan__tag--cur">Seu plano</span>' : ''}
+      <span class="plan__radio" aria-hidden="true">${icon('check', 13)}</span>
+      <span class="plan__name">${p.name}</span>
+      <span class="plan__price"><b>${p.price}</b>${p.per}</span>
+      <span class="plan__note">${p.note}</span>
+      ${yearly ? `<span class="plan__save">${p.tier === 'pro' ? 'Economize R$ 58,90 por ano' : 'Economize R$ 34,90 por ano'}</span>` : ''}
+    </button>`; };
+  const paint = () => {
+    box.innerHTML = [yearly ? 'essencial_ano' : 'essencial_mes', yearly ? 'pro_ano' : 'pro_mes'].map(card).join('');
+    w.querySelectorAll('[data-period]').forEach((x) => x.classList.toggle('is-on', (x.dataset.period === 'ano') === yearly));
+    w.querySelectorAll('[data-plan]').forEach((btn) => { const on = btn.dataset.plan === chosen; btn.classList.toggle('is-on', on); btn.setAttribute('aria-checked', String(on)); });
     buy.textContent = PLAN_INFO[chosen].cta;
-    err.hidden = true;
+  };
+  w.addEventListener('click', (e) => {
+    const per = e.target.closest('[data-period]');
+    if (per) { yearly = per.dataset.period === 'ano'; if (chosen !== 'fundador') chosen = chosen.replace(/_(mes|ano)$/, yearly ? '_ano' : '_mes'); paint(); return; }
+    const btn = e.target.closest('[data-plan]');
+    if (!btn || btn.disabled) return;
+    chosen = btn.dataset.plan; err.hidden = true; paint();
     if (navigator.vibrate) navigator.vibrate(6);
-  }));
+  });
+  paint();
   buy.onclick = async () => {
     err.hidden = true;
     buy.disabled = true; buy.classList.add('is-busy');
@@ -211,7 +224,7 @@ export function openPlans({ blocking = false } = {}) {
       }
       openPlans({ blocking: true }); // teste já usado (CPF, aparelho ou conexão): mostra o motivo
     } catch (e) {
-      tb.disabled = false; tb.innerHTML = `${icon('sparkles', 18)} Começar meu teste grátis de 24h`;
+      tb.disabled = false; tb.innerHTML = `${icon('sparkles', 18)} Começar meu teste grátis de 7 dias`;
       err.textContent = 'Não consegui liberar agora. Verifique a internet e tente de novo.'; err.hidden = false;
     }
   };
@@ -255,7 +268,7 @@ export async function confirmPayment({ quiet = false, manual = false } = {}) {
       return false;
     }
     if (st.plan === 'lifetime' || st.plan === 'monthly') {
-      w.querySelector('.paywall__inner').innerHTML = `<div class="brandwrap">${brand('simbolo', { h: 64, on: 'dark' })}</div><h1>Pagamento confirmado! 🎉</h1><p>${st.plan === 'lifetime' ? 'Seu Lembra é vitalício. Obrigado!' : 'Sua assinatura mensal está ativa. Obrigado!'}</p><button class="btn btn--primary btn--block" data-go>Começar a usar</button>`;
+      w.querySelector('.paywall__inner').innerHTML = `<div class="brandwrap">${brand('simbolo', { h: 64, on: 'dark' })}</div><h1>Pagamento confirmado! 🎉</h1><p>${st.plan === 'lifetime' ? (st.founder ? 'Bem-vindo aos Fundadores: o Profissional é seu para sempre. Obrigado!' : 'Seu Lembra é vitalício. Obrigado!') : `Seu plano ${st.tier === 'essencial' ? 'Essencial' : 'Profissional'} ${st.interval === 'year' ? 'anual' : 'mensal'} está ativo. Obrigado!`}</p><button class="btn btn--primary btn--block" data-go>Começar a usar</button>`;
       w.querySelector('[data-go]').onclick = () => { w.remove(); window.__calRender && window.__calRender(); };
       return true;
     }

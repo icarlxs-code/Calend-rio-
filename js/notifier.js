@@ -129,8 +129,9 @@ export function buildSchedule(now = Date.now()) {
         at, member, title: msg.title, body: resp && !(ev.assignees.length === 1 && ev.assignees[0] === member) ? `${msg.body} · ${resp}` : msg.body, tag: `rem-${ev.id}`, url: `./#/e/${ev.id}`, kind: 'reminders', badge: pendingOn(member, ev.date),
       }));
     });
-    // atrasado: cobrança a cada 10 min (só para quem é responsável) até marcar como feito
-    if (ev.status === 'pendente') {
+    // atrasado: cobrança a cada 10 min (só para quem é responsável) até marcar como feito — recurso do plano Profissional
+    const essencial = store.solo && store.billing?.plan === 'monthly' && store.billing?.tier === 'essencial';
+    if (ev.status === 'pendente' && !essencial) {
       const owner = onlyFor(ev.companyId);
       const who = owner ? [owner] : (ev.assignees || []).length ? ev.assignees : [ev.createdBy || store.me].filter(Boolean);
       who.forEach((member) => lateReminders(ev, at0, coName(ev.companyId), personaOf(member), { clientLike: WORK.clientLike }).forEach((r) => {

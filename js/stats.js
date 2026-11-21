@@ -99,8 +99,16 @@ export function startPresence() {
 }
 /* avisa o servidor de avisos que a pessoa abriu o app (para os "tem algo pra marcar hoje?") */
 let lastSeenPost = 0;
-function seenServer() {
-  if (Date.now() - lastSeenPost < 20 * 60e3) return;
+export function seenServer(force = false) {
+  const fromNotif = window.__openSrc === 'notif' || /[?&]src=notif/.test(location.search);
+  if (!force && !fromNotif && Date.now() - lastSeenPost < 20 * 60e3) return;
   lastSeenPost = Date.now();
-  import('./avisos.js').then(({ api, server }) => server() && api('/seen', {}).catch(() => {}));
+  const src = fromNotif ? 'notif' : 'icon';
+  window.__openSrc = '';
+  if (/[?&]src=notif/.test(location.search)) try { history.replaceState(null, '', location.pathname + location.hash); } catch { /* ok */ }
+  Promise.all([import('./avisos.js'), import('./reward.js')]).then(([{ api, server }, r]) => {
+    if (!server()) return;
+    let streak = 0; try { streak = r.streak().days || 0; } catch { /* ok */ }
+    api('/seen', { src, streak, notif: typeof Notification !== 'undefined' ? Notification.permission : 'unsupported' }).catch(() => {});
+  });
 }

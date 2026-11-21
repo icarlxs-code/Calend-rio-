@@ -1,5 +1,5 @@
 /* Agenda compartilhada (complemento pago, à parte): o dono convida pessoas para a agenda de TRABALHO dele.
-   - Dupla: você + 1 pessoa · R$ 6,90/mês   - Equipe: você + até 4 pessoas · R$ 14,90/mês
+   - +1 pessoa · R$ 7,90/mês   - +4 pessoas · R$ 29,90/mês (Fundadores/vitalício: R$ 4,90 e R$ 19,90)
    Não vem no plano Mensal nem no Vitalício. Quem é convidado não paga nada enquanto o dono mantiver o complemento.
    Cada pessoa usa o próprio login e continua com a própria agenda e o próprio modo Pessoal.
 
@@ -15,8 +15,8 @@ import { openPlans, openPortal, markBuying } from './billing.js';
 import { CONFIG } from '../config.js';
 
 export const ADDONS = {
-  dupla: { name: 'Dupla', price: '6,90', vprice: '4,90', seats: 1, line: 'Você + 1 pessoa' },
-  equipe: { name: 'Equipe', price: '14,90', vprice: '9,90', seats: 4, line: 'Você + até 4 pessoas' },
+  dupla: { name: '+1 pessoa', price: '7,90', vprice: '4,90', seats: 1, line: 'Você + 1 pessoa' },
+  equipe: { name: '+4 pessoas', price: '29,90', vprice: '19,90', seats: 4, line: 'Você + até 4 pessoas' },
 };
 /* Vitalício paga o complemento mais barato (o servidor cobra o mesmo valor) */
 export const addonPrice = (k) => (store.billing?.plan === 'lifetime' ? ADDONS[k].vprice : ADDONS[k].price);

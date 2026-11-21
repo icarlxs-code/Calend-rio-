@@ -52,19 +52,19 @@ test('IPv6 vira o bloco /64 do aparelho; IPv4 fica igual', async () => {
 test('checkout: monta a assinatura de R$ 9,90 e o vitalício de R$ 150', async () => {
   const env = mkEnv(); const calls = [];
   const fakeFetch = async (url, opt) => { calls.push({ url, body: new URLSearchParams(opt.body) }); return { ok: true, json: async () => ({ url: 'https://checkout.stripe.com/c/x' }) }; };
-  const r = await createCheckout(env, user('A'), { plan: 'mensal', returnUrl: 'https://icarlxs-code.github.io/Calend-rio-/#/x' }, fakeFetch);
+  const r = await createCheckout(env, user('A'), { plan: 'pro_mes', returnUrl: 'https://icarlxs-code.github.io/Calend-rio-/#/x' }, fakeFetch);
   assert.equal(r.url, 'https://checkout.stripe.com/c/x');
   const b1 = calls[0].body;
   assert.equal(b1.get('mode'), 'subscription');
-  assert.equal(b1.get('line_items[0][price_data][unit_amount]'), '990');
+  assert.equal(b1.get('line_items[0][price_data][unit_amount]'), '1990');
   assert.equal(b1.get('line_items[0][price_data][currency]'), 'brl');
   assert.equal(b1.get('line_items[0][price_data][recurring][interval]'), 'month');
   assert.equal(b1.get('client_reference_id'), 'A');
-  assert.equal(b1.get('success_url'), 'https://icarlxs-code.github.io/Calend-rio-/pago/?p=mensal'); // página oficial de pagamento recebido
-  await createCheckout(env, user('A'), { plan: 'vitalicio', returnUrl: '' }, fakeFetch);
+  assert.equal(b1.get('success_url'), 'https://icarlxs-code.github.io/Calend-rio-/pago/?p=pro_mes'); // página oficial de pagamento recebido
+  await createCheckout(env, user('A'), { plan: 'fundador', returnUrl: '' }, fakeFetch);
   assert.equal(calls[1].body.get('mode'), 'payment');
-  assert.equal(calls[1].body.get('line_items[0][price_data][unit_amount]'), '15000');
-  await assert.rejects(createCheckout(mkEnv({ STRIPE_SECRET_KEY: '' }), user('A'), { plan: 'mensal' }, fakeFetch), /chave da Stripe/);
+  assert.equal(calls[1].body.get('line_items[0][price_data][unit_amount]'), '19900');
+  await assert.rejects(createCheckout(mkEnv({ STRIPE_SECRET_KEY: '' }), user('A'), { plan: 'pro_mes' }, fakeFetch), /chave da Stripe/);
 });
 
 async function sign(secret, payload, t) {
@@ -91,7 +91,7 @@ test('nunca cobra em dobro: vitalício não compra mensal; mensal não assina de
   const env = mkEnv(); const calls = [];
   const fakeFetch = async (url, opt) => { calls.push({ url, body: new URLSearchParams(opt.body) }); return { ok: true, json: async () => ({ url: 'https://checkout.stripe.com/c/x' }) }; };
   await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { client_reference_id: 'M', mode: 'subscription', subscription: 'sub_m', customer: 'cus_m', metadata: { uid: 'M', plan: 'mensal' } } } });
-  await assert.rejects(createCheckout(env, user('M'), { plan: 'mensal', returnUrl: 'https://x.test/' }, fakeFetch), /já assina/);
+  await assert.rejects(createCheckout(env, user('M'), { plan: 'pro_mes', returnUrl: 'https://x.test/' }, fakeFetch), /já tem uma assinatura/);
   // passa para o vitalício: a Stripe é chamada para cancelar a mensalidade
   const realFetch = globalThis.fetch; const deleted = [];
   env.STRIPE_SECRET_KEY = 'sk_test_x';
@@ -102,8 +102,8 @@ test('nunca cobra em dobro: vitalício não compra mensal; mensal não assina de
   assert.deepEqual(deleted, [['DELETE', 'https://api.stripe.com/v1/subscriptions/sub_m']]);
   const st = statusOf(JSON.parse(env.kv['bill:M']), user('M'));
   assert.equal(st.plan, 'lifetime');
-  await assert.rejects(createCheckout(env, user('M'), { plan: 'vitalicio', returnUrl: 'https://x.test/' }, fakeFetch), /já é vitalícia/);
-  await assert.rejects(createCheckout(env, user('M'), { plan: 'mensal', returnUrl: 'https://x.test/' }, fakeFetch), /já é vitalícia/);
+  await assert.rejects(createCheckout(env, user('M'), { plan: 'fundador', returnUrl: 'https://x.test/' }, fakeFetch), /já é vitalícia/);
+  await assert.rejects(createCheckout(env, user('M'), { plan: 'pro_mes', returnUrl: 'https://x.test/' }, fakeFetch), /já é vitalícia/);
 });
 
 test('cortesia do dono: libera e tira o acesso (para revisores das lojas), sem mexer em quem pagou', async () => {

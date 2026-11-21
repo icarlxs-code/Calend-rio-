@@ -1,10 +1,10 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-iuo4z7xp'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-c3rydhb3'/*CACHE*/;
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster5.jpg',
   ...Array.from({ length: 67 }, (_, i) => `media/intro5/f${String(i + 1).padStart(3, '0')}.webp`),
   'media/logos/pura-vida.jpg', 'media/lembra-logo.jpg', 'media/marca/completa-preto.png', 'media/marca/completa-branco.png', 'media/marca/simbolo-preto.png', 'media/marca/simbolo-branco.png', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/c-HA2GI5PU.js', 'dist/c-CETNAV5H.js', 'dist/c-O3IRFKYV.js', 'dist/c-AXCDNOF5.js', 'dist/c-ACQBAYWC.js', 'dist/c-S3GV665Q.js', 'dist/c-FJWJGE7E.js', 'dist/a-IUO4Z7XP.js', 'dist/c-G32Q6RYD.js', 'dist/c-6IJD3BQ7.js', 'dist/c-O3YSDJJ4.js', 'dist/c-J66WQUAF.js', 'dist/c-T47SASKM.js', 'dist/c-WMVIU2OE.js', 'dist/c-VCD65IGE.js', 'dist/c-HJPLEZHS.js', 'dist/c-UYFKO4A3.js', 'dist/c-YP7L22HI.js', 'dist/c-4WJ4TYVF.js', 'dist/c-YGVPVHL5.js', 'dist/c-5EWYQU6K.js', 'dist/c-DYYOLCGO.js', 'dist/c-4DQ6JYP5.js', 'dist/c-U5ZFZJ43.js', 'dist/c-ESQTIKOA.js', 'dist/c-CIJP7VMQ.js', 'dist/c-YJVOSJF5.js', 'dist/c-CID5JDJZ.js', 'dist/c-YEARXB46.js', 'dist/c-MYDFTVQQ.js', 'dist/c-U53RW4YL.js', 'dist/c-VHNSBD2M.js',
+  /*FILES*/ 'dist/c-LPIKZVOK.js', 'dist/c-LMFVTA2R.js', 'dist/c-T4RPSIYA.js', 'dist/c-KGZ2HA44.js', 'dist/c-KI5WN7SI.js', 'dist/c-B7Q3BCPY.js', 'dist/c-3KQBY2U6.js', 'dist/c-BA3MR3BC.js', 'dist/c-ESF3FXHZ.js', 'dist/c-R3WBNYYV.js', 'dist/a-C3RYDHB3.js', 'dist/c-Q7QPW7KD.js', 'dist/c-BHRIEULG.js', 'dist/c-6IJD3BQ7.js', 'dist/c-AT2QKSZ7.js', 'dist/c-5OSSUBBL.js', 'dist/c-D5YUT3ZV.js', 'dist/c-ZZWI5WUP.js', 'dist/c-PK52NUGT.js', 'dist/c-WMVIU2OE.js', 'dist/c-PNR4LTFV.js', 'dist/c-G2EVDCHZ.js', 'dist/c-WB66Q42G.js', 'dist/c-UXIK5VFP.js', 'dist/c-37XHBBFA.js', 'dist/c-U7SEM6PY.js', 'dist/c-DURZVFQ3.js', 'dist/c-4WJ4TYVF.js', 'dist/c-HBQGGPMI.js', 'dist/c-CID5JDJZ.js', 'dist/c-YZLRJBX2.js', 'dist/c-HRKMG23T.js', 'dist/c-CIJP7VMQ.js', 'dist/c-YEARXB46.js', 'dist/c-T2S5JUFN.js', 'dist/c-U53RW4YL.js', 'dist/c-VHNSBD2M.js',
 ];
 
 self.addEventListener('install', (e) => {
@@ -84,7 +84,9 @@ self.addEventListener('notificationclick', (e) => {
         c.postMessage({ type: 'open', url: target });
         return c.focus();
       }
-      return self.clients.openWindow(target);
+      // abriu pelo aviso: o app conta isso (ajuda a acertar o melhor horário dos próximos avisos)
+      let t2 = target; try { const u = new URL(target); u.searchParams.set('src', 'notif'); t2 = u.href; } catch { /* ok */ }
+      return self.clients.openWindow(t2);
     }),
   );
 });

@@ -8,7 +8,7 @@ import { generateVapid, sendPush } from './webpush.js';
 import { verifyIdToken } from './auth.js';
 import { runCoach } from './coach.js';
 import { runPersonalCoach } from './pcoach.js';
-import { recordAct, getBoard, adminBoard, monthlyAward } from './rank.js';
+import { recordAct, getBoard, adminBoard, monthlyAward, eligible as rankEligible, standing as rankStanding, weekKey as rankWeek } from './rank.js';
 import { getBill, putBill, stripe as stripeApi } from './billing.js';
 import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling, untilOf, statusOf, grantComp } from './billing.js';
 
@@ -312,7 +312,7 @@ async function handle(req, env) {
 
   // ---------- cobrança e teste grátis ----------
   if (url.pathname === '/billing/status') {
-    const st = await billingStatus(env, me);
+    const st = { ...(await billingStatus(env, me)), foundersLeft: Math.max(0, 200 - Number(await env.CAL.get('founders-count') || 0)) };
     // mantém o prazo do relógio em dia (ex.: o teste acabou, o mensal renovou)
     if (me.ws !== 'main') { const reg = (await env.CAL.get('users', 'json')) || {}; if (reg[me.id] && reg[me.id].until !== untilOf(st)) await registerUser(env, me, st); }
     return reply(env, req, st);
@@ -326,6 +326,8 @@ async function handle(req, env) {
   if (['/notify', '/schedule', '/coach', '/personal', '/ask', '/tidy', '/test', '/coach-test', '/pnudge-test'].includes(url.pathname)) {
     plan = await entitled(env, me);
     if (!plan.active) return reply(env, req, LOCKED, 402);
+    // assistente com IA: recurso do plano Profissional
+    if (['/ask', '/tidy'].includes(url.pathname) && plan.tier === 'essencial') return reply(env, req, { error: 'O assistente com IA faz parte do plano Profissional.', upgrade: true }, 402);
   }
   if (url.pathname === '/billing/checkout' || url.pathname === '/billing/portal') {
     try {
@@ -528,11 +530,11 @@ async function handle(req, env) {
   // ---------- ranking semanal (só plano mensal; pontos contados aqui, com anti-fraude) ----------
   if (url.pathname === '/rank/act') {
     const st = await billingStatus(env, me);
-    return reply(env, req, await recordAct(env, me, st, { type: clean(body.type, 20), ref: clean(body.ref, 80) }));
+    return reply(env, req, await recordAct(env, me, st, { type: clean(body.type, 20), ref: clean(body.ref, 80), ontime: body.ontime !== false }));
   }
   if (url.pathname === '/rank/board') {
     const st = await billingStatus(env, me);
-    return reply(env, req, { ...(await getBoard(env, me)), eligible: st.plan === 'monthly' && st.active });
+    return reply(env, req, { ...(await getBoard(env, me)), eligible: rankEligible(st) });
   }
   if (url.pathname === '/rank/admin') {
     if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
@@ -540,7 +542,17 @@ async function handle(req, env) {
   }
   // a pessoa abriu o app: o "amigo" do Pessoal sabe há quanto tempo ela não entra
   if (url.pathname === '/seen') {
-    await env.CAL.put(`seen:${me.id}`, String(Date.now()), { expirationTtl: 60 * 864e2 });
+    // guarda: última abertura, horários em que costuma abrir, por onde abriu (aviso ou ícone), sequência e permissão de avisos
+    const now = Date.now(), raw = await env.CAL.get(`seen:${me.id}`);
+    let sn = {}; try { sn = raw && raw.startsWith('{') ? JSON.parse(raw) : { last: Number(raw) || 0 }; } catch { sn = {}; }
+    const h = new Date(now - 3 * 3600e3).getUTCHours();
+    sn.hours = Array.isArray(sn.hours) && sn.hours.length === 24 ? sn.hours : Array(24).fill(0);
+    if (now - (sn.last || 0) > 30 * 60e3) sn.hours[h] = Math.min(999, sn.hours[h] + 1);
+    sn.last = now; sn.opens = (sn.opens || 0) + 1;
+    if (body.src === 'notif') sn.viaNotif = (sn.viaNotif || 0) + 1;
+    sn.streak = Math.max(0, Math.min(3650, Number(body.streak) || 0));
+    sn.perm = clean(body.notif, 12);
+    await env.CAL.put(`seen:${me.id}`, JSON.stringify(sn), { expirationTtl: 60 * 864e2 });
     return reply(env, req, { ok: true });
   }
   if (url.pathname === '/personal') {
@@ -638,7 +650,18 @@ export default {
       safe('lembretes', runSchedule(env)),
       safe('pessoal', runPersonal(env)),
       safe('coach', runCoach(env, sendToMember, team)),
-      safe('amigo', runPersonalCoach(env, sendToMember, team)),
+      safe('amigo', (async () => {
+        const wk = rankWeek(Date.now());
+        let board = null;
+        const rankInfo = async (ws) => {
+          board = board || (await env.CAL.get(`rank:${wk}`, 'json')) || {};
+          const s = rankStanding(board, ws);
+          if (!s || !s.pos) return null;
+          const ahead = s.pos > 1 ? s.group[s.pos - 2][1].pts - s.pts + 1 : 0;
+          return { pos: s.pos, week: wk, leagueName: { bronze: 'Bronze', prata: 'Prata', ouro: 'Ouro' }[s.league], ahead };
+        };
+        return runPersonalCoach(env, sendToMember, team, rankInfo);
+      })()),
       safe('aviso único', oneShot(env)),
       safe('ranking', monthlyAward(env, { stripe: stripeApi, getBill, putBill, notify: (id, msg) => sendToMember(env, id, msg) })),
     ])));

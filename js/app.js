@@ -279,7 +279,11 @@ const actions = {
     render();
   },
   'open-event': (b) => openEventDetail(b.dataset.id),
-  assistant: () => openAssistant(),
+  assistant: async () => {
+    const { hasPro } = await import('./billing.js');
+    if (!hasPro()) { toast('O assistente com IA faz parte do plano Profissional.', { ms: 4000 }); return openPlans(); }
+    return openAssistant();
+  },
   'apply-fix': async (b) => {
     const e = store.event(b.dataset.id);
     if (!e) return;
@@ -618,6 +622,26 @@ function requirePhoto(tries = 0) {
   };
 }
 
+/* Avisos desligados: o Lembra não consegue te alcançar. Pede de novo, com jeito (no máximo a cada 3 dias). */
+function askNotifications() {
+  if (store.mode !== 'cloud' || typeof Notification === 'undefined' || Notification.permission === 'granted') return;
+  if (document.querySelector('.sheet-wrap.is-open, .paywall.is-open, .photogate, .ficha')) { setTimeout(askNotifications, 8000); return; }
+  let last = 0; try { last = Number(localStorage.getItem('lembra.askNotif') || 0); } catch { /* ok */ }
+  if (Date.now() - last < 3 * 864e5) return;
+  try { localStorage.setItem('lembra.askNotif', String(Date.now())); } catch { /* ok */ }
+  const denied = Notification.permission === 'denied';
+  const s = openSheet({
+    className: 'sheet--dialog',
+    html: `<div class="dialog">
+      <h3>🔔 Sem avisos, o Lembra fica mudo</h3>
+      <p>${denied ? 'As notificações estão bloqueadas neste celular. Para receber os lembretes na hora certa, ative em <b>Ajustes do iPhone → Notificações → Lembra</b> (no Android: segure o ícone → Informações do app → Notificações).' : 'É pelos avisos que o Lembra te lembra na hora certa — mesmo com o app fechado. Leva 2 segundos.'}</p>
+      ${denied ? '<button class="btn btn--primary btn--block" data-close>Entendi</button>' : '<button class="btn btn--primary btn--block" data-enable>Ativar os avisos</button><button class="btn-text btn--block" data-close>Agora não</button>'}
+    </div>`,
+    onMount: (a) => { const b = a.el.querySelector('[data-enable]'); if (b) b.onclick = () => { a.close && a.close(); settingsActions.notifyEnable(); }; },
+  });
+  return s;
+}
+
 /* Aviso único (ex.: Matheus usa uma instalação antiga): pede para abrir o site no Safari e instalar de novo */
 const REINSTALL_FOR = ['matheus'];
 const REINSTALL_HASH = /^#\/atualizar/.test(location.hash);
@@ -854,7 +878,7 @@ async function startBilling() {
   startTeam().catch((e) => console.warn('equipe', e));
   if (!st.active) {
     // sem plano: tudo bloqueado até começar o teste grátis ou assinar; ao começar o teste, mostra o guia
-    window.addEventListener('lembra:trial', () => { toast('Seu teste grátis de 24h começou ✓', { ms: 3500 }); showGuideSoon(); }, { once: true });
+    window.addEventListener('lembra:trial', () => { toast('Seu teste grátis de 7 dias começou ✓', { ms: 3500 }); showGuideSoon(); }, { once: true });
     return openPlans({ blocking: true });
   }
   if (/^#\/planos/.test(location.hash)) { history.replaceState(null, '', location.pathname + location.search); openPlans(); }
@@ -888,6 +912,7 @@ function startApp() {
   personal.onSaved = (b, a) => import('./rank.js').then((r) => r.rankPersonal(b, a));
   setTimeout(askReinstall, 2500); // aviso de instalar a versão nova (só para quem precisa)
   setTimeout(requirePhoto, 3500);
+  setTimeout(askNotifications, 12000);
   startPresence();
   personal.on(() => { if (ui.space === 'personal') rerenderAll(); });
   store.onDenied = (msg) => toast(msg, { ms: 5000 });
@@ -1178,6 +1203,8 @@ async function boot() {
 
 navigator.serviceWorker?.addEventListener('message', (ev) => {
   if (ev.data?.type === 'open' && ev.data.url) {
+    window.__openSrc = 'notif';
+    import('./stats.js').then((m) => m.seenServer(true));
     const h = ev.data.url.split('#')[1];
     if (h) openDeepLink('#' + h);
   }

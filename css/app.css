@@ -1977,3 +1977,16 @@ button:active:not(:disabled), .btn:active, .pbig:active, .pchip:active, .prow:ac
 .rank__ini { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: #3A3A3C; color: #fff; font-weight: 800; }
 .rank__name { flex: 1; color: var(--muted, #8E8E93); }
 .rank__rules { padding-left: 18px; line-height: 1.7; }
+
+/* tela de planos: Mensal/Anual e Fundadores */
+.period { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,.08); margin: 4px auto 12px; width: max-content; }
+.period button { padding: 9px 18px; border-radius: 999px; font-weight: 750; font-size: 14.5px; color: rgba(255,255,255,.75); }
+.period button.is-on { background: #fff; color: #000; }
+.period button span { color: #30D158; font-weight: 850; margin-left: 4px; }
+.plan--founder { width: 100%; margin-top: 10px; text-align: left; border-color: #FFB800 !important; background: linear-gradient(135deg, rgba(255,184,0,.18), rgba(255,122,0,.10)) !important; }
+.plan--founder .plan__tag { background: #FFB800; color: #000; }
+.plan--founder .plan__name { display: inline-flex; align-items: center; gap: 6px; }
+.rank__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.rank__stats div { background: var(--card, #fff); border-radius: 16px; padding: 12px; text-align: center; }
+.rank__stats b { display: block; font-size: 24px; } .rank__stats small { color: var(--muted, #8E8E93); font-size: 12px; }
+.rank__row.is-up .rank__pos { color: #16A34A; }

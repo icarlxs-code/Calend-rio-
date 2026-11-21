@@ -36,7 +36,7 @@ test('agenda compartilhada: exige plano base pago e é cobrada à parte (não ve
   await createCheckout(env, user(OWNER), { plan: 'equipe', returnUrl: 'https://x.test/' }, fakeFetch(calls));
   const p = calls[0];
   assert.equal(p.get('mode'), 'subscription');
-  assert.equal(p.get('line_items[0][price_data][unit_amount]'), '990', 'vitalício paga a Equipe com desconto (R$ 9,90)');
+  assert.equal(p.get('line_items[0][price_data][unit_amount]'), '1990', 'vitalício paga a Equipe com desconto (R$ 19,90)');
   assert.equal(p.get('line_items[0][price_data][recurring][interval]'), 'month');
   assert.equal(p.get('subscription_data[metadata][plan]'), 'equipe');
   await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { client_reference_id: OWNER, mode: 'subscription', subscription: 'sub_add', customer: 'cus_1', metadata: { uid: OWNER, plan: 'equipe' } } } });
@@ -110,8 +110,8 @@ test('volta do pagamento só para o site oficial; Pix/boleto confirmam depois; r
   assert.equal(siteBase(env, 'lixo'), 'https://lembra.test/');
   const calls = [];
   await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { client_reference_id: OWNER, mode: 'payment', payment_status: 'paid', customer: 'cus_x', payment_intent: 'pi_card', metadata: { uid: OWNER, plan: 'vitalicio' } } } });
-  await createCheckout(env, user(GUEST), { plan: 'mensal', returnUrl: 'https://lembra.test/' }, fakeFetch(calls));
-  assert.equal(calls[0].get('success_url'), 'https://lembra.test/pago/?p=mensal');
+  await createCheckout(env, user(GUEST), { plan: 'pro_mes', returnUrl: 'https://lembra.test/' }, fakeFetch(calls));
+  assert.equal(calls[0].get('success_url'), 'https://lembra.test/pago/?p=pro_mes');
   assert.equal(calls[0].get('cancel_url'), 'https://lembra.test/pago/?cancelado=1');
   // Pix: a sessão termina sem pagamento confirmado; confirma depois
   await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { client_reference_id: GUEST, mode: 'payment', payment_status: 'unpaid', customer: 'cus_g', metadata: { uid: GUEST, plan: 'vitalicio' } } } });

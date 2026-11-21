@@ -22,7 +22,7 @@ export const CONFIG = {
   supportWhatsapp: '',
   supportEmail: 'icarlxs@gmail.com',
   // versão dos Termos/Privacidade: ao mudar, o app pede o aceite de novo
-  termsVersion: '1.0',
+  termsVersion: '1.1',
   termsDate: '19/11/2026',
 
   // Endereço do servidor gratuito de avisos (Cloudflare Workers). Preenchido depois de publicar.
