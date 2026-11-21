@@ -97,6 +97,29 @@ const T = {
     'Acredita em você como eu acredito 💜',
     'O dia não acabou. Ainda dá tempo de fazer algo incrível ✨',
   ],
+  counsel: [
+    'Como você tá de verdade hoje, {n}? Se algo pesou, tudo bem. Respira e vai no seu ritmo 💜',
+    'Não carrega o mundo nas costas. Escolhe UMA coisa importante agora e faz só ela.',
+    'Pensa em 3 coisas boas que aconteceram hoje. Gratidão muda o foco da mente 🙏',
+    'Se a cabeça tá cheia, escreve num papel o que tá te preocupando. Tirar da mente já alivia.',
+    'Você não precisa dar conta de tudo hoje. Precisa só do próximo passo.',
+    'Errar faz parte. O que importa é o que você faz depois. Segue, {n}.',
+    'Cuidado com a voz interna: fala com você como falaria com um amigo que você ama 💜',
+    'Ansiedade é o futuro batendo na porta antes da hora. Volta pro agora: o que dá pra fazer nos próximos 10 minutos?',
+    'Pede ajuda quando precisar. Isso não é fraqueza, é inteligência.',
+    'Descansar não é perder tempo, {n}. É recarregar pra continuar.',
+    'Comemora o que você já fez hoje, mesmo que pareça pouco. Pouco todo dia vira muito.',
+    'Sabe aquela coisa que você tá adiando? Faz só os primeiros 2 minutos. O resto vem.',
+  ],
+  social: [
+    'Manda uma mensagem pra alguém que você gosta e não fala faz tempo. Vai fazer o dia dessa pessoa 💬',
+    'Liga pra sua mãe, seu pai ou alguém da família hoje. 5 minutinhos já valem muito ❤️',
+    'Que tal chamar um amigo pra conversar ou tomar um café essa semana? ☕',
+    'Elogia alguém hoje, de verdade. Faz bem pra quem ouve e pra quem fala 😊',
+    'Responde aquelas mensagens que ficaram paradas. Tira esse peso da cabeça 💬',
+    'Pergunta pra alguém próximo como ele tá. Às vezes a pessoa só precisa disso 💜',
+  ],
+  habit: [],
   selfcare: [
     'Dá uma alongada rápida e arruma a postura, {n} 🧘',
     'Faz uma pausa de 5 minutinhos. Respira fundo 3 vezes 🌿',
@@ -104,6 +127,21 @@ const T = {
     'Descansa os olhos da tela um pouco, {n} 👀',
   ],
 };
+/* hábitos do dia a dia, de acordo com a hora (escovar os dentes, arrumar a cama, ler...) */
+const HABITS = [
+  [6, 10, 'Já arrumou a cama, {n}? Começar o dia com uma vitória pequena faz diferença 🛏️'],
+  [6, 10, 'Toma um pouco de sol hoje de manhã, nem que seja 10 minutos ☀️'],
+  [6, 11, 'Já tomou café da manhã direitinho? Não sai de estômago vazio ☕'],
+  [12, 15, 'Comeu? Agora escova os dentes 🪥 Sorriso bonito dá trabalho, hein!'],
+  [9, 18, 'Dá uma organizada rápida no que está à sua volta. Ambiente limpo, cabeça leve 🧹'],
+  [9, 18, 'Levanta e anda um pouquinho. 2 minutos já ativam o corpo 🚶'],
+  [14, 20, 'Que tal 10 minutos de leitura hoje? Um capítulo já conta 📚'],
+  [15, 21, 'Já se mexeu hoje? Uma caminhada, um treino, uma dança... qualquer coisa vale 💪'],
+  [17, 21, 'Separa a roupa e as coisas de amanhã. O você de amanhã agradece 👕'],
+  [19, 23, 'Escova os dentes antes de deitar, combinado? 🪥'],
+  [19, 23, 'Faz seu cuidado da noite: banho, pele, cabelo... você merece esse carinho 🧴'],
+  [20, 23, 'Deixa o celular longe da cama hoje. O sono vem melhor 📵'],
+];
 const OPENERS = ['Ei, {n}!', 'Opa, passando aqui:', 'Ô {n},', 'Só um toque de amigo:', 'Olha só,', 'Psiu, {n}!', 'Rapidinho:', 'Ei, {campeao},', 'Fala, {n}!', 'Lembrete de quem torce por você:'];
 const CLOSERS = ['Tô contigo 💜', 'Bora! 💪', 'Você consegue.', 'Confia.', 'Orgulho de você.', 'Conta comigo.', 'Vai dar certo 🙏', 'Um passo de cada vez.', 'Você é importante, viu?', 'Segue firme!'];
 const pick = (a, seed) => a[Math.abs(seed) % a.length];
@@ -164,7 +202,7 @@ export function randomGap(freq, rand = Math.random) {
 }
 const MIN_GAP = 25 * 60e3;
 /* Títulos organizados por tipo */
-export const KIND_TITLE = { water: '💧 Água', verse: '📖 Versículo', motivation: '💜 Motivação', selfcare: '🌿 Pausa', lunch: '🍽️ Almoço', dinner: '🍽️ Jantar', night: '🌙 Boa noite' };
+export const KIND_TITLE = { counsel: '🫶 Conselho', social: '💬 Pessoas', habit: '✅ Hábito', water: '💧 Água', verse: '📖 Versículo', motivation: '💜 Motivação', selfcare: '🌿 Pausa', lunch: '🍽️ Almoço', dinner: '🍽️ Jantar', night: '🌙 Boa noite' };
 /* Janela do dia de cada pessoa (da ficha): começa 30 min depois de acordar e termina 15 min antes de dormir.
    Sem ficha: 7h20 às 22h15. Funciona também para quem trabalha à noite (janela que passa da meia-noite).
    Tudo é medido em "minutos desde o começo da janela" (rel). */
@@ -210,13 +248,13 @@ export function nextNudge(p, st, now, rand = Math.random) {
   // 1) momentos fixos do dia
   const anchor = prefs.nudges && now - (st.lastAny || 0) >= 20 * 60e3 ? ANCHORS.find((a) => mins >= a.from && mins <= a.to && !st.done[a.key] && (!a.pref || prefs[a.pref])) : null;
   // água: de hora em hora, das 8h às 21h30 (independente das outras mensagens)
-  const waterDue = prefs.water && mins >= 40 && mins <= L - 45 && now >= (st.nextWater || 0) && now - (st.lastAny || 0) >= (st.minGap || 25) * 60e3;
+  const waterDue = prefs.water && (st.water || 0) < 4 && mins >= 90 && mins <= L - 45 && now >= (st.nextWater || 0) && now - (st.lastAny || 0) >= (st.minGap || 25) * 60e3;
   let isWater = false;
   if (!anchor && waterDue) {
     isWater = true;
     st.water++;
     st.lastWater = now;
-    st.nextWater = now + (40 + Math.round(rand() * 60)) * 60e3; // próxima água entre 40 e 100 min
+    st.nextWater = now + (150 + Math.round(rand() * 60)) * 60e3; // próxima água entre 2h30 e 3h30 (máx. 4 por dia)
     const wpool = T.water.filter((w) => !(st.recent || []).some((r) => r.includes(fill(w, V))));
     msg = { title: KIND_TITLE.water, body: fill(pick(wpool.length ? wpool : T.water, seed), V), kind: 'water' };
   } else if (anchor) {
@@ -243,8 +281,12 @@ export function nextNudge(p, st, now, rand = Math.random) {
     const agenda = agendaMessages(p, br, st).filter((m) => !st.recent.includes(m.body));
     const options = [];
     if (agenda.length) options.push(['agenda', 4]);
-    if (prefs.faith && st.verses < 3) options.push(['verse', 2]);
+    if (prefs.faith && st.verses < 4) options.push(['verse', 3]);
     options.push(['motivation', 3]);
+    options.push(['counsel', 3]);
+    const habits = HABITS.filter(([a, b, t]) => br.h >= a && br.h < b && !(st.recent || []).some((r) => r.includes(fill(t, V).slice(0, 30))));
+    if (habits.length) options.push(['habit', 3]);
+    if (br.h >= 10 && br.h < 21) options.push(['social', 1.5]);
     if (mins > 160 && mins < L - 240) options.push(['selfcare', 1]);
     const total = options.reduce((a, [, w]) => a + w, 0);
     let r = rand() * total, kind = options[0][0];
@@ -256,6 +298,9 @@ export function nextNudge(p, st, now, rand = Math.random) {
     } else if (kind === 'water') {
       st.water++;
       msg = { title: KIND_TITLE.water, body: fill(pick(T.water, seed), V), kind: 'water' };
+    } else if (kind === 'habit') {
+      const hs = HABITS.filter(([a, b, t]) => br.h >= a && br.h < b && !(st.recent || []).some((r) => r.includes(fill(t, V).slice(0, 30))));
+      msg = { title: KIND_TITLE.habit, body: fill(pick(hs, seed)[2], V), kind: 'habit' };
     } else if (kind === 'verse') {
       st.verses++;
       const v = pick(VERSES, seed);
@@ -268,7 +313,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
   // variedade mesmo sem IA: às vezes um jeito diferente de começar e de terminar
   if (!['morning', 'night', 'verse'].includes(msg.kind)) {
     const r1 = rand(), r2 = rand();
-    if (r1 < 0.45 && !/^(ei|opa|ô|psiu|fala|olha)\b/i.test(msg.body)) msg.body = fill(`${pick(OPENERS, Math.floor(r1 * 1e6))} ${msg.body.charAt(0).toLowerCase()}${msg.body.slice(1)}`, V);
+    if (r1 < 0.45 && !/^(ei|opa|ô|psiu|fala|olha)\b/i.test(msg.body) && !(n && msg.body.includes(n))) msg.body = fill(`${pick(OPENERS, Math.floor(r1 * 1e6))} ${msg.body.charAt(0).toLowerCase()}${msg.body.slice(1)}`, V);
     if (r2 < 0.4) msg.body = fill(`${msg.body} ${pick(CLOSERS, Math.floor(r2 * 1e6))}`, V);
   }
   if (!isWater) st.next = now + randomGap(prefs.freq, rand) * 60e3;
@@ -290,6 +335,9 @@ const KIND_TASK = {
   agenda: 'Lembre a pessoa disto da agenda pessoal dela, como um amigo que se importa e dá aquela força: ',
   verse: 'Escreva UMA frase curta e acolhedora para apresentar o versículo (sem repetir o versículo).',
   motivation: 'Mensagem de ânimo e autoestima, sincera e específica (não genérica), como um amigo próximo ou conselheiro que acredita muito nela.',
+  counsel: 'Fale como um psicólogo/conselheiro acolhedor: uma reflexão curta e prática sobre ansiedade, foco, autoestima, gratidão ou descanso, com uma pergunta ou ação simples. Base: ',
+  social: 'Incentive com carinho a pessoa a cuidar das relações (falar com um amigo, ligar para a família, elogiar alguém). Base: ',
+  habit: 'Lembre com leveza deste hábito do dia a dia, como um amigo que cuida: ',
   selfcare: 'Sugira um cuidado rápido com o corpo/mente (respirar, alongar, postura, tomar um ar, descansar os olhos).',
 };
 export async function humanize(env, msg, p, recent, br) {
@@ -305,7 +353,7 @@ Agora são ${String(br.h).padStart(2, '0')}h${String(br.m).padStart(2, '0')} (${
 ${today ? `Coisas de hoje na agenda pessoal: ${today}.` : 'Hoje a agenda pessoal está livre.'}
 NÃO repita nem parafraseie estas mensagens recentes: ${(recent || []).slice(-8).join(' | ') || '—'}
 Responda SÓ com JSON: {"title":"até 38 caracteres, com 1 emoji","body":"até 170 caracteres"}`;
-  const task = KIND_TASK[msg.kind] + (msg.kind === 'agenda' ? msg.fact : '');
+  const task = KIND_TASK[msg.kind] + (msg.kind === 'agenda' ? msg.fact : ['counsel', 'social', 'habit'].includes(msg.kind) ? msg.body : '');
   for (const model of AI_MODELS) {
     try {
       const out = await env.AI.run(model, { messages: [{ role: 'system', content: sys }, { role: 'user', content: task }], max_tokens: 220, temperature: 1.0 });

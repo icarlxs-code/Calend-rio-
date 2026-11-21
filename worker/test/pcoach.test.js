@@ -54,15 +54,16 @@ test('mensagens da agenda: pendência, aniversário, lista; cabelo já marcado n
   assert.match(ask('n'), /cuidado com o visual/);
 });
 
-test('ao longo de um dia: água de hora em hora + outras mensagens, sem repetir texto seguido', () => {
+test('ao longo de um dia: pouca água (máx. 5) e muita variedade, sem repetir texto seguido', () => {
   let st = {}, bodies = [];
   for (let t = at('07:00'); t <= at('22:30'); t += 60e3) {
     const r = nextNudge(prof, st, t);
     if (r) { st = r.state; bodies.push(r.msg.body); }
   }
   const water = bodies.filter((b) => b.includes('💧')).length;
-  assert.ok(water >= 7 && water <= 17, `água ${water}`);
-  assert.ok(bodies.length >= 12 && bodies.length <= 30, `mandou ${bodies.length}`);
+  assert.ok(water >= 2 && water <= 4, `água ${water}`);
+  assert.ok(water / bodies.length < 0.3, 'água não pode dominar');
+  assert.ok(bodies.length >= 9 && bodies.length <= 30, `mandou ${bodies.length}`);
   for (let i = 1; i < bodies.length; i++) assert.notEqual(bodies[i], bodies[i - 1]);
 });
 
