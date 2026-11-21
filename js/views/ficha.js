@@ -4,7 +4,7 @@ import { brand } from '../brand.js';
 import { icon } from '../icons.js';
 import { esc } from '../utils.js';
 import { PROFESSIONS, ARCHETYPES, TYPE_DEFS, archOf, searchProfessions, profStyle } from '../../functions/catalog.js';
-import { DIFFICULTIES, JOURNEYS, GOALS, TONES, METHODS, VOLUMES, PRONOUNS, GENDERS, computePersona, validCPF, maskCPF, ageOf, g } from '../persona.js';
+import { DIFFICULTIES, JOURNEYS, GOALS, TONES, METHODS, VOLUMES, PRONOUNS, GENDERS, computePersona, validCPF, maskCPF, maskPhone, validPhone, tidyName, validNameChars, ageOf, g } from '../persona.js';
 import { store, saveUserProfile } from '../store.js';
 import { savePrefs } from '../personal.js';
 import { routine } from '../planner.js';
@@ -75,22 +75,22 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
         </ul></div>${nav('Começar')}`,
     voce: () => `<h2>Sobre você</h2><p class="ficha__sub">Seus dados ficam guardados só na sua conta.</p>
       <label class="flabel" for="fi-name">Nome completo</label><input id="fi-name" class="input" data-f="name" value="${esc(f.name)}" autocomplete="name" maxlength="80">
-      <label class="flabel" for="fi-nick">Como prefere que o Lembra te chame?</label><input id="fi-nick" class="input" data-f="nickname" value="${esc(f.nickname)}" maxlength="30" placeholder="Ex.: Rafa">
-      <div class="row2"><div><label class="flabel" for="fi-birth">Nascimento</label><input id="fi-birth" class="input" type="date" data-f="birth" value="${esc(f.birth)}"></div>
-      <div><label class="flabel" for="fi-cpf">CPF</label><input id="fi-cpf" class="input" inputmode="numeric" data-f="cpf" value="${esc(maskCPF(f.cpf))}" placeholder="000.000.000-00" maxlength="14"></div></div>
+      <label class="flabel" for="fi-nick">Como prefere que o Lembra te chame?</label><input id="fi-nick" class="input" data-f="nickname" value="${esc(f.nickname)}" maxlength="30" placeholder="Ex.: Rafa" autocomplete="nickname">
+      <div class="row2"><div><label class="flabel" for="fi-birth">Nascimento</label><input id="fi-birth" class="input" type="date" data-f="birth" value="${esc(f.birth)}" min="1900-01-01" max="${new Date().toISOString().slice(0, 10)}" autocomplete="bday"></div>
+      <div><label class="flabel" for="fi-cpf">CPF</label><input id="fi-cpf" class="input" inputmode="numeric" data-f="cpf" value="${esc(maskCPF(f.cpf))}" placeholder="000.000.000-00" maxlength="20" autocomplete="off"></div></div>
       <label class="flabel">Você se identifica como</label>
       <div class="ficha__chips">${GENDERS.map((x) => `<button class="ficha__chip${f.gender === x.id ? ' is-on' : ''}" data-gender="${x.id}">${esc(x.label)}</button>`).join('')}</div>
       <label class="flabel">Como o Lembra fala com você?</label>
       <div class="ficha__chips">${PRONOUNS.map((p) => `<button class="ficha__chip${f.pronoun === p.id ? ' is-on' : ''}" data-pronoun="${p.id}">${esc(p.label)}</button>`).join('')}</div>
       <p class="fhelp">Isso muda o jeito de falar (pronta, pronto ou “tudo pronto”) e as sugestões do seu modo Pessoal. Ninguém mais vê.</p>
-      <label class="flabel" for="fi-phone">Celular (opcional)</label><input id="fi-phone" class="input" type="tel" inputmode="tel" data-f="phone" value="${esc(f.phone)}" placeholder="(00) 00000-0000" maxlength="20">
+      <label class="flabel" for="fi-phone">Celular (opcional)</label><input id="fi-phone" class="input" type="tel" inputmode="tel" data-f="phone" value="${esc(maskPhone(f.phone))}" placeholder="(00) 00000-0000" maxlength="20" autocomplete="tel-national">
       <p class="fhelp">O CPF serve só para identificar sua conta e garantir um teste grátis por pessoa. Ele não aparece para ninguém.</p>${nav()}`,
     trabalho: () => {
       return `<h2>Com o que você trabalha?</h2><p class="ficha__sub">O Lembra se adapta à sua profissão: nomes, tipos de compromisso, dicas e cobranças.</p>
       <div class="ficha__search">${icon('search', 18)}<input class="input" data-q type="search" enterkeyhint="done" placeholder="Busque: enfermeiro, professor, sargento…" value="${esc(q)}" autocomplete="off" autocorrect="off" spellcheck="false"></div>
       <div class="ficha__list" data-list>${listHtml()}</div>
       <div data-pick>${pickHtml()}</div>
-      <div class="row2"><div><label class="flabel" for="fi-role">Cargo ou função (opcional)</label><input id="fi-role" class="input" data-f="role" value="${esc(f.role)}" placeholder="Ex.: Sargento, Residente" maxlength="40"></div>
+      <div class="row2"><div><label class="flabel" for="fi-role">Cargo ou função (opcional)</label><input id="fi-role" class="input" data-f="role" value="${esc(f.role)}" placeholder="Ex.: Gerente" maxlength="40"></div>
       <div><label class="flabel" for="fi-place">Onde trabalha (opcional)</label><input id="fi-place" class="input" data-f="workplace" value="${esc(f.workplace)}" maxlength="60"></div></div>${nav()}`;
     },
     rotina: () => `<h2>Sua rotina</h2><p class="ficha__sub">Para o Lembra só te chamar nos horários certos.</p>
@@ -257,16 +257,34 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
   const validate = () => {
     const s = STEPS[step];
     if (s === 'voce') {
-      if (f.name.trim().split(/\s+/).length < 2) return 'Escreva seu nome completo (nome e sobrenome).';
+      f.name = tidyName(f.name);
+      const nm = wrap.querySelector('[data-f="name"]'); if (nm) nm.value = f.name;
+      if (!f.name) return 'Escreva seu nome completo.';
+      if (!validNameChars(f.name)) return 'O nome deve ter só letras (sem números, emojis ou símbolos).';
+      if (f.name.split(' ').filter((w) => w.replace(/[^\p{L}]/gu, '').length >= 2).length < 2) return 'Escreva seu nome completo (nome e sobrenome).';
+      f.nickname = f.nickname.replace(/\s+/g, ' ').trim();
+      if (f.nickname && !/\p{L}/u.test(f.nickname)) return 'O apelido precisa ter pelo menos uma letra.';
+      if (!f.birth) return 'Informe a sua data de nascimento.';
       const age = ageOf(f.birth);
-      if (age === null || age > 110) return 'Informe uma data de nascimento válida.';
+      if (age === null || age > 110 || f.birth > new Date().toISOString().slice(0, 10)) return 'Data de nascimento inválida. Confira o dia, o mês e o ano.';
       if (age < 13) return 'O Lembra é para maiores de 13 anos (menores de 18 com autorização dos responsáveis).';
       if (!validCPF(f.cpf)) return 'CPF inválido. Confira os números.';
       if (!f.gender) return 'Escolha como você se identifica (pode ser “Prefiro não dizer”).';
       if (!f.pronoun) return 'Escolha como o Lembra fala com você.';
+      if (!validPhone(f.phone)) return 'Celular inválido. Use DDD + número, ex.: (11) 98765-4321 — ou deixe em branco.';
     }
-    if (s === 'trabalho' && !f.profession.trim()) return 'Escolha ou escreva a sua profissão.';
-    if (s === 'rotina' && !f.workDays.length) return 'Marque pelo menos um dia de trabalho.';
+    if (s === 'trabalho') {
+      f.profession = f.profession.replace(/\s+/g, ' ').trim();
+      if (!f.profession) return 'Escolha ou escreva a sua profissão.';
+      if (!/\p{L}{2}/u.test(f.profession)) return 'Escreva o nome da profissão com letras.';
+    }
+    if (s === 'rotina') {
+      const t = /^\d{2}:\d{2}$/;
+      if (![f.workStart, f.workEnd, f.wake, f.sleep, f.lunch].every((x) => t.test(x || ''))) return 'Preencha todos os horários (trabalho, acordar, almoço e dormir).';
+      if (f.workStart === f.workEnd && f.journey !== 'plantao') return 'O horário de começo e de término do trabalho não podem ser iguais.';
+      if (f.wake === f.sleep) return 'O horário de acordar e de dormir não podem ser iguais.';
+      if (!f.workDays.length) return 'Marque pelo menos um dia de trabalho.';
+    }
     if (s === 'resumo' && sub > conquests().length && !f.consent) return 'Para continuar, marque a bolinha de concordância com os Termos e a Política de Privacidade.';
     return '';
   };
@@ -277,6 +295,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       // corrigiu o campo: some o aviso de erro
       if (err) { err = ''; const e = wrap.querySelector('.ficha__err'); if (e) e.hidden = true; }
       if (k === 'cpf') { el.value = maskCPF(el.value); f.cpf = el.value.replace(/\D/g, ''); }
+      else if (k === 'phone') { el.value = maskPhone(el.value); f.phone = el.value; }
       else if (k === 'forget') { f.forget = +el.value; wrap.querySelector('.ficha__rangev b').textContent = FORGET[f.forget]; }
       else if (k === 'perDay') { f.perDay = +el.value; wrap.querySelector('[data-perday]').textContent = `${f.perDay} por dia`; }
       else f[k] = el.value;

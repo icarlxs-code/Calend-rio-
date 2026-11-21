@@ -29,7 +29,7 @@ import { captureInvite, maybeAcceptInvite, startTeam, openShare, pendingInvite }
 import { personaOf } from './notifier.js';
 import { applyProfTheme, applyThemePref, setThemePref } from './theme.js';
 import { startErrorLog } from './errlog.js';
-import { computePersona } from './persona.js';
+import { computePersona, cleanEmail, validEmail, emailTypo, tidyName, validNameChars } from './persona.js';
 import { reportStats, loadStatsDays, reportSoon, startPresence } from './stats.js';
 import { ensureSeedCompanies, ensureMatheusLogo, ensureNotifyOwners } from './seed-companies.js';
 import { ensureMatheusJG } from './seed-matheus.js';
@@ -720,10 +720,15 @@ const LOGIN_ERRORS = {
   'auth/user-disabled': 'Este usuário foi desativado no Firebase.',
   'auth/operation-not-allowed': 'O login por e-mail/senha não está ativado no Firebase.',
   'auth/api-key-not-valid': 'Configuração do Firebase inválida (apiKey).',
+  'auth/missing-email': 'Digite o seu e-mail.',
+  'auth/missing-password': 'Digite a sua senha.',
+  'auth/invalid-login-credentials': 'E-mail ou senha incorretos. Confira a senha (toque no olho para ver o que digitou).',
+  'auth/password-does-not-meet-requirements': 'Senha fraca: use pelo menos 8 caracteres, com letras e números.',
 };
 let loginEmail = '';
 let loginName = '', loginPass = ''; // não perde o que foi digitado quando aparece um aviso
 let loginNotice = '';
+let loginTypo = '', typoAsked = ''; // sugestão de correção do e-mail (gmial.com → gmail.com)
 let signupMode = false;
 let pendingProfile = null;
 /* qual conta entrou por último neste aparelho (protege contra sessão antiga de outra conta) */
@@ -772,7 +777,8 @@ function showLogin(errMsg = '') {
       ${signupMode ? `<p class="login__hint">Mínimo de 8 caracteres, com letras e números.</p>
       <label class="consent"><input type="checkbox" name="consent" ${loginConsent ? 'checked' : ''}><span class="consent__dot" aria-hidden="true">${icon('check', 14)}</span>
         <span>Li e concordo com os <a href="${siteBase()}termos/" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="${siteBase()}privacidade/" target="_blank" rel="noopener">Política de Privacidade</a> (LGPD).</span></label>` : ''}
-      ${msg ? `<p class="login__err">${esc(msg)}</p>` : ''}
+      ${loginTypo ? `<div class="login__typo">Você quis dizer <b>${esc(loginTypo)}</b>? <button class="btn-text btn-text--sm" type="button" data-fixmail>Corrigir</button></div>` : ''}
+      ${msg ? `<p class="login__err" role="alert">${esc(msg)}</p>` : ''}
       <button class="btn btn--primary btn--block" type="submit" data-go>${signupMode ? 'Criar minha conta' : 'Entrar'}</button>
       ${signupMode ? '' : '<button class="btn-text btn-text--sm" type="button" data-reset>Esqueci minha senha</button>'}
       ${isStandalone() ? '' : `<button class="btn btn--soft btn--block login__install" type="button" data-installguide>${icon('phone', 16)} Instalar na tela inicial do celular</button>`}
@@ -780,21 +786,29 @@ function showLogin(errMsg = '') {
     </form>
   </div>`;
   const f = root.querySelector('[data-login]');
+  const fx = root.querySelector('[data-fixmail]');
+  if (fx) fx.onclick = () => { loginEmail = loginTypo; loginTypo = ''; loginName = tidyName(f.name?.value || loginName); loginPass = f.pass.value; loginConsent = !!f.consent?.checked; showLogin(); };
   root.querySelector('[data-eye]').onclick = () => {
     f.pass.type = f.pass.type === 'password' ? 'text' : 'password';
   };
   f.onsubmit = async (ev) => {
     ev.preventDefault();
-    const email = f.email.value.trim().toLowerCase();
+    // e-mail: tira espaços (o teclado do celular costuma pôr um no fim) e confere a digitação
+    const email = cleanEmail(f.email.value);
     const pass = f.pass.value;
     loginEmail = email;
     loginPass = pass;
-    if (signupMode) loginName = (f.name.value || '').trim();
-    loginNotice = '';
-    if (!email || !pass) return showLogin('Preencha o e-mail e a senha.');
-    const name = signupMode ? (f.name.value || '').trim() : '';
+    if (signupMode) loginName = tidyName(f.name.value);
     if (signupMode) loginConsent = !!f.consent?.checked;
+    loginNotice = '';
+    loginTypo = '';
+    if (!email || !pass) return showLogin(!email ? 'Digite o seu e-mail.' : 'Digite a sua senha.');
+    if (!validEmail(email)) return showLogin('E-mail incompleto ou com erro de digitação. Exemplo: nome@gmail.com');
+    const name = signupMode ? loginName : '';
     if (signupMode && !name) return showLogin('Escreva seu nome.');
+    if (signupMode && !validNameChars(name)) return showLogin('O nome deve ter só letras (sem números ou símbolos).');
+    // domínio parecido com um famoso (gmial.com, hotmail.con): pergunta antes de criar a conta com e-mail errado
+    if (signupMode && emailTypo(email) && typoAsked !== email) { typoAsked = email; loginTypo = emailTypo(email); return showLogin('Confira o seu e-mail antes de continuar (toque de novo em “Criar minha conta” se estiver certo).'); }
     // senha forte: 8+ caracteres com letras e números (dificulta invasão por tentativa)
     if (signupMode && (pass.length < 8 || !/[A-Za-zÀ-ÿ]/.test(pass) || !/\d/.test(pass))) return showLogin('Crie uma senha com pelo menos 8 caracteres, misturando letras e números.');
     if (signupMode && !loginConsent) return showLogin('Para criar a conta, aceite os Termos de Uso e a Política de Privacidade.');
@@ -819,11 +833,12 @@ function showLogin(errMsg = '') {
   };
   const ig = root.querySelector('[data-installguide]');
   if (ig) ig.onclick = () => showInstallGuide({ force: true });
-  root.querySelector('[data-mode]').onclick = () => { signupMode = !signupMode; showLogin(); };
+  root.querySelector('[data-mode]').onclick = () => { loginEmail = cleanEmail(f.email.value); loginPass = f.pass.value; loginTypo = ''; signupMode = !signupMode; showLogin(); };
   const rs = root.querySelector('[data-reset]');
   if (rs) rs.onclick = async () => {
-    const email = f.email.value.trim().toLowerCase();
+    const email = cleanEmail(f.email.value);
     if (!email) return toast('Digite seu e-mail primeiro');
+    if (!validEmail(email)) return toast('Confira o e-mail: parece incompleto ou com erro de digitação');
     try {
       await cloudApi.resetPassword(email);
       toast('Enviamos um e-mail para criar uma nova senha (veja também o spam)', { ms: 6000 });

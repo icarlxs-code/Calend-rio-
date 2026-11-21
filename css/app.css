@@ -171,6 +171,9 @@ h1, h2, h3, h4, p { margin: 0; }
 .login h1 { font-size: 30px; color: var(--text); letter-spacing: -0.02em; }
 .login .form { width: 100%; max-width: 360px; margin-top: 16px; text-align: left; }
 .login__err { color: var(--danger); font-size: 14px; margin-bottom: 10px; }
+.login__typo { font-size: 14px; background: var(--surface-2, rgba(10,132,255,.08)); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; text-align: left; }
+.login__typo b { overflow-wrap: anywhere; }
+.login__typo [data-fixmail] { color: var(--accent, #0a84ff); font-weight: 700; }
 
 /* ---------- cabeçalho ---------- */
 .hdr {

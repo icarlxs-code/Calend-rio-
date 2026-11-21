@@ -107,6 +107,61 @@ export const maskCPF = (raw) => {
   return c.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1-$2');
 };
 
+/* Celular brasileiro: (11) 98765-4321 / (11) 3456-7890. Aceita +55 colado. */
+export const maskPhone = (raw) => {
+  let c = String(raw || '').replace(/\D/g, '');
+  if (c.length > 11 && c.startsWith('55')) c = c.slice(2);
+  c = c.slice(0, 11);
+  if (c.length <= 2) return c ? `(${c}` : '';
+  const ddd = c.slice(0, 2), n = c.slice(2);
+  const cut = c.length === 11 || n[0] === '9' ? 5 : 4; // celular (9xxxx) ou fixo
+  return n.length > cut ? `(${ddd}) ${n.slice(0, cut)}-${n.slice(cut)}` : `(${ddd}) ${n}`;
+};
+export const validPhone = (raw) => {
+  let c = String(raw || '').replace(/\D/g, '');
+  if (c.length > 11 && c.startsWith('55')) c = c.slice(2);
+  if (!c) return true; // opcional
+  return /^[1-9][1-9](9\d{8}|[2-5]\d{7})$/.test(c);
+};
+
+/* Nome: só letras (com acento), espaço, hífen e apóstrofo; arruma espaços e maiúsculas */
+const LOWER = new Set(['da', 'de', 'do', 'das', 'dos', 'e', 'di', 'du', 'van', 'von']);
+export const tidyName = (raw) => String(raw || '').normalize('NFC').replace(/\s+/g, ' ').trim()
+  .split(' ').map((w, i) => {
+    const lw = w.toLocaleLowerCase('pt-BR');
+    if (i > 0 && LOWER.has(lw)) return lw;
+    // só ajusta quem digitou tudo minúsculo ou tudo maiúsculo (respeita "McDonald", "DiCaprio")
+    if (w !== lw && w !== w.toLocaleUpperCase('pt-BR')) return w;
+    return lw.replace(/(^|[-'’])(\p{L})/gu, (m, a, b) => a + b.toLocaleUpperCase('pt-BR'));
+  }).join(' ');
+export const validNameChars = (raw) => /^[\p{L}\p{M}' ’.-]+$/u.test(String(raw || '').trim());
+
+/* E-mail: formato e erros de digitação comuns no domínio (gmial.com, hotmail.con…) */
+const DOMAINS = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'yahoo.com.br', 'icloud.com', 'live.com', 'bol.com.br', 'uol.com.br', 'terra.com.br', 'msn.com', 'me.com', 'hotmail.com.br', 'outlook.com.br'];
+const lev = (a, b) => {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d[a.length][b.length];
+};
+export const cleanEmail = (raw) => String(raw || '').normalize('NFC').replace(/\s+/g, '').replace(/[,;]+$/, '').toLowerCase();
+export const validEmail = (e) => /^[a-z0-9._%+'-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(e) && !/\.\./.test(e) && !/^\.|\.@|@-/.test(e);
+export function emailTypo(e) {
+  const m = /^([^@]+)@(.+)$/.exec(e || '');
+  if (!m) return '';
+  const dom = m[2];
+  if (DOMAINS.includes(dom)) return '';
+  let best = '', bd = 3;
+  for (const d of DOMAINS) { const x = lev(dom, d); if (x < bd) { bd = x; best = d; } }
+  // "gmail" sem ".com", "gmail.co", "gmail.com.br" (não existe)
+  const fixes = { 'gmail': 'gmail.com', 'gmail.com.br': 'gmail.com', 'hotmail': 'hotmail.com', 'outlook': 'outlook.com', 'icloud': 'icloud.com', 'icloud.com.br': 'icloud.com' };
+  if (fixes[dom]) best = fixes[dom], bd = 1;
+  return bd > 0 && (bd === 1 || (bd === 2 && dom.length >= 8)) && best ? `${m[1]}@${best}` : '';
+}
+
 /* A ficha vira a personalização (com a explicação de cada número) */
 export function computePersona(f) {
   const diffs = new Set(f.difficulties || []);

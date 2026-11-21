@@ -1,10 +1,10 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-da5vz2gz'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-oigbloeh'/*CACHE*/;
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster5.jpg',
   ...Array.from({ length: 67 }, (_, i) => `media/intro5/f${String(i + 1).padStart(3, '0')}.webp`),
   'media/logos/pura-vida.jpg', 'media/lembra-logo.jpg', 'media/marca/completa-preto.png', 'media/marca/completa-branco.png', 'media/marca/simbolo-preto.png', 'media/marca/simbolo-branco.png', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/c-34MP6P2R.js', 'dist/c-MQHA77PO.js', 'dist/c-T4RPSIYA.js', 'dist/c-LCETWLEZ.js', 'dist/c-KI5WN7SI.js', 'dist/c-B7Q3BCPY.js', 'dist/c-3KQBY2U6.js', 'dist/c-4D3TQTBG.js', 'dist/c-AUE623Z4.js', 'dist/c-R3WBNYYV.js', 'dist/a-DA5VZ2GZ.js', 'dist/c-YFJ5GX3K.js', 'dist/c-PW5XFWSZ.js', 'dist/c-6IJD3BQ7.js', 'dist/c-AT2QKSZ7.js', 'dist/c-5OSSUBBL.js', 'dist/c-D5YUT3ZV.js', 'dist/c-ZZWI5WUP.js', 'dist/c-PK52NUGT.js', 'dist/c-WMVIU2OE.js', 'dist/c-YSSNUHGT.js', 'dist/c-IYDKXJYW.js', 'dist/c-JS7CY5FM.js', 'dist/c-UXIK5VFP.js', 'dist/c-37XHBBFA.js', 'dist/c-U7SEM6PY.js', 'dist/c-O7TTSZID.js', 'dist/c-ONIGGATC.js', 'dist/c-HBQGGPMI.js', 'dist/c-CID5JDJZ.js', 'dist/c-YZLRJBX2.js', 'dist/c-HRKMG23T.js', 'dist/c-CIJP7VMQ.js', 'dist/c-YEARXB46.js', 'dist/c-T2S5JUFN.js', 'dist/c-U53RW4YL.js', 'dist/c-VHNSBD2M.js',
+  /*FILES*/ 'dist/c-OPXMMP2M.js', 'dist/c-4JJF65OI.js', 'dist/c-T4RPSIYA.js', 'dist/c-C73AA3H5.js', 'dist/c-KI5WN7SI.js', 'dist/c-B7Q3BCPY.js', 'dist/c-3KQBY2U6.js', 'dist/c-7SFVQU47.js', 'dist/c-7GEYCEMW.js', 'dist/c-R3WBNYYV.js', 'dist/a-OIGBLOEH.js', 'dist/c-MKMUIEPP.js', 'dist/c-MXCPLKPG.js', 'dist/c-6IJD3BQ7.js', 'dist/c-AT2QKSZ7.js', 'dist/c-5OSSUBBL.js', 'dist/c-D5YUT3ZV.js', 'dist/c-ZZWI5WUP.js', 'dist/c-PK52NUGT.js', 'dist/c-WMVIU2OE.js', 'dist/c-TYWCHA23.js', 'dist/c-MWJC4G5B.js', 'dist/c-IIHIJAGQ.js', 'dist/c-UXIK5VFP.js', 'dist/c-37XHBBFA.js', 'dist/c-U7SEM6PY.js', 'dist/c-6UL6MZJL.js', 'dist/c-G4VPUJXH.js', 'dist/c-HBQGGPMI.js', 'dist/c-CID5JDJZ.js', 'dist/c-YZLRJBX2.js', 'dist/c-HRKMG23T.js', 'dist/c-CIJP7VMQ.js', 'dist/c-YEARXB46.js', 'dist/c-T2S5JUFN.js', 'dist/c-U53RW4YL.js', 'dist/c-VHNSBD2M.js',
 ];
 
 self.addEventListener('install', (e) => {
