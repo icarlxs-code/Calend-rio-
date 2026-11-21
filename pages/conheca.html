@@ -57,10 +57,15 @@ a{color:inherit}
 .hero h1{font-size:clamp(40px,6vw,68px);line-height:1.0;font-weight:850;margin:14px 0 18px}
 .hero h1 em{font-style:normal;color:var(--pink)}
 .hero .lead{font-size:clamp(18px,2vw,21px);line-height:1.5;margin:0 0 28px;max-width:560px}
-.stage{position:relative;height:620px;perspective:1400px}
-.device{position:absolute;left:50%;top:50%;width:290px;aspect-ratio:620/1343;margin:-310px 0 0 -145px;border-radius:48px;background:#111;padding:10px;box-shadow:0 50px 100px rgba(11,11,15,.28),0 0 0 1px rgba(0,0,0,.6),inset 0 0 0 2px #2a2a2e;transform:rotateY(-14deg) rotateX(6deg);transform-style:preserve-3d;will-change:transform}
-.device img{width:100%;height:100%;object-fit:cover;object-position:top;border-radius:39px;display:block}
-.device::after{content:'';position:absolute;top:20px;left:50%;width:92px;height:26px;margin-left:-46px;border-radius:20px;background:#000}
+.stage{position:relative;height:660px;perspective:1400px;display:grid;place-items:center}
+.device{--dw:300px;position:relative;width:var(--dw);padding:calc(var(--dw)*.034);border-radius:calc(var(--dw)*.175);background:linear-gradient(150deg,#3a3a40 0%,#121214 35%,#1d1d21 100%);box-shadow:0 60px 120px rgba(11,11,15,.30),0 20px 40px rgba(11,11,15,.18),inset 0 0 0 1.5px #4a4a52,inset 0 0 0 4px #0a0a0b;transform-style:preserve-3d;will-change:transform}
+.device::before,.device::after{content:'';position:absolute;left:calc(var(--dw)*-.012);width:calc(var(--dw)*.014);border-radius:3px;background:#2a2a2f}
+.device::before{top:22%;height:7%;box-shadow:0 calc(var(--dw)*.17) 0 #2a2a2f}
+.device::after{left:auto;right:calc(var(--dw)*-.012);top:28%;height:11%}
+.device .scr{position:relative;aspect-ratio:430/932;border-radius:calc(var(--dw)*.14);overflow:hidden;background:#000;transform:translateZ(1px)}
+.device .scr img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;transition:opacity .5s}
+.device .island{position:absolute;top:calc(var(--dw)*.031);left:50%;width:calc(var(--dw)*.3);height:calc(var(--dw)*.088);transform:translateX(-50%);border-radius:99px;background:#000;z-index:3}
+.device .glare{position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.16),rgba(255,255,255,0) 38%);pointer-events:none;z-index:2}
 .float{position:absolute;display:flex;align-items:center;gap:12px;padding:12px 16px 12px 12px;border-radius:18px;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);box-shadow:0 18px 40px rgba(11,11,15,.16),0 0 0 1px rgba(11,11,15,.05);font-size:14px;line-height:1.3;will-change:transform;white-space:nowrap}
 .float i{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;flex:none}
 .float i svg{width:20px;height:20px}
@@ -68,8 +73,34 @@ a{color:inherit}
 .float small{color:var(--mute)}
 .f1{top:70px;left:-6px}.f2{top:250px;right:-18px}.f3{bottom:70px;left:10px}
 @media(max-width:900px){.hero .wrap{grid-template-columns:1fr;text-align:center}.hero .lead{margin-left:auto;margin-right:auto}.micro{justify-content:center}.stage{height:560px}.f1{left:0}.f2{right:0}.cta{width:100%;max-width:420px}}
-@media(max-width:420px){.float{font-size:12.5px;padding:10px 12px 10px 10px}.float i{width:32px;height:32px}.f2{top:230px}}
+@media(max-width:420px){.stage .device{--dw:260px}.float{font-size:12.5px;padding:10px 12px 10px 10px}.float i{width:32px;height:32px}.f2{top:230px}}
 
+.rot{display:block;font-size:clamp(20px,2.4vw,26px);font-weight:800;letter-spacing:-.02em;color:var(--ink);margin:0 0 14px;min-height:1.3em}
+.rot b{color:var(--pink);border-right:3px solid var(--pink);padding-right:3px;animation:caret 1s steps(1) infinite}
+@keyframes caret{50%{border-color:transparent}}
+/* passeio pelo app (o celular fica parado e a tela troca enquanto você rola) */
+.tour{padding:40px 0 60px;background:linear-gradient(180deg,#fff,#F6F6F9)}
+.tour .wrap{display:grid;grid-template-columns:1fr 1fr;gap:60px}
+.tour .ph{position:sticky;top:calc(50vh - 330px);height:660px;display:grid;place-items:center;perspective:1400px}
+.tour .ph .device{--dw:300px}
+.tstep{min-height:78vh;display:flex;flex-direction:column;justify-content:center;opacity:.25;transition:opacity .4s}
+.tstep.on{opacity:1}
+.tstep .num{font-size:15px;font-weight:800;color:var(--pink);letter-spacing:.08em}
+.tstep h3{font-size:clamp(28px,3.4vw,42px);line-height:1.06;font-weight:850;margin:10px 0 14px}
+.tstep p{font-size:18.5px;margin:0;max-width:470px}
+.tour .bar{position:absolute;left:-28px;top:12vh;height:60vh;position:sticky;float:left;width:3px;border-radius:3px;background:var(--line);overflow:hidden}
+.tour .bar i{display:block;width:100%;height:0;background:var(--pink);transition:height .2s}
+@media(max-width:900px){.tour .wrap{grid-template-columns:1fr;gap:0}.tour .ph{top:76px;height:auto;padding:10px 0 0;z-index:1}.tour .ph .device{--dw:190px}.tstep{min-height:92vh;justify-content:flex-end;padding:0 0 18px;position:relative;z-index:2;opacity:1}.tc{padding:22px 18px;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:22px;box-shadow:0 14px 34px rgba(0,0,0,.10)}.tour .ph{position:sticky;top:84px}.tour .ph .device{--dw:210px}.tour .steps-col{margin-top:-60vh}.tour .bar{display:none}}
+/* avisos chegando no celular do topo */
+.drop{position:absolute;left:50%;top:13%;width:86%;transform:translate(-50%,-140%);opacity:0;display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:16px;background:rgba(250,250,252,.92);backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:4;font-size:11.5px;line-height:1.25}
+.drop i{width:28px;height:28px;border-radius:8px;flex:none;display:grid;place-items:center;color:#fff}
+.drop i svg{width:15px;height:15px}
+.drop b{display:block;font-size:12px}
+.drop.go{animation:drop 3.2s cubic-bezier(.2,.9,.2,1) forwards}
+@keyframes drop{0%{transform:translate(-50%,-140%);opacity:0}12%{transform:translate(-50%,0);opacity:1}80%{transform:translate(-50%,0);opacity:1}100%{transform:translate(-50%,-30%) scale(.94);opacity:0}}
+.shake{animation:shake .5s}
+@keyframes shake{20%,60%{transform:translateX(-3px) rotate(-1deg)}40%,80%{transform:translateX(3px) rotate(1deg)}}
+.pc:hover .ic{animation:shake .5s}
 /* faixa de confiança */
 .strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--soft)}
 .strip .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding-top:22px;padding-bottom:22px}
@@ -116,11 +147,11 @@ section{padding:96px 0}
 .ticks li{display:flex;gap:12px;font-size:16.5px;color:var(--ink2)}
 .ticks svg{width:22px;height:22px;color:var(--green);flex:none;margin-top:1px}
 .shot{position:relative;display:grid;place-items:center;min-height:640px;padding:40px 0;border-radius:32px;background:linear-gradient(160deg,#F7F7FA,#ECECF2);overflow:hidden}
-.shot .device{position:relative;left:auto;top:auto;margin:0;width:250px;transform:rotate(-3deg)}
+.shot .device{--dw:250px}
 .shot .badge{position:absolute;display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:16px;background:#fff;box-shadow:0 14px 34px rgba(11,11,15,.14);font-size:14px;font-weight:700;will-change:transform}
 .shot .badge i{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff}
 .shot .badge i svg{width:17px;height:17px}
-@media(max-width:900px){.feat{grid-template-columns:1fr;gap:28px}.feat.rev .txt{order:0}.shot{min-height:600px}.shot .device{width:230px}}
+@media(max-width:900px){.feat{grid-template-columns:1fr;gap:28px}.feat.rev .txt{order:0}.shot{min-height:600px}.shot .device{--dw:232px}}
 
 /* profissões em movimento */
 .marq{overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
@@ -211,12 +242,13 @@ footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;t
   <div class="rv">
     <span class="eyebrow">Agenda inteligente para profissionais</span>
     <h1>Pare de depender da memória. <em>Comece a depender do {{APP}}.</em></h1>
+    <span class="rot" aria-hidden="true">Nunca mais esqueça <b id="rot">o cliente das 9h</b></span>
     <p class="lead">Cada compromisso esquecido custa um cliente, uma multa ou uma pessoa decepcionada. O {{APP}} se adapta à sua profissão, calcula quantos avisos <b>você</b> precisa e cobra você quando atrasa — até que esquecer deixe de ser uma opção.</p>
     <a class="cta" href="../#/cadastro" data-keep>Começar meu teste grátis <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
     <div class="micro"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>24 horas com tudo liberado</span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Sem cartão de crédito</span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Pronto em 2 minutos</span></div>
   </div>
   <div class="stage" id="stage">
-    <div class="device" data-tilt><img src="../media/lp/hoje.jpg" alt="Tela Hoje do {{APP}}" width="620" height="1343" fetchpriority="high"></div>
+    <div class="device" data-tilt><div class="scr"><div class="drop" id="drop"><i style="background:#FF2D55"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></i><div><b id="dropT">LEMBRA · agora</b><span id="dropB">Consulta com Ana Paula em 30 min</span></div></div><img src="../media/lp/hoje.jpg" alt="Tela Hoje do {{APP}}" width="620" height="1343" fetchpriority="high"><i class="island"></i><i class="glare"></i></div></div>
     <div class="float f1" data-par="-0.18"><i style="background:#F59E0B"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></i><div><b>Consulta em 30 min</b><small>Ana Paula · Limpeza</small></div></div>
     <div class="float f2" data-par="0.22"><i style="background:#16A34A"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></i><div><b>Dia 100% concluído</b><small>7 dias seguidos em dia</small></div></div>
     <div class="float f3" data-par="-0.1"><i style="background:#FF2D55"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-8H4v8M2 13h20M12 13v8M12 8a3 3 0 1 0-3-3c0 1.7 3 3 3 3s3-1.3 3-3a3 3 0 1 0-3 3"/></svg></i><div><b>Amanhã: aniversário da mãe</b><small>Já pensou no presente?</small></div></div>
@@ -230,9 +262,23 @@ footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;t
   <div class="rv d3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>7 dias de garantia</div>
 </div></div>
 
+
+<!-- PASSEIO PELO APP -->
+<section class="tour" id="tour"><div class="wrap">
+  <div class="ph"><div class="device" id="tourDev"><div class="scr">
+    <img data-t="0" src="../media/lp/hoje.jpg" alt="" loading="lazy"><img data-t="1" src="../media/lp/novo.jpg" alt="" loading="lazy" style="opacity:0"><img data-t="2" src="../media/lp/pessoal.jpg" alt="" loading="lazy" style="opacity:0"><img data-t="3" src="../media/lp/calendario.jpg" alt="" loading="lazy" style="opacity:0">
+    <i class="island"></i><i class="glare"></i></div></div></div>
+  <div class="steps-col" style="position:relative"><div class="bar"><i id="tbar"></i></div>
+    <div class="tstep" data-step="0"><div class="tc"><span class="num">01 · HOJE</span><h3>Abra o app e saiba exatamente o que fazer.</h3><p>O próximo compromisso, quanto falta e o que está atrasado, na primeira tela. Sem procurar, sem adivinhar.</p></div></div>
+    <div class="tstep" data-step="1"><div class="tc"><span class="num">02 · MARCAR</span><h3>Marque em segundos. O {{APP}} confere por você.</h3><p>Tipos prontos da sua profissão e um assistente que avisa na hora se aquilo já foi marcado ou se bate com outro horário.</p></div></div>
+    <div class="tstep" data-step="2"><div class="tc"><span class="num">03 · PESSOAL</span><h3>Sua vida fora do trabalho também não fica para trás.</h3><p>Aniversários, contas, saúde e listas no modo Pessoal — com mensagens de ânimo, versículos e lembretes de cuidado ao longo do dia.</p></div></div>
+    <div class="tstep" data-step="3"><div class="tc"><span class="num">04 · VISÃO DO MÊS</span><h3>Veja o mês inteiro e quem está onde.</h3><p>Calendário com tudo o que vem pela frente, atrasos em destaque e a agenda da equipe no mesmo lugar.</p></div></div>
+  </div>
+</div></section>
+
 <!-- DOR -->
 <section class="pain"><div class="wrap">
-  <div class="head rv"><span class="eyebrow">O custo invisível</span><h2>Esquecer nunca sai de graça.</h2><p>Você não percebe na hora. Mas cada esquecimento cobra a conta depois — em dinheiro, em reputação ou em relacionamentos.</p></div>
+  <div class="head rv"><span class="eyebrow">O custo invisível</span><h2>Esquecer nunca sai de graça.<br>E a conta sempre chega.</h2><p>Você não percebe na hora. Mas cada esquecimento cobra a conta depois — em dinheiro, em reputação ou em relacionamentos.</p></div>
   <div class="cards4">
     <div class="pc rv"><div class="ic pop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5m0-5-5 5"/></svg></div><b>O cliente que não volta</b><p>Um horário esquecido é suficiente para ele procurar outro profissional. E ele não avisa que foi embora.</p></div>
     <div class="pc rv d1"><div class="ic pop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M7 15h4"/></svg></div><b>Juros, multas e taxas</b><p>Boleto vencido, imposto atrasado, documento fora do prazo. Dinheiro perdido por um lembrete que não existiu.</p></div>
@@ -257,21 +303,21 @@ footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;t
   <div class="feat">
     <div class="txt rv"><span class="eyebrow">Trabalho</span><h3>Uma agenda que fala a língua da sua profissão.</h3><p>Dentista marca consultas e retornos. Confeiteira marca encomendas e entregas. Professor marca aulas e provas. O {{APP}} já vem pronto para o seu dia a dia.</p>
       <ul class="ticks"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Tipos de compromisso e campos próprios da sua área</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Avisa quando algo foi marcado duas vezes</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Assistente que organiza e reorganiza a agenda por você</li></ul></div>
-    <div class="shot rv d1"><div class="device" data-tilt><img src="../media/lp/novo.jpg" alt="Novo compromisso no {{APP}}" loading="lazy" width="620" height="1343"></div>
+    <div class="shot rv d1"><div class="device" data-tilt><div class="scr"><img src="../media/lp/novo.jpg" alt="Novo compromisso no {{APP}}" loading="lazy" width="620" height="1343"><i class="island"></i><i class="glare"></i></div></div>
       <div class="badge" data-par="-0.12" style="top:60px;right:24px"><i style="background:#FF3B30"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></i>Isso já foi marcado</div>
       <div class="badge" data-par="0.14" style="bottom:70px;left:22px"><i style="background:#0A84FF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6l-4.9 3.6 1.9-5.8L4 8.8h6.1Z"/></svg></i>Assistente</div></div>
   </div>
   <div class="feat rev">
     <div class="txt rv"><span class="eyebrow">Vida pessoal</span><h3>E um modo Pessoal só seu, com um toque.</h3><p>Aniversários, contas, consultas, listas de compras e cuidados com você. Separado do trabalho e visível só para você.</p>
       <ul class="ticks"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Sugestões pensadas para a sua idade e o seu momento</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Mensagens de ânimo, versículos e lembretes de cuidado ao longo do dia</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Coisas que se repetem: o {{APP}} lembra sozinho, para sempre</li></ul></div>
-    <div class="shot rv d1" style="background:linear-gradient(160deg,#FFF1F4,#FFE3EA)"><div class="device" data-tilt><img src="../media/lp/pessoal.jpg" alt="Modo Pessoal do {{APP}}" loading="lazy" width="620" height="1343"></div>
+    <div class="shot rv d1" style="background:linear-gradient(160deg,#FFF1F4,#FFE3EA)"><div class="device" data-tilt><div class="scr"><img src="../media/lp/pessoal.jpg" alt="Modo Pessoal do {{APP}}" loading="lazy" width="620" height="1343"><i class="island"></i><i class="glare"></i></div></div>
       <div class="badge" data-par="0.12" style="top:70px;left:22px"><i style="background:#FF2D55"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></i>Só você vê</div>
       <div class="badge" data-par="-0.14" style="bottom:80px;right:22px"><i style="background:#8B5CF6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/></svg></i>Versículo do dia</div></div>
   </div>
   <div class="feat">
     <div class="txt rv"><span class="eyebrow">Equipe</span><h3>Divida a agenda com quem trabalha com você.</h3><p>Sócio, equipe ou família no mesmo calendário. Cada um vê o que precisa, recebe os próprios avisos e é notificado na hora quando algo muda.</p>
       <ul class="ticks"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Bilhetes com marcação de pessoas</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Quem você convida não paga nada</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Calendário do mês inteiro, com quem está onde</li></ul></div>
-    <div class="shot rv d1" style="background:linear-gradient(160deg,#EEF6FF,#E1EEFF)"><div class="device" data-tilt><img src="../media/lp/calendario.jpg" alt="Calendário do {{APP}}" loading="lazy" width="620" height="1343"></div>
+    <div class="shot rv d1" style="background:linear-gradient(160deg,#EEF6FF,#E1EEFF)"><div class="device" data-tilt><div class="scr"><img src="../media/lp/calendario.jpg" alt="Calendário do {{APP}}" loading="lazy" width="620" height="1343"><i class="island"></i><i class="glare"></i></div></div>
       <div class="badge" data-par="-0.12" style="top:80px;right:20px"><i style="background:#16A34A"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></i>Agenda da equipe</div></div>
   </div>
 </div></section>
@@ -329,8 +375,8 @@ footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;t
 
 <!-- CHAMADA FINAL -->
 <section class="final"><div class="wrap rv">
-  <h2>O próximo compromisso esquecido<br>pode ser o último.</h2>
-  <p>Leve 2 minutos para configurar. Teste por 24 horas. Decida depois.</p>
+  <h2>Quantos clientes, prazos e pessoas<br>você ainda pode perder?</h2>
+  <p>Cada dia sem um sistema é mais um dia correndo esse risco. Configure em 2 minutos e teste 24 horas, sem cartão.</p>
   <a class="cta" href="../#/cadastro" data-keep>Começar meu teste grátis <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
   <div class="micro"><span>Sem cartão</span><span>·</span><span>Cancele quando quiser</span><span>·</span><span>7 dias de garantia</span></div>
 </div></section>
@@ -350,6 +396,41 @@ footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;t
       if (!o.source && document.referrer && !/github\.io|lembra/.test(document.referrer)) { try { o.source = new URL(document.referrer).hostname.replace(/^www\./, '').slice(0, 60); } catch (e) {} }
       if (o.source && !localStorage.getItem('lembra.origem')) localStorage.setItem('lembra.origem', JSON.stringify(Object.assign(o, { page: 'conheca', at: Date.now() })));
     } catch (e) {}
+  })();
+
+  // frase que se reescreve no topo
+  (function () {
+    var el = document.getElementById('rot'); if (!el) return;
+    var words = ['o cliente das 9h', 'o boleto de sexta', 'o aniversário da mãe', 'a reunião de segunda', 'o remédio das 20h', 'a entrega da encomenda'];
+    var i = 0, j = words[0].length, del = true;
+    setInterval(function () {
+      var w = words[i];
+      if (del) { j--; if (j <= 0) { del = false; i = (i + 1) % words.length; } }
+      else { j++; if (j >= words[i].length) { del = true; j = words[i].length + 6; } }
+      el.textContent = words[i].slice(0, Math.max(0, Math.min(j, words[i].length)));
+    }, 70);
+  })();
+  // avisos chegando no celular do topo, um atrás do outro
+  (function () {
+    var d = document.getElementById('drop'); if (!d) return;
+    var msgs = [['Consulta com Ana Paula em 30 min', '#F59E0B'], ['Boleto da internet vence hoje', '#FF3B30'], ['Amanhã: aniversário da mãe 🎂', '#FF2D55'], ['Atrasado 10 min: ligar para o cliente', '#0A84FF'], ['Dia 100% concluído. Orgulho de você! ✓', '#16A34A']];
+    var k = 0;
+    function next() { var m = msgs[k++ % msgs.length]; document.getElementById('dropB').textContent = m[0]; d.querySelector('i').style.background = m[1]; d.classList.remove('go'); void d.offsetWidth; d.classList.add('go'); var dev = d.closest('.device'); dev.classList.remove('shake'); void dev.offsetWidth; }
+    setTimeout(next, 900); setInterval(next, 3600);
+  })();
+  // passeio: a tela do celular muda conforme o texto rola
+  (function () {
+    var steps = document.querySelectorAll('.tstep'), imgs = document.querySelectorAll('#tourDev img'), bar = document.getElementById('tbar'), dev = document.getElementById('tourDev');
+    if (!steps.length) return;
+    function set(n) {
+      steps.forEach(function (s, i) { s.classList.toggle('on', i === n); });
+      imgs.forEach(function (im) { im.style.opacity = +im.dataset.t === n ? 1 : 0; });
+      bar.style.height = ((n + 1) / steps.length * 100) + '%';
+      dev.style.transform = 'rotateY(' + (n % 2 ? 10 : -10) + 'deg) rotateX(4deg)';
+    }
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) set(+e.target.dataset.step); }); }, { rootMargin: '-45% 0px -45% 0px' });
+    steps.forEach(function (s) { io.observe(s); });
+    set(0);
   })();
   // animações ao rolar: elementos aparecem, ícones "saltam", cartões flutuantes andam em velocidades diferentes
   (function () {
