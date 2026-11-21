@@ -19,7 +19,13 @@ const pageUrl = (name) => `${/^(localhost|127\.0\.0\.1)$/.test(location.hostname
 const WD = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const FORGET = ['', 'Quase nunca esqueço', 'Esqueço às vezes', 'Esqueço com frequência', 'Esqueço muito', 'Esqueço quase tudo'];
 const LEADS = [{ v: '', l: 'O Lembra calcula' }, { v: 15, l: '15 min' }, { v: 30, l: '30 min' }, { v: 60, l: '1 hora' }, { v: 120, l: '2 horas' }, { v: 1440, l: '1 dia' }];
-const STEPS = ['inicio', 'voce', 'trabalho', 'rotina', 'dificuldades', 'estilo', 'resumo'];
+const STEPS = ['inicio', 'voce', 'trabalho', 'rotina', 'dificuldades', 'estilo', 'mente', 'resumo'];
+/* "Você por dentro": como apps de afirmações (I am, Mantra) estudam a pessoa no começo — aqui para o amigo do Lembra falar do jeito certo */
+const MOOD = { motivation: [['baixa', 'Baixa'], ['media', 'Mais ou menos'], ['alta', 'Alta']], selfesteem: [['baixa', 'Baixa'], ['oscila', 'Oscila'], ['boa', 'Boa']], anxiety: [['muita', 'Muito'], ['as_vezes', 'Às vezes'], ['pouca', 'Pouco']] };
+const TRAITS = [['ansioso', ''], ['impulsivo', 'Impulsivo(a)'], ['perfeccionista', 'Perfeccionista'], ['procrastinador', 'Deixo tudo pra depois'], ['organizado', 'Organizado(a)'], ['sensivel', 'Sensível'], ['competitivo', 'Competitivo(a)'], ['sonhador', 'Sonhador(a)'], ['pratico', 'Prático(a)']].filter(([, l]) => l);
+const FOCUS = [['autoestima', 'Autoestima'], ['ansiedade', 'Ansiedade'], ['foco', 'Foco'], ['disciplina', 'Disciplina'], ['relacionamentos', 'Relacionamentos'], ['saude', 'Saúde e corpo'], ['dinheiro', 'Dinheiro'], ['gratidao', 'Gratidão'], ['descanso', 'Descanso e sono']];
+const RELIGIONS = [['catolica', 'Católica'], ['evangelica', 'Evangélica'], ['protestante', 'Protestante'], ['crista', 'Cristã (sem denominação)'], ['adventista', 'Adventista'], ['testemunha', 'Testemunha de Jeová'], ['ortodoxa', 'Cristã ortodoxa'], ['sud', 'Santos dos Últimos Dias'], ['espirita', 'Espírita'], ['umbanda', 'Umbanda'], ['candomble', 'Candomblé'], ['judaica', 'Judaica'], ['islamica', 'Islâmica'], ['budista', 'Budista'], ['hindu', 'Hinduísta'], ['espiritualizado', 'Espiritualizado(a), sem religião'], ['agnostico', 'Agnóstico(a)'], ['ateu', 'Ateu / ateia'], ['outra', 'Outra'], ['nao_dizer', 'Prefiro não dizer']];
+const WATER = [[0, 'Não precisa'], [60, 'A cada 1h'], [90, 'A cada 1h30'], [120, 'A cada 2h'], [180, 'A cada 3h']];
 
 export function openFicha({ initial = {}, onDone, onClose, required = true } = {}) {
   const f = {
@@ -27,6 +33,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     pronoun: '', gender: '', volume: '', method: '',
     journey: 'comercial', workStart: '08:00', workEnd: '18:00', workDays: [1, 2, 3, 4, 5], wake: '06:30', sleep: '22:30', lunch: '12:00',
     difficulties: [], forget: 3, lead: '', tone: 'firme', freq: '', faith: true, water: true, meals: true, goal: 'lembrar', consent: false,
+    motivationLevel: '', selfesteem: '', anxiety: '', traits: [], focus: [], wantsMotivation: true, religion: '', perDay: 7, waterEvery: 180,
     ...initial,
   };
   let step = initial.onboardedAt ? 1 : 0, q = '', err = '', sub = 0, calcDone = false;
@@ -106,15 +113,30 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       <div class="ficha__chips">${LEADS.map((l) => `<button class="ficha__chip${String(f.lead) === String(l.v) ? ' is-on' : ''}" data-lead="${l.v}">${l.l}</button>`).join('')}</div>${nav()}`,
     estilo: () => `<h2>Como o Lembra fala com você</h2><p class="ficha__sub">Quando você atrasar ou precisar de um empurrão.</p>
       <div class="ficha__cards ficha__cards--1">${TONES.map((t) => `<button class="ficha__card${f.tone === t.id ? ' is-on' : ''}" data-tone="${t.id}"><b>${esc(t.label)}</b><small>${esc(t.sample)}</small></button>`).join('')}</div>
-      <label class="flabel">Mensagens de ânimo durante o dia</label>
-      <div class="ficha__chips">${[['', 'O Lembra decide'], ['calma', 'Poucas'], ['normal', 'Equilibrado'], ['alta', 'Bastante']].map(([v, l]) => `<button class="ficha__chip${f.freq === v ? ' is-on' : ''}" data-freq="${v}">${l}</button>`).join('')}</div>
       <div class="list ficha__toggles">
-        <label class="list__row"><span><b>Versículos e fé</b></span><input type="checkbox" class="switch" data-chk="faith" ${f.faith ? 'checked' : ''}></label>
-        <label class="list__row"><span><b>Lembrar de beber água</b></span><input type="checkbox" class="switch" data-chk="water" ${f.water ? 'checked' : ''}></label>
-        <label class="list__row"><span><b>Lembrar de comer</b></span><input type="checkbox" class="switch" data-chk="meals" ${f.meals ? 'checked' : ''}></label>
+        <label class="list__row"><span><b>Lembrar de comer</b><small>almoço e jantar</small></span><input type="checkbox" class="switch" data-chk="meals" ${f.meals ? 'checked' : ''}></label>
       </div>
       <label class="flabel">Seu principal objetivo</label>
-      <div class="ficha__chips">${GOALS.map((g) => `<button class="ficha__chip${f.goal === g.id ? ' is-on' : ''}" data-goal="${g.id}">${esc(g.label)}</button>`).join('')}</div>${nav('Ver meu Lembra')}`,
+      <div class="ficha__chips">${GOALS.map((g) => `<button class="ficha__chip${f.goal === g.id ? ' is-on' : ''}" data-goal="${g.id}">${esc(g.label)}</button>`).join('')}</div>${nav()}`,
+    mente: () => {
+      const one = (k, list) => `<div class="ficha__chips">${list.map(([v, l]) => `<button class="ficha__chip${f[k] === v ? ' is-on' : ''}" data-one="${k}" data-v="${v}">${l}</button>`).join('')}</div>`;
+      const many = (k, list) => `<div class="ficha__chips">${list.map(([v, l]) => `<button class="ficha__chip${f[k].includes(v) ? ' is-on' : ''}" data-many="${k}" data-v="${v}">${l}</button>`).join('')}</div>`;
+      return `<h2>Você por dentro</h2><p class="ficha__sub">Para o Lembra falar com você como um amigo que te conhece — e não mandar a mesma coisa que manda para todo mundo. Fica só na sua conta.</p>
+      <label class="flabel">Como anda a sua motivação ultimamente?</label>${one('motivationLevel', MOOD.motivation)}
+      <label class="flabel">E a sua autoestima?</label>${one('selfesteem', MOOD.selfesteem)}
+      <label class="flabel">Você se considera uma pessoa ansiosa?</label>${one('anxiety', MOOD.anxiety)}
+      <label class="flabel">Como você se descreve? <small>(pode marcar vários)</small></label>${many('traits', TRAITS)}
+      <label class="flabel">O que você quer trabalhar em você?</label>${many('focus', FOCUS)}
+      <div class="list ficha__toggles">
+        <label class="list__row"><span><b>Mensagens de motivação</b><small>frases de ânimo do seu jeito</small></span><input type="checkbox" class="switch" data-chk="wantsMotivation" ${f.wantsMotivation ? 'checked' : ''}></label>
+        <label class="list__row"><span><b>Mensagens de fé</b><small>da sua religião, se você tiver</small></span><input type="checkbox" class="switch" data-chk="faith" data-rerender ${f.faith ? 'checked' : ''}></label>
+      </div>
+      ${f.faith ? `<label class="flabel">Qual é a sua religião ou crença?</label>${one('religion', RELIGIONS)}` : ''}
+      <label class="flabel">Quantas mensagens do amigo do Lembra por dia?</label>
+      <input class="ficha__range" type="range" min="3" max="15" step="1" data-f="perDay" value="${f.perDay}"><p class="ficha__rangev"><b data-perday>${f.perDay} por dia</b> <small>(fora os lembretes da sua agenda)</small></p>
+      <label class="flabel">Lembrar de beber água</label>${one('waterEvery', WATER.map(([v, l]) => [String(v), l]))}
+      ${nav('Ver meu Lembra')}`;
+    },
     resumo: () => {
       const pages = conquests();
       const nick = esc(f.nickname || f.name.split(' ')[0] || '');
@@ -256,6 +278,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       if (err) { err = ''; const e = wrap.querySelector('.ficha__err'); if (e) e.hidden = true; }
       if (k === 'cpf') { el.value = maskCPF(el.value); f.cpf = el.value.replace(/\D/g, ''); }
       else if (k === 'forget') { f.forget = +el.value; wrap.querySelector('.ficha__rangev b').textContent = FORGET[f.forget]; }
+      else if (k === 'perDay') { f.perDay = +el.value; wrap.querySelector('[data-perday]').textContent = `${f.perDay} por dia`; }
       else f[k] = el.value;
     }));
     const qi = wrap.querySelector('[data-q]');
@@ -296,7 +319,9 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     for (const k of ['pronoun', 'volume', 'method']) $(`[data-${k}]`).forEach((b) => (b.onclick = () => { f[k] = b.dataset[k]; $(`[data-${k}]`).forEach((x) => x.classList.toggle('is-on', x === b)); }));
     $('[data-freq]').forEach((b) => (b.onclick = () => pickOne('freq', b.dataset.freq, (v) => { f.freq = v; })));
     $('[data-goal]').forEach((b) => (b.onclick = () => pickOne('goal', b.dataset.goal, (v) => { f.goal = v; })));
-    $('[data-chk]').forEach((c) => (c.onchange = () => { f[c.dataset.chk] = c.checked; }));
+    $('[data-chk]').forEach((c) => (c.onchange = () => { f[c.dataset.chk] = c.checked; if (c.dataset.rerender !== undefined) { saveDraft(); render(); } }));
+    $('[data-one]').forEach((b) => (b.onclick = () => { const k = b.dataset.one; f[k] = b.dataset.v; $(`[data-one="${k}"]`).forEach((x) => x.classList.toggle('is-on', x === b)); }));
+    $('[data-many]').forEach((b) => (b.onclick = () => { const k = b.dataset.many, v = b.dataset.v; f[k] = f[k].includes(v) ? f[k].filter((x) => x !== v) : [...f[k], v]; b.classList.toggle('is-on', f[k].includes(v)); }));
     const back = wrap.querySelector('[data-back]');
     if (back) back.onclick = () => { err = ''; if (STEPS[step] === 'resumo' && sub > 0) { sub--; render(); return; } step--; sub = 0; calcDone = false; render(); };
     $('[data-quit]').forEach((b) => (b.onclick = () => close()));
@@ -321,7 +346,8 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
 
 /* ---------- salvar e quando pedir a ficha ---------- */
 const KEYS = ['name', 'nickname', 'pronoun', 'gender', 'birth', 'cpf', 'phone', 'profession', 'area', 'arch', 'role', 'workplace', 'journey', 'volume', 'method', 'workStart', 'workEnd', 'workDays',
-  'wake', 'sleep', 'lunch', 'difficulties', 'forget', 'lead', 'tone', 'freq', 'faith', 'water', 'meals', 'goal'];
+  'wake', 'sleep', 'lunch', 'difficulties', 'forget', 'lead', 'tone', 'freq', 'faith', 'water', 'meals', 'goal',
+  'motivationLevel', 'selfesteem', 'anxiety', 'traits', 'focus', 'wantsMotivation', 'religion', 'perDay', 'waterEvery'];
 
 /* A ficha vira: perfil da conta + perfil de trabalho do espaço + lembretes da pessoa + mensagens do Pessoal */
 export async function saveFicha(r) {

@@ -2,6 +2,7 @@
    mensagens de ânimo, versículos, água, hora de comer e lembretes do que ela anotou.
    Cada pessoa recebe só sobre a própria agenda pessoal. */
 import { brNow } from './coach.js';
+import { pickMind, pickFaith, mindBrief, hashStr, RELIGIONS } from './mind.js';
 
 export const VERSES = [
   ['Tudo posso naquele que me fortalece.', 'Filipenses 4:13'],
@@ -243,6 +244,14 @@ export function anchorsFor(w) {
 export function nextNudge(p, st, now, rand = Math.random) {
   const br = brNow(now);
   const prefs = { nudges: true, water: true, meals: true, faith: true, freq: 'normal', ...(p.prefs || {}) };
+  const pid = p.uid || p.name || 'x'; // identidade da pessoa: a sequência de mensagens é só dela
+  const fam = prefs.religion ? (RELIGIONS[prefs.religion] || {}).fam : null;
+  if (fam === 'secular') prefs.faith = false;
+  const faithOf = (slot) => (prefs.religion ? pickFaith(prefs.religion, pid, slot, st.recent || []) : pick(VERSES, hashStr(`${pid}|${slot}`)));
+  const wantsMotivation = prefs.motivation !== false;
+  const waterEvery = Number.isFinite(prefs.waterEvery) ? prefs.waterEvery : 180; // minutos (0 = não lembrar)
+  const waterMax = waterEvery > 0 ? Math.max(1, Math.min(8, Math.floor(spanOf(dayWindow(prefs)) / waterEvery))) : 0;
+  const phase = hashStr(`${pid}|agua`) % 40; // cada pessoa bebe água num horário diferente
   if (!prefs.nudges && !prefs.water) return null;
   const w = dayWindow(prefs);
   const L = spanOf(w);
@@ -259,13 +268,13 @@ export function nextNudge(p, st, now, rand = Math.random) {
   // 1) momentos fixos do dia
   const anchor = prefs.nudges && now - (st.lastAny || 0) >= 20 * 60e3 ? ANCHORS.find((a) => mins >= a.from && mins <= a.to && !st.done[a.key] && (!a.pref || prefs[a.pref])) : null;
   // água: de hora em hora, das 8h às 21h30 (independente das outras mensagens)
-  const waterDue = prefs.water && (st.water || 0) < 4 && mins >= 90 && mins <= L - 45 && now >= (st.nextWater || 0) && now - (st.lastAny || 0) >= (st.minGap || 25) * 60e3;
+  const waterDue = prefs.water && waterEvery > 0 && (st.water || 0) < waterMax && mins >= 70 + phase && mins <= L - 45 && now >= (st.nextWater || 0) && now - (st.lastAny || 0) >= (st.minGap || 25) * 60e3;
   let isWater = false;
   if (!anchor && waterDue) {
     isWater = true;
     st.water++;
     st.lastWater = now;
-    st.nextWater = now + (150 + Math.round(rand() * 60)) * 60e3; // próxima água entre 2h30 e 3h30 (máx. 4 por dia)
+    st.nextWater = now + Math.round(waterEvery * (0.85 + rand() * 0.3)) * 60e3; // no intervalo que a pessoa escolheu, com variação
     const wpool = T.water.filter((w) => !(st.recent || []).some((r) => r.includes(fill(w, V))));
     msg = { title: KIND_TITLE.water, body: fill(pick(wpool.length ? wpool : T.water, seed), V), kind: 'water' };
   } else if (anchor) {
@@ -273,13 +282,13 @@ export function nextNudge(p, st, now, rand = Math.random) {
     if (anchor.key === 'morning') {
       const count = (p.today || []).filter((x) => !x.done).length;
       const base = fill(pick(T.morning, seed), V);
-      const v = prefs.faith ? pick(VERSES, seed + br.wd) : null;
+      const v = prefs.faith ? faithOf(`${br.date}|manha`) : null;
       msg = { title: `☀️ Bom dia, ${n}`, body: v ? `${base}\n${verseText(v)}` : base, kind: 'morning', verse: v };
       if (count) msg.body += `\nHoje você tem ${count} ${count > 1 ? 'coisas' : 'coisa'} anotada${count > 1 ? 's' : ''}.`;
       if (prefs.faith) st.verses++;
     } else if (anchor.key === 'night') {
       const base = fill(pick(T.night, seed), V);
-      const v = prefs.faith ? pick(NIGHT_VERSES, seed) : null;
+      const v = prefs.faith ? (prefs.religion && fam !== 'crista' && fam !== 'catolica' ? faithOf(`${br.date}|noite`) : pick(NIGHT_VERSES, hashStr(`${pid}|${br.date}|noite`))) : null;
       msg = { title: KIND_TITLE.night, body: v ? `${base}\n${verseText(v)}` : base, kind: 'night', verse: v };
     } else {
       msg = { title: KIND_TITLE[anchor.key], body: fill(pick(T[anchor.key], seed), V), kind: anchor.key };
@@ -314,8 +323,8 @@ export function nextNudge(p, st, now, rand = Math.random) {
       else if (p.rank.pos < st.rankPos) st.rankPos = p.rank.pos; // subiu: guarda a melhor posição
     }
     if (prefs.faith && st.verses < 4) options.push(['verse', 3]);
-    options.push(['motivation', 3]);
-    options.push(['counsel', 3]);
+    if (wantsMotivation) { options.push(['motivation', 3]); options.push(['counsel', 3]); }
+    if (p.mind && wantsMotivation) options.push(['mind', 5]); // frases escolhidas pelo jeito de ser da pessoa
     const habits = HABITS.filter(([a, b, t]) => br.h >= a && br.h < b && !(st.recent || []).some((r) => r.includes(fill(t, V).slice(0, 30))));
     if (habits.length) options.push(['habit', 3]);
     if (br.h >= 10 && br.h < 21) options.push(['social', 1.5]);
@@ -348,13 +357,18 @@ export function nextNudge(p, st, now, rand = Math.random) {
     } else if (kind === 'habit') {
       const hs = HABITS.filter(([a, b, t]) => br.h >= a && br.h < b && !(st.recent || []).some((r) => r.includes(fill(t, V).slice(0, 30))));
       msg = { title: KIND_TITLE.habit, body: fill(pick(hs, seed)[2], V), kind: 'habit' };
+    } else if (kind === 'mind') {
+      const m2 = pickMind(p.mind, pid, `${br.date}|${br.h}|${st.mindN || 0}`, (st.recent || []).map((x) => x.replace(/\{n\}/g, n)));
+      st.mindN = (st.mindN || 0) + 1;
+      msg = { title: { ansiedade: '🌿 Respira', autoestima: '💜 Pra você', desmotivado: '💪 Um passo', motivado: '🔥 Bora', gratidao: '🙏 Gratidão', descanso: '🌙 Pausa' }[m2.group] || KIND_TITLE.motivation, body: fill(m2.text, V), kind: 'mind', group: m2.group };
     } else if (kind === 'verse') {
       st.verses++;
-      const v = pick(VERSES, seed);
+      const v = faithOf(`${br.date}|${br.h}|${st.verses}`);
       msg = { title: KIND_TITLE.verse, body: verseText(v), kind: 'verse', verse: v };
     } else {
       const pool = T[kind].filter((s) => !st.recent.includes(fill(s, V)));
-      msg = { title: KIND_TITLE[kind] || KIND_TITLE.motivation, body: fill(pick(pool.length ? pool : T[kind], seed), V), kind };
+      const list = pool.length ? pool : T[kind];
+      msg = { title: KIND_TITLE[kind] || KIND_TITLE.motivation, body: fill(list[hashStr(`${pid}|${br.date}|${br.h}|${kind}|${seed}`) % list.length], V), kind };
     }
   }
   // variedade mesmo sem IA: às vezes um jeito diferente de começar e de terminar
@@ -363,10 +377,10 @@ export function nextNudge(p, st, now, rand = Math.random) {
     if (r1 < 0.45 && !/^(ei|opa|ô|psiu|fala|olha)\b/i.test(msg.body) && !(n && msg.body.includes(n))) msg.body = fill(`${pick(OPENERS, Math.floor(r1 * 1e6))} ${msg.body.charAt(0).toLowerCase()}${msg.body.slice(1)}`, V);
     if (r2 < 0.4) msg.body = fill(`${msg.body} ${pick(CLOSERS, Math.floor(r2 * 1e6))}`, V);
   }
-  if (!isWater) st.next = now + randomGap(prefs.freq, rand) * 60e3;
+  if (!isWater) st.next = now + (prefs.perDay ? Math.max(25, Math.round((L / prefs.perDay) * (0.6 + rand() * 0.8))) : randomGap(prefs.freq, rand)) * 60e3;
   st.lastAny = now;
   st.minGap = 25 + Math.round(rand() * 22); // folga mínima também varia (25 a 47 min)
-  st.recent = [...(st.recent || []), msg.body].slice(-12);
+  st.recent = [...(st.recent || []), msg.body].slice(-40);
   return { msg: { ...msg, tag: 'p-amigo', url: msg.url || (['checkin', 'streak'].includes(msg.kind) ? './' : './#/p/hoje') }, state: st };
 }
 
@@ -382,6 +396,7 @@ const KIND_TASK = {
   agenda: 'Lembre a pessoa disto da agenda pessoal dela, como um amigo que se importa e dá aquela força: ',
   verse: 'Escreva UMA frase curta e acolhedora para apresentar o versículo (sem repetir o versículo).',
   motivation: 'Mensagem de ânimo e autoestima, sincera e específica (não genérica), como um amigo próximo ou conselheiro que acredita muito nela.',
+  mind: 'Reescreva esta mensagem do jeito dessa pessoa, como um amigo próximo que conhece ela (mantenha a ideia). Base: ',
   counsel: 'Fale como um psicólogo/conselheiro acolhedor: uma reflexão curta e prática sobre ansiedade, foco, autoestima, gratidão ou descanso, com uma pergunta ou ação simples. Base: ',
   social: 'Incentive com carinho a pessoa a cuidar das relações (falar com um amigo, ligar para a família, elogiar alguém). Base: ',
   streak: 'Avise com carinho e senso de urgência que a sequência de dias seguidos da pessoa no app vai acabar hoje se ela não concluir pelo menos uma tarefa. Base: ',
@@ -396,14 +411,14 @@ export async function humanize(env, msg, p, recent, br) {
   const tone = { carinhoso: 'Tom: carinhoso e acolhedor.', firme: 'Tom: amigo coach, firme e motivador, que puxa para cima.', direto: 'Tom: direto e objetivo, sem rodeios, mas gentil.' }[p.prefs?.tone] || '';
   const work = p.work && p.work.profession ? `${p.name} trabalha como ${p.work.profession}${p.work.goal ? ` e o objetivo ${g.dele} é: ${p.work.goal}` : ''}. Quando fizer sentido, conecte a mensagem com a rotina dessa profissão (sem inventar fatos).` : '';
   const g = p.prefs?.pronoun === 'f' ? { dele: 'dela', o: 'a', ele: 'ela' } : p.prefs?.pronoun === 'm' ? { dele: 'dele', o: 'o', ele: 'ele' } : { dele: 'dele(a)', o: 'o(a)', ele: 'ele(a)' };
-  const sys = `Você escreve notificações de celular em português do Brasil para ${p.name}${p.prefs?.pronoun === 'f' ? ' (mulher; use o feminino)' : p.prefs?.pronoun === 'm' ? ' (homem; use o masculino)' : ' (use linguagem neutra, sem marcar gênero)'}, como o melhor amigo ${g.dele} — alguém que se importa de verdade, conselheiro, que levanta a autoestima e a moral.${p.prefs?.faith === false ? ' Não fale de religião.' : ' Pode citar fé em Deus com naturalidade.'}
+  const sys = `Você escreve notificações de celular em português do Brasil para ${p.name}${p.prefs?.pronoun === 'f' ? ' (mulher; use o feminino)' : p.prefs?.pronoun === 'm' ? ' (homem; use o masculino)' : ' (use linguagem neutra, sem marcar gênero)'}, como o melhor amigo ${g.dele} — alguém que se importa de verdade, conselheiro, que levanta a autoestima e a moral.${p.prefs?.faith === false || (p.prefs?.religion && (RELIGIONS[p.prefs.religion] || {}).fam === 'secular') ? ' Não fale de religião nem de Deus.' : p.prefs?.religion ? ` A religião da pessoa é ${RELIGIONS[p.prefs.religion]?.label || 'cristã'}: se falar de fé, respeite SÓ essa tradição.` : ' Pode citar fé em Deus com naturalidade.'}${p.mind ? ` Sobre a pessoa: ${mindBrief(p.mind)}.` : ''}${p.age ? ` Ela tem por volta de ${p.age} anos: use referências e jeito de falar dessa idade.` : ''}
 ${tone} ${work}
 Estilo: humano, caloroso, informal, como mensagem de WhatsApp de um amigo. Frases curtas. No máximo 1 ou 2 emojis. Nunca soe robótico, nunca use "lembrete:" seco, não use aspas, não repita frases prontas.
 Agora são ${String(br.h).padStart(2, '0')}h${String(br.m).padStart(2, '0')} (${['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][br.wd]}).
 ${today ? `Coisas de hoje na agenda pessoal: ${today}.` : 'Hoje a agenda pessoal está livre.'}
 NÃO repita nem parafraseie estas mensagens recentes: ${(recent || []).slice(-8).join(' | ') || '—'}
 Responda SÓ com JSON: {"title":"até 38 caracteres, com 1 emoji","body":"até 170 caracteres"}`;
-  const task = KIND_TASK[msg.kind] + (msg.kind === 'agenda' ? msg.fact : ['counsel', 'social', 'habit', 'checkin', 'streak', 'rank'].includes(msg.kind) ? msg.body : '');
+  const task = KIND_TASK[msg.kind] + (msg.kind === 'agenda' ? msg.fact : ['counsel', 'social', 'habit', 'checkin', 'streak', 'rank', 'mind'].includes(msg.kind) ? msg.body : '');
   for (const model of AI_MODELS) {
     try {
       const out = await env.AI.run(model, { messages: [{ role: 'system', content: sys }, { role: 'user', content: task }], max_tokens: 220, temperature: 1.0 });
@@ -449,7 +464,7 @@ export async function runPersonalCoach(env, sendToMember, team, rankInfo = null)
     // posição no ranking (para avisar quando cair) — só para quem participa
     let rank = null;
     if (m.ws && m.ws !== 'main' && rankInfo) { const b = await rankInfo(m.ws); if (b) rank = b; }
-    let p = { ...prof, name: prof.name || m.name, seenAt: sn.last || 0, seen: sn, rank };
+    let p = { ...prof, uid: m.id, name: prof.prefs?.nickname || prof.name || m.name, seenAt: sn.last || 0, seen: sn, rank, mind: prof.prefs?.mind || null, age: prof.prefs?.age || null };
     if (prof.date && prof.date !== br.date) {
       const yesterday = new Date(Date.parse(br.date) - 864e5).toISOString().slice(0, 10);
       p = { ...p, today: prof.date === yesterday ? prof.tomorrow || [] : [], tomorrow: [] };

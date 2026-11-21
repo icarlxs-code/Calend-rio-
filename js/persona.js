@@ -147,7 +147,14 @@ export function computePersona(f) {
       lunchStart: lunch, lunchEnd: `${String(Math.floor((toMin(lunch) + 60) / 60) % 24).padStart(2, '0')}:${String((toMin(lunch) + 60) % 60).padStart(2, '0')}`,
       daysOff: [0, 1, 2, 3, 4, 5, 6].filter((d) => !workDays.includes(d)), travelMin: 30, maxTasks: volume ? volume.max : journey.max,
     },
-    nudges: { nudges: true, water, meals, faith: !!f.faith, freq, wake, sleep, lunch, tone, pronoun: ['f', 'm', 'n'].includes(f.pronoun) ? f.pronoun : 'n' },
+    nudges: {
+      nudges: true, water: Number(f.waterEvery ?? 180) > 0 && water !== false, meals, faith: !!f.faith && !['ateu', 'agnostico', 'nao_dizer'].includes(f.religion), freq, wake, sleep, lunch, tone, pronoun: ['f', 'm', 'n'].includes(f.pronoun) ? f.pronoun : 'n',
+      // perfil para o amigo do Lembra (mensagens só desta pessoa)
+      nickname: (f.nickname || String(f.name || '').split(' ')[0] || '').trim().slice(0, 30), age: ageOf(f.birth) || null,
+      religion: f.faith ? f.religion || 'crista' : '', motivation: f.wantsMotivation !== false,
+      perDay: Number(f.perDay) || 7, waterEvery: Number(f.waterEvery ?? 180),
+      mind: { motivation: f.motivationLevel || null, selfesteem: f.selfesteem || null, anxiety: f.anxiety || (Array.isArray(f.difficulties) && f.difficulties.includes('ansiedade') ? 'as_vezes' : null), traits: f.traits || [], focus: f.focus || [] },
+    },
     why,
   };
 }
