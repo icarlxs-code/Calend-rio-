@@ -5,9 +5,9 @@ import { polishSoon } from './polish.js';
 import { renderPersonalSpace, personalTabbar, bindPersonal, personalActions, openPersonalEditor } from './views/personal.js';
 import { personal, startPersonal, occurrences } from './personal.js';
 import { CONFIG } from '../config.js';
-import { store, initLocal, initCloud } from './store.js';
+import { store, initLocal, initCloud, saveMyProfile } from './store.js';
 import { ui, saveUi } from './ui.js';
-import { esc, isStandalone, todayKey, addDays, addMonths, monthKey, uid, toMin, nowMin } from './utils.js';
+import { esc, isStandalone, todayKey, addDays, addMonths, monthKey, uid, toMin, nowMin, resizeImage } from './utils.js';
 import { TYPES, TYPE_ORDER, WORK, ent, isMarketing, applyArch, crew } from './constants.js';
 import { icon } from './icons.js';
 import { openSheets, openSheet, toast, confirmDialog, avatar } from './components.js';
@@ -30,7 +30,7 @@ import { personaOf } from './notifier.js';
 import { applyProfTheme, applyThemePref, setThemePref } from './theme.js';
 import { startErrorLog } from './errlog.js';
 import { computePersona } from './persona.js';
-import { reportStats, loadStatsDays, reportSoon } from './stats.js';
+import { reportStats, loadStatsDays, reportSoon, startPresence } from './stats.js';
 import { ensureSeedCompanies, ensureMatheusLogo, ensureNotifyOwners } from './seed-companies.js';
 import { ensureMatheusJG } from './seed-matheus.js';
 import { ensureSeedRoutine } from './seed-routine.js';
@@ -581,6 +581,40 @@ function checkReminders() {
   push.updateBadge(store.eventsOn(now.date, { person: store.me }).filter((e) => e.status !== 'feito').length);
 }
 
+/* Foto de perfil obrigatória para contas novas (criadas a partir de 21/11/2026): tela que só fecha com a foto */
+const PHOTO_FROM = Date.parse('2026-11-21T00:00:00-03:00');
+function requirePhoto(tries = 0) {
+  if (!store.solo || store.mode !== 'cloud' || !store.user || store.shared) return;
+  const me = store.member(store.me) || {};
+  const created = store.user.metadata?.creationTime ? Date.parse(store.user.metadata.creationTime) : 0;
+  if (me.photo || created < PHOTO_FROM || document.querySelector('.photogate')) return;
+  // espera a ficha, os termos e a tela de planos saírem da frente
+  if (document.querySelector('.ficha, .termsgate, .paywall.is-open')) { if (tries < 200) setTimeout(() => requirePhoto(tries + 1), 3000); return; }
+  const w = document.createElement('div');
+  w.className = 'photogate';
+  w.innerHTML = `<div class="photogate__in">
+    <div class="photogate__pic" data-pic>${avatar(store.me, 120)}</div>
+    <h2>Coloque sua foto de perfil</h2>
+    <p>Assim sua dupla, sua equipe e seus clientes sabem quem é quem. Leva 5 segundos.</p>
+    <label class="btn btn--primary btn--block btn--big">${icon('camera', 18)} Escolher foto<input type="file" accept="image/*" data-photo hidden></label>
+    <p class="photogate__err" data-err hidden></p>
+  </div>`;
+  document.body.appendChild(w);
+  requestAnimationFrame(() => w.classList.add('is-open'));
+  w.querySelector('[data-photo]').onchange = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const err = w.querySelector('[data-err]');
+    try {
+      const photo = await resizeImage(f, 256);
+      w.querySelector('[data-pic]').innerHTML = `<img src="${photo}" alt="">`;
+      await saveMyProfile({ name: me.name, photo, color: me.color });
+      toast('Foto salva ✓');
+      setTimeout(() => { w.classList.remove('is-open'); setTimeout(() => w.remove(), 300); render(); }, 600);
+    } catch (x) { err.textContent = 'Não consegui usar essa foto. Tente outra.'; err.hidden = false; }
+  };
+}
+
 /* Aviso único (ex.: Matheus usa uma instalação antiga): pede para abrir o site no Safari e instalar de novo */
 const REINSTALL_FOR = ['matheus'];
 const REINSTALL_HASH = /^#\/atualizar/.test(location.hash);
@@ -843,6 +877,8 @@ function startApp() {
   store.on(rerenderAll);
   startPersonal();
   setTimeout(askReinstall, 2500); // aviso de instalar a versão nova (só para quem precisa)
+  setTimeout(requirePhoto, 3500);
+  startPresence();
   personal.on(() => { if (ui.space === 'personal') rerenderAll(); });
   store.onDenied = (msg) => toast(msg, { ms: 5000 });
   store.onError = (err) => {

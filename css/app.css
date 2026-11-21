@@ -1935,3 +1935,14 @@ button:active:not(:disabled), .btn:active, .pbig:active, .pchip:active, .prow:ac
 /* a entrada de cada etapa só mexe na transparência: com "transform", os botões fixos do rodapé pulavam para o meio da tela */
 @keyframes fichaFade { from { opacity: 0; } to { opacity: 1; } }
 .ficha__step.is-new { animation: fichaFade .26s ease; }
+
+/* ---------- Foto de perfil obrigatória (contas novas) ---------- */
+.photogate { position: fixed; inset: 0; z-index: 390; background: rgba(0,0,0,.55); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); display: grid; place-items: center; padding: 24px; opacity: 0; transition: opacity .25s; }
+.photogate.is-open { opacity: 1; }
+.photogate__in { width: 100%; max-width: 380px; background: var(--card, #fff); color: var(--text, #000); border-radius: 28px; padding: 28px 22px 22px; text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,.35); }
+.photogate__pic { width: 120px; height: 120px; margin: 0 auto 16px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; }
+.photogate__pic img, .photogate__pic .avatar { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; }
+.photogate h2 { font-size: 22px; margin: 0 0 6px; }
+.photogate p { color: var(--muted, #6E6E73); margin: 0 0 18px; }
+.photogate__err { color: #FF3B30 !important; margin: 12px 0 0 !important; }
+.acct__last b.is-live { color: #30D158; }

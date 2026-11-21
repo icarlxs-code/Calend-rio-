@@ -120,6 +120,17 @@ const T = {
     'Pergunta pra alguém próximo como ele tá. Às vezes a pessoa só precisa disso 💜',
   ],
   habit: [],
+  checkin: [
+    'Tem mais alguma coisa pra marcar hoje, {n}? Anota agora antes que escape 📝',
+    'Lembrou de algo que precisa fazer? Joga no Lembra que eu te lembro na hora certa 😉',
+    'Passou alguma coisa pela sua cabeça que você não anotou? Abre aqui rapidinho 📝',
+    'Ei, {n}! Algum compromisso, conta ou recado novo? Marca agora e tira da cabeça 🧠',
+    'Como tá seu dia? Se surgiu algo novo, coloca no Lembra pra não esquecer 💜',
+    'Tem cliente, reunião ou aniversário chegando? Dá uma olhada na agenda e marca o que faltar 📅',
+    'Cabeça leve é cabeça que anota tudo. Tem algo pra colocar aí hoje? ✍️',
+    'Vai que esquece… Anota agora o que você prometeu pra alguém hoje 🤝',
+    'Já faz um tempinho que você não passa aqui, {n}. Bora dar uma conferida no dia? 👀',
+  ],
   selfcare: [
     'Dá uma alongada rápida e arruma a postura, {n} 🧘',
     'Faz uma pausa de 5 minutinhos. Respira fundo 3 vezes 🌿',
@@ -202,7 +213,7 @@ export function randomGap(freq, rand = Math.random) {
 }
 const MIN_GAP = 25 * 60e3;
 /* Títulos organizados por tipo */
-export const KIND_TITLE = { counsel: '🫶 Conselho', social: '💬 Pessoas', habit: '✅ Hábito', water: '💧 Água', verse: '📖 Versículo', motivation: '💜 Motivação', selfcare: '🌿 Pausa', lunch: '🍽️ Almoço', dinner: '🍽️ Jantar', night: '🌙 Boa noite' };
+export const KIND_TITLE = { checkin: '📝 Algo pra marcar?', counsel: '🫶 Conselho', social: '💬 Pessoas', habit: '✅ Hábito', water: '💧 Água', verse: '📖 Versículo', motivation: '💜 Motivação', selfcare: '🌿 Pausa', lunch: '🍽️ Almoço', dinner: '🍽️ Jantar', night: '🌙 Boa noite' };
 /* Janela do dia de cada pessoa (da ficha): começa 30 min depois de acordar e termina 15 min antes de dormir.
    Sem ficha: 7h20 às 22h15. Funciona também para quem trabalha à noite (janela que passa da meia-noite).
    Tudo é medido em "minutos desde o começo da janela" (rel). */
@@ -238,7 +249,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
   const ANCHORS = anchorsFor(w);
   const mins = relOf(br.h * 60 + br.m, w); // minutos desde o começo do dia da pessoa
   st = { next: 0, day: '', done: {}, water: 0, verses: 0, recent: [], asked: {}, ...st };
-  if (st.day !== br.date) st = { ...st, day: br.date, done: {}, water: 0, verses: 0 };
+  if (st.day !== br.date) st = { ...st, day: br.date, done: {}, water: 0, verses: 0, checkins: 0 };
   if (mins > L) return null;
   const seed = Math.floor(rand() * 1e6);
   const n = p.name || '';
@@ -281,6 +292,9 @@ export function nextNudge(p, st, now, rand = Math.random) {
     const agenda = agendaMessages(p, br, st).filter((m) => !st.recent.includes(m.body));
     const options = [];
     if (agenda.length) options.push(['agenda', 4]);
+    // ficou horas sem abrir o app: chama de volta para anotar (até 3 por dia, com 3h entre elas)
+    const away = p.seenAt ? now - p.seenAt : 0;
+    if (away > 3 * 3600e3 && (st.checkins || 0) < 3 && now - (st.lastCheckin || 0) > 3 * 3600e3 && mins > 60) options.push(['checkin', 8]);
     if (prefs.faith && st.verses < 4) options.push(['verse', 3]);
     options.push(['motivation', 3]);
     options.push(['counsel', 3]);
@@ -298,6 +312,11 @@ export function nextNudge(p, st, now, rand = Math.random) {
     } else if (kind === 'water') {
       st.water++;
       msg = { title: KIND_TITLE.water, body: fill(pick(T.water, seed), V), kind: 'water' };
+    } else if (kind === 'checkin') {
+      st.checkins = (st.checkins || 0) + 1;
+      st.lastCheckin = now;
+      const pool = T.checkin.filter((x) => !st.recent.includes(fill(x, V)));
+      msg = { title: KIND_TITLE.checkin, body: fill(pick(pool.length ? pool : T.checkin, seed), V), kind: 'checkin' };
     } else if (kind === 'habit') {
       const hs = HABITS.filter(([a, b, t]) => br.h >= a && br.h < b && !(st.recent || []).some((r) => r.includes(fill(t, V).slice(0, 30))));
       msg = { title: KIND_TITLE.habit, body: fill(pick(hs, seed)[2], V), kind: 'habit' };
@@ -320,7 +339,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
   st.lastAny = now;
   st.minGap = 25 + Math.round(rand() * 22); // folga mínima também varia (25 a 47 min)
   st.recent = [...(st.recent || []), msg.body].slice(-12);
-  return { msg: { ...msg, tag: 'p-amigo', url: './#/p/hoje' }, state: st };
+  return { msg: { ...msg, tag: 'p-amigo', url: msg.kind === 'checkin' ? './' : './#/p/hoje' }, state: st };
 }
 
 /* Reescreve a mensagem com IA, como um amigo/conselheiro de verdade.
@@ -337,6 +356,7 @@ const KIND_TASK = {
   motivation: 'Mensagem de ânimo e autoestima, sincera e específica (não genérica), como um amigo próximo ou conselheiro que acredita muito nela.',
   counsel: 'Fale como um psicólogo/conselheiro acolhedor: uma reflexão curta e prática sobre ansiedade, foco, autoestima, gratidão ou descanso, com uma pergunta ou ação simples. Base: ',
   social: 'Incentive com carinho a pessoa a cuidar das relações (falar com um amigo, ligar para a família, elogiar alguém). Base: ',
+  checkin: 'A pessoa está há algumas horas sem abrir o app de agenda. Chame de volta com carinho e curiosidade para ela anotar algo novo de hoje (compromisso, conta, recado, promessa). Base: ',
   habit: 'Lembre com leveza deste hábito do dia a dia, como um amigo que cuida: ',
   selfcare: 'Sugira um cuidado rápido com o corpo/mente (respirar, alongar, postura, tomar um ar, descansar os olhos).',
 };
@@ -353,7 +373,7 @@ Agora são ${String(br.h).padStart(2, '0')}h${String(br.m).padStart(2, '0')} (${
 ${today ? `Coisas de hoje na agenda pessoal: ${today}.` : 'Hoje a agenda pessoal está livre.'}
 NÃO repita nem parafraseie estas mensagens recentes: ${(recent || []).slice(-8).join(' | ') || '—'}
 Responda SÓ com JSON: {"title":"até 38 caracteres, com 1 emoji","body":"até 170 caracteres"}`;
-  const task = KIND_TASK[msg.kind] + (msg.kind === 'agenda' ? msg.fact : ['counsel', 'social', 'habit'].includes(msg.kind) ? msg.body : '');
+  const task = KIND_TASK[msg.kind] + (msg.kind === 'agenda' ? msg.fact : ['counsel', 'social', 'habit', 'checkin'].includes(msg.kind) ? msg.body : '');
   for (const model of AI_MODELS) {
     try {
       const out = await env.AI.run(model, { messages: [{ role: 'system', content: sys }, { role: 'user', content: task }], max_tokens: 220, temperature: 1.0 });
@@ -394,7 +414,8 @@ export async function runPersonalCoach(env, sendToMember, team) {
     st.winAt = now;
     if (!fresh) { all[m.id] = { ...(all[m.id] || {}), ...st }; changed = true; }
     // resumo de outro dia (a pessoa não abriu o app hoje): ajusta "hoje" e "amanhã"
-    let p = { ...prof, name: prof.name || m.name };
+    const seenRaw = await env.CAL.get(`seen:${m.id}`);
+    let p = { ...prof, name: prof.name || m.name, seenAt: seenRaw ? Number(seenRaw) : 0 };
     if (prof.date && prof.date !== br.date) {
       const yesterday = new Date(Date.parse(br.date) - 864e5).toISOString().slice(0, 10);
       p = { ...p, today: prof.date === yesterday ? prof.tomorrow || [] : [], tomorrow: [] };

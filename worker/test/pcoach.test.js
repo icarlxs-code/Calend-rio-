@@ -135,3 +135,19 @@ test('janela do dia vem da ficha: quem acorda 5h recebe o bom dia 5h30; quem dor
   assert.ok(inWindow(18 * 60, w));
   assert.ok(!inWindow(12 * 60, w));
 });
+
+test('sem abrir o app há mais de 3h: manda "tem algo pra marcar?" (até 3 por dia)', () => {
+  let st = {}, n = 0;
+  const p = { ...prof, seenAt: at('07:00') };
+  for (let t = at('07:00'); t <= at('22:30'); t += 60e3) {
+    const r = nextNudge(p, st, t);
+    if (r) { st = r.state; if (r.msg.kind === 'checkin') n++; }
+  }
+  assert.ok(n >= 1 && n <= 3, `checkins ${n}`);
+  let st2 = {}, n2 = 0;
+  for (let t = at('07:00'); t <= at('22:30'); t += 60e3) {
+    const r = nextNudge({ ...prof, seenAt: t - 60e3 }, st2, t);
+    if (r) { st2 = r.state; if (r.msg.kind === 'checkin') n2++; }
+  }
+  assert.equal(n2, 0, 'quem está usando o app não recebe');
+});

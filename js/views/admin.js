@@ -6,6 +6,9 @@ import { esc, todayKey, addDays } from '../utils.js';
 import { CONFIG } from '../../config.js';
 import { DIFFICULTIES, GOALS, JOURNEYS } from '../persona.js';
 
+/* "no app agora": sinal de presença do último 2,5 min (o app manda 1 por minuto enquanto está aberto) */
+const isOnline = (u) => !!u.online && u.lastPing && Date.now() - u.lastPing < 150e3;
+const when = (ms) => (ms ? new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—');
 const ago = (ms) => {
   if (!ms) return '—';
   const m = Math.round((Date.now() - ms) / 60e3);
@@ -34,12 +37,13 @@ const planLabel = (p) => (!p ? 'Conta própria' : p.comp ? 'Cortesia' : { trial:
 function card(u, open) {
   const c = u.counts || {};
   const d = u.device || {};
-  const online = u.lastSeen && Date.now() - u.lastSeen < 15 * 60e3;
+  const online = isOnline(u);
+  const last = Math.max(u.lastPing || 0, u.lastSeen || 0);
   return `<div class="acct${open ? ' is-open' : ''}" data-uid="${esc(u.uid)}">
     <button class="acct__top" data-toggle="${esc(u.uid)}">
       ${face(u)}
       <div class="acct__id"><strong>${esc(u.name || 'Sem nome')}${online ? ' <span class="adot" title="Usando agora"></span>' : ''}</strong><small>${esc(u.email || '')}</small></div>
-      <div class="acct__last"><b>${esc(ago(u.lastSeen))}</b><small>${u.workspace === 'dupla' ? 'Dupla' : u.workspace === 'compartilhada' ? 'Convidado' : planLabel(planOf(u.uid))}${planOf(u.uid)?.addon?.active ? ` + ${planOf(u.uid).addon.plan === 'equipe' ? 'Equipe' : 'Dupla'}` : ''}</small></div>
+      <div class="acct__last"><b class="${online ? 'is-live' : ''}">${online ? 'no app agora' : esc(`saiu ${ago(last)}`)}</b><small>${u.workspace === 'dupla' ? 'Dupla' : u.workspace === 'compartilhada' ? 'Convidado' : planLabel(planOf(u.uid))}${planOf(u.uid)?.addon?.active ? ` + ${planOf(u.uid).addon.plan === 'equipe' ? 'Equipe' : 'Dupla'}` : ''}</small></div>
     </button>
     ${u.profile?.done ? `<div class="acct__prof">${icon('idcard', 13)} <b>${esc(u.profile.profession || '—')}</b>${u.profile.age ? ` · ${esc(u.profile.age)} anos` : ''} · índice ${u.profile.index}/100</div>` : u.workspace !== 'dupla' ? `<div class="acct__prof is-off">${icon('idcard', 13)} Ficha não preenchida</div>` : ''}
     <div class="acct__chips">
@@ -51,7 +55,9 @@ function card(u, open) {
     ${open ? `<div class="acct__more">
       <div class="agrid">
         <div><small>Conta criada</small><b>${esc(date(u.createdAt))}</b></div>
-        <div><small>Último acesso</small><b>${esc(u.lastSeen ? new Date(u.lastSeen).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—')}</b></div>
+        <div><small>Agora</small><b>${online ? '🟢 Com o app aberto' : '⚪ App fechado'}</b></div>
+        <div><small>Última vez que entrou</small><b>${esc(when(u.lastOpen || u.lastSeen))}</b></div>
+        <div><small>Saiu do app</small><b>${online ? '—' : esc(when(u.closedAt || last))}</b></div>
         <div><small>Vezes que abriu</small><b>${u.opens || 0}</b></div>
         <div><small>Dias ativos (30 dias)</small><b>${(u.activeDays || []).filter((x) => x >= addDays(todayKey(), -29)).length}</b></div>
         <div><small>Aparelho</small><b>${esc(DEV[d.platform] || '—')}</b></div>
@@ -153,7 +159,7 @@ function cleanStat(u) {
     uid: S(u.uid, 64), name: S(u.name, 60), email: S(u.email, 120), workspace: S(u.workspace, 20), space: S(u.space, 20),
     photo: typeof u.photo === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(u.photo) ? u.photo : null,
     color: /^#[0-9a-fA-F]{6}$/.test(u.color || '') ? u.color : '#8E8E93',
-    createdAt: N(u.createdAt), lastSeen: N(u.lastSeen), opens: N(u.opens),
+    createdAt: N(u.createdAt), lastSeen: N(u.lastSeen), opens: N(u.opens), online: !!u.online, lastPing: N(u.lastPing), lastOpen: N(u.lastOpen), closedAt: N(u.closedAt),
     activeDays: Array.isArray(u.activeDays) ? u.activeDays.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)).slice(-40) : [],
     counts: Object.fromEntries(['companies', 'events', 'myEvents', 'thisWeek', 'done30', 'late', 'posts30', 'notes', 'personal', 'lists', 'birthdays'].map((k) => [k, N(c[k])])),
     device: { platform: S(d.platform, 20), installed: !!d.installed, notifications: S(d.notifications, 20), registered: !!d.registered },
@@ -212,7 +218,7 @@ export async function openAdmin() {
       <h3 class="ah">Pessoas</h3>
       <div class="agroup">
         ${row('Contas', `${users.length}`, `${newWeek} nova${newWeek === 1 ? '' : 's'} nos últimos 7 dias`)}
-        ${row('Usando agora', `${users.filter((u) => u.lastSeen && now - u.lastSeen < 15 * 60e3).length}`)}
+        ${row('No app agora', `${users.filter(isOnline).length}`)}
         ${row('Ativas na semana', `${act(7)}`)}
         ${row('Convidados (agenda de outra pessoa)', `${users.filter((u) => u.workspace === 'compartilhada').length}`)}
       </div>
@@ -226,7 +232,7 @@ export async function openAdmin() {
       ${originHtml(users)}
       ${insightsHtml(users)}`;
     } else if (tab === 'pessoas') {
-      const list = users.filter((u) => !q || `${u.name} ${u.email} ${u.profile?.profession || ''}`.toLowerCase().includes(q)).sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+      const list = users.filter((u) => !q || `${u.name} ${u.email} ${u.profile?.profession || ''}`.toLowerCase().includes(q)).sort((a, b) => (isOnline(b) - isOnline(a)) || (Math.max(b.lastPing || 0, b.lastSeen || 0) - Math.max(a.lastPing || 0, a.lastSeen || 0)));
       body = `<input class="input" type="search" placeholder="Buscar por nome, e-mail ou profissão" data-q value="${esc(q)}">
       <div class="accts">${list.map((u) => card(u, u.uid === openUid)).join('') || '<p class="fhelp">Nenhuma conta encontrada.</p>'}</div>
       <p class="fhelp">Toque numa conta para ver os detalhes. Aparecem aqui as contas que já abriram o app atualizado.</p>`;

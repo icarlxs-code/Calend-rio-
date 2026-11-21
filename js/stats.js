@@ -76,3 +76,30 @@ export async function loadStatsDays() {
     store.statsDays = (d && Array.isArray(d.activeDays)) ? d.activeDays : [];
   } catch { store.statsDays = []; }
 }
+
+/* Presença em tempo real (Painel do dono): "no app agora" enquanto a tela está aberta,
+   "saiu há X" quando fecha. Um sinal por minuto só enquanto o app está na frente. */
+let beat = null;
+export function startPresence() {
+  const api = store.backendApi;
+  if (store.mode !== 'cloud' || !api || !api.touchStats || !store.user) return;
+  const uidv = store.user.uid;
+  const send = (data) => api.touchStats(uidv, data).catch(() => {});
+  const on = () => {
+    send({ online: true, lastPing: Date.now(), lastOpen: Date.now() });
+    clearInterval(beat);
+    beat = setInterval(() => send({ online: true, lastPing: Date.now() }), 60e3);
+    seenServer();
+  };
+  const off = () => { clearInterval(beat); send({ online: false, closedAt: Date.now(), lastPing: Date.now() }); };
+  document.addEventListener('visibilitychange', () => (document.visibilityState === 'visible' ? on() : off()));
+  window.addEventListener('pagehide', off);
+  if (document.visibilityState === 'visible') on();
+}
+/* avisa o servidor de avisos que a pessoa abriu o app (para os "tem algo pra marcar hoje?") */
+let lastSeenPost = 0;
+function seenServer() {
+  if (Date.now() - lastSeenPost < 20 * 60e3) return;
+  lastSeenPost = Date.now();
+  import('./avisos.js').then(({ api, server }) => server() && api('/seen', {}).catch(() => {}));
+}

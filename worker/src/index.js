@@ -233,7 +233,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/admin/grant': 30, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20 };
+const LIMITS = { '/admin/grant': 30, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -467,6 +467,11 @@ async function handle(req, env) {
     return reply(env, req, { ok: true });
   }
 
+  // a pessoa abriu o app: o "amigo" do Pessoal sabe há quanto tempo ela não entra
+  if (url.pathname === '/seen') {
+    await env.CAL.put(`seen:${me.id}`, String(Date.now()), { expirationTtl: 60 * 864e2 });
+    return reply(env, req, { ok: true });
+  }
   if (url.pathname === '/personal') {
     const items = (Array.isArray(body.items) ? body.items : []).slice(0, 300)
       .filter((it) => it && typeof it.at === 'number')
