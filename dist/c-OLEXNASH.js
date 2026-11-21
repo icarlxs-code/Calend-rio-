@@ -1,1 +1,0 @@
-var s=Object.defineProperty;var n=(a,o)=>{for(var e in o)s(a,e,{get:o[e],enumerable:!0})};var d=["Nova aba Notas no Pessoal: anote o que fez ou onde deixou as coisas, com dia e hora","Pergunte ao assistente: \u201Conde deixei o t\xEAnis?\u201D ou \u201Co que anotei hoje?\u201D"];export{n as a,d as b};

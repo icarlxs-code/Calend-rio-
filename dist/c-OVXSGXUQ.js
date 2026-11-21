@@ -1,0 +1,1 @@
+var s=Object.defineProperty;var t=(a,e)=>{for(var o in e)s(a,o,{get:e[o],enumerable:!0})};var u=["Notas agora ficam dentro de Listas: anote o que fez ou onde deixou as coisas","Pergunte ao assistente: \u201Conde deixei o t\xEAnis?\u201D"];export{t as a,u as b};

@@ -2499,8 +2499,6 @@ html.has-vip, html.has-vip body { overflow: hidden; }
 .updpill b { background: #fff; color: #0A84FF; padding: 5px 12px; border-radius: 999px; font-size: 13px; }
 .updpill.is-busy { opacity: .8; }
 @keyframes updin { from { opacity: 0; transform: translate(-50%, -12px); } }
-/* Pessoal com 6 itens na barra (Início, Agenda, +, Listas, Notas, Ajustes) */
-.tabbar:has(> :nth-child(6)) { grid-template-columns: repeat(6, 1fr); }
 .memoadd { display: flex; flex-direction: column; gap: 8px; background: var(--surface); border-radius: var(--radius, 16px); box-shadow: var(--shadow); padding: 12px; }
 .memoadd textarea { width: 100%; border: 0; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 16px; color: var(--text); resize: none; }
 .memosearch { margin-top: 4px; }
@@ -2510,3 +2508,10 @@ html.has-vip, html.has-vip body { overflow: hidden; }
 .memo__t { flex: none; min-width: 44px; font-size: 13px; font-weight: 700; color: var(--text-3); padding-top: 2px; }
 .memo p { flex: 1; margin: 0; font-size: 15.5px; line-height: 1.4; word-break: break-word; }
 .memo__x { flex: none; color: var(--text-3); }
+
+.pmemocard { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 0; border-radius: var(--radius, 16px); background: var(--surface); box-shadow: var(--shadow); font: inherit; color: inherit; text-align: left; margin-bottom: 4px; }
+.pmemocard > span:not(.ptile) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pmemocard strong { font-size: 16px; } .pmemocard small { font-size: 13px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pmemocard > .ic:last-child { color: var(--text-3); flex: none; }
+.pback { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); display: inline-flex; align-items: center; gap: 2px; font-size: 14px; font-weight: 600; }
+.pmemocard > .ptile { flex: none; width: var(--s); height: var(--s); }

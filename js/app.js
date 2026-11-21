@@ -156,7 +156,7 @@ function render() {
   const personalMode = ui.space === 'personal';
   const html = personalMode ? renderPersonalSpace() : ui.tab === 'mes' ? renderMonth() : ui.tab === 'empresas' ? renderCompanies() : ui.tab === 'ajustes' ? renderSettings() : renderToday();
   view.innerHTML = html;
-  document.querySelectorAll('.tabbar__btn').forEach((b) => b.classList.toggle('is-on', b.dataset.tab === (personalMode ? ui.ptab || 'p-hoje' : ui.tab)));
+  document.querySelectorAll('.tabbar__btn').forEach((b) => b.classList.toggle('is-on', b.dataset.tab === (personalMode ? (ui.ptab === 'p-notas' ? 'p-listas' : ui.ptab || 'p-hoje') : ui.tab)));
   window.scrollTo(0, scroll);
   const ni = view.querySelector('[data-form="note"] input');
   if (ni && draftNote) ni.value = draftNote;

@@ -169,8 +169,11 @@ function listCard(l) {
 function renderLists() {
   const lists = personal.lists;
   const presets = LIST_PRESETS.filter((p) => !lists.some((l) => l.name.toLowerCase() === p.name.toLowerCase()));
+  const memos = personal.memos;
   return `${header(`${icon('lock', 11)} Só você vê`, 'Listas', workBtn)}
   <div class="page ppage">
+    <button class="pmemocard" data-action="ptab" data-tab="p-notas">${tile('note', ['#FFB86B', '#FF7A59'], 44)}
+      <span><strong>Notas</strong><small>${memos.length ? `Última: ${esc(memos[0].text.slice(0, 48))}` : 'O que você fez ou onde deixou as coisas, com dia e hora'}</small></span>${icon('right', 16)}</button>
     ${lists.length ? `<div class="pgrid">${lists.map(listCard).join('')}<button class="plistcard plistcard--new" data-action="p-newlist">${icon('plus', 22)}<strong>Nova lista</strong></button></div>`
       : emptyCard('listcheck', 'Suas listas', 'Mercado, coisas pra fazer, ideias, presentes… tudo num lugar só, sem data.')}
     ${presets.length ? section('Começar rápido', `<div class="pchips">${presets.map((p) => `<button class="pchip" data-action="p-newlist" data-name="${esc(p.name)}" data-ic="${p.ic}">${tile(p.ic, LIST_ICONS[p.ic].g, 24)}${esc(p.name)}</button>`).join('')}<button class="pchip" data-action="p-newlist">${tile('plus', ['#B9B2C6', '#8A8296'], 24)}Outra</button></div>`) : ''}
@@ -185,7 +188,7 @@ function renderMemos() {
   const list = q ? all.filter((m) => m.text.toLowerCase().includes(q)) : all;
   const days = [];
   for (const m of list) { const d = days[days.length - 1]; if (d && d.date === m.date) d.items.push(m); else days.push({ date: m.date, items: [m] }); }
-  return `${header(`${icon('lock', 11)} Só você vê`, 'Notas')}
+  return `${header(`<button class="pback" data-action="ptab" data-tab="p-listas">${icon('left', 14)} Listas</button>`, 'Notas')}
   <div class="page ppage">
     <form class="memoadd" data-form="memo" autocomplete="off">
       <textarea name="t" rows="2" maxlength="500" placeholder="O que você fez ou onde deixou? Ex.: deixei o tênis em cima da mesa"></textarea>
@@ -257,7 +260,6 @@ export const personalTabbar = () => `
   ${ptabBtn('p-agenda', 'calendar', 'Agenda')}
   <button class="tabbar__fab" data-action="p-new" aria-label="Anotar">${icon('plus', 28)}</button>
   ${ptabBtn('p-listas', 'list', 'Listas')}
-  ${ptabBtn('p-notas', 'note', 'Notas')}
   ${ptabBtn('p-ajustes', 'settings', 'Ajustes')}`;
 
 export function bindPersonal(view) {

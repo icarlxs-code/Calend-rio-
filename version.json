@@ -1,12 +1,12 @@
 {
-  "version": "2.0.4",
-  "build": "xmwbtk2s",
+  "version": "2.0.5",
+  "build": "7rfv3egw",
   "date": "2026-11-21",
   "min": "",
   "title": "Notas no Pessoal",
   "notes": [
-    "Nova aba Notas no Pessoal: anote o que fez ou onde deixou as coisas, com dia e hora",
-    "Pergunte ao assistente: “onde deixei o tênis?” ou “o que anotei hoje?”"
+    "Notas agora ficam dentro de Listas: anote o que fez ou onde deixou as coisas",
+    "Pergunte ao assistente: “onde deixei o tênis?”"
   ],
-  "builtAt": "2026-11-21T22:21:10.423Z"
+  "builtAt": "2026-11-21T22:31:57.157Z"
 }
