@@ -66,3 +66,40 @@ export function tick(up = 0) {
   if (!a) return;
   note(a, 660 * Math.pow(1.12, up), a.currentTime + 0.01, 0.16, 0.04);
 }
+
+/* nota macia (sino abafado): ataque lento, cauda longa e um filtro que tira o "brilho" agressivo */
+function soft(a, freq, at, dur = 1.1, gain = 0.05) {
+  const o = a.createOscillator(), o2 = a.createOscillator(), g = a.createGain(), g2 = a.createGain(), f = a.createBiquadFilter();
+  f.type = 'lowpass'; f.frequency.setValueAtTime(2600, at); f.Q.value = 0.4;
+  o.type = 'sine'; o.frequency.setValueAtTime(freq, at);
+  o2.type = 'triangle'; o2.frequency.setValueAtTime(freq * 2, at);
+  g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(gain, at + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  g2.gain.setValueAtTime(0.0001, at); g2.gain.exponentialRampToValueAtTime(gain * 0.12, at + 0.025); g2.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.5);
+  o.connect(g).connect(f); o2.connect(g2).connect(f); f.connect(a.destination);
+  o.start(at); o2.start(at); o.stop(at + dur + 0.05); o2.stop(at + dur + 0.05);
+}
+/* compromisso marcado: "dlin-dlom" calmo e tranquilo (~1,2s) */
+export function softOk() {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + 0.02;
+  soft(a, 523.25, t, 1.25, 0.022);      // dó (corpo, bem baixinho)
+  soft(a, 783.99, t + 0.01, 0.9, 0.045); // sol
+  soft(a, 1046.5, t + 0.16, 1.15, 0.04); // dó agudo
+}
+/* emblema desbloqueado: arpejo brilhante e um acorde que brilha no fim */
+export function fanfare() {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + 0.03;
+  [1046.5, 1318.51, 1567.98, 2093].forEach((f, i) => note(a, f, t + i * 0.075, 0.32, 0.045));
+  [1046.5, 1318.51, 1567.98].forEach((f) => soft(a, f, t + 0.34, 1.3, 0.03));
+}
+/* subiu de nível: escada subindo + acorde maior aberto, mais longo */
+export function levelUp() {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + 0.03;
+  [392, 523.25, 659.25, 783.99, 1046.5, 1318.51].forEach((f, i) => note(a, f, t + i * 0.06, 0.26, 0.04));
+  [523.25, 659.25, 783.99, 1046.5].forEach((f) => soft(a, f, t + 0.42, 1.8, 0.03));
+}

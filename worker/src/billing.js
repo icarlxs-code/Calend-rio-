@@ -21,6 +21,9 @@ export const PLANS = {
   pro_mes: { name: 'Lembra Profissional · mensal', amount: 1990, mode: 'subscription', interval: 'month', tier: 'pro' },
   pro_ano: { name: 'Lembra Profissional · anual', amount: 17990, mode: 'subscription', interval: 'year', tier: 'pro' },
   fundador: { name: 'Lembra Fundadores · Profissional para sempre', amount: 19900, mode: 'payment', tier: 'pro', founder: true },
+  // anual no Pix: pagamento único que vale 12 meses (o Pix não renova sozinho; perto de vencer, o app avisa)
+  essencial_ano_pix: { name: 'Lembra Essencial · 12 meses (Pix)', amount: 11990, mode: 'payment', tier: 'essencial', prepaidDays: 365 },
+  pro_ano_pix: { name: 'Lembra Profissional · 12 meses (Pix)', amount: 17990, mode: 'payment', tier: 'pro', prepaidDays: 365 },
   // antigos: só para quem já assinou (não aparecem mais na tela de planos)
   mensal: { name: 'Lembra mensal', amount: 990, mode: 'subscription', interval: 'month', tier: 'pro', legacy: true },
   vitalicio: { name: 'Lembra vitalício', amount: 15000, mode: 'payment', tier: 'pro', legacy: true },
@@ -62,7 +65,7 @@ export function addonOf(b, now = Date.now()) {
   return { plan: a.plan, seats: PLANS[a.plan].seats, active, paidUntil: a.paidUntil || null, cancelAt: a.cancelAt || null };
 }
 /* Plano base pago (mensal em dia ou vitalício): exigido para o complemento funcionar */
-export const basePaid = (b, now = Date.now()) => !!b && (!!b.lifetime || (!!b.subActive && (!b.paidUntil || b.paidUntil > now - 3 * 864e5)));
+export const basePaid = (b, now = Date.now()) => !!b && (!!b.lifetime || (!!b.prepaidUntil && b.prepaidUntil > now) || (!!b.subActive && (!b.paidUntil || b.paidUntil > now - 3 * 864e5)));
 
 /* Situação da conta: team | lifetime | monthly | trial | expired | blocked | none */
 export function statusOf(b, me, now = Date.now()) {
@@ -72,6 +75,8 @@ export function statusOf(b, me, now = Date.now()) {
   const extra = addon ? { addon } : {};
   if (b.lifetime) return { plan: 'lifetime', active: true, tier: 'pro', ...(b.founder ? { founder: true } : {}), ...(b.comp ? { comp: true } : {}), ...extra };
   if (b.subActive && (!b.paidUntil || b.paidUntil > now - 3 * 864e5)) return { plan: 'monthly', active: true, tier: b.tier || 'pro', interval: b.interval || 'month', paidUntil: b.paidUntil || null, cancelAt: b.cancelAt || null, ...extra };
+  // 12 meses pagos no Pix (sem renovação automática)
+  if (b.prepaidUntil && b.prepaidUntil > now) return { plan: 'monthly', active: true, tier: b.prepaidTier || b.tier || 'pro', interval: 'year', paidUntil: b.prepaidUntil, prepaid: true, ...extra };
   // acesso liberado pelo dono até uma data e hora (sem pagar); depois disso, precisa assinar
   if (b.compUntil && b.compUntil > now) return { plan: 'comp', active: true, tier: 'pro', comp: true, compUntil: b.compUntil, ...extra };
   if (b.pending && now - b.pending.at < 4 * 864e5) extra.pending = b.pending.plan;
@@ -230,7 +235,11 @@ export async function createCheckout(env, me, { plan, returnUrl }, fetchImpl = f
   // nunca cobra duas vezes pela mesma coisa
   if (!p.addon && b.lifetime) throw Object.assign(new Error('Sua conta já é vitalícia: está tudo liberado para sempre.'), { status: 409 });
   if (p.legacy) throw Object.assign(new Error('Este plano não está mais disponível.'), { status: 400 });
-  if (!p.addon && p.mode === 'subscription' && basePaid(b)) throw Object.assign(new Error('Você já tem uma assinatura. Para trocar de plano, use “Gerenciar assinatura”.'), { status: 409 });
+  const now0 = Date.now();
+  const prepaidLeft = b.prepaidUntil && !b.subActive && !b.lifetime ? b.prepaidUntil - now0 : 0;
+  if (!p.addon && p.mode === 'subscription' && prepaidLeft > 10 * 864e5) throw Object.assign(new Error(`Seu plano pago no Pix vale até ${new Date(b.prepaidUntil).toLocaleDateString('pt-BR')}. Faltando 10 dias, você renova no Pix ou passa para o cartão sem perder nenhum dia.`), { status: 409 });
+  if (!p.addon && p.mode === 'subscription' && basePaid(b) && !(prepaidLeft > 0)) throw Object.assign(new Error('Você já tem uma assinatura. Para trocar de plano, use “Gerenciar assinatura”.'), { status: 409 });
+  if (p.prepaidDays && b.subActive) throw Object.assign(new Error('Você já tem uma assinatura no cartão. Para trocar para o Pix, cancele em “Gerenciar assinatura” e pague o anual no Pix quando ela terminar.'), { status: 409 });
   if (p.founder && Number(await env.CAL.get('founders-count') || 0) >= FOUNDERS_MAX) throw Object.assign(new Error('As vagas de Fundadores acabaram.'), { status: 409 });
   if (p.addon) {
     if (!basePaid(b)) throw Object.assign(new Error('A agenda compartilhada é um complemento: primeiro assine o plano Mensal ou o Vitalício.'), { status: 409 });
@@ -248,20 +257,32 @@ export async function createCheckout(env, me, { plan, returnUrl }, fetchImpl = f
     locale: 'pt-BR',
     allow_promotion_codes: 'true',
     line_items: { 0: { quantity: 1, price_data: price } },
-    // cartão de crédito (funciona com assinatura e com pagamento único)
-    payment_method_types: { 0: 'card' },
+    // cartão em tudo; Pix só no pagamento único (Fundadores e anual no Pix) — a Stripe não renova Pix sozinha
+    payment_method_types: p.mode === 'payment' ? { 0: 'card', 1: 'pix' } : { 0: 'card' },
     metadata: { uid: me.ws, plan },
   };
   if (b.customer) params.customer = b.customer; else params.customer_email = me.email;
   if (p.mode === 'subscription') params.subscription_data = { metadata: { uid: me.ws, plan } };
+  // trocando do Pix para o cartão perto de vencer: a 1ª cobrança só acontece quando o Pix acaba (não paga em dobro)
+  if (p.mode === 'subscription' && !p.addon && prepaidLeft > 2 * 864e5) params.subscription_data.trial_end = Math.floor(b.prepaidUntil / 1000);
   else params.payment_intent_data = { metadata: { uid: me.ws, plan } };
+  if (p.mode === 'payment') params.payment_method_options = { pix: { expires_after_seconds: 86400 } }; // o QR do Pix vale 24h
   let s;
-  try { s = await stripe(env, 'checkout/sessions', params, fetchImpl); }
+  const go = async () => {
+    try { return await stripe(env, 'checkout/sessions', params, fetchImpl); }
+    catch (e) {
+      // cliente antigo que não existe mais na Stripe (ex.: trocou de conta/modo): cria de novo pelo e-mail
+      if (!/No such customer/i.test(e.raw || '') || !params.customer) throw e;
+      delete params.customer; params.customer_email = me.email;
+      return stripe(env, 'checkout/sessions', params, fetchImpl);
+    }
+  };
+  try { s = await go(); }
   catch (e) {
-    // cliente antigo que não existe mais na Stripe (ex.: trocou de conta/modo): cria de novo pelo e-mail
-    if (!/No such customer/i.test(e.raw || '') || !params.customer) throw e;
-    delete params.customer; params.customer_email = me.email;
-    s = await stripe(env, 'checkout/sessions', params, fetchImpl);
+    // a conta da Stripe ainda não tem o Pix ligado: vende só no cartão (o anual no Pix não faz sentido sem Pix)
+    if (!/pix/i.test(e.raw || e.message || '') || p.prepaidDays) throw p.prepaidDays && /pix/i.test(e.raw || e.message || '') ? Object.assign(new Error('O Pix está indisponível agora. Escolha pagar com cartão ou tente mais tarde.'), { status: 503 }) : e;
+    params.payment_method_types = { 0: 'card' }; delete params.payment_method_options;
+    s = await go();
   }
   return { url: s.url };
 }
@@ -298,7 +319,15 @@ export async function handleStripeEvent(env, ev) {
     const b = (await getBill(env, uid)) || { uid };
     b.customer = o.customer || b.customer;
     // vitalício: cartão confirma na hora; Pix/boleto confirmam depois (async_payment_succeeded)
-    if (o.mode === 'payment' && o.payment_status === 'paid') {
+    const prepaid = PLANS[o.metadata?.plan]?.prepaidDays;
+    if (o.mode === 'payment' && o.payment_status === 'paid' && prepaid) {
+      // 12 meses no Pix: soma ao que ainda faltava (pagar antes de vencer não perde dias)
+      if (b.prepaidPI !== o.payment_intent || !b.prepaidUntil) {
+        b.prepaidUntil = Math.max(now, b.prepaidUntil || 0) + prepaid * 864e5;
+        b.prepaidTier = PLANS[o.metadata.plan].tier; b.tier = b.prepaidTier; b.prepaidPI = o.payment_intent || null; b.prepaidAt = now;
+      }
+      b.pending = null;
+    } else if (o.mode === 'payment' && o.payment_status === 'paid') {
       if (!b.lifetime && PLANS[o.metadata?.plan]?.founder) { b.founder = true; await env.CAL.put('founders-count', String(Number(await env.CAL.get('founders-count') || 0) + 1)); }
       b.lifetime = true; b.lifetimeAt = now; b.lifetimePI = o.payment_intent || b.lifetimePI || null; b.pending = null; b.tier = 'pro';
       // quem assinava o mensal e passou para o vitalício: a mensalidade é cancelada na hora
@@ -343,6 +372,7 @@ export async function handleStripeEvent(env, ev) {
     if (!uid) return;
     const b = await getBill(env, uid);
     if (b && b.lifetime && (!b.lifetimePI || b.lifetimePI === o.payment_intent)) { b.lifetime = false; b.refundedAt = now; b.updatedAt = now; await putBill(env, uid, b); }
+    else if (b && b.prepaidUntil && b.prepaidPI && b.prepaidPI === o.payment_intent) { b.prepaidUntil = now; b.refundedAt = now; b.updatedAt = now; await putBill(env, uid, b); }
     return uid;
   }
   if (ev.type === 'invoice.paid' && o.customer) {

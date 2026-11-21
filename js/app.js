@@ -10,7 +10,7 @@ import { ui, saveUi } from './ui.js';
 import { esc, isStandalone, todayKey, addDays, addMonths, monthKey, uid, toMin, nowMin, resizeImage } from './utils.js';
 import { TYPES, TYPE_ORDER, WORK, ent, isMarketing, applyArch, crew } from './constants.js';
 import { icon } from './icons.js';
-import { openSheets, openSheet, toast, confirmDialog, avatar } from './components.js';
+import { openSheets, openSheet, toast, confirmDialog, avatar, refreshLevelRings } from './components.js';
 import { renderToday, renderMonth } from './views/calendar.js';
 import { renderCompanies, openCompany, openCompanyEditor } from './views/companies.js';
 import { renderSettings, settingsActions } from './views/settings.js';
@@ -201,6 +201,9 @@ const actions = {
   tab: (b) => setTab(b.dataset.tab),
   space: (b) => switchSpace(b.dataset.space, b),
   'edit-profile': async () => (await import('./views/profile.js')).openProfile(),
+  profile: async () => (await import('./views/profile.js')).openProfilePage(),
+  'team-board': async () => (await import('./views/teamboard.js')).openTeamBoard(),
+  'confirm-phone': async () => (await import('./phone.js')).confirmPhone(() => render()),
   support: async () => {
     if (store.mode === 'cloud' && store.user) return (await import('./views/support.js')).openSupport();
     const wa = String(CONFIG.supportWhatsapp || '').replace(/\D/g, '');
@@ -345,6 +348,14 @@ const actions = {
   'coach-test': () => settingsActions.coachTest(),
   'onboarding-again': () => settingsActions.onboardingAgain(),
   export: () => settingsActions.export(),
+  whatsnew: async () => (await import('./version.js')).openNews(),
+  'check-update': async (b) => {
+    if (b) b.disabled = true;
+    const r = await (await import('./version.js')).updateNow();
+    if (b) b.disabled = false;
+    if (!r.ok) return toast('Sem internet agora. Tente de novo daqui a pouco.');
+    toast(r.current ? `Você já está na versão mais recente (${r.version}) ✓` : `Baixando a versão ${r.version}…`, { ms: 3500 });
+  },
   logout: async () => {
     if (await confirmDialog({ title: 'Sair da conta?', text: 'Este celular deixa de receber os lembretes desta conta até você entrar de novo.', ok: 'Sair' })) {
       // antes de sair: este aparelho para de receber as notificações desta conta (privacidade)
@@ -369,7 +380,7 @@ const lockGuard = (ev) => {
   const inApp = ev.target.closest && ev.target.closest('#view, .tabbar');
   if (!inApp || ev.target.closest('[data-allow-locked], [data-action="logout"]')) return;
   // modo "só olhar": trocar de aba e ver a agenda é livre; criar/editar/concluir abre os planos
-  if (ev.target.closest('[data-action="tab"], [data-action="ptab"], [data-action="space"], [data-action="switch-space"], [data-action="support"], [data-action="ranking"]')) return;
+  if (ev.target.closest('[data-action="tab"], [data-action="ptab"], [data-action="space"], [data-action="switch-space"], [data-action="support"], [data-action="ranking"], [data-action="profile"], [data-action="team-board"], [data-action="check-update"], [data-action="whatsnew"]')) return;
   if (ev.type === 'focusin' && !ev.target.matches('input, textarea, select, [contenteditable]')) return;
   if (ev.type === 'click' && !ev.target.closest('button, a, input, textarea, select, label, [data-action], [role="button"], [data-id]')) return;
   ev.preventDefault();
@@ -596,7 +607,8 @@ function requirePhoto(tries = 0) {
   const created = store.user.metadata?.creationTime ? Date.parse(store.user.metadata.creationTime) : 0;
   if (me.photo || created < PHOTO_FROM || document.querySelector('.photogate')) return;
   // espera a ficha, os termos e a tela de planos saírem da frente
-  if (document.querySelector('.ficha, .termsgate, .paywall.is-open')) { if (tries < 200) setTimeout(() => requirePhoto(tries + 1), 3000); return; }
+  // (e também perguntas abertas, como "entrar na agenda de quem te convidou?", e comemorações de conquistas)
+  if (document.querySelector('.ficha, .termsgate, .paywall.is-open, .sheet--dialog, .gx, .pkr') || pendingInvite()) { if (tries < 200) setTimeout(() => requirePhoto(tries + 1), 3000); return; }
   const w = document.createElement('div');
   w.className = 'photogate';
   w.innerHTML = `<div class="photogate__in">
@@ -835,17 +847,157 @@ function showLogin(errMsg = '') {
   if (ig) ig.onclick = () => showInstallGuide({ force: true });
   root.querySelector('[data-mode]').onclick = () => { loginEmail = cleanEmail(f.email.value); loginPass = f.pass.value; loginTypo = ''; signupMode = !signupMode; showLogin(); };
   const rs = root.querySelector('[data-reset]');
-  if (rs) rs.onclick = async () => {
-    const email = cleanEmail(f.email.value);
-    if (!email) return toast('Digite seu e-mail primeiro');
-    if (!validEmail(email)) return toast('Confira o e-mail: parece incompleto ou com erro de digitação');
+  if (rs) rs.onclick = () => { loginEmail = cleanEmail(f.email.value); showForgot(); };
+}
+
+/* ---------- Esqueci minha senha: tela própria, à prova de erro ----------
+   1) confere o e-mail (formato e erro de digitação: gmial.com…)  2) envia o link (Firebase)
+   3) mostra onde procurar (Spam/Promoções), botão para abrir o app de e-mail e "Reenviar" com contador
+   4) não chegou? fala com o suporte mesmo sem entrar (o dono responde por e-mail) */
+const phoneOn = () => { try { return !!CONFIG.phoneAuth || localStorage.getItem('cal.phoneAuth') === '1'; } catch { return !!CONFIG.phoneAuth; } };
+const MAILAPP = [[/@(gmail|googlemail)\./, 'Abrir o Gmail', 'https://mail.google.com/mail/u/0/#search/Lembra'], [/@(hotmail|outlook|live|msn)\./, 'Abrir o Outlook', 'https://outlook.live.com/mail/'], [/@(icloud|me|mac)\./, 'Abrir o iCloud Mail', 'https://www.icloud.com/mail'], [/@yahoo\./, 'Abrir o Yahoo Mail', 'https://mail.yahoo.com/']];
+let forgotSentAt = 0, forgotTo = '';
+function showForgot(state = 'form', msg = '') {
+  const email = loginEmail || '';
+  const app = MAILAPP.find(([re]) => re.test(forgotTo || email));
+  const wait = Math.max(0, 60 - Math.round((Date.now() - forgotSentAt) / 1000));
+  root.innerHTML = `<div class="login login--forgot">
+    <div class="brandwrap login__brand">${brand('simbolo', { h: 64, alt: esc(CONFIG.appName) })}</div>
+    ${state === 'sent' ? `<h1 class="login__hook">Confira seu e-mail</h1>
+      <p class="login__lead">Enviamos um link para <b>${esc(forgotTo)}</b>. Toque nele para criar uma senha nova. Ele vale por 1 hora.</p>
+      <ul class="fsteps">
+        <li>${icon('mail', 18)}<span>Procure por <b>“Redefinir senha”</b> ou <b>“Lembra”</b>.</span></li>
+        <li>${icon('alert', 18)}<span>Não achou? Olhe também em <b>Spam</b>, <b>Lixo eletrônico</b> e <b>Promoções</b>. Pode levar até 5 minutos.</span></li>
+        <li>${icon('check', 18)}<span>Criou a senha nova? Volte aqui e entre com ela.</span></li>
+      </ul>
+      ${app ? `<a class="btn btn--primary btn--block" href="${app[2]}" target="_blank" rel="noopener">${icon('mail', 18)} ${app[1]}</a>` : ''}
+      <button class="btn btn--soft btn--block" data-resend ${wait ? 'disabled' : ''}>${wait ? `Reenviar em ${wait}s` : 'Reenviar o e-mail'}</button>
+      <button class="btn-text btn-text--sm" data-other>Usar outro e-mail</button>
+      <div class="fhelpbox"><b>Não chegou de jeito nenhum?</b><p>Fale com a gente sem precisar entrar: respondemos no seu e-mail.</p><button class="btn btn--soft btn--sm" data-help>${icon('headset', 16)} Pedir ajuda</button></div>`
+    : state === 'help' ? `<h1 class="login__hook">Pedir ajuda</h1>
+      <p class="login__lead">Conte o que aconteceu. A equipe do Lembra responde no e-mail abaixo em até 24h.</p>
+      <form class="form" data-helpform novalidate>
+        <div class="fgroup"><label class="flabel" for="h-email">Seu e-mail</label><input id="h-email" class="input" type="email" name="email" value="${esc(email)}" autocomplete="email" autocapitalize="none" inputmode="email"></div>
+        <div class="fgroup"><label class="flabel" for="h-text">Mensagem</label><textarea id="h-text" class="input" name="text" rows="4" maxlength="1000" placeholder="Ex.: pedi para trocar a senha e o e-mail não chegou."></textarea></div>
+        ${msg ? `<p class="login__err" role="alert">${esc(msg)}</p>` : ''}
+        <button class="btn btn--primary btn--block" data-go>Enviar pedido de ajuda</button>
+      </form>
+      <button class="btn-text btn-text--sm" data-back>Voltar</button>`
+    : state === 'helped' ? `<h1 class="login__hook">Pedido enviado ✓</h1>
+      <p class="login__lead">Recebemos sua mensagem. Vamos responder no seu e-mail em até 24h (olhe também o Spam).</p>
+      <button class="btn btn--primary btn--block" data-back>Voltar para entrar</button>`
+    : `<h1 class="login__hook">Esqueceu a senha?</h1>
+      <p class="login__lead">Sem problema. Digite o e-mail da sua conta e enviamos um link para criar uma senha nova.</p>
+      <form class="form" data-forgot novalidate>
+        <div class="fgroup"><label class="flabel" for="r-email">E-mail da conta</label><input id="r-email" class="input" type="email" name="email" value="${esc(email)}" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="email"></div>
+        ${loginTypo ? `<div class="login__typo">Você quis dizer <b>${esc(loginTypo)}</b>? <button class="btn-text btn-text--sm" type="button" data-fixmail>Corrigir</button></div>` : ''}
+        ${msg ? `<p class="login__err" role="alert">${esc(msg)}</p>` : ''}
+        <button class="btn btn--primary btn--block" data-go>Enviar link</button>
+      </form>
+      ${phoneOn() ? `<button class="btn btn--soft btn--block" data-sms>${icon('phone', 18)} Recuperar pelo celular (SMS)</button>` : ''}
+      <button class="btn-text btn-text--sm" data-back>Voltar para entrar</button>`}
+  </div>`;
+  const $ = (sel) => root.querySelector(sel);
+  if ($('[data-back]')) $('[data-back]').onclick = () => { loginTypo = ''; showLogin(); };
+  if ($('[data-other]')) $('[data-other]').onclick = () => showForgot('form');
+  if ($('[data-help]')) $('[data-help]').onclick = () => showForgot('help');
+  if ($('[data-sms]')) $('[data-sms]').onclick = async () => (await import('./phone.js')).recoverBySms(cloudApi, () => {});
+  if ($('[data-fixmail]')) $('[data-fixmail]').onclick = () => { loginEmail = loginTypo; loginTypo = ''; showForgot('form'); };
+  const send = async (to, btn) => {
+    if (btn) { btn.disabled = true; btn.textContent = 'Enviando…'; }
     try {
-      await cloudApi.resetPassword(email);
-      toast('Enviamos um e-mail para criar uma nova senha (veja também o spam)', { ms: 6000 });
+      await Promise.race([cloudApi.resetPassword(to, `${siteBase().startsWith('http') ? siteBase() : location.origin + siteBase()}?senha=nova&email=${encodeURIComponent(to)}`), new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), 20000))]);
+      forgotSentAt = Date.now(); forgotTo = to; loginEmail = to;
+      showForgot('sent');
+      const tick = setInterval(() => { const b = root.querySelector('[data-resend]'); if (!b) return clearInterval(tick); const w = Math.max(0, 60 - Math.round((Date.now() - forgotSentAt) / 1000)); b.disabled = !!w; b.textContent = w ? `Reenviar em ${w}s` : 'Reenviar o e-mail'; if (!w) clearInterval(tick); }, 1000);
     } catch (err) {
-      toast(LOGIN_ERRORS[err?.code] || 'Não foi possível enviar o e-mail');
+      const code = err && err.code;
+      showForgot('form', code === 'timeout' ? 'O servidor demorou para responder. Verifique a internet e tente de novo.'
+        : code === 'auth/too-many-requests' ? 'Muitos pedidos seguidos. Espere alguns minutos e tente de novo (ou use “Pedir ajuda”).'
+        : LOGIN_ERRORS[code] || 'Não consegui enviar agora. Tente de novo em instantes.');
     }
   };
+  const ff = $('[data-forgot]');
+  if (ff) ff.onsubmit = (ev) => {
+    ev.preventDefault();
+    const to = cleanEmail(ff.email.value);
+    loginEmail = to;
+    if (!to) return showForgot('form', 'Digite o e-mail da sua conta.');
+    if (!validEmail(to)) return showForgot('form', 'E-mail incompleto ou com erro de digitação. Exemplo: nome@gmail.com');
+    if (emailTypo(to) && typoAsked !== to) { typoAsked = to; loginTypo = emailTypo(to); return showForgot('form', 'Confira o e-mail antes de enviar (toque de novo em “Enviar link” se estiver certo).'); }
+    loginTypo = '';
+    send(to, ff.querySelector('[data-go]'));
+  };
+  if ($('[data-resend]')) $('[data-resend]').onclick = (e) => send(forgotTo, e.currentTarget);
+  const hf = $('[data-helpform]');
+  if (hf) hf.onsubmit = async (ev) => {
+    ev.preventDefault();
+    const em = cleanEmail(hf.email.value), text = hf.text.value.trim();
+    loginEmail = em;
+    if (!validEmail(em)) return showForgot('help', 'Digite um e-mail válido para a gente responder.');
+    if (text.length < 5) return showForgot('help', 'Escreva o que aconteceu (pode ser curtinho).');
+    const b = hf.querySelector('[data-go]'); b.disabled = true; b.textContent = 'Enviando…';
+    try {
+      const base = (localStorage.getItem('cal.pushServer') || CONFIG.pushServer || '').replace(/\/+$/, '');
+      const r = await fetch(`${base}/support/guest`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: em, text, about: 'senha' }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || 'erro');
+      showForgot('helped');
+    } catch (e) { showForgot('help', e.message && e.message !== 'erro' ? e.message : 'Não consegui enviar agora. Verifique a internet e tente de novo.'); }
+  };
+}
+
+/* ---------- Link do e-mail: criar a senha nova aqui mesmo no app ---------- */
+async function showNewPassword(code) {
+  let email = '';
+  loading('Conferindo o link…');
+  try { email = await cloudApi.verifyReset(code); }
+  catch (e) {
+    root.innerHTML = `<div class="login"><div class="brandwrap login__brand">${brand('simbolo', { h: 64 })}</div>
+      <h1 class="login__hook">Esse link não vale mais</h1>
+      <p class="login__lead">${e?.code === 'auth/expired-action-code' ? 'Ele passou de 1 hora.' : 'Ele já foi usado ou está incompleto.'} Peça um novo: leva 1 minuto.</p>
+      <button class="btn btn--primary btn--block" data-again>Pedir um link novo</button></div>`;
+    root.querySelector('[data-again]').onclick = () => { history.replaceState(null, '', location.pathname); showForgot('form'); };
+    return;
+  }
+  const draw = (msg = '') => {
+    root.innerHTML = `<div class="login"><div class="brandwrap login__brand">${brand('simbolo', { h: 64 })}</div>
+      <h1 class="login__hook">Crie sua senha nova</h1>
+      <p class="login__lead">Conta: <b>${esc(email)}</b></p>
+      <form class="form" data-newpass novalidate>
+        <div class="fgroup"><label class="flabel" for="n-pass">Senha nova</label>
+          <div class="input-eye"><input id="n-pass" class="input" type="password" name="pass" autocomplete="new-password" placeholder="8+ caracteres, letras e números" autocapitalize="none" autocorrect="off" spellcheck="false">
+          <button type="button" class="iconbtn iconbtn--sm" data-eye aria-label="Mostrar senha">${icon('eye', 18)}</button></div></div>
+        <div class="fgroup"><label class="flabel" for="n-pass2">Repita a senha nova</label><input id="n-pass2" class="input" type="password" name="pass2" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
+        <p class="login__hint">Mínimo de 8 caracteres, com letras e números.</p>
+        ${msg ? `<p class="login__err" role="alert">${esc(msg)}</p>` : ''}
+        <button class="btn btn--primary btn--block" data-go>Salvar senha nova e entrar</button>
+      </form></div>`;
+    const f = root.querySelector('[data-newpass]');
+    root.querySelector('[data-eye]').onclick = () => { const t = f.pass.type === 'password' ? 'text' : 'password'; f.pass.type = t; f.pass2.type = t; };
+    f.onsubmit = async (ev) => {
+      ev.preventDefault();
+      const pass = f.pass.value;
+      if (pass.length < 8 || !/[A-Za-zÀ-ÿ]/.test(pass) || !/\d/.test(pass)) return draw('Crie uma senha com pelo menos 8 caracteres, misturando letras e números.');
+      if (pass !== f.pass2.value) return draw('As duas senhas não estão iguais. Digite de novo.');
+      const b = f.querySelector('[data-go]'); b.disabled = true; b.textContent = 'Salvando…';
+      try {
+        await cloudApi.confirmReset(code, pass);
+        history.replaceState(null, '', location.pathname);
+        toast('Senha nova salva ✓ Entrando…', { ms: 3000 });
+        loginEmail = email;
+        try { localStorage.removeItem(LS_UID); } catch { /* ok */ }
+        await cloudApi.signIn(email, pass).then((cred) => { try { localStorage.setItem(LS_UID, cred.user.uid); } catch { /* ok */ } });
+        // já entrou: abre o app normalmente (a tela de senha nova abriu antes do app começar)
+        setTimeout(() => location.replace(location.pathname), 600);
+      } catch (err) {
+        const c = err && err.code;
+        if (c === 'auth/expired-action-code' || c === 'auth/invalid-action-code') return showNewPassword(code);
+        draw(LOGIN_ERRORS[c] || 'Não consegui salvar agora. Verifique a internet e tente de novo.');
+      }
+    };
+  };
+  draw();
 }
 
 /* Não conseguiu falar com a nuvem: mostra o motivo e deixa tentar de novo */
@@ -924,8 +1076,18 @@ function startApp() {
   render();
   store.on(rerenderAll);
   startPersonal();
-  personal.onSaved = (b, a) => import('./rank.js').then((r) => r.rankPersonal(b, a));
+  personal.onSaved = (b, a) => { import('./rank.js').then((r) => r.rankPersonal(b, a)); import('./game.js').then((gm) => gm.onPersonal(b, a)).catch(() => {}); };
+  // conquistas: XP, níveis e emblemas (concluir, marcar, bilhetes); começa depois que a agenda carregou
+  store.hooks.game = (b, a) => import('./game.js').then((gm) => gm.onEvent(b, a)).catch(() => {});
+  store.hooks.note = (n) => import('./game.js').then((gm) => gm.onNote(n)).catch(() => {});
+  setTimeout(() => import('./game.js').then((gm) => { gm.startGame(); gm.onGame(() => refreshLevelRings()); refreshLevelRings(); }).catch((e) => console.warn('conquistas', e)), 1800);
   setTimeout(askReinstall, 2500); // aviso de instalar a versão nova (só para quem precisa)
+  // versão: confere se há nova ao voltar para o app (atualiza sozinho) e mostra as novidades uma vez
+  import('./version.js').then((v) => {
+    v.startVersionWatch();
+    const news = (n = 0) => (openSheets().length || document.querySelector('.ficha, .paywall, .ob, .guide, .photogate, .termsgate') ? n < 30 && setTimeout(() => news(n + 1), 4000) : v.maybeShowWhatsNew());
+    setTimeout(news, 6000);
+  }).catch(() => {});
   setTimeout(requirePhoto, 3500);
   setTimeout(askNotifications, 12000);
   startPresence();
@@ -1166,6 +1328,12 @@ async function boot() {
   } catch (e) {
     console.error(e);
     return cloudError(e);
+  }
+  {
+    const qp = new URLSearchParams(location.search);
+    if (qp.get('mode') === 'resetPassword' && qp.get('oobCode')) return showNewPassword(qp.get('oobCode'));
+    if (qp.get('mode') === 'verifyEmail' && qp.get('oobCode')) { cloudApi.applyCode(qp.get('oobCode')).then(() => toast('E-mail confirmado ✓', { ms: 3500 })).catch(() => {}); history.replaceState(null, '', location.pathname + location.hash); }
+    if (qp.get('senha') === 'nova') { const em = cleanEmail(qp.get('email') || ''); if (validEmail(em)) loginEmail = em; loginNotice = 'Senha trocada? Agora é só entrar com a senha nova.'; history.replaceState(null, '', location.pathname + location.hash); }
   }
   let authAnswered = false;
   let started = false;

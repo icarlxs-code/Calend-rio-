@@ -7,6 +7,7 @@ import { TYPES } from './constants.js';
 import { platform } from './install.js';
 import * as push from './avisos.js';
 import { ageOf } from './persona.js';
+import { appInfo } from './version.js';
 
 let lastFull = 0;
 const ageBand = (birth) => {
@@ -40,6 +41,8 @@ export function reportStats({ open = false, force = false } = {}) {
     workspace: store.shared ? 'compartilhada' : store.solo ? 'proprio' : 'dupla',
     createdAt: store.user.metadata?.creationTime ? Date.parse(store.user.metadata.creationTime) : null,
     lastSeen: now,
+    // versão do app neste aparelho (o Painel do dono vê quem está atualizado)
+    app: appInfo(),
     device: { platform: platform(), installed: isStandalone(), notifications: push.permission(), registered: push.deviceRegistered(), ua: navigator.userAgent.slice(0, 160) },
     space: document.documentElement.dataset.space || 'work',
     // ficha (sem dados sensíveis: nada de CPF, telefone ou data exata de nascimento)
@@ -86,7 +89,7 @@ export function startPresence() {
   const uidv = store.user.uid;
   const send = (data) => api.touchStats(uidv, data).catch(() => {});
   const on = () => {
-    send({ online: true, lastPing: Date.now(), lastOpen: Date.now() });
+    send({ online: true, lastPing: Date.now(), lastOpen: Date.now(), app: appInfo() });
     clearInterval(beat);
     beat = setInterval(() => send({ online: true, lastPing: Date.now() }), 60e3);
     seenServer();

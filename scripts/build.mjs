@@ -10,6 +10,11 @@ const root = resolve(import.meta.dirname, '..');
 const out = resolve(root, 'dist');
 rmSync(out, { recursive: true, force: true });
 
+/* Versão do app (release.json): a cada mudança de estrutura sobe o número.
+   2.0.0 → 2.1.0 (novidade) → 2.1.1 (correção). "min": versão mínima — abaixo dela o app se atualiza na marra. */
+const release = JSON.parse(readFileSync(resolve(root, 'release.json'), 'utf8'));
+if (!/^\d+\.\d+\.\d+$/.test(release.version || '')) throw new Error('release.json: "version" precisa ser no formato 2.0.0');
+
 const result = await build({
   entryPoints: [resolve(root, 'js/app.js')],
   bundle: true,
@@ -23,6 +28,12 @@ const result = await build({
   legalComments: 'none',
   metafile: true,
   logLevel: 'warning',
+  define: {
+    __APP_VERSION__: JSON.stringify(release.version),
+    __APP_TITLE__: JSON.stringify(release.title || ''),
+    __APP_NOTES__: JSON.stringify(Array.isArray(release.notes) ? release.notes.slice(0, 12) : []),
+    __APP_MIN__: JSON.stringify(release.min || ''),
+  },
 });
 
 const files = Object.keys(result.metafile.outputs).map((f) => relative(root, resolve(root, f)).replace(/\\/g, '/'));
@@ -60,5 +71,11 @@ const og = `<!--OG--><meta property="og:type" content="website"><meta property="
 const idx = readFileSync(resolve(root, 'index.html'), 'utf8');
 writeFileSync(resolve(root, 'index.html'), /<!--OG-->[\s\S]*?<!--\/OG-->/.test(idx) ? idx.replace(/<!--OG-->[\s\S]*?<!--\/OG-->/, og) : idx.replace('<link rel="manifest"', `${og}\n  <link rel="manifest"`));
 
+/* version.json: o app confere ao abrir/voltar (atualiza sozinho) e o Painel do dono compara com a versão de cada pessoa */
+writeFileSync(resolve(root, 'version.json'), JSON.stringify({
+  version: release.version, build: version, date: release.date || '', min: release.min || '',
+  title: release.title || '', notes: Array.isArray(release.notes) ? release.notes.slice(0, 12) : [], builtAt: new Date().toISOString(),
+}, null, 2) + '\n');
+
 const kb = (f) => Math.round(readFileSync(resolve(root, f)).length / 1024);
-console.log(`Versão ${version}:`, files.map((f) => `${f} (${kb(f)} KB)`).join(', '));
+console.log(`Versão ${release.version} (build ${version}):`, files.map((f) => `${f} (${kb(f)} KB)`).join(', '));

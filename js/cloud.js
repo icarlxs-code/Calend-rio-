@@ -19,8 +19,10 @@ const useEmulator = () => {
   }
 };
 
+let appConfig = null;
 export async function connect(config) {
   if (useEmulator()) config = { ...config, projectId: 'demo-calendario' };
+  appConfig = config;
   fs = fsMod;
   authApi = authMod;
   const app = appMod.initializeApp(config);
@@ -36,7 +38,7 @@ export async function connect(config) {
   } catch {
     auth = authApi.getAuth(app);
   }
-  if (useEmulator()) authApi.connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+  if (useEmulator()) { authApi.connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true }); try { auth.settings.appVerificationDisabledForTesting = true; } catch { /* ok */ } }
   // e-mails do login (confirmação e "esqueci a senha") em português
   try { auth.languageCode = 'pt-BR'; } catch { /* ok */ }
   functions = fnMod.getFunctions(app, CONFIG.functionsRegion || 'southamerica-east1');
@@ -44,7 +46,17 @@ export async function connect(config) {
   return {
     onUser: (cb) => authApi.onAuthStateChanged(auth, cb),
     signIn: (email, pass) => authApi.signInWithEmailAndPassword(auth, email, pass),
-    resetPassword: (email) => authApi.sendPasswordResetEmail(auth, email),
+    // e-mail de "esqueci a senha": o botão do e-mail volta para o app (se o endereço do app estiver autorizado no Firebase)
+    resetPassword: async (email, continueUrl = '') => {
+      if (!continueUrl) return authApi.sendPasswordResetEmail(auth, email);
+      try { return await authApi.sendPasswordResetEmail(auth, email, { url: continueUrl, handleCodeInApp: false }); }
+      catch (e) { if (/continue-uri|domain/i.test(String(e.code || e.message))) return authApi.sendPasswordResetEmail(auth, email); throw e; }
+    },
+    // tela própria de "criar nova senha" (link do e-mail com ?mode=resetPassword&oobCode=…)
+    phoneStart, phoneFinish, setPassword,
+    verifyReset: (code) => authApi.verifyPasswordResetCode(auth, code),
+    confirmReset: (code, pass) => authApi.confirmPasswordReset(auth, code, pass),
+    applyCode: (code) => authApi.applyActionCode(auth, code),
     signOut: () => authApi.signOut(auth),
     signUp: async (email, pass, name) => {
       const cred = await authApi.createUserWithEmailAndPassword(auth, email, pass);
@@ -76,7 +88,53 @@ let base = [];
 const col = (name) => fs.collection(db, ...base, name);
 const ref = (name, id) => fs.doc(db, ...base, name, id);
 
+/* ---------- celular por SMS (Firebase Phone Auth) ----------
+   Confirmar o celular: liga o número à conta já aberta.
+   Recuperar a senha: o SMS é conferido num login SEPARADO (só na memória), sem mexer no app.
+   Só se o número for de uma conta com e-mail é que a senha nova é gravada e o app entra com ela. */
+let verifier = null, smsMode = 'link', auth2 = null;
+function smsAuth() {
+  if (auth2) return auth2;
+  const app2 = appMod.initializeApp(appConfig, 'recuperar-sms');
+  auth2 = authApi.initializeAuth(app2, { persistence: authApi.inMemoryPersistence });
+  if (useEmulator()) { authApi.connectAuthEmulator(auth2, 'http://127.0.0.1:9099', { disableWarnings: true }); try { auth2.settings.appVerificationDisabledForTesting = true; } catch { /* ok */ } }
+  try { auth2.languageCode = 'pt-BR'; } catch { /* ok */ }
+  return auth2;
+}
+async function phoneStart(e164, boxId, mode = 'link') {
+  try { verifier?.clear(); } catch { /* ok */ }
+  smsMode = mode;
+  const a = mode === 'signin' ? smsAuth() : auth;
+  verifier = new authApi.RecaptchaVerifier(a, boxId, { size: 'invisible' });
+  return mode === 'signin' ? authApi.signInWithPhoneNumber(a, e164, verifier) : authApi.linkWithPhoneNumber(auth.currentUser, e164, verifier);
+}
+async function phoneFinish(confirmation, code) {
+  const r = await confirmation.confirm(code);
+  if (smsMode === 'signin') {
+    // número que não é de nenhuma conta (ou conta só de telefone): desfaz e avisa — não cria conta vazia
+    const info = authApi.getAdditionalUserInfo ? authApi.getAdditionalUserInfo(r) : null;
+    if ((info && info.isNewUser) || !r.user.email) {
+      await r.user.delete().catch(() => {});
+      await authApi.signOut(auth2).catch(() => {});
+      throw Object.assign(new Error('sem conta'), { code: 'auth/user-not-found' });
+    }
+  }
+  return r;
+}
+async function setPassword(p) {
+  if (smsMode !== 'signin') return authApi.updatePassword(auth.currentUser, p);
+  // recuperação: grava a senha nova na conta do SMS e entra no app com o e-mail + senha nova
+  const u = auth2.currentUser;
+  if (!u || !u.email) throw Object.assign(new Error('sem conta'), { code: 'auth/user-not-found' });
+  await authApi.updatePassword(u, p);
+  const email = u.email;
+  await authApi.signOut(auth2).catch(() => {});
+  smsMode = 'link';
+  return authApi.signInWithEmailAndPassword(auth, email, p);
+}
+
 const backend = {
+  phoneStart, phoneFinish, setPassword,
   setWorkspace(uid) { base = uid ? ['ws', uid] : []; },
   /* Resumo de uso de cada conta (o dono vê no painel) */
   writeStats(uid, data) {
@@ -133,6 +191,16 @@ const backend = {
     batch.set(fs.doc(db, 'teams', owner, 'joins', me), { token, ...clean(person), at: now });
     batch.update(fs.doc(db, 'teams', owner), { members: fs.arrayUnion(me), [`names.${me}`]: clean(person) });
     await batch.commit();
+  },
+  /* Nível de conquistas no placar da equipe: o dono grava no próprio documento; o convidado só no próprio nome */
+  async setMyTeamLevel(owner, uid, level) {
+    const lv = Math.max(0, Math.min(100, Math.round(Number(level) || 0)));
+    if (!owner || owner === uid) {
+      const s = await fs.getDoc(fs.doc(db, 'teams', uid));
+      if (s.exists()) await fs.updateDoc(fs.doc(db, 'teams', uid), { ownerLevel: lv });
+      return;
+    }
+    await fs.updateDoc(fs.doc(db, 'teams', owner), { [`names.${uid}.level`]: lv });
   },
   /* ---------- excluir conta (LGPD) ---------- */
   async deleteTeam(owner) {

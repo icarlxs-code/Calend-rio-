@@ -81,6 +81,11 @@ export const store = {
     const owner = this.ownerOf(col, item);
     return !owner || owner === this.me;
   },
+  /* Quem é responsável por um compromisso pode marcar como feito (mesmo sem ter cadastrado).
+     Só o status muda: título, dia, hora e o resto continuam sendo de quem cadastrou. */
+  canComplete(item) {
+    return this.canEdit('events', item) || (!!this.me && (item?.assignees || []).includes(this.me));
+  },
   _denied(col, item) {
     const owner = this.member(this.ownerOf(col, item))?.name || 'o parceiro';
     if (this.onDenied) this.onDenied(`Só ${owner} pode alterar isso (foi ${owner === 'o parceiro' ? 'ele' : owner} quem cadastrou).`);
@@ -94,8 +99,14 @@ export const store = {
     if (this._locked(col)) return item;
     const existing = this.state[col]?.find((x) => x.id === item.id);
     if (existing && !this.canEdit(col, existing)) {
-      this._denied(col, existing);
-      return existing;
+      // responsável marcando como feito/pendente: só o status pode mudar
+      const SKIP = new Set(['status', 'doneAt', 'doneBy', 'updatedAt', 'updatedBy']);
+      const onlyStatus = col === 'events' && this.canComplete(existing)
+        && [...new Set([...Object.keys(existing), ...Object.keys(item)])].every((k) => SKIP.has(k) || JSON.stringify(existing[k] ?? null) === JSON.stringify(item[k] ?? null));
+      if (!onlyStatus) {
+        this._denied(col, existing);
+        return existing;
+      }
     }
     const before = col === 'events' ? this.state.events.find((x) => x.id === item.id) : null;
     const prev = before ? { ...before } : null;
@@ -103,11 +114,18 @@ export const store = {
     if (this.me) item.updatedBy = this.me;
     if (!item.createdAt) item.createdAt = item.updatedAt;
     if (!item.createdBy && this.me) item.createdBy = this.me;
+    // quando foi concluído e por quem (placar da equipe e conquistas: "no horário" ou "atrasado")
+    if (col === 'events') {
+      if (item.status === 'feito' && prev?.status !== 'feito') { item.doneAt = item.updatedAt; if (this.me) item.doneBy = this.me; }
+      else if (item.status !== 'feito') { item.doneAt = null; item.doneBy = null; }
+    }
     applyLocal(col, item);
     persist(() => backend.write(col, item));
     touch(col, item);
     this.emit();
     if (col === 'events' && this.hooks.eventChange) this.hooks.eventChange(prev, { ...item });
+    if (col === 'events' && this.hooks.game) try { this.hooks.game(prev, { ...item }); } catch (e) { console.warn('conquistas', e); }
+    if (col === 'notes' && !existing && this.hooks.note) try { this.hooks.note({ ...item }); } catch (e) { console.warn('conquistas', e); }
     return item;
   },
   async upsertMany(col, items, { activity = null } = {}) {
@@ -408,18 +426,31 @@ export function soloMember(user, prof = {}) {
   return { id: 'u' + user.uid.replace(/[^A-Za-z0-9]/g, '').slice(0, 24), name: name.charAt(0).toUpperCase() + name.slice(1), email: (user.email || '').toLowerCase(), color: prof.color || '#7C5CFF', photo: prof.photo || null };
 }
 /* Salva a ficha/perfil da conta (qualquer conta: users/{uid}) */
+/* atualiza só a MINHA linha na equipe (na agenda compartilhada os colegas continuam na lista) */
+function refreshMe() {
+  if (!store.solo || !store.user) return;
+  const me = soloMember(store.user, store.profile);
+  const i = store.team.findIndex((m) => m.id === me.id);
+  store.team = i < 0 ? (store.team.length > 1 ? [me, ...store.team] : [me]) : store.team.map((m) => (m.id === me.id ? { ...m, ...me, uid: m.uid, owner: m.owner, level: m.level } : m));
+}
 export async function saveUserProfile(data) {
   if (!store.user || !backend || !backend.saveProfile) throw new Error('sem nuvem');
   store.profile = { ...(store.profile || {}), ...data };
-  if (store.solo) store.team = [soloMember(store.user, store.profile)];
+  refreshMe();
   store.emit();
+  await backend.saveProfile(store.user.uid, data);
+}
+/* Grava na conta sem redesenhar a tela (conquistas, salvas a cada poucos segundos) */
+export async function saveProfileQuiet(data) {
+  if (!store.user || !backend || !backend.saveProfile) return;
+  store.profile = { ...(store.profile || {}), ...data };
   await backend.saveProfile(store.user.uid, data);
 }
 /* Salva nome/foto/cor do perfil (contas próprias) */
 export async function saveMyProfile(data) {
   if (!store.solo || !backend.saveProfile) return;
   store.profile = { ...(store.profile || {}), ...data };
-  store.team = [soloMember(store.user, store.profile)];
+  refreshMe();
   store.emit();
   await backend.saveProfile(store.user.uid, store.profile);
 }

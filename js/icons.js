@@ -148,8 +148,12 @@ const P = {
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
   idcard: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M6 16c.6-1.4 1.7-2 3-2s2.4.6 3 2M14 10h4M14 13h3"/>',
   share2: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>',
+  gem: '<path d="M6 3h12l4 6-10 12L2 9Z"/><path d="M11 3 8 9l4 12 4-12-3-6"/><path d="M2 9h20"/>',
   crown: '<path d="m3 7 4 4 5-6 5 6 4-4-2 11H5L3 7Z"/><path d="M5 21h14"/>',
 };
 
+/* só o desenho (para usar dentro de outro SVG, ex.: emblemas) */
+export const iconPaths = (name) => P[name] || P.dot;
+export const hasIcon = (name) => !!P[name];
 export const icon = (name, size = 20, cls = '') =>
   `<svg class="ic ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || P.dot}</svg>`;

@@ -15,6 +15,10 @@ import { soundOn } from '../sound.js';
 import * as push from '../avisos.js';
 import { resetOnboarding } from './onboarding.js';
 import { WD_SHORT } from '../utils.js';
+import { brand } from '../brand.js';
+import { phoneAuthOn } from '../phone.js';
+import { professionFor } from '../../functions/catalog.js';
+import { APP_VERSION, APP_BUILD } from '../version.js';
 
 export function renderSettings() {
   const me = store.member(store.me);
@@ -32,6 +36,9 @@ export function renderSettings() {
         ${grow({ cls: 'pbig--toPersonal', attrs: 'data-action="space" data-space="personal"', ic: 'heart', c: '#FF2D55', t: 'Modo Pessoal', s: 'Aniversários, compromissos e listas — só você vê' })}
         ${cloud ? fichaRow() : ''}
         ${cloud && store.solo ? grow({ cls: 'pbig--share', attrs: 'data-action="share"', ic: 'users', c: '#34C759', t: 'Agenda compartilhada', s: store.shared ? `Você está na agenda de ${esc(store.shared.ownerName)}` : store.billing?.addon?.active ? `Plano ${store.billing.addon.plan === 'equipe' ? 'Equipe' : 'Dupla'} ativo · convide e gerencie` : 'Divida a agenda com sócio ou equipe · à parte' }) : ''}
+        ${store.team.length > 1 ? grow({ attrs: 'data-action="team-board"', ic: 'trophy', c: '#FF9F0A', t: 'Placar da equipe', s: 'Quem cumpriu o que marcou nesta semana' }) : ''}
+        ${grow({ attrs: 'data-action="profile"', ic: 'crown', c: '#AF52DE', t: 'Perfil e conquistas', s: 'Seu nível, XP e emblemas' })}
+        ${cloud && phoneAuthOn() ? grow({ attrs: store.profile?.phoneVerified ? '' : 'data-action="confirm-phone"', ic: 'shield', c: store.profile?.phoneVerified ? '#34C759' : '#0A84FF', t: store.profile?.phoneVerified ? 'Celular confirmado ✓' : 'Confirmar meu celular', s: store.profile?.phoneVerified ? esc(store.profile.phone || '') + ' · dá para recuperar a senha por SMS' : 'Protege a conta e permite recuperar a senha por SMS' }) : ''}
         ${grow({ attrs: 'data-action="guide"', ic: 'sparkles', c: '#5856D6', t: 'Como funciona o Lembra', s: 'Trabalho e Pessoal em 1 minuto' })}
         ${cloud ? grow({ cls: 'pbig--privacy', attrs: 'data-action="privacy"', ic: 'lock', c: '#8E8E93', t: 'Privacidade e dados', s: 'Termos, baixar ou apagar meus dados' }) : ''}
         ${cloud && store.solo ? grow({ attrs: 'data-action="ranking"', ic: 'trophy', c: '#FF9F0A', t: 'Ranking da semana', s: store.billing?.plan === 'monthly' && store.billing?.tier !== 'essencial' ? 'Ligas semanais · o nº 1 do mês ganha o mês seguinte grátis' : 'Plano Profissional · ligas e meses grátis' }) : ''}
@@ -45,7 +52,7 @@ export function renderSettings() {
         ? `<div class="card whocard">
             <div class="whocard__top">${me ? avatar(me.id, 48) : icon('user', 24)}<div class="whocard__txt"><strong>${esc(me?.name || store.user?.email || '')}${store.billing?.plan === 'lifetime' ? `<span class="vbadge">${icon('crown', 12)} Vitalício</span>` : ''}</strong><small>${esc(store.user?.email || '')}</small></div></div>
             <div class="whocard__btns">${store.solo ? `<button class="btn btn--soft btn--sm" data-action="edit-profile">${icon('edit', 16)} Editar perfil</button>` : ''}
-            <button class="btn btn--soft btn--sm" data-action="logout">${icon('logout', 16)} Sair</button></div></div>`
+            <button class="btn btn--danger-soft btn--sm" data-action="logout">${icon('logout', 16)} Sair da conta</button></div></div>`
         : `<div class="whogrid">${store.team.map((m) => `<button class="whobtn${store.me === m.id ? ' is-on' : ''}" style="--mc:${m.color}" data-action="set-me" data-p="${m.id}">${avatar(m.id, 34)}<span>${esc(m.name)}</span><i class="whobtn__check">${icon('check', 14)}</i></button>`).join('')}</div>
            <p class="fhelp">Usado para saudação, “Criado por” e nos lembretes.</p>`}
     </section>
@@ -120,7 +127,19 @@ export function renderSettings() {
       </div>
       <p class="fhelp">${store.state.companies.length} empresas · ${store.state.events.length} eventos · ${store.state.notes.length} bilhetes</p>
     </section>
-    <p class="about">${esc(CONFIG.appName)} — sua agenda de trabalho e pessoal</p>
+    <section class="block">
+      <h2 class="block__title">${icon('refresh', 16)} Versão do app</h2>
+      <div class="list">
+        <div class="list__row list__row--static"><span><b>${esc(CONFIG.appName)} ${esc(APP_VERSION)}</b><small>Atualiza sozinho sempre que você abre · código ${esc(APP_BUILD)}</small></span><span class="verok">${icon('check', 14)} em dia</span></div>
+        <button class="list__row" data-action="whatsnew">${icon('sparkles', 18)}<span>Novidades desta versão</span>${icon('right', 16, 'muted')}</button>
+        <button class="list__row" data-action="check-update">${icon('refresh', 18)}<span>Procurar atualização agora</span>${icon('right', 16, 'muted')}</button>
+      </div>
+    </section>
+    ${cloud ? `<section class="block">
+      <button class="logoutbig" data-action="logout">${icon('logout', 20)}<span>Sair da conta</span></button>
+      <p class="fhelp center">Conectado como ${esc(store.user?.email || '')}</p>
+    </section>` : ''}
+    <div class="about">${brand('palavra', { h: 22, alt: esc(CONFIG.appName) })}<small>versão ${esc(APP_VERSION)} · sua agenda de trabalho e pessoal</small></div>
   </div>`;
 }
 
@@ -131,7 +150,7 @@ function themeCard() {
     <h2 class="block__title">${icon('sun', 16)} Aparência</h2>
     <div class="seg3">${THEMES.map((t) => `<button class="seg3__btn${cur === t.id ? ' is-on' : ''}" data-action="theme" data-v="${t.id}">${icon(t.id === 'dark' ? 'moon' : t.id === 'light' ? 'sun' : 'phone', 18)}<b>${t.label}</b><small>${t.hint}</small></button>`).join('')}</div>
     <div class="list" style="margin-top:10px"><label class="list__row"><span><b>Sons</b><small>Toque suave ao trocar de modo e ao concluir</small></span><input type="checkbox" class="switch" data-sound ${soundOn() ? 'checked' : ''}></label></div>
-    ${!isMarketing() && WORK.theme ? `<p class="fhelp">As cores do modo Trabalho combinam com a sua área${WORK.profession ? ` (${esc(WORK.profession)})` : ''}.</p>` : ''}
+    ${!isMarketing() && WORK.theme ? `<p class="fhelp">As cores do modo Trabalho combinam com a sua área${WORK.profession ? ` (${esc(professionFor(WORK.profession, store.profile?.pronoun))})` : ''}.</p>` : ''}
   </section>`;
 }
 /* Linha de lista agrupada: ícone num quadrado colorido + título + detalhe + seta */
@@ -139,7 +158,7 @@ export const grow = ({ cls = '', attrs = '', ic, c, t, s = '', badge = '' }) => 
 function fichaRow() {
   const p = store.profile || {};
   if (!p.onboardedAt) return grow({ cls: 'pbig--ficha', attrs: 'data-action="ficha"', ic: 'idcard', c: '#FF9500', t: 'Preencha sua ficha', s: '2 minutos: o Lembra se adapta a você' });
-  return grow({ cls: 'pbig--ficha', attrs: 'data-action="ficha"', ic: !isMarketing() && WORK.badge ? WORK.badge : 'idcard', c: '#FF9500', t: 'Sua ficha', s: `${esc(p.profession || 'Profissão')} · índice ${Number(p.index) || 0}/100`, badge: '' });
+  return grow({ cls: 'pbig--ficha', attrs: 'data-action="ficha"', ic: !isMarketing() && WORK.badge ? WORK.badge : 'idcard', c: '#FF9500', t: 'Sua ficha', s: `${esc(professionFor(p.profession, p.pronoun) || 'Profissão')} · índice ${Number(p.index) || 0}/100`, badge: '' });
 }
 
 function notifySection() {
@@ -200,9 +219,9 @@ function fillDevices() {
 
 function planSection() {
   const b = store.billing || {};
-  const label = { trial: 'Teste grátis (tudo liberado)', comp: 'Acesso liberado', monthly: `${b.tier === 'essencial' ? 'Essencial' : 'Profissional'} · ${b.interval === 'year' ? 'anual' : 'mensal'}`, lifetime: b.founder ? 'Fundadores · Profissional para sempre' : 'Vitalício', expired: 'Teste encerrado', blocked: 'Sem plano', none: 'Sem plano', shared: 'Agenda compartilhada', checking: 'Conferindo…', offline: 'Sem conexão para conferir' }[b.plan] || '—';
+  const label = { trial: 'Teste grátis (tudo liberado)', comp: 'Acesso liberado', monthly: `${b.tier === 'essencial' ? 'Essencial' : 'Profissional'} · ${b.prepaid ? '12 meses no Pix' : b.interval === 'year' ? 'anual' : 'mensal'}`, lifetime: b.founder ? 'Fundadores · Profissional para sempre' : 'Vitalício', expired: 'Teste encerrado', blocked: 'Sem plano', none: 'Sem plano', shared: 'Agenda compartilhada', checking: 'Conferindo…', offline: 'Sem conexão para conferir' }[b.plan] || '—';
   const detail = b.plan === 'trial' ? `Termina em ${fmtLeft(b.trialEndsAt - Date.now())}`
-    : b.plan === 'monthly' ? (b.cancelAt ? `Cancelada: vale até ${new Date(b.cancelAt).toLocaleDateString('pt-BR')}` : b.paidUntil ? `Renova em ${new Date(b.paidUntil).toLocaleDateString('pt-BR')}` : 'Ativa')
+    : b.plan === 'monthly' ? (b.prepaid ? `Pago até ${new Date(b.paidUntil).toLocaleDateString('pt-BR')} · perto de vencer, é só renovar` : b.cancelAt ? `Cancelada: vale até ${new Date(b.cancelAt).toLocaleDateString('pt-BR')}` : b.paidUntil ? `Renova em ${new Date(b.paidUntil).toLocaleDateString('pt-BR')}` : 'Ativa')
       : b.plan === 'lifetime' ? (b.comp ? 'Acesso cortesia liberado pelo Lembra.' : 'Pago uma vez, para sempre. Obrigado!')
         : b.plan === 'comp' ? `Acesso liberado pelo Lembra até ${new Date(b.compUntil).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}. Depois disso, é só escolher um plano.`
         : b.plan === 'shared' ? `Liberado pela agenda de ${store.shared?.ownerName || b.ownerName || 'quem te convidou'}. Você não paga nada.` : '';
@@ -211,7 +230,7 @@ function planSection() {
   return `<section class="block">
     <h2 class="block__title">${icon('card', 16)} Seu plano</h2>
     <div class="card card--row"><div><strong>${esc(label)}</strong>${detail ? `<small>${esc(detail)}</small>` : ''}</div>
-      ${b.plan === 'monthly' || (b.plan === 'lifetime' && b.addon) ? '<button class="btn btn--soft btn--sm" data-action="billing-portal">Gerenciar</button>' : !['lifetime', 'shared'].includes(b.plan) ? '<button class="btn btn--primary btn--sm" data-action="plans">Assinar</button>' : ''}
+      ${b.plan === 'monthly' && b.prepaid ? ((b.paidUntil - Date.now()) < 30 * 864e5 ? '<button class="btn btn--primary btn--sm" data-action="plans">Renovar</button>' : '') : b.plan === 'monthly' || (b.plan === 'lifetime' && b.addon) ? '<button class="btn btn--soft btn--sm" data-action="billing-portal">Gerenciar</button>' : !['lifetime', 'shared'].includes(b.plan) ? '<button class="btn btn--primary btn--sm" data-action="plans">Assinar</button>' : ''}
     </div>
     ${b.plan === 'monthly' && b.tier === 'essencial' ? `<button class="card card--row upgrade" data-action="billing-portal">${icon('crown', 20)}<div><strong>Passe para o Profissional</strong><small>Assistente com IA, cobrança de atraso e ranking com meses grátis. Troque em “Gerenciar”.</small></div>${icon('right', 16)}</button>` : ''}
     ${b.plan === 'monthly' && (b.foundersLeft ?? 0) > 0 ? `<button class="card card--row upgrade" data-action="plans">${icon('crown', 20)}<div><strong>Vire Fundador</strong><small>R$ 199 uma vez: o Profissional para sempre. Só ${b.foundersLeft} vagas. A assinatura é cancelada na hora.</small></div>${icon('right', 16)}</button>` : ''}

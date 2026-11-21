@@ -137,16 +137,19 @@ test('janela do dia vem da ficha: quem acorda 5h recebe o bom dia 5h30; quem dor
 });
 
 test('sem abrir o app há mais de 3h: manda "tem algo pra marcar?" (até 3 por dia)', () => {
+  // sorteio com semente fixa: o teste dá sempre o mesmo resultado
+  let seed = 42;
+  const rnd = () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   let st = {}, n = 0;
   const p = { ...prof, seenAt: at('07:00') };
   for (let t = at('07:00'); t <= at('22:30'); t += 60e3) {
-    const r = nextNudge(p, st, t);
+    const r = nextNudge(p, st, t, rnd);
     if (r) { st = r.state; if (r.msg.kind === 'checkin') n++; }
   }
   assert.ok(n >= 1 && n <= 3, `checkins ${n}`);
   let st2 = {}, n2 = 0;
   for (let t = at('07:00'); t <= at('22:30'); t += 60e3) {
-    const r = nextNudge({ ...prof, seenAt: t - 60e3 }, st2, t);
+    const r = nextNudge({ ...prof, seenAt: t - 60e3 }, st2, t, rnd);
     if (r) { st2 = r.state; if (r.msg.kind === 'checkin') n2++; }
   }
   assert.equal(n2, 0, 'quem está usando o app não recebe');

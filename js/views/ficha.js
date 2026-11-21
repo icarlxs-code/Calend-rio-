@@ -3,7 +3,7 @@
 import { brand } from '../brand.js';
 import { icon } from '../icons.js';
 import { esc } from '../utils.js';
-import { PROFESSIONS, ARCHETYPES, TYPE_DEFS, archOf, searchProfessions, profStyle } from '../../functions/catalog.js';
+import { PROFESSIONS, ARCHETYPES, TYPE_DEFS, archOf, searchProfessions, profStyle, professionFor } from '../../functions/catalog.js';
 import { DIFFICULTIES, JOURNEYS, GOALS, TONES, METHODS, VOLUMES, PRONOUNS, GENDERS, computePersona, validCPF, maskCPF, maskPhone, validPhone, tidyName, validNameChars, ageOf, g } from '../persona.js';
 import { store, saveUserProfile } from '../store.js';
 import { savePrefs } from '../personal.js';
@@ -12,6 +12,8 @@ import { toast } from '../components.js';
 import { rise, tick } from '../sound.js';
 import { burst } from '../reward.js';
 import { CONFIG } from '../../config.js';
+import { pickField, openPicker } from '../picker.js';
+import { roleHint } from '../roles.js';
 
 /* páginas oficiais (Termos e Privacidade) */
 const pageUrl = (name) => `${/^(localhost|127\.0\.0\.1)$/.test(location.hostname) || !CONFIG.siteUrl ? location.pathname.replace(/[^/]*$/, '') : CONFIG.siteUrl.replace(/\/?$/, '/')}${name}/`;
@@ -47,6 +49,39 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
   document.body.appendChild(wrap);
   requestAnimationFrame(() => wrap.classList.add('is-open'));
 
+  /* caixas de escolha: uma linha na tela; abrem a lista (única ou várias) */
+  const PICK = {
+    gender: { label: 'Você se identifica como', options: () => GENDERS.map((x) => ({ v: x.id, l: x.label })),
+      after: (v) => { f.pronoun = GENDERS.find((x) => x.id === v)?.pronoun || 'n'; refreshField('pronoun'); } },
+    pronoun: { label: 'O Lembra fala com você…', options: () => PRONOUNS.map((x) => ({ v: x.id, l: x.label, d: x.id === 'f' ? 'Ex.: “Pronta para hoje?”' : x.id === 'm' ? 'Ex.: “Pronto para hoje?”' : 'Ex.: “Tudo pronto para hoje?”' })) },
+    journey: { label: 'Como é a sua jornada?', options: () => JOURNEYS.map((j) => ({ v: j.id, l: j.label, d: j.hint })),
+      after: (v) => { if (v === 'plantao') { f.workStart = '07:00'; f.workEnd = '19:00'; const ws = wrap.querySelector('[data-f="workStart"]'), we = wrap.querySelector('[data-f="workEnd"]'); if (ws) ws.value = f.workStart; if (we) we.value = f.workEnd; } } },
+    volume: { label: 'Quantos compromissos de trabalho num dia normal?', options: () => VOLUMES.map((v) => ({ v: v.id, l: v.label })) },
+    difficulties: { label: 'O que acontece com você', title: 'O que mais te atrapalha?', multi: true, hint: 'Marque tudo o que acontece com você. Sem julgamento 😉', options: () => DIFFICULTIES.map((d) => ({ v: d.id, l: d.label })) },
+    method: { label: 'Hoje, como você se lembra dos compromissos?', options: () => METHODS.map((m) => ({ v: m.id, l: m.label })) },
+    lead: { label: 'Quanto tempo antes você quer o aviso?', options: () => LEADS.map((l) => ({ v: l.v, l: l.l })) },
+    tone: { label: 'Quando você atrasar, o Lembra fala como…', options: () => TONES.map((t) => ({ v: t.id, l: t.label, d: t.sample })),
+      after: (v) => { const smp = wrap.querySelector('.ficha__sample'); if (smp) smp.textContent = TONES.find((t) => t.id === v)?.sample || ''; } },
+    goal: { label: 'Seu principal objetivo', options: () => GOALS.map((x) => ({ v: x.id, l: x.label })) },
+    motivationLevel: { label: 'Como anda a sua motivação?', options: () => MOOD.motivation.map(([v, l]) => ({ v, l })) },
+    selfesteem: { label: 'E a sua autoestima?', options: () => MOOD.selfesteem.map(([v, l]) => ({ v, l })) },
+    anxiety: { label: 'Você se considera uma pessoa ansiosa?', options: () => MOOD.anxiety.map(([v, l]) => ({ v, l })) },
+    traits: { label: 'Como você se descreve?', multi: true, options: () => TRAITS.map(([v, l]) => ({ v, l })) },
+    focus: { label: 'O que você quer trabalhar em você?', multi: true, options: () => FOCUS.map(([v, l]) => ({ v, l })) },
+    religion: { label: 'Qual é a sua religião ou crença?', options: () => RELIGIONS.map(([v, l]) => ({ v, l })) },
+    waterEvery: { label: 'Lembrar de beber água', options: () => WATER.map(([v, l]) => ({ v, l })) },
+  };
+  const field = (k) => pickField({ key: k, label: PICK[k].label, options: PICK[k].options(), value: f[k], multi: !!PICK[k].multi });
+  const refreshField = (k) => { const box = wrap.querySelector(`[data-pkf="${k}"]`); if (box) { box.outerHTML = field(k); bindPick(); } };
+  const bindPick = () => wrap.querySelectorAll('[data-pickf]').forEach((b) => (b.onclick = () => {
+    const k = b.dataset.pickf, P = PICK[k];
+    openPicker({ title: P.title || P.label, hint: P.hint || '', options: P.options(), multi: !!P.multi, value: f[k], onDone: (v) => {
+      f[k] = v;
+      if (P.after) P.after(v);
+      if (err) { err = ''; const e = wrap.querySelector('.ficha__err'); if (e) e.hidden = true; }
+      refreshField(k); saveDraft();
+    } });
+  }));
   const prog = () => `<div class="ficha__prog"><i style="width:${Math.round((step / (STEPS.length - 1)) * 100)}%"></i></div>`;
   const nav = (next = 'Continuar') => `<p class="ficha__err" ${err ? '' : 'hidden'}>${esc(err)}</p>
     <div class="ficha__nav">${step > 0 ? '<button class="btn btn--soft" data-back>Voltar</button>' : !required ? '<button class="btn-text" data-quit>Agora não</button>' : '<span></span>'}<button class="btn btn--primary" data-next>${next}</button></div>`;
@@ -54,14 +89,14 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
   const listHtml = () => {
     const list = searchProfessions(q, 30);
     const own = q.trim() && !list.some((p) => p.name.toLowerCase() === q.trim().toLowerCase());
-    return list.map((p) => `<button class="ficha__opt${f.profession === p.name ? ' is-on' : ''}" data-prof="${esc(p.name)}"><span class="ficha__optic">${icon(profStyle(p.name).icon || ARCHETYPES[p.arch]?.entity.icon || 'briefcase', 18)}</span><span><b>${esc(p.name)}</b><small>${esc(p.area)}</small></span></button>`).join('')
+    return list.map((p) => `<button class="ficha__opt${f.profession === p.name ? ' is-on' : ''}" data-prof="${esc(p.name)}"><span class="ficha__optic">${icon(profStyle(p.name).icon || ARCHETYPES[p.arch]?.entity.icon || 'briefcase', 18)}</span><span><b>${esc(professionFor(p.name, f.pronoun))}</b><small>${esc(p.area)}</small></span></button>`).join('')
       + (own ? `<button class="ficha__opt ficha__opt--own" data-prof="${esc(q.trim())}"><span class="ficha__optic">${icon('plus', 18)}</span><span><b>Usar “${esc(q.trim())}”</b><small>Minha profissão não está na lista</small></span></button>` : '')
       || '<p class="fhelp" style="padding:12px 14px">Nada encontrado. Escreva sua profissão e toque em “Usar”.</p>';
   };
   const pickHtml = () => {
     if (!f.profession) return '';
     const a = ARCHETYPES[archOf(f.profession)];
-    return `<div class="ficha__pick">${icon(profStyle(f.profession).icon || a.entity.icon || 'check', 20)} <div><b>${esc(f.profession)}</b><small>Sua agenda vai organizar por <b>${esc(a.entity.many.toLowerCase())}</b>, com: ${a.types.slice(0, 5).map((t) => esc(TYPE_DEFS[t].label)).join(', ')}…</small></div></div>`;
+    return `<div class="ficha__pick">${icon(profStyle(f.profession).icon || a.entity.icon || 'check', 20)} <div><b>${esc(professionFor(f.profession, f.pronoun))}</b><small>Sua agenda vai organizar por <b>${esc(a.entity.many.toLowerCase())}</b>, com: ${a.types.slice(0, 5).map((t) => esc(TYPE_DEFS[t].label)).join(', ')}…</small></div></div>`;
   };
   const views = {
     inicio: () => `<div class="ficha__hero">
@@ -78,10 +113,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       <label class="flabel" for="fi-nick">Como prefere que o Lembra te chame?</label><input id="fi-nick" class="input" data-f="nickname" value="${esc(f.nickname)}" maxlength="30" placeholder="Ex.: Rafa" autocomplete="nickname">
       <div class="row2"><div><label class="flabel" for="fi-birth">Nascimento</label><input id="fi-birth" class="input" type="date" data-f="birth" value="${esc(f.birth)}" min="1900-01-01" max="${new Date().toISOString().slice(0, 10)}" autocomplete="bday"></div>
       <div><label class="flabel" for="fi-cpf">CPF</label><input id="fi-cpf" class="input" inputmode="numeric" data-f="cpf" value="${esc(maskCPF(f.cpf))}" placeholder="000.000.000-00" maxlength="20" autocomplete="off"></div></div>
-      <label class="flabel">Você se identifica como</label>
-      <div class="ficha__chips">${GENDERS.map((x) => `<button class="ficha__chip${f.gender === x.id ? ' is-on' : ''}" data-gender="${x.id}">${esc(x.label)}</button>`).join('')}</div>
-      <label class="flabel">Como o Lembra fala com você?</label>
-      <div class="ficha__chips">${PRONOUNS.map((p) => `<button class="ficha__chip${f.pronoun === p.id ? ' is-on' : ''}" data-pronoun="${p.id}">${esc(p.label)}</button>`).join('')}</div>
+      <div class="row2">${field('gender')}${field('pronoun')}</div>
       <p class="fhelp">Isso muda o jeito de falar (pronta, pronto ou “tudo pronto”) e as sugestões do seu modo Pessoal. Ninguém mais vê.</p>
       <label class="flabel" for="fi-phone">Celular (opcional)</label><input id="fi-phone" class="input" type="tel" inputmode="tel" data-f="phone" value="${esc(maskPhone(f.phone))}" placeholder="(00) 00000-0000" maxlength="20" autocomplete="tel-national">
       <p class="fhelp">O CPF serve só para identificar sua conta e garantir um teste grátis por pessoa. Ele não aparece para ninguém.</p>${nav()}`,
@@ -90,51 +122,42 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       <div class="ficha__search">${icon('search', 18)}<input class="input" data-q type="search" enterkeyhint="done" placeholder="Busque: enfermeiro, professor, sargento…" value="${esc(q)}" autocomplete="off" autocorrect="off" spellcheck="false"></div>
       <div class="ficha__list" data-list>${listHtml()}</div>
       <div data-pick>${pickHtml()}</div>
-      <div class="row2"><div><label class="flabel" for="fi-role">Cargo ou função (opcional)</label><input id="fi-role" class="input" data-f="role" value="${esc(f.role)}" placeholder="Ex.: Gerente" maxlength="40"></div>
-      <div><label class="flabel" for="fi-place">Onde trabalha (opcional)</label><input id="fi-place" class="input" data-f="workplace" value="${esc(f.workplace)}" maxlength="60"></div></div>${nav()}`;
+      <label class="flabel" for="fi-role">Cargo ou função <small class="muted">(opcional)</small></label><input id="fi-role" class="input" data-f="role" value="${esc(f.role)}" placeholder="${esc(roleHint(f.profession))}" maxlength="40">
+      <label class="flabel" for="fi-place">Onde trabalha <small class="muted">(opcional)</small></label><input id="fi-place" class="input" data-f="workplace" value="${esc(f.workplace)}" maxlength="60" placeholder="Ex.: nome da empresa, loja ou hospital">${nav()}`;
     },
     rotina: () => `<h2>Sua rotina</h2><p class="ficha__sub">Para o Lembra só te chamar nos horários certos.</p>
-      <label class="flabel">Como é a sua jornada?</label>
-      <div class="ficha__cards">${JOURNEYS.map((j) => `<button class="ficha__card${f.journey === j.id ? ' is-on' : ''}" data-journey="${j.id}"><b>${esc(j.label)}</b><small>${esc(j.hint)}</small></button>`).join('')}</div>
+      ${field('journey')}
       <div class="row2"><div><label class="flabel">Começo o trabalho</label><input class="input" type="time" data-f="workStart" value="${f.workStart}"></div><div><label class="flabel">Termino</label><input class="input" type="time" data-f="workEnd" value="${f.workEnd}"></div></div>
-      <label class="flabel">Num dia normal, quantos compromissos de trabalho você tem?</label>
-      <div class="ficha__chips">${VOLUMES.map((v) => `<button class="ficha__chip${f.volume === v.id ? ' is-on' : ''}" data-volume="${v.id}">${esc(v.label)}</button>`).join('')}</div>
+      ${field('volume')}
       <label class="flabel">Dias em que trabalho</label>
       <div class="ficha__days">${WD.map((w, i) => `<button class="ficha__day${f.workDays.includes(i) ? ' is-on' : ''}" data-wd="${i}">${w}</button>`).join('')}</div>
       <div class="row3"><div><label class="flabel">Acordo</label><input class="input" type="time" data-f="wake" value="${f.wake}"></div><div><label class="flabel">Almoço</label><input class="input" type="time" data-f="lunch" value="${f.lunch}"></div><div><label class="flabel">Durmo</label><input class="input" type="time" data-f="sleep" value="${f.sleep}"></div></div>${nav()}`,
     dificuldades: () => `<h2>O que mais te atrapalha?</h2><p class="ficha__sub">Marque tudo o que acontece com você. Sem julgamento 😉</p>
-      <div class="ficha__chips">${DIFFICULTIES.map((d) => `<button class="ficha__chip${f.difficulties.includes(d.id) ? ' is-on' : ''}" data-diff="${d.id}">${esc(d.label)}</button>`).join('')}</div>
+      ${field('difficulties')}
       <p class="fhelp">Opções sobre saúde (ansiedade, sono) são opcionais e só servem para ajustar o ritmo das mensagens. Ficam só na sua conta.</p>
-      <label class="flabel">Hoje, como você se lembra dos compromissos?</label>
-      <div class="ficha__chips">${METHODS.map((m) => `<button class="ficha__chip${f.method === m.id ? ' is-on' : ''}" data-method="${m.id}">${esc(m.label)}</button>`).join('')}</div>
+      ${field('method')}
       <label class="flabel">O quanto você esquece as coisas?</label>
       <input class="ficha__range" type="range" min="1" max="5" step="1" data-f="forget" value="${f.forget}"><p class="ficha__rangev"><b>${FORGET[f.forget]}</b></p>
-      <label class="flabel">Quanto tempo antes você quer o aviso?</label>
-      <div class="ficha__chips">${LEADS.map((l) => `<button class="ficha__chip${String(f.lead) === String(l.v) ? ' is-on' : ''}" data-lead="${l.v}">${l.l}</button>`).join('')}</div>${nav()}`,
+      ${field('lead')}${nav()}`,
     estilo: () => `<h2>Como o Lembra fala com você</h2><p class="ficha__sub">Quando você atrasar ou precisar de um empurrão.</p>
-      <div class="ficha__cards ficha__cards--1">${TONES.map((t) => `<button class="ficha__card${f.tone === t.id ? ' is-on' : ''}" data-tone="${t.id}"><b>${esc(t.label)}</b><small>${esc(t.sample)}</small></button>`).join('')}</div>
+      ${field('tone')}
+      <p class="ficha__sample">${esc(TONES.find((t) => t.id === f.tone)?.sample || '')}</p>
       <div class="list ficha__toggles">
         <label class="list__row"><span><b>Lembrar de comer</b><small>almoço e jantar</small></span><input type="checkbox" class="switch" data-chk="meals" ${f.meals ? 'checked' : ''}></label>
       </div>
-      <label class="flabel">Seu principal objetivo</label>
-      <div class="ficha__chips">${GOALS.map((g) => `<button class="ficha__chip${f.goal === g.id ? ' is-on' : ''}" data-goal="${g.id}">${esc(g.label)}</button>`).join('')}</div>${nav()}`,
+      ${field('goal')}${nav()}`,
     mente: () => {
-      const one = (k, list) => `<div class="ficha__chips">${list.map(([v, l]) => `<button class="ficha__chip${f[k] === v ? ' is-on' : ''}" data-one="${k}" data-v="${v}">${l}</button>`).join('')}</div>`;
-      const many = (k, list) => `<div class="ficha__chips">${list.map(([v, l]) => `<button class="ficha__chip${f[k].includes(v) ? ' is-on' : ''}" data-many="${k}" data-v="${v}">${l}</button>`).join('')}</div>`;
       return `<h2>Você por dentro</h2><p class="ficha__sub">Para o Lembra falar com você como um amigo que te conhece — e não mandar a mesma coisa que manda para todo mundo. Fica só na sua conta.</p>
-      <label class="flabel">Como anda a sua motivação ultimamente?</label>${one('motivationLevel', MOOD.motivation)}
-      <label class="flabel">E a sua autoestima?</label>${one('selfesteem', MOOD.selfesteem)}
-      <label class="flabel">Você se considera uma pessoa ansiosa?</label>${one('anxiety', MOOD.anxiety)}
-      <label class="flabel">Como você se descreve? <small>(pode marcar vários)</small></label>${many('traits', TRAITS)}
-      <label class="flabel">O que você quer trabalhar em você?</label>${many('focus', FOCUS)}
+      ${field('motivationLevel')}${field('selfesteem')}${field('anxiety')}
+      ${field('traits')}${field('focus')}
       <div class="list ficha__toggles">
         <label class="list__row"><span><b>Mensagens de motivação</b><small>frases de ânimo do seu jeito</small></span><input type="checkbox" class="switch" data-chk="wantsMotivation" ${f.wantsMotivation ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Mensagens de fé</b><small>da sua religião, se você tiver</small></span><input type="checkbox" class="switch" data-chk="faith" data-rerender ${f.faith ? 'checked' : ''}></label>
       </div>
-      ${f.faith ? `<label class="flabel">Qual é a sua religião ou crença?</label>${one('religion', RELIGIONS)}` : ''}
+      ${f.faith ? field('religion') : ''}
       <label class="flabel">Quantas mensagens do amigo do Lembra por dia?</label>
       <input class="ficha__range" type="range" min="3" max="15" step="1" data-f="perDay" value="${f.perDay}"><p class="ficha__rangev"><b data-perday>${f.perDay} por dia</b> <small>(fora os lembretes da sua agenda)</small></p>
-      <label class="flabel">Lembrar de beber água</label>${one('waterEvery', WATER.map(([v, l]) => [String(v), l]))}
+      ${field('waterEvery')}
       ${nav('Ver meu Lembra')}`;
     },
     resumo: () => {
@@ -182,7 +205,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     const vol = VOLUMES.find((v) => v.id === f.volume);
     const jour = JOURNEYS.find((j) => j.id === f.journey) || JOURNEYS[0];
     const list = [
-      { k: 'Trabalho', ic: profStyle(f.profession).icon || a.entity.icon || 'briefcase', c: '#0A84FF', title: `Uma agenda com a cara de ${f.profession}`, big: `${a.types.length} tipos de compromisso`, text: `Aba “${a.entity.many}” e os compromissos do seu dia a dia: ${a.types.map((t) => TYPE_DEFS[t].label).join(', ')}.` },
+      { k: 'Trabalho', ic: profStyle(f.profession).icon || a.entity.icon || 'briefcase', c: '#0A84FF', title: `Uma agenda com a cara de ${professionFor(f.profession, f.pronoun)}`, big: `${a.types.length} tipos de compromisso`, text: `Aba “${a.entity.many}” e os compromissos do seu dia a dia: ${a.types.map((t) => TYPE_DEFS[t].label).join(', ')}.` },
       { k: 'Avisos', ic: 'bell', c: '#FF9500', title: `${p.offsets.length + 1} avisos para cada compromisso`, big: p.offsets.map(off).join(' · '), text: `E uma pergunta na hora exata. Calculado pelo seu nível de cuidado (${p.index}/100): quanto mais você esquece, mais o Lembra te protege.` },
     ];
     if (method && method.w) list.push({ k: 'Cabeça leve', ic: 'sparkles', c: '#AF52DE', title: 'Você não precisa mais guardar tudo de cabeça', big: '', text: `Hoje você lembra ${method.id === 'cabeca' ? 'de cabeça' : method.id === 'outros' ? 'porque alguém te lembra' : 'no papel'}. A partir de agora esse trabalho é do Lembra.` });
@@ -290,6 +313,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
   };
   const bind = () => {
     const $ = (sel) => wrap.querySelectorAll(sel);
+    bindPick();
     $('[data-f]').forEach((el) => (el.oninput = () => {
       const k = el.dataset.f;
       // corrigiu o campo: some o aviso de erro
@@ -308,6 +332,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       if (err) { err = ''; showErr(); }
       listEl.innerHTML = listHtml(); bindProfs();
       wrap.querySelector('[data-pick]').innerHTML = pickHtml();
+      const role = wrap.querySelector('#fi-role'); if (role) role.placeholder = roleHint(f.profession);
     }));
     if (qi) {
       qi.oninput = () => { q = qi.value; listEl.innerHTML = listHtml(); listEl.scrollTop = 0; bindProfs(); };

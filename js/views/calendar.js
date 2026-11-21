@@ -8,8 +8,10 @@ import {
   WD_LETTER, WD_SHORT, dayLabel, fmtDuration, MONTHS_SHORT, MONTHS, toMin, nowMin, fmtTime, fmtCountdown, greeting, rgba, textOn,
 } from '../utils.js';
 import { icon } from '../icons.js';
-import { avatar, avatars, logo, eventCard, emptyState, typeBadge, whoText, timeRange, logoOrType } from '../components.js';
+import { meRing, avatar, avatars, logo, eventCard, emptyState, typeBadge, whoText, timeRange, logoOrType } from '../components.js';
 import { dayInsights, nextUp } from '../insights.js';
+import { teamBoardCard } from './teamboard.js';
+import { professionFor } from '../../functions/catalog.js';
 import { dayBrief, dayBriefRows, freeTime } from '../planner.js';
 
 /* ---------- elementos compartilhados ---------- */
@@ -53,7 +55,7 @@ export function renderToday() {
         <p class="hdr__eyebrow">${date === today ? `${greeting()}${me ? ', ' + esc(me.name) : ''}` : esc(fmtDayLong(date))}</p>
         <h1>${esc(relDay(date))}${date === today ? `<span class="hdr__date">${esc(fmtDayShort(date))}</span>` : ''}</h1>
         ${(!isMarketing() && WORK.profession) || store.shared || Object.keys(store.profile?.teams || {}).length ? `<div class="hdr__chips">
-          ${!isMarketing() && WORK.profession ? `<button class="profchip" data-action="ficha">${icon(WORK.badge || 'briefcase', 13)} ${esc(WORK.profession)}</button>` : ''}
+          ${!isMarketing() && WORK.profession ? `<button class="profchip" data-action="ficha">${icon(WORK.badge || 'briefcase', 13)} ${esc(professionFor(WORK.profession, store.profile?.pronoun))}</button>` : ''}
           ${store.shared || Object.keys(store.profile?.teams || {}).length ? `<button class="wschip" data-action="share">${icon('users', 13)} ${store.shared ? `Agenda de ${esc(store.shared.ownerName)}` : 'Minha agenda'} ${icon('down', 12)}</button>` : ''}
         </div>` : ''}
       </div>
@@ -61,7 +63,7 @@ export function renderToday() {
         ${date !== today ? `<button class="chip chip--accent" data-action="go-today">Hoje</button>` : ''}
         <button class="iconbtn iconbtn--personal" data-action="space" data-space="personal" aria-label="Ir para o Pessoal">${icon('heart', 19)}</button>
         <button class="iconbtn iconbtn--ai" data-action="assistant" aria-label="Assistente">${icon('sparkle', 20)}</button>
-        <button class="iconbtn" data-action="tab" data-tab="ajustes" aria-label="Perfil">${me ? avatar(me.id, 34) : icon('user', 20)}</button>
+        <button class="iconbtn iconbtn--me" data-action="profile" aria-label="Seu perfil e conquistas">${me ? meRing(me.id, 32) : icon('user', 20)}</button>
       </div>
     </div>
     ${personSwitch()}
@@ -219,6 +221,7 @@ export function renderToday() {
       ${icon('right', 18, 'muted')}
     </button>
     ${team}
+    ${teamBoardCard()}
     <section class="block">
       <h2 class="block__title">${icon('clock', 16)} Agenda ${store.team.length < 2 ? 'do dia' : ui.person === 'all' ? `da ${crew()}` : 'de ' + esc(store.member(ui.person)?.name || '')}</h2>
       ${summary}

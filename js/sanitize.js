@@ -41,6 +41,8 @@ export function sanitizeItem(col, x) {
       createdBy: safeId(x.createdBy),
       updatedBy: safeId(x.updatedBy),
       seriesId: safeId(x.seriesId),
+      doneAt: Number.isFinite(x.doneAt) && x.doneAt > 0 ? x.doneAt : null,
+      doneBy: safeId(x.doneBy),
       duration: x.duration ? num(x.duration, 5, 1440, null) : null,
       reminder: num(x.reminder, -1, 10080, 30),
       visibleToClient: x.visibleToClient !== false,

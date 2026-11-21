@@ -1,10 +1,11 @@
 /* Modo Pessoal: um "outro app" dentro do Calendário. Visual, telas e menu próprios,
    mesmo login. Só o dono vê o que está aqui (nem o parceiro, nem o trabalho). */
+import { okFx } from '../okfx.js';
 import {
   personal, CATS, REPEATS, LIST_PRESETS, occurrences, overdue, savePersonal, removePersonal, toggleDone, parseQuick,
   doneOn, birthdays, phraseOfDay, newList, addEntry, toggleEntry, removeEntry, clearDone, savePrefs, LIST_ICONS, listIcon,
 } from '../personal.js';
-import { openSheet, sheetHead, toast, confirmDialog, avatar } from '../components.js';
+import { openSheet, sheetHead, toast, confirmDialog, avatar, meRing } from '../components.js';
 import { isMarketing } from '../constants.js';
 import { icon } from '../icons.js';
 import { store } from '../store.js';
@@ -56,7 +57,7 @@ function renderHome() {
   const lists = personal.lists;
   const quickCats = ['aniversario', 'beleza', 'buscar', 'saude', 'pagar', 'compromisso'];
   return `
-  ${header(`${icon('lock', 11)} Só você vê`, `${esc(greeting())}${firstName() ? ', ' + esc(firstName()) : ''}`, `${workBtn}<button class="iconbtn iconbtn--ai" data-action="assistant" aria-label="Assistente">${icon('sparkle', 19)}</button><button class="iconbtn" data-action="ptab" data-tab="p-ajustes" aria-label="Perfil">${store.me ? avatar(store.me, 34) : icon('user', 20)}</button>`)}
+  ${header(`${icon('lock', 11)} Só você vê`, `${esc(greeting())}${firstName() ? ', ' + esc(firstName()) : ''}`, `${workBtn}<button class="iconbtn iconbtn--ai" data-action="assistant" aria-label="Assistente">${icon('sparkle', 19)}</button><button class="iconbtn iconbtn--me" data-action="profile" aria-label="Seu perfil e conquistas">${store.me ? meRing(store.me, 32) : icon('user', 20)}</button>`)}
   <div class="page ppage">
     ${personal.error === 'rules' ? `<div class="palert">${tile('alert', ['#FF8A7A', '#E5341F'], 36)}<div><strong>O Pessoal ainda não está liberado na nuvem</strong><small>O que você anota não fica salvo. No Firebase: Firestore → Regras → cole as regras novas → Publicar. Depois feche e abra o app.</small></div></div>` : personal.error === 'net' ? `<div class="palert">${tile('alert', ['#FFB547', '#FF7A1A'], 36)}<div><strong>Sem conexão com a nuvem</strong><small>Confira a internet. O que você anotar aparece quando a conexão voltar.</small></div></div>` : ''}
     <div class="phero">
@@ -245,7 +246,8 @@ export function bindPersonal(view) {
     f.q.value = '';
     const it = savePersonal({ ...parseQuick(q), remind: 'auto' });
     if (!it) { f.q.value = q; return false; } // sem plano ativo: nada foi salvo
-    toast(`Anotado: ${dayLabel(it.date)}${it.time ? ' às ' + fmtTime(it.time) : ''}`, { action: 'Ajustar', onAction: () => openPersonalEditor(it.id), ms: 4000 });
+    okFx({ title: 'Anotado!', sub: `${dayLabel(it.date)}${it.time ? ' às ' + fmtTime(it.time) : ''}` });
+    setTimeout(() => toast(`${it.title}`, { action: 'Ajustar', onAction: () => openPersonalEditor(it.id), ms: 3500 }), 1600);
     return false;
   };
   if (view.querySelector('[data-usage]')) fillUsage(view);
@@ -440,7 +442,7 @@ export function openPersonalEditor(id = null, preset = {}) {
         if (!title) { form.title.focus(); return toast('Escreva o que é'); }
         const ok = savePersonal({ ...d, title, date: form.date.value || todayKey(), time: form.time.value || null, repeat: form.repeat.value, note: form.note.value.trim(), birthYear: +form.birthYear.value || null, remind: form.remind.checked ? 'auto' : 'none' });
         a.close();
-        if (ok) toast('Salvo ✓');
+        if (ok) { if (!id) okFx({ title: 'Anotado!', sub: `${dayLabel(ok.date || todayKey())}${ok.time ? ' às ' + fmtTime(ok.time) : ''}` }); else toast('Salvo ✓'); }
       };
       const del = el.querySelector('[data-del]');
       if (del) del.onclick = async () => {

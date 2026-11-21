@@ -24,6 +24,6 @@ export async function openRanking() {
       <p class="fhelp">Jogo limpo: cada item conta uma vez, há limite de pontos por hora e por dia, e contas com uso automático (robôs, scripts, IA mexendo sozinha) saem do ranking. A sequência aguenta 1 dia de folga por semana. Quem fica 20+ dias ativo no mês ganha 10% de desconto. Cada pessoa ganha no máximo 1 prêmio a cada 90 dias.</p>`}
   </div>`;
   const a = openSheet({ className: 'sheet--tall', html: html() });
-  try { d = await (await import('../avisos.js')).api('/rank/board', {}); a.set(html()); } catch (e) { toast('Não consegui abrir o ranking agora.'); }
+  try { d = await (await import('../avisos.js')).api('/rank/board', {}); a.set(html()); import('../game.js').then((g) => g.onRank(d)).catch(() => {}); } catch (e) { toast('Não consegui abrir o ranking agora.'); }
   return a;
 }

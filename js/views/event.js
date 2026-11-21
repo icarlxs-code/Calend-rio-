@@ -1,4 +1,5 @@
 /* Detalhe do evento e editor (criar/editar) */
+import { okFx } from '../okfx.js';
 import { store } from '../store.js';
 import { CONFIG } from '../../config.js';
 import { ui } from '../ui.js';
@@ -43,8 +44,8 @@ function detailHtml(id) {
       <p class="detail__when">${icon('calendar', 15)} ${esc(relDay(e.date))}, ${esc(fmtDayLong(e.date).split(', ')[1])} · ${icon('clock', 15)} ${esc(timeRange(e))}</p>
     </div>
 
-    ${mine ? '' : `<p class="detail__lock">${icon('eye', 14)} Cadastrado por ${esc(ownerName)} — você só pode ver. Use “Duplicar” para criar uma cópia sua.</p>`}
-    <div class="seg seg--status"${mine ? '' : ' hidden'}>
+    ${mine ? '' : `<p class="detail__lock">${icon('eye', 14)} Cadastrado por ${esc(ownerName)} — ${store.canComplete(e) ? 'você é responsável: pode marcar o andamento, mas não editar.' : 'você só pode ver. Use “Duplicar” para criar uma cópia sua.'}</p>`}
+    <div class="seg seg--status"${mine || store.canComplete(e) ? '' : ' hidden'}>
       ${STATUS_ORDER.map((s) => `<button class="seg__btn${e.status === s ? ' is-on' : ''} st-${s}" data-status="${s}">${s === 'feito' ? icon('check', 14) : ''}${STATUS[s].label}</button>`).join('')}
     </div>
 
@@ -471,11 +472,15 @@ function mountEditor(api, d, original, rep) {
       await store.upsertMany('events', use.map((date, i) => ({ ...d, id: i === 0 ? d.id : uid('e_'), date, seriesId })), {
         activity: { notifyPartner: d.notifyPartner, kind: 'series', count: use.length, label: `${TYPES[d.type].label} ${REPEATS.find((x) => x.v === rep.mode)?.label.toLowerCase() || ''} às ${fmtTime(d.time)}`, sample: { companyId: d.companyId, date: use[0] } },
       });
-      toast(`${use.length} eventos criados`);
+      api.close();
+      okFx({ title: `${use.length} ${EV()}s marcados`, sub: `${REPEATS.find((x) => x.v === rep.mode)?.label || ''}${d.time ? ' · ' + fmtTime(d.time) : ''}`.replace(/^ · /, '') });
+      return;
     } else {
       if (!(await checkBeforeSave(d, true, api, refreshAll))) return;
       await store.upsert('events', { ...d });
-      toast(`${EVc()} salvo ✓`);
+      api.close();
+      okFx({ title: `${EVc()} marcado`, sub: `${dayLabel(d.date)}${d.time ? ' · ' + fmtTime(d.time) : ''}` });
+      return;
     }
     api.close();
   };

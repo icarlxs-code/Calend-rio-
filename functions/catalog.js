@@ -383,12 +383,33 @@ export function archOf(profession) {
   const hit = KEYS.find(([re]) => re.test(n));
   return hit ? hit[1] : 'generico';
 }
+/* a pessoa escreve do jeito dela: no feminino (enfermeira, professora, psicóloga), por apelido (uber, ifood, ti)… */
+const SYN = { uber: 'motorista de aplicativo', '99': 'motorista de aplicativo', ifood: 'entregador', rappi: 'entregador', loggi: 'entregador', ti: 'tecnico de informatica', dev: 'desenvolvedor', pm: 'policial militar', pf: 'policial federal', prf: 'policial rodoviario', gcm: 'guarda municipal', cuidadora: 'cuidador de idosos', baba: 'cuidador de idosos', faxina: 'diarista', unha: 'manicure', unhas: 'manicure', sobrancelha: 'designer de sobrancelhas', cilios: 'lash designer', bolo: 'confeiteiro', bolos: 'confeiteiro', doceira: 'confeiteiro', doces: 'confeiteiro', personal: 'personal trainer', influencer: 'produtor de conteudo', youtuber: 'produtor de conteudo', concurso: 'concurseiro', faculdade: 'universitario', escola: 'estudante' };
+/* "enfermeira" → "enfermeiro", "professora" → "professor", "psicóloga" → "psicólogo" (o catálogo está no masculino) */
+const toMasc = (w) => (/eira$/.test(w) ? w.replace(/eira$/, 'eiro') : /ora$/.test(w) ? w.replace(/ora$/, 'or') : /triz$/.test(w) ? w.replace(/triz$/, 'tor') : /esa$/.test(w) ? w.replace(/esa$/, 'es') : /a$/.test(w) && w.length > 3 ? w.replace(/a$/, 'o') : w);
 export function searchProfessions(q, limit = 40) {
   const n = norm(q);
   if (!n) return PROFESSIONS.slice(0, limit);
-  const starts = PROFESSIONS.filter((p) => norm(p.name).startsWith(n));
-  const has = PROFESSIONS.filter((p) => !norm(p.name).startsWith(n) && (norm(p.name).includes(n) || norm(p.area).includes(n)));
+  const forms = [...new Set([n, n.split(' ').map(toMasc).join(' '), SYN[n] || '', ...n.split(' ').map((w) => SYN[w] || '').filter(Boolean)].filter(Boolean))];
+  const nm = (p) => norm(p.name);
+  // a forma original vale em qualquer parte do nome; as convertidas (feminino → catálogo) só no começo de uma palavra
+  const wordStart = (p, f) => nm(p).startsWith(f) || nm(p).includes(' ' + f);
+  const starts = PROFESSIONS.filter((p) => forms.some((f) => nm(p).startsWith(f)));
+  const has = PROFESSIONS.filter((p) => !starts.includes(p) && (nm(p).includes(n) || norm(p.area).includes(n) || forms.slice(1).some((f) => wordStart(p, f))));
   return [...starts, ...has].slice(0, limit);
+}
+/* nome da profissão no feminino para quem escolheu ser tratada no feminino (Enfermeira, Professora, Confeiteira) */
+const FEM_FIX = { 'Garçom': 'Garçom', 'Policial militar': 'Policial militar', 'Policial civil': 'Policial civil', 'Policial federal': 'Policial federal', 'Policial rodoviário': 'Policial rodoviária', 'Personal trainer': 'Personal trainer', 'Juiz': 'Juíza', 'Bombeiro hidráulico': 'Bombeira hidráulica', 'Bombeiro civil': 'Bombeira civil', 'Bombeiro militar': 'Bombeira militar', 'Militar do Exército': 'Militar do Exército', 'Militar da Marinha': 'Militar da Marinha', 'Militar da Aeronáutica': 'Militar da Aeronáutica', 'Doméstica': 'Doméstica', 'Garçonete': 'Garçonete', 'Barista': 'Barista', 'Bartender': 'Bartender', 'Social media': 'Social media', 'Web designer': 'Web designer', 'Designer gráfico': 'Designer gráfica', 'Designer de sobrancelhas': 'Designer de sobrancelhas', 'Lash designer': 'Lash designer', 'Body piercer': 'Body piercer', 'Copywriter': 'Copywriter', 'Videomaker': 'Videomaker', 'Motoboy': 'Motogirl', 'Frentista': 'Frentista',
+  // postos militares não mudam ("a sargento", "a cabo"); alguns têm forma própria
+  'Soldado': 'Soldado', 'Cabo': 'Cabo', 'Sargento': 'Sargento', 'Subtenente': 'Subtenente', 'Tenente': 'Tenente', 'Capitão': 'Capitã', 'Escrivão': 'Escrivã', 'Astronauta': 'Astronauta' };
+const femWord = (w) => (/^[A-ZÁÉÍÓÚ]?[a-záéíóúâêôãõç]+$/.test(w) ? (/eiro$/.test(w) ? w.replace(/eiro$/, 'eira') : /dor$/.test(w) ? w.replace(/dor$/, 'dora') : /tor$/.test(w) ? w.replace(/tor$/, 'tora') : /sor$/.test(w) ? w.replace(/sor$/, 'sora') : /o$/.test(w) ? w.replace(/o$/, 'a') : /ês$/.test(w) ? w.replace(/ês$/, 'esa') : w) : w);
+export function professionFor(name, pronoun) {
+  if (pronoun !== 'f' || !name) return name;
+  if (FEM_FIX[name]) return FEM_FIX[name];
+  if (!PROFESSIONS.some((p) => p.name === name)) return name; // profissão escrita pela pessoa: fica como ela escreveu
+  const words = name.split(' ');
+  // só a primeira palavra (e adjetivos logo depois, como "técnico", "auxiliar") muda: "Técnico de enfermagem" → "Técnica de enfermagem"
+  return words.map((w, i) => (i === 0 || (i === 1 && !/^(de|da|do|dos|das|e)$/.test(words[1])) ? femWord(w) : w)).join(' ');
 }
 export const typeDef = (id) => TYPE_DEFS[id] || TYPE_DEFS.outro;
 

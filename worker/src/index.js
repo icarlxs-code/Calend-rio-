@@ -249,7 +249,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/admin/grant': 30, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20 };
+const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -288,6 +288,34 @@ async function handle(req, env) {
     }
   }
   if (req.method !== 'POST') return reply(env, req, { error: 'método não permitido' }, 405);
+
+  // ajuda sem login (ex.: "o e-mail de trocar a senha não chegou"): vai para a caixa de suporte do dono
+  if (url.pathname === '/support/guest') {
+    const ip = req.headers.get('CF-Connecting-IP') || 'local';
+    if (tooMany(`guest:${ip}`, 3)) return reply(env, req, { error: 'Muitos pedidos seguidos. Espere um minuto.' }, 429);
+    let b = {};
+    try { b = JSON.parse((await req.text()).slice(0, 4000) || '{}'); } catch { b = {}; }
+    const email = clean(b.email, 120).trim().toLowerCase(), text = clean(b.text, 1000).trim();
+    if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email)) return reply(env, req, { error: 'Digite um e-mail válido para a gente responder.' }, 400);
+    if (text.length < 5) return reply(env, req, { error: 'Escreva o que aconteceu.' }, 400);
+    const day = new Date().toISOString().slice(0, 10), dk = `guest-day:${day}`;
+    const n = Number((await env.CAL.get(dk)) || 0);
+    if (n > 200) return reply(env, req, { error: 'Muitos pedidos hoje. Tente amanhã ou escreva para o e-mail de suporte.' }, 429);
+    await env.CAL.put(dk, String(n + 1), { expirationTtl: 2 * 86400 });
+    const id = 'g' + Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(email)))).slice(0, 8).map((x) => x.toString(16).padStart(2, '0')).join('');
+    const now = Date.now(), key = `support:${id}`;
+    const th = (await env.CAL.get(key, 'json')) || { id, name: 'Sem login', email, msgs: [], guest: true };
+    th.msgs.push({ from: 'user', text: `[${b.about === 'senha' ? 'Não consegue entrar / senha' : 'Pedido de ajuda'}] ${text}`, at: now });
+    th.msgs = th.msgs.slice(-50); th.updatedAt = now; th.unread = (th.unread || 0) + 1; th.guest = true;
+    await env.CAL.put(key, JSON.stringify(th));
+    const idx = (await env.CAL.get('support-index', 'json')) || {};
+    idx[id] = { name: 'Sem login', email, at: now, unread: th.unread, last: text.slice(0, 80), guest: true };
+    await env.CAL.put('support-index', JSON.stringify(idx));
+    const em = (env.ADMIN_EMAIL || JSON.parse(env.TEAM || '[]')[0]?.email || '').toLowerCase();
+    const owner = JSON.parse(env.TEAM || '[]').find((m) => (m.email || '').toLowerCase() === em)?.id;
+    if (owner) await sendToMember(env, owner, { title: '🔑 Ajuda sem login', body: `${email}: ${text.slice(0, 140)}`, tag: `sup-${id}`, url: './#/suporte-dono' }).catch(() => 0);
+    return reply(env, req, { ok: true });
+  }
 
   let me;
   try {
@@ -358,6 +386,15 @@ async function handle(req, env) {
       await refreshUntil(env, clean(body.uid, 64));
       return reply(env, req, { ok: true, status: st });
     } catch (e) { return reply(env, req, { error: e.message }, e.status || 500); }
+  }
+  // dono do app pede para uma pessoa atualizar (notificação que abre o app já na versão nova)
+  if (url.pathname === '/admin/nudge-update') {
+    if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
+    const uid = clean(body.uid, 64), email = clean(body.email, 120).toLowerCase(), v = /^\d+\.\d+\.\d+$/.test(body.version || '') ? body.version : '';
+    const teamMember = JSON.parse(env.TEAM || '[]').find((m) => (m.email || '').toLowerCase() === email);
+    const member = teamMember ? teamMember.id : 'u' + uid.replace(/[^A-Za-z0-9]/g, '').slice(0, 24);
+    const sent = await sendToMember(env, member, { title: `✨ Lembra ${v ? v + ' ' : ''}chegou`, body: 'Toque aqui para abrir: o app se atualiza sozinho em 2 segundos.', tag: 'atualizar', url: './' }).catch(() => 0);
+    return reply(env, req, { ok: true, sent });
   }
   if (url.pathname === '/billing/all') {
     if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);

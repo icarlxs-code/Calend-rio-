@@ -5,11 +5,12 @@ import { store } from '../store.js';
 import { openSheet, sheetHead, toast } from '../components.js';
 import { icon } from '../icons.js';
 import { esc } from '../utils.js';
+import { brand } from '../brand.js';
 
 const api = async (path, body = {}) => (await import('../avisos.js')).api(path, body);
 const hm = (ms) => new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 const bubbles = (msgs, mine) => (msgs || []).map((m) => `<div class="smsg ${m.from === mine ? 'smsg--me' : m.from === 'auto' ? 'smsg--auto' : ''}">
-    ${m.from === 'auto' ? `<small>${icon('sparkles', 12)} Resposta automática</small>` : m.from !== mine ? `<small>${m.from === 'owner' ? 'Suporte Lembra' : 'Cliente'}</small>` : ''}
+    ${m.from === 'auto' ? `<small><span class="smsg__av">${brand('letra', { h: 12 })}</span> Suporte Lembra · resposta automática</small>` : m.from !== mine ? `<small>${m.from === 'owner' ? `<span class="smsg__av">${brand('letra', { h: 12 })}</span> Suporte Lembra` : 'Cliente'}</small>` : ''}
     <p>${esc(m.text)}</p><time>${hm(m.at)}</time></div>`).join('');
 const box = (placeholder) => `<form class="schat__form" data-sform><textarea name="t" rows="1" maxlength="1000" placeholder="${placeholder}"></textarea><button class="iconbtn iconbtn--accent" aria-label="Enviar">${icon('right', 18)}</button></form>`;
 function wire(a, send) {
@@ -34,6 +35,7 @@ export async function openSupport() {
   let msgs = [];
   const html = () => `${sheetHead('Suporte Lembra', { left: '<button class="btn-text" data-close>Fechar</button>' })}
     <div class="schat">
+      <div class="schat__who"><span class="schat__logo">${brand('simbolo', { h: 30 })}</span><div><b>Suporte Lembra</b><small>Equipe do Lembra · responde em até 24h</small></div></div>
       <div class="schat__list" data-list>
         <div class="smsg smsg--auto"><p>Oi${store.member(store.me)?.name ? ', ' + esc(store.member(store.me).name) : ''}! 👋 Conte aqui sua dúvida, problema ou sugestão. A gente lê tudo.</p></div>
         ${bubbles(msgs, 'user')}
@@ -49,7 +51,7 @@ export async function openSupport() {
 export async function openSupportInbox() {
   let inbox = [], cur = null, thread = [], who = {};
   const html = () => cur ? `${sheetHead(esc(who.name || 'Conversa'), { left: '<button class="btn-text" data-back>Voltar</button>' })}
-    <div class="schat"><p class="fhelp" style="margin:0 16px">${esc(who.email || '')}</p>
+    <div class="schat"><p class="fhelp" style="margin:8px 16px 0">${esc(who.email || '')}${who.guest ? ` · <b>sem login</b>: responda por e-mail · <a href="mailto:${esc(who.email || '')}?subject=${encodeURIComponent('Suporte Lembra')}">Escrever e-mail</a>` : ''}</p>
       <div class="schat__list" data-list>${bubbles(thread, 'owner')}</div>
       ${box('Responder…')}</div>`
     : `${sheetHead('Suporte · mensagens', { left: '<button class="btn-text" data-close>Fechar</button>' })}
@@ -64,7 +66,7 @@ export async function openSupportInbox() {
     onMount: (x) => {
       x.el.querySelectorAll('[data-open]').forEach((b) => (b.onclick = async () => {
         const r = await api('/support/inbox', { id: b.dataset.open });
-        cur = b.dataset.open; thread = r.thread || []; who = { name: r.name, email: r.email }; x.set(html());
+        cur = b.dataset.open; thread = r.thread || []; who = { name: r.name, email: r.email, guest: /^g[0-9a-f]{16}$/.test(b.dataset.open) }; x.set(html());
       }));
       const back = x.el.querySelector('[data-back]');
       if (back) back.onclick = async () => { cur = null; const r = await api('/support/inbox').catch(() => ({})); inbox = r.inbox || inbox; x.set(html()); };

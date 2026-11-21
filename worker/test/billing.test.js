@@ -128,3 +128,68 @@ test('dono libera até uma data: tudo liberado até lá, depois precisa assinar'
   const later = statusOf(b, { ws: 'abc' }, now + 4 * 864e5);
   assert.equal(later.active, false); assert.equal(later.plan, 'expired');
 });
+
+test('Pix: Fundadores aceita cartão e Pix; assinatura só cartão; sem Pix na conta Stripe, cai para cartão', async () => {
+  const env = mkEnv(); const calls = [];
+  const ok = async (url, opt) => { calls.push(new URLSearchParams(opt.body)); return { ok: true, json: async () => ({ url: 'https://checkout.stripe.com/c/x' }) }; };
+  await createCheckout(env, user('P'), { plan: 'fundador', returnUrl: 'https://x.test/' }, ok);
+  assert.equal(calls[0].get('payment_method_types[0]'), 'card');
+  assert.equal(calls[0].get('payment_method_types[1]'), 'pix');
+  assert.equal(calls[0].get('payment_method_options[pix][expires_after_seconds]'), '86400');
+  await createCheckout(env, user('Q'), { plan: 'pro_mes', returnUrl: 'https://x.test/' }, ok);
+  assert.equal(calls[1].get('payment_method_types[0]'), 'card');
+  assert.equal(calls[1].get('payment_method_types[1]'), null);
+  // conta Stripe sem Pix ligado: a Stripe recusa o "pix" → o Fundadores sai só no cartão (não quebra a venda)
+  const semPix = async (url, opt) => {
+    const b = new URLSearchParams(opt.body); calls.push(b);
+    if (b.get('payment_method_types[1]') === 'pix') return { ok: false, status: 400, text: async () => JSON.stringify({ error: { message: 'The payment method type provided: pix is invalid. Please ensure the provided type is activated in your dashboard' } }), json: async () => ({ error: { message: 'The payment method type provided: pix is invalid.' } }) };
+    return { ok: true, json: async () => ({ url: 'https://checkout.stripe.com/c/card' }) };
+  };
+  const r = await createCheckout(mkEnv(), user('R'), { plan: 'fundador', returnUrl: 'https://x.test/' }, semPix);
+  assert.equal(r.url, 'https://checkout.stripe.com/c/card');
+  assert.equal(calls[calls.length - 1].get('payment_method_types[1]'), null);
+  // o anual no Pix sem Pix ligado: mensagem clara (não vende "Pix" no cartão)
+  await assert.rejects(createCheckout(mkEnv(), user('S'), { plan: 'pro_ano_pix', returnUrl: 'https://x.test/' }, semPix), /Pix está indisponível/);
+});
+
+test('Pix: anual pago no Pix vale 12 meses (sem renovar sozinho) e pagar antes de vencer soma os dias', async () => {
+  const env = mkEnv(); const calls = [];
+  const ok = async (url, opt) => { calls.push(new URLSearchParams(opt.body)); return { ok: true, json: async () => ({ url: 'https://checkout.stripe.com/c/x' }) }; };
+  await createCheckout(env, user('V'), { plan: 'pro_ano_pix', returnUrl: 'https://x.test/' }, ok);
+  assert.equal(calls[0].get('mode'), 'payment');
+  assert.equal(calls[0].get('line_items[0][price_data][unit_amount]'), '17990');
+  assert.equal(calls[0].get('payment_method_types[1]'), 'pix');
+  const now = Date.now();
+  // Pix: primeiro "completed" (aguardando), depois o banco confirma
+  await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { mode: 'payment', payment_status: 'unpaid', client_reference_id: 'V', customer: 'cus_v', metadata: { uid: 'V', plan: 'pro_ano_pix' } } } });
+  let st = statusOf(JSON.parse(env.kv['bill:V'] || env.kv[Object.keys(env.kv).find((k) => /V$/.test(k))]), { ws: 'V' });
+  assert.equal(st.active, false);
+  assert.equal(st.pending, 'pro_ano_pix');
+  await handleStripeEvent(env, { type: 'checkout.session.async_payment_succeeded', data: { object: { mode: 'payment', payment_status: 'paid', payment_intent: 'pi_v1', client_reference_id: 'V', customer: 'cus_v', metadata: { uid: 'V', plan: 'pro_ano_pix' } } } });
+  const key = Object.keys(env.kv).find((k) => /V$/.test(k) && /bill/.test(k));
+  let b = JSON.parse(env.kv[key]);
+  st = statusOf(b, { ws: 'V' });
+  assert.equal(st.plan, 'monthly'); assert.equal(st.tier, 'pro'); assert.equal(st.interval, 'year'); assert.equal(st.prepaid, true);
+  assert.ok(Math.abs(b.prepaidUntil - (now + 365 * 864e5)) < 60e3);
+  // o mesmo aviso repetido não soma de novo
+  await handleStripeEvent(env, { type: 'checkout.session.async_payment_succeeded', data: { object: { mode: 'payment', payment_status: 'paid', payment_intent: 'pi_v1', client_reference_id: 'V', customer: 'cus_v', metadata: { uid: 'V', plan: 'pro_ano_pix' } } } });
+  assert.equal(JSON.parse(env.kv[key]).prepaidUntil, b.prepaidUntil);
+  // renovou antes de vencer: soma mais 365 dias ao que faltava
+  await handleStripeEvent(env, { type: 'checkout.session.completed', data: { object: { mode: 'payment', payment_status: 'paid', payment_intent: 'pi_v2', client_reference_id: 'V', customer: 'cus_v', metadata: { uid: 'V', plan: 'pro_ano_pix' } } } });
+  const b2 = JSON.parse(env.kv[key]);
+  assert.ok(Math.abs(b2.prepaidUntil - (now + 730 * 864e5)) < 60e3);
+  // com Pix ativo (bem longe de vencer), não deixa assinar no cartão por cima (sem cobrança dupla)
+  await assert.rejects(createCheckout(env, user('V'), { plan: 'pro_mes', returnUrl: 'https://x.test/' }, ok), /Pix vale até/);
+  // faltando 7 dias: pode passar para o cartão; a 1ª cobrança fica para quando o Pix acabar
+  const b7 = { ...JSON.parse(env.kv[key]), prepaidUntil: Date.now() + 7 * 864e5 };
+  env.kv[key] = JSON.stringify(b7);
+  await createCheckout(env, user('V'), { plan: 'pro_ano', returnUrl: 'https://x.test/' }, ok);
+  const last = calls[calls.length - 1];
+  assert.equal(last.get('mode'), 'subscription');
+  assert.equal(last.get('subscription_data[trial_end]'), String(Math.floor(b7.prepaidUntil / 1000)));
+  // e também pode renovar no Pix de novo (soma ao que falta)
+  await createCheckout(env, user('V'), { plan: 'pro_ano_pix', returnUrl: 'https://x.test/' }, ok);
+  assert.equal(calls[calls.length - 1].get('mode'), 'payment');
+  // vencido: volta a pedir plano
+  assert.equal(statusOf({ ...b2, prepaidUntil: now - 1000 }, { ws: 'V' }).active, false);
+});

@@ -12,6 +12,21 @@ export function avatar(id, size = 26) {
   if (m.photo) return `<span class="avatar avatar--photo" style="--s:${size}px;background:${m.color}" title="${esc(m.name)}"><img src="${m.photo}" alt="" loading="lazy"></span>`;
   return `<span class="avatar" style="--s:${size}px;background:${m.color}" title="${esc(m.name)}">${esc(m.name[0])}</span>`;
 }
+/* foto da pessoa com o anel de nível (progresso até o próximo nível) e o número do nível, como nas redes sociais */
+export function meRing(id, size = 34) {
+  const L = typeof window !== 'undefined' ? window.__lvl : null;
+  return `<span class="lvring${L ? '' : ' is-off'}" data-lvring style="--s:${size}px;--p:${L ? L.deg : 0}deg;--h:${L ? L.hue : '#8E8E93'}">${avatar(id, size)}<i class="lvring__n">${L ? L.level : ''}</i></span>`;
+}
+/* atualiza os anéis já desenhados (sem redesenhar a tela) */
+export function refreshLevelRings() {
+  const L = window.__lvl;
+  if (!L) return;
+  document.querySelectorAll('[data-lvring]').forEach((el) => {
+    el.classList.remove('is-off');
+    el.style.setProperty('--p', `${L.deg}deg`); el.style.setProperty('--h', L.hue);
+    const n = el.querySelector('.lvring__n'); if (n && n.textContent !== String(L.level)) { n.textContent = L.level; n.classList.remove('is-pop'); void n.offsetWidth; n.classList.add('is-pop'); }
+  });
+}
 export function avatars(ids = [], size = 24) {
   if (!ids.length) return `<span class="avatar avatar--empty" style="--s:${size}px" title="Sem responsável">?</span>`;
   return `<span class="avatars">${ids.map((id) => avatar(id, size)).join('')}</span>`;
@@ -96,7 +111,7 @@ export function eventCard(e, { showDate = false, compact = false, highlight = []
         ${e.visibleToClient === false ? `<span class="ecard__private" title="Não aparece para o cliente">${icon('eyeoff', 12)}</span>` : ''}
       </div>` : ''}
     </div>
-    ${store.canEdit('events', e) ? `<button class="ecard__check${done ? ' is-on' : ''}" data-action="toggle-done" data-id="${e.id}" aria-label="${done ? 'Desmarcar' : 'Marcar como feito'}">
+    ${store.canComplete(e) ? `<button class="ecard__check${done ? ' is-on' : ''}" data-action="toggle-done" data-id="${e.id}" aria-label="${done ? 'Desmarcar' : 'Marcar como feito'}">
       ${icon('check', 16)}
     </button>` : ''}
   </article>`;

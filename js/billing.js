@@ -71,6 +71,15 @@ export const fmtLeft = (ms) => {
 /* Faixa do teste grátis (vai no topo das telas) */
 export function trialBanner() {
   const b = store.billing;
+  // anual pago no Pix: faltando 10 dias ou menos, lembra de renovar (o Pix não renova sozinho)
+  if (b && b.plan === 'monthly' && b.prepaid && b.paidUntil && b.paidUntil - Date.now() < 10 * 864e5) {
+    const d = Math.max(0, Math.ceil((b.paidUntil - Date.now()) / 864e5));
+    return `<button class="trialbar${d <= 3 ? ' is-ending' : ''}" data-action="plans">
+      <span class="trialbar__ic">${icon('clock', 16)}</span>
+      <span><b>${d ? `Seu plano no Pix vence em ${d} ${d === 1 ? 'dia' : 'dias'}` : 'Seu plano no Pix vence hoje'}</b><small>Renove no Pix ou no cartão para não parar os lembretes</small></span>
+      <span class="trialbar__go">Renovar</span>
+    </button>`;
+  }
   if (!b || b.plan !== 'trial') return '';
   const left = b.trialEndsAt - Date.now();
   return `<button class="trialbar${left < 3 * 3600e3 ? ' is-ending' : ''}" data-action="plans">
@@ -96,6 +105,9 @@ const PLAN_INFO = {
   pro_mes: { tier: 'pro', name: 'Profissional', price: 'R$ 19,90', per: '/mês', note: 'Cobrança mensal', cta: 'Assinar o Profissional · R$ 19,90/mês' },
   pro_ano: { tier: 'pro', name: 'Profissional', price: 'R$ 14,99', per: '/mês', note: 'R$ 179,90 por ano', cta: 'Assinar o Profissional · R$ 179,90/ano' },
   fundador: { tier: 'pro', name: 'Fundadores', price: 'R$ 199', per: ' uma vez', note: 'Profissional para sempre', cta: 'Garantir minha vaga de Fundador · R$ 199' },
+  // anual no Pix: paga uma vez, vale 12 meses (o Pix não renova sozinho)
+  essencial_ano_pix: { tier: 'essencial', name: 'Essencial', price: 'R$ 9,99', per: '/mês', note: 'R$ 119,90 no Pix, vale 12 meses', cta: 'Pagar com Pix · R$ 119,90 (12 meses)' },
+  pro_ano_pix: { tier: 'pro', name: 'Profissional', price: 'R$ 14,99', per: '/mês', note: 'R$ 179,90 no Pix, vale 12 meses', cta: 'Pagar com Pix · R$ 179,90 (12 meses)' },
 };
 const COMPARE = [
   ['Agenda com a cara da sua profissão', true, true],
@@ -113,21 +125,25 @@ export function openPlans({ blocking = false } = {}) {
   const b = store.billing || {};
   const canTrial = b.plan === 'none';
   const offline = b.plan === 'offline';
-  const isMonthly = b.plan === 'monthly';
+  const prepaid = b.plan === 'monthly' && !!b.prepaid; // pagou 12 meses no Pix: pode renovar o mesmo plano
+  const isMonthly = b.plan === 'monthly' && !prepaid;
   const founders = (b.foundersLeft ?? 200) > 0 && b.plan !== 'lifetime';
-  const title = offline ? 'Não consegui conferir seu plano'
+  const title = prepaid ? 'Renove seu plano' : offline ? 'Não consegui conferir seu plano'
     : canTrial ? 'Experimente o Lembra grátis por 7 dias'
       : isMonthly ? 'Mude de plano quando quiser'
         : !blocking ? 'Escolha seu plano'
           : b.plan === 'blocked' ? (b.reason === 'cpf' ? 'Este CPF já usou o teste grátis' : b.reason === 'rede' ? 'O teste grátis já foi usado nesta conexão' : 'O teste grátis já foi usado neste aparelho')
             : 'Seu teste grátis terminou';
-  const sub = offline ? 'Verifique a internet e toque em “Tentar de novo”. Assim que conectar, tudo volta ao normal.'
+  const sub = prepaid ? `Seu plano está pago até ${new Date(b.paidUntil).toLocaleDateString('pt-BR')}. Renovando agora no Pix, os 12 meses novos somam ao que falta — você não perde nenhum dia.`
+    : offline ? 'Verifique a internet e toque em “Tentar de novo”. Assim que conectar, tudo volta ao normal.'
     : canTrial ? 'Tudo liberado, sem cartão e sem compromisso. Nunca mais esqueça um compromisso — depois, escolha o plano que preferir.'
       : isMonthly ? 'Para trocar entre Essencial e Profissional ou entre mensal e anual, use “Gerenciar assinatura” em Ajustes. Virar Fundador cancela a assinatura na hora, sem cobrança dupla.'
         : !blocking ? 'Continue com tudo liberado, sem limites.'
           : b.plan === 'blocked' ? 'O teste grátis é um por pessoa. Para usar o Lembra com esta conta, escolha um plano abaixo.'
             : 'Sua agenda, seus lembretes e o seu modo Pessoal estão guardados, esperando você. Escolha um plano e continue de onde parou.';
-  let yearly = true, chosen = 'pro_ano';
+  let yearly = true, chosen = prepaid && b.tier === 'essencial' ? 'essencial_ano' : 'pro_ano', pm = prepaid ? 'pix' : 'card';
+  // o que vai para o pagamento: no anual com Pix, o plano de 12 meses no Pix
+  const finalPlan = () => (pm === 'pix' && /_ano$/.test(chosen) ? `${chosen}_pix` : chosen);
   const tick = (on) => (on ? `<span class="cmp__yes">${icon('check', 15)}</span>` : '<span class="cmp__no">—</span>');
   const w = document.createElement('div');
   w.className = 'paywall';
@@ -139,6 +155,7 @@ export function openPlans({ blocking = false } = {}) {
     ${canTrial ? `<button class="btn btn--trial btn--block" data-trial>${icon('sparkles', 18)} Começar meu teste grátis de 7 dias</button><p class="paywall__or">ou escolha seu plano</p>` : ''}
     <div class="period" role="tablist"><button data-period="mes" role="tab">Mensal</button><button data-period="ano" role="tab" class="is-on">Anual <span>-25%</span></button></div>
     <div class="plans" role="radiogroup" aria-label="Planos" data-plans></div>
+    <div class="paymeth" data-paymeth role="radiogroup" aria-label="Forma de pagamento"></div>
     ${founders ? `<button class="plan plan--founder" data-plan="fundador" role="radio" aria-checked="false"><span class="plan__tag">Só ${b.foundersLeft ?? 200} vagas</span><span class="plan__radio" aria-hidden="true">${icon('check', 13)}</span><span class="plan__name">${icon('crown', 14)} Fundadores</span><span class="plan__price"><b>R$ 199</b> uma única vez</span><span class="plan__note">O Profissional para sempre, sem mensalidade. Só para as primeiras 200 contas.</span></button>` : ''}
     <div class="cmp" aria-label="O que vem em cada plano">
       <div class="cmp__row cmp__row--head"><span>O que vem</span><span>Essencial</span><span>Pro</span></div>
@@ -146,7 +163,7 @@ export function openPlans({ blocking = false } = {}) {
       <div class="cmp__row cmp__row--addon"><span>${icon('users', 14)} Agenda compartilhada com sócio ou equipe</span><span class="cmp__price">à parte<br><b>R$&nbsp;7,90</b><br>por pessoa</span><span class="cmp__price">à parte<br><b>R$&nbsp;7,90</b><br>por pessoa</span></div>
     </div>
     <p class="paywall__addon">${icon('info', 14)}<span><b>Compartilhar a agenda é um complemento à parte</b>, cobrado por pessoa: +1 pessoa R$ 7,90/mês ou +4 pessoas R$ 29,90/mês (Fundadores pagam R$ 4,90 e R$ 19,90). Quem você convidar não paga nada.</span></p>
-    <p class="paywall__safe">${icon('lock', 13)} Pagamento seguro pela Stripe, com cartão de crédito. Cancele quando quiser. Arrependeu? Devolvemos em até 7 dias.</p>
+    <p class="paywall__safe">${icon('lock', 13)} Pagamento seguro pela Stripe: cartão de crédito ou Pix (no anual e no Fundadores). Cancele quando quiser. Arrependeu? Devolvemos em até 7 dias.</p>
     <p class="paywall__err" data-err hidden></p>
     <div class="paywall__foot">
       <button class="btn-text btn-text--sm" data-paid>Já paguei — verificar</button>
@@ -173,11 +190,20 @@ export function openPlans({ blocking = false } = {}) {
     box.innerHTML = [yearly ? 'essencial_ano' : 'essencial_mes', yearly ? 'pro_ano' : 'pro_mes'].map(card).join('');
     w.querySelectorAll('[data-period]').forEach((x) => x.classList.toggle('is-on', (x.dataset.period === 'ano') === yearly));
     w.querySelectorAll('[data-plan]').forEach((btn) => { const on = btn.dataset.plan === chosen; btn.classList.toggle('is-on', on); btn.setAttribute('aria-checked', String(on)); });
-    buy.textContent = PLAN_INFO[chosen].cta;
+    const pmBox = w.querySelector('[data-paymeth]');
+    pmBox.innerHTML = chosen === 'fundador'
+      ? `<p class="paymeth__note">${icon('info', 14)} No Fundadores você escolhe <b>cartão ou Pix</b> na página de pagamento.</p>`
+      : yearly ? `<span class="paymeth__k">Como prefere pagar o anual?</span>
+        <button class="paymeth__b${pm === 'card' ? ' is-on' : ''}" data-pm="card" role="radio" aria-checked="${pm === 'card'}">${icon('card', 18)}<span><b>Cartão de crédito</b><small>Renova sozinho todo ano</small></span></button>
+        <button class="paymeth__b${pm === 'pix' ? ' is-on' : ''}" data-pm="pix" role="radio" aria-checked="${pm === 'pix'}"><span class="paymeth__pix">PIX</span><span><b>Pix</b><small>Paga uma vez, vale 12 meses</small></span></button>`
+        : `<p class="paymeth__note">${icon('info', 14)} No mensal o pagamento é no cartão. Prefere Pix? Escolha o <b>Anual</b>.</p>`;
+    buy.textContent = PLAN_INFO[finalPlan()].cta;
   };
   w.addEventListener('click', (e) => {
     const per = e.target.closest('[data-period]');
     if (per) { yearly = per.dataset.period === 'ano'; if (chosen !== 'fundador') chosen = chosen.replace(/_(mes|ano)$/, yearly ? '_ano' : '_mes'); paint(); return; }
+    const pmb = e.target.closest('[data-pm]');
+    if (pmb) { pm = pmb.dataset.pm; paint(); if (navigator.vibrate) navigator.vibrate(6); return; }
     const btn = e.target.closest('[data-plan]');
     if (!btn || btn.disabled) return;
     chosen = btn.dataset.plan; err.hidden = true; paint();
@@ -190,9 +216,10 @@ export function openPlans({ blocking = false } = {}) {
     const label = buy.textContent;
     buy.textContent = 'Abrindo o pagamento seguro…';
     try {
-      const r = await api('/billing/checkout', { plan: chosen, returnUrl: location.href });
+      const plan = finalPlan();
+      const r = await api('/billing/checkout', { plan, returnUrl: location.href });
       if (!r.url) throw new Error(r.error || 'sem endereço');
-      markBuying(chosen);
+      markBuying(plan);
       location.href = r.url; // página de pagamento da Stripe
     } catch (e) {
       err.textContent = /[a-z]{3,} [a-z]{3,} [a-z]{3,}/.test(e.message || '') && !/[ãçéêóõíá]/.test(e.message || '') ? 'O pagamento está temporariamente indisponível. Tente de novo em alguns minutos.' : e.message || 'Não consegui abrir o pagamento agora. Tente de novo.';
@@ -268,7 +295,7 @@ export async function confirmPayment({ quiet = false, manual = false } = {}) {
       return false;
     }
     if (st.plan === 'lifetime' || st.plan === 'monthly') {
-      w.querySelector('.paywall__inner').innerHTML = `<div class="brandwrap">${brand('simbolo', { h: 64, on: 'dark' })}</div><h1>Pagamento confirmado! 🎉</h1><p>${st.plan === 'lifetime' ? (st.founder ? 'Bem-vindo aos Fundadores: o Profissional é seu para sempre. Obrigado!' : 'Seu Lembra é vitalício. Obrigado!') : `Seu plano ${st.tier === 'essencial' ? 'Essencial' : 'Profissional'} ${st.interval === 'year' ? 'anual' : 'mensal'} está ativo. Obrigado!`}</p><button class="btn btn--primary btn--block" data-go>Começar a usar</button>`;
+      w.querySelector('.paywall__inner').innerHTML = `<div class="brandwrap">${brand('simbolo', { h: 64, on: 'dark' })}</div><h1>Pagamento confirmado! 🎉</h1><p>${st.plan === 'lifetime' ? (st.founder ? 'Bem-vindo aos Fundadores: o Profissional é seu para sempre. Obrigado!' : 'Seu Lembra é vitalício. Obrigado!') : (st.prepaid ? `Seu ${st.tier === 'essencial' ? 'Essencial' : 'Profissional'} está pago até ${new Date(st.paidUntil).toLocaleDateString('pt-BR')} (12 meses no Pix). Obrigado!` : `Seu plano ${st.tier === 'essencial' ? 'Essencial' : 'Profissional'} ${st.interval === 'year' ? 'anual' : 'mensal'} está ativo. Obrigado!`)}</p><button class="btn btn--primary btn--block" data-go>Começar a usar</button>`;
       w.querySelector('[data-go]').onclick = () => { w.remove(); window.__calRender && window.__calRender(); };
       return true;
     }

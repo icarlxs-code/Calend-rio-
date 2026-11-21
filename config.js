@@ -25,6 +25,10 @@ export const CONFIG = {
   termsVersion: '1.1',
   termsDate: '19/11/2026',
 
+  // Celular confirmado por SMS e "recuperar a senha pelo celular" (Firebase → Authentication → Telefone).
+  // Precisa do plano Blaze do Firebase (≈ US$ 0,02 por SMS no Brasil). Depois de ligar lá, troque para true.
+  phoneAuth: false,
+
   // Endereço do servidor gratuito de avisos (Cloudflare Workers). Preenchido depois de publicar.
   pushServer: 'https://calend-rio.icarlxs.workers.dev',
 

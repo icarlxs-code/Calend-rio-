@@ -34,6 +34,16 @@ function last30(u) {
 }
 let planOf = () => null;
 const planLabel = (p) => (!p ? 'Conta própria' : p.plan === 'comp' ? `Liberado até ${new Date(p.compUntil).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : p.comp ? 'Cortesia' : { trial: 'Teste grátis', monthly: 'Mensal', lifetime: 'Vitalício', expired: 'Teste acabou', blocked: 'Sem plano', none: 'Sem plano' }[p.plan] || 'Conta própria');
+/* versão do app da pessoa comparada com a última publicada */
+let latestVer = null;
+const cmpV = (a, b) => { const A = String(a || '0').split('.').map(Number), B = String(b || '0').split('.').map(Number); for (let i = 0; i < 3; i++) if ((A[i] || 0) !== (B[i] || 0)) return (A[i] || 0) > (B[i] || 0) ? 1 : -1; return 0; };
+const verState = (u) => {
+  if (!u.app) return { cls: 'warn', label: 'versão antiga', long: 'Antes da 2.0.0 (ainda não abriu o app atualizado)', ok: false };
+  if (!latestVer) return { cls: '', label: `v${u.app.v}`, long: `v${u.app.v}`, ok: true };
+  const same = u.app.b === latestVer.build || cmpV(u.app.v, latestVer.version) >= 0;
+  return same ? { cls: 'ok', label: `v${u.app.v} ✓`, long: `v${u.app.v} (${u.app.b}) — a mais recente`, ok: true }
+    : { cls: 'warn', label: `v${u.app.v} · desatualizada`, long: `v${u.app.v} (${u.app.b}) — a última é a v${latestVer.version}`, ok: false };
+};
 function card(u, open) {
   const c = u.counts || {};
   const d = u.device || {};
@@ -51,6 +61,8 @@ function card(u, open) {
       <span>${icon('calendar', 12)} ${c.myEvents || 0} eventos</span>
       <span>${icon('heart', 12)} ${c.personal || 0} pessoais</span>
       <span class="${d.notifications === 'granted' && d.registered ? 'ok' : 'warn'}">${icon('bell', 12)} ${d.notifications === 'granted' && d.registered ? 'avisos ok' : 'sem avisos'}</span>
+      <span class="${verState(u).cls}">${icon('refresh', 12)} ${esc(verState(u).label)}</span>
+      ${u.game ? `<span>${icon('trophy', 12)} nível ${u.game.level}</span>` : ''}
     </div>
     ${open ? `<div class="acct__more">
       <div class="agrid">
@@ -64,7 +76,12 @@ function card(u, open) {
         <div><small>Instalado na tela inicial</small><b>${d.installed ? 'Sim' : 'Não'}</b></div>
         <div><small>Notificações</small><b>${esc(NOTIF[d.notifications] || '—')}${d.registered ? ' · cadastrado' : ''}</b></div>
         <div><small>Último modo usado</small><b>${u.space === 'personal' ? 'Pessoal' : 'Trabalho'}</b></div>
+        <div><small>Versão do app</small><b class="${verState(u).ok ? 'good' : 'bad'}">${esc(verState(u).long)}</b></div>
+        <div><small>Recebeu esta versão</small><b>${u.app?.since ? esc(when(u.app.since)) : '—'}</b></div>
+        ${u.game ? `<div><small>Conquistas</small><b>Nível ${u.game.level} · ${u.game.xp.toLocaleString('pt-BR')} XP · ${u.game.badges} emblemas</b></div>` : ''}
       </div>
+      ${!verState(u).ok ? `<div class="aupd"><p>${u.lastOpen && latestVer?.builtAt && u.lastOpen < Date.parse(latestVer.builtAt) ? 'Ainda não abriu o app desde a atualização: ela chega sozinha na próxima vez que abrir.' : 'Abriu o app mas continua na versão antiga (celular guardou a versão velha).'}</p>
+        <button class="btn btn--soft btn--sm" data-nudge-upd="${esc(u.uid)}" data-email="${esc(u.email)}">${icon('bell', 14)} Pedir para atualizar</button></div>` : ''}
       ${u.profile?.done ? `<h4>Ficha</h4>
       <div class="agrid">
         <div><small>Profissão</small><b>${esc(u.profile.profession || '—')}</b></div>
@@ -170,6 +187,8 @@ function cleanStat(u) {
     activeDays: Array.isArray(u.activeDays) ? u.activeDays.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)).slice(-40) : [],
     counts: Object.fromEntries(['companies', 'events', 'myEvents', 'thisWeek', 'done30', 'late', 'posts30', 'notes', 'personal', 'lists', 'birthdays'].map((k) => [k, N(c[k])])),
     device: { platform: S(d.platform, 20), installed: !!d.installed, notifications: S(d.notifications, 20), registered: !!d.registered },
+    app: u.app && typeof u.app === 'object' && /^\d+\.\d+\.\d+$/.test(u.app.v || '') ? { v: S(u.app.v, 20), b: S(u.app.b, 12).replace(/[^a-z0-9]/gi, ''), since: N(u.app.since) } : null,
+    game: u.game && typeof u.game === 'object' ? { level: Math.max(0, Math.min(100, Math.round(N(u.game.level)))), xp: N(u.game.xp), badges: N(u.game.badges) } : null,
     origin: u.origin && typeof u.origin === 'object' ? { source: S(u.origin.source, 60), medium: S(u.origin.medium, 60), campaign: S(u.origin.campaign, 60) } : null,
     profile: p.done ? { done: true, profession: S(p.profession, 80), area: S(p.area, 80), age: S(p.age, 10), index: N(p.index), forget: N(p.forget),
       difficulties: Array.isArray(p.difficulties) ? p.difficulties.filter((x) => typeof x === 'string').slice(0, 12).map((x) => x.slice(0, 30)) : [],
@@ -190,10 +209,13 @@ export async function openAdmin() {
     const P = Object.values(plans);
     const monthly = P.filter((p) => p.plan === 'monthly').length;
     const lifetime = P.filter((p) => p.plan === 'lifetime' && !p.comp).length;
+    const founders = P.filter((p) => p.plan === 'lifetime' && p.founder && !p.comp).length;
+    // preço por mês de cada assinatura (anual dividido por 12)
+    const perMonth = (p) => (p.tier === 'essencial' ? (p.interval === 'year' ? 119.9 / 12 : 12.9) : (p.interval === 'year' ? 179.9 / 12 : 19.9));
     const trial = P.filter((p) => p.plan === 'trial').length;
     const addons = P.filter((p) => p.addon && p.addon.active);
     // receita por mês: mensais + complementos (vitalício paga o complemento mais barato); o vitalício em si entra uma vez só
-    const mrr = monthly * 9.9 + addons.reduce((a, p) => a + (p.addon.plan === 'equipe' ? (p.plan === 'lifetime' ? 9.9 : 14.9) : (p.plan === 'lifetime' ? 4.9 : 6.9)), 0);
+    const mrr = P.filter((p) => p.plan === 'monthly').reduce((a, p) => a + perMonth(p), 0) + addons.reduce((a, p) => a + (p.addon.plan === 'equipe' ? (p.plan === 'lifetime' ? 19.9 : 29.9) : (p.plan === 'lifetime' ? 4.9 : 7.9)), 0);
     const tried = P.filter((p) => p.plan !== 'none' && p.plan !== 'team').length;
     const conv = tried ? Math.round(((monthly + lifetime) / tried) * 100) : 0;
     const money = (v) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -208,7 +230,7 @@ export async function openAdmin() {
       <div class="ahero">
         <small>Receita por mês</small>
         <b>${money(mrr)}</b>
-        <span>${monthly} ${monthly === 1 ? 'assinante mensal' : 'assinantes mensais'} · ${addons.length} agenda${addons.length === 1 ? '' : 's'} compartilhada${addons.length === 1 ? '' : 's'}</span>
+        <span>${monthly} ${monthly === 1 ? 'assinante' : 'assinantes'} · ${addons.length} agenda${addons.length === 1 ? '' : 's'} compartilhada${addons.length === 1 ? '' : 's'}</span>
       </div>
       <div class="atiles">
         <div><b>${act(1)}</b><small>ativas hoje</small></div>
@@ -217,8 +239,8 @@ export async function openAdmin() {
       </div>
       <h3 class="ah">Dinheiro</h3>
       <div class="agroup">
-        ${row('Vitalícios vendidos', `${lifetime}`, `${money(lifetime * 150)} no total`)}
-        ${row('Assinantes do Mensal', `${monthly}`)}
+        ${row('Fundadores / vitalícios vendidos', `${lifetime}`, `${money(founders * 199 + (lifetime - founders) * 150)} no total`)}
+        ${row('Assinantes (mensal e anual)', `${monthly}`, `${P.filter((p) => p.plan === 'monthly' && p.tier === 'essencial').length} Essencial · ${P.filter((p) => p.plan === 'monthly' && p.tier !== 'essencial').length} Profissional · ${P.filter((p) => p.plan === 'monthly' && p.interval === 'year').length} anuais`)}
         ${row('Agendas compartilhadas', `${addons.length}`, `${addons.filter((p) => p.addon.plan === 'equipe').length} Equipe · ${addons.filter((p) => p.addon.plan === 'dupla').length} Dupla`)}
         ${row('Conversão do teste', `${conv}%`, 'quem pagou ÷ quem testou')}
       </div>
@@ -231,6 +253,7 @@ export async function openAdmin() {
       </div>
       <h3 class="ah">Saúde do app</h3>
       <div class="agroup">
+        ${row(`Na versão atual${latestVer ? ` (v${esc(latestVer.version)})` : ''}`, `${users.filter((u) => verState(u).ok && u.app).length} de ${users.length}`, (() => { const late = users.filter((u) => !verState(u).ok); return late.length ? `desatualizados: ${late.slice(0, 4).map((u) => esc((u.name || u.email || '').split(' ')[0])).join(', ')}${late.length > 4 ? ` e mais ${late.length - 4}` : ''} — atualiza sozinho ao abrir` : 'todo mundo atualizado ✓'; })())}
         ${row('Instalaram na tela inicial', `${installed}${pct(installed)}`)}
         ${row('Recebem notificações', `${notif}${pct(notif)}`, notif < users.length ? 'sem isso, os lembretes não chegam' : '')}
         ${row('Compromissos criados', `${users.reduce((a, u) => a + (u.counts?.myEvents || 0), 0)}`)}
@@ -294,6 +317,14 @@ export async function openAdmin() {
           plans[b.dataset.grant] = r.status; toast(b.dataset.on !== '1' ? 'Acesso retirado' : until ? `Liberado até ${when(until)} ✓` : 'Acesso cortesia liberado ✓'); a.set(html());
         } catch (e) { b.disabled = false; toast(e.message || 'Não consegui agora.'); }
       }));
+      a.el.querySelectorAll('[data-nudge-upd]').forEach((b) => (b.onclick = async () => {
+        b.disabled = true;
+        try {
+          const { api } = await import('../avisos.js');
+          const r = await api('/admin/nudge-update', { uid: b.dataset.nudgeUpd, email: b.dataset.email, version: latestVer?.version || '' });
+          toast(r.sent ? 'Aviso enviado ✓ Quando a pessoa tocar, o app abre já atualizado.' : 'A pessoa não ativou as notificações: peça pelo WhatsApp para abrir o app.', { ms: 5000 });
+        } catch (e) { b.disabled = false; toast(e.message || 'Não consegui agora.'); }
+      }));
       const r = a.el.querySelector('[data-reload]');
       if (r) r.onclick = () => load();
       const ce = a.el.querySelector('[data-clear-errors]');
@@ -305,6 +336,7 @@ export async function openAdmin() {
   const load = async () => {
     try {
       users = (await store.backendApi.listStats()).map(cleanStat); err = null;
+      try { latestVer = await (await import('../version.js')).fetchLatest(); } catch { latestVer = null; }
       try { const { api } = await import('../avisos.js'); plans = (await api('/billing/all', {})).byWs || {}; } catch { plans = {}; }
       try { const { api } = await import('../avisos.js'); errors = (await api('/admin/errors', {})).errors || []; } catch { errors = null; }
     }
