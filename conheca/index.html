@@ -13,522 +13,399 @@
 <meta property="og:locale" content="pt_BR">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://icarlxs-code.github.io/Calend-rio-/media/og.jpg">
-<meta name="theme-color" content="#0B0B0F">
+<meta name="theme-color" content="#ffffff">
 <link rel="icon" href="../icons/favicon-64.png">
 <link rel="apple-touch-icon" href="../icons/icon-180.png">
+<link rel="modulepreload" href="../vendor/three/three.module.min.js">
 <link rel="preload" as="image" href="../media/lp/hoje.jpg">
+<script type="importmap">{"imports":{"three":"../vendor/three/three.module.min.js"}}</script>
 <style>:root{--bg:#F2F2F7;--card:#fff;--text:#121216;--muted:#5b5b66;--line:rgba(0,0,0,.08);--accent:#0A84FF;color-scheme:light dark}@media (prefers-color-scheme:dark){:root{--bg:#000;--card:#16161A;--text:#F4F4F6;--muted:#a1a1ab;--line:rgba(255,255,255,.1)}}*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Arial,sans-serif;-webkit-text-size-adjust:100%}main{max-width:720px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 28px) 18px 48px}.top{display:flex;align-items:center;gap:10px;margin-bottom:18px}h1{font-size:28px;line-height:1.15;letter-spacing:-.02em;margin:6px 0 8px}h2{font-size:19px;margin:28px 0 6px}h3{font-size:16px;margin:18px 0 4px}p,li{color:var(--muted)}b,strong{color:var(--text)}a{color:var(--accent)}ul{padding-left:20px}.card{background:var(--card);border-radius:20px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 6px 20px rgba(0,0,0,.06)}.center{text-align:center}.center img.logo{width:96px;height:96px;border-radius:26px;box-shadow:0 10px 30px rgba(0,0,0,.15)}.btn{display:block;width:100%;padding:16px;border-radius:16px;border:0;background:var(--text);color:var(--bg);font:600 17px/1 inherit;text-align:center;text-decoration:none;margin-top:16px}.small{font-size:13px}.ok{width:64px;height:64px;border-radius:50%;background:#34C759;color:#fff;display:grid;place-items:center;margin:0 auto 10px;font-size:34px}.toc{columns:2;font-size:14px}@media(max-width:520px){.toc{columns:1}}.brandc{display:flex;justify-content:center;margin:8px 0 14px}
-:root{--ink:#0B0B0F;--ink2:#3A3A40;--mute:#6E6E76;--soft:#F4F4F7;--line:rgba(11,11,15,.09);--pink:#FF2D55;--green:#16A34A;--blue:#0A84FF;--amber:#F59E0B;--r:22px;color-scheme:light}
+:root{--ink:#0B0B0F;--ink2:#3A3A42;--mute:#6E6E78;--soft:#F5F5F7;--line:rgba(11,11,15,.08);--pink:#FF2D55;--green:#16A34A;color-scheme:light}
+*{box-sizing:border-box}
 html,body{background:#fff;color:var(--ink)}
-body{font:17px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,Arial,sans-serif;overflow-x:hidden}
+body{margin:0;font:17px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,Arial,sans-serif;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 main{max-width:none;padding:0}
 .wrap{max-width:1120px;margin:0 auto;padding:0 22px}
-h1,h2,h3{color:var(--ink);letter-spacing:-.03em;margin:0}
-p{color:var(--ink2)}
+h1,h2,h3{color:var(--ink);letter-spacing:-.035em;margin:0;font-weight:850}
+p{color:var(--ink2);margin:0}
 b,strong{color:var(--ink)}
-a{color:inherit}
-.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--pink)}
-.eyebrow::before{content:'';width:18px;height:2px;background:currentColor;border-radius:2px}
-
-/* navegação */
-.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.82);backdrop-filter:saturate(1.6) blur(18px);-webkit-backdrop-filter:saturate(1.6) blur(18px);border-bottom:1px solid transparent;transition:border-color .2s}
-.nav.is-scrolled{border-color:var(--line)}
-.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:68px;padding-top:env(safe-area-inset-top,0px)}
-.nav img{height:46px;width:auto;display:block}
-.nav .links{display:flex;align-items:center;gap:6px}
-.nav .links a{font-size:15px;font-weight:600;text-decoration:none;padding:9px 14px;border-radius:999px;color:var(--ink2)}
+.eyebrow{display:inline-block;font-size:13px;font-weight:750;letter-spacing:.1em;text-transform:uppercase;color:var(--pink)}
+svg.i{width:20px;height:20px;flex:none}
+.nav{position:fixed;top:0;left:0;right:0;z-index:50;background:rgba(255,255,255,.9);-webkit-backdrop-filter:saturate(1.8) blur(16px);backdrop-filter:saturate(1.8) blur(16px);border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+.nav img{height:38px;width:auto;display:block}
+.nav .links{display:flex;align-items:center;gap:4px}
+.nav .links a{font-size:15px;font-weight:650;text-decoration:none;padding:8px 14px;border-radius:999px;color:var(--ink2)}
 .nav .links a.go{background:var(--ink);color:#fff}
-@media(max-width:640px){.nav .links a.hide{display:none}.nav img{height:34px}}
-
-/* botões */
-.cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:60px;padding:0 30px;border-radius:16px;background:var(--pink);color:#fff;font-weight:800;font-size:18px;text-decoration:none;box-shadow:0 14px 34px rgba(255,45,85,.32);transition:transform .15s,box-shadow .15s}
-.cta:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(255,45,85,.38)}
+@media(max-width:700px){.nav .links a.hide{display:none}}
+.cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:58px;padding:0 30px;border-radius:16px;background:var(--pink);color:#fff;font-weight:800;font-size:18px;text-decoration:none;box-shadow:0 10px 26px rgba(255,45,85,.3);transition:transform .15s}
 .cta:active{transform:scale(.98)}
-.cta svg{width:20px;height:20px}
-.cta--dark{background:var(--ink);box-shadow:0 14px 34px rgba(0,0,0,.22)}
-.micro{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:14px;font-size:14px;color:var(--mute)}
-.micro span{display:inline-flex;align-items:center;gap:6px}
-.micro svg{width:16px;height:16px;color:var(--green)}
-
-/* topo */
-.hero{position:relative;padding:56px 0 40px;overflow:hidden}
-.hero::before{content:'';position:absolute;inset:-20% -10% auto;height:620px;background:radial-gradient(50% 50% at 70% 40%,rgba(255,45,85,.14),transparent 70%),radial-gradient(40% 40% at 20% 30%,rgba(10,132,255,.08),transparent 70%);pointer-events:none}
-.hero .wrap{position:relative;display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
-.hero h1{font-size:clamp(40px,6vw,68px);line-height:1.0;font-weight:850;margin:14px 0 18px}
-.hero h1 em{font-style:normal;color:var(--pink)}
-.hero .lead{font-size:clamp(18px,2vw,21px);line-height:1.5;margin:0 0 28px;max-width:560px}
-.stage{position:relative;height:660px;perspective:1400px;display:grid;place-items:center}
-.device{--dw:300px;position:relative;width:var(--dw);padding:calc(var(--dw)*.034);border-radius:calc(var(--dw)*.175);background:linear-gradient(150deg,#3a3a40 0%,#121214 35%,#1d1d21 100%);box-shadow:0 60px 120px rgba(11,11,15,.30),0 20px 40px rgba(11,11,15,.18),inset 0 0 0 1.5px #4a4a52,inset 0 0 0 4px #0a0a0b;transform-style:preserve-3d;will-change:transform}
-.device::before,.device::after{content:'';position:absolute;left:calc(var(--dw)*-.012);width:calc(var(--dw)*.014);border-radius:3px;background:#2a2a2f}
-.device::before{top:22%;height:7%;box-shadow:0 calc(var(--dw)*.17) 0 #2a2a2f}
-.device::after{left:auto;right:calc(var(--dw)*-.012);top:28%;height:11%}
-.device .scr{position:relative;aspect-ratio:430/932;border-radius:calc(var(--dw)*.14);overflow:hidden;background:#000;transform:translateZ(1px)}
-.device .scr img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;transition:opacity .5s}
-.device .island{position:absolute;top:calc(var(--dw)*.031);left:50%;width:calc(var(--dw)*.3);height:calc(var(--dw)*.088);transform:translateX(-50%);border-radius:99px;background:#000;z-index:3}
-.device .glare{position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.16),rgba(255,255,255,0) 38%);pointer-events:none;z-index:2}
-.float{position:absolute;display:flex;align-items:center;gap:12px;padding:12px 16px 12px 12px;border-radius:18px;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);box-shadow:0 18px 40px rgba(11,11,15,.16),0 0 0 1px rgba(11,11,15,.05);font-size:14px;line-height:1.3;will-change:transform;white-space:nowrap}
-.float i{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;flex:none}
-.float i svg{width:20px;height:20px}
-.float b{display:block;font-size:14.5px}
-.float small{color:var(--mute)}
-.f1{top:70px;left:-6px}.f2{top:250px;right:-18px}.f3{bottom:70px;left:10px}
-@media(max-width:900px){.hero .wrap{grid-template-columns:1fr;text-align:center}.hero .lead{margin-left:auto;margin-right:auto}.micro{justify-content:center}.stage{height:560px}.f1{left:0}.f2{right:0}.cta{width:100%;max-width:420px}}
-@media(max-width:420px){.stage .device{--dw:260px}.float{font-size:12.5px;padding:10px 12px 10px 10px}.float i{width:32px;height:32px}.f2{top:230px}}
-
-.rot{display:block;font-size:clamp(20px,2.4vw,26px);font-weight:800;letter-spacing:-.02em;color:var(--ink);margin:0 0 14px;min-height:1.3em}
-.rot b{color:var(--pink);border-right:3px solid var(--pink);padding-right:3px;animation:caret 1s steps(1) infinite}
-@keyframes caret{50%{border-color:transparent}}
-/* passeio pelo app (o celular fica parado e a tela troca enquanto você rola) */
-.tour{padding:40px 0 60px;background:linear-gradient(180deg,#fff,#F6F6F9)}
-.tour .wrap{display:grid;grid-template-columns:1fr 1fr;gap:60px}
-.tour .ph{position:sticky;top:calc(50vh - 330px);height:660px;display:grid;place-items:center;perspective:1400px}
-.tour .ph .device{--dw:300px}
-.tstep{min-height:78vh;display:flex;flex-direction:column;justify-content:center;opacity:.25;transition:opacity .4s}
-.tstep.on{opacity:1}
-.tstep .num{font-size:15px;font-weight:800;color:var(--pink);letter-spacing:.08em}
-.tstep h3{font-size:clamp(28px,3.4vw,42px);line-height:1.06;font-weight:850;margin:10px 0 14px}
-.tstep p{font-size:18.5px;margin:0;max-width:470px}
-.tour .bar{position:absolute;left:-28px;top:12vh;height:60vh;position:sticky;float:left;width:3px;border-radius:3px;background:var(--line);overflow:hidden}
-.tour .bar i{display:block;width:100%;height:0;background:var(--pink);transition:height .2s}
-@media(max-width:900px){.tour .wrap{grid-template-columns:1fr;gap:0}.tour .ph{top:76px;height:auto;padding:10px 0 0;z-index:1}.tour .ph .device{--dw:190px}.tstep{min-height:92vh;justify-content:flex-end;padding:0 0 18px;position:relative;z-index:2;opacity:1}.tc{padding:22px 18px;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:22px;box-shadow:0 14px 34px rgba(0,0,0,.10)}.tour .ph{position:sticky;top:84px}.tour .ph .device{--dw:210px}.tour .steps-col{margin-top:-60vh}.tour .bar{display:none}}
-/* avisos chegando no celular do topo */
-.drop{position:absolute;left:50%;top:13%;width:86%;transform:translate(-50%,-140%);opacity:0;display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:16px;background:rgba(250,250,252,.92);backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:4;font-size:11.5px;line-height:1.25}
-.drop i{width:28px;height:28px;border-radius:8px;flex:none;display:grid;place-items:center;color:#fff}
-.drop i svg{width:15px;height:15px}
-.drop b{display:block;font-size:12px}
-.drop.go{animation:drop 3.2s cubic-bezier(.2,.9,.2,1) forwards}
-@keyframes drop{0%{transform:translate(-50%,-140%);opacity:0}12%{transform:translate(-50%,0);opacity:1}80%{transform:translate(-50%,0);opacity:1}100%{transform:translate(-50%,-30%) scale(.94);opacity:0}}
-.shake{animation:shake .5s}
-@keyframes shake{20%,60%{transform:translateX(-3px) rotate(-1deg)}40%,80%{transform:translateX(3px) rotate(1deg)}}
-.pc:hover .ic{animation:shake .5s}
-/* ---------- CENA 3D DO TOPO (presa na tela enquanto a pessoa rola) ---------- */
-.scene{height:300vh;position:relative;background:#fff}
-.scene__pin{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;display:flex;flex-direction:column;align-items:center;padding-top:calc(env(safe-area-inset-top,0px) + 92px);perspective:1200px}
-.scene__txt{text-align:center;position:relative;z-index:5;padding:0 20px;will-change:transform,opacity}
-.scene h1{font-size:clamp(38px,7vw,84px);line-height:.98;font-weight:850;letter-spacing:-.045em;margin:12px 0 10px}
-.split .w{display:inline-block;overflow:hidden;vertical-align:bottom;padding-bottom:.06em}
-.split .w>span{display:inline-block;transform:translateY(105%);will-change:transform}
-.scene__sub{font-size:clamp(19px,2.6vw,28px);font-weight:750;letter-spacing:-.02em;color:var(--ink);margin:0}
-.scene__sub b{color:var(--pink);border-right:3px solid var(--pink);padding-right:3px;animation:caret 1s steps(1) infinite}
-.scene__3d{position:relative;flex:1;width:100%;display:grid;place-items:center;transform-style:preserve-3d}
-.scene__3d .device{--dw:min(300px,62vw,31vh);transform-origin:50% 80%;will-change:transform}
-.tile{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;transform-style:preserve-3d;will-change:transform,opacity;opacity:0}
-.tile__f,.tile__b{position:absolute;inset:0;border-radius:18px;backface-visibility:hidden}
-.tile__f{display:grid;place-items:center;color:#fff;background:linear-gradient(145deg,color-mix(in srgb,var(--c) 75%,#fff),var(--c));box-shadow:inset 0 2px 0 rgba(255,255,255,.35);transform:translateZ(9px)}
-.tile__f svg{width:30px;height:30px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.2))}
-.tile__b{background:color-mix(in srgb,var(--c) 55%,#000);transform:translateZ(-9px);box-shadow:0 30px 40px rgba(0,0,0,.25)}
-.scene__cta{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 28px);text-align:center;padding:0 22px;opacity:0;transform:translateY(40px);z-index:6;will-change:transform,opacity}
-.scene__cta .lead{max-width:640px;margin:0 auto 18px;font-size:clamp(16px,2vw,19px);background:rgba(255,255,255,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:16px;padding:10px 14px}
-.scene__cta .micro{justify-content:center}
-.scene__hint{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);font-size:14px;font-weight:700;color:var(--mute);z-index:7}
-.scene__hint span{display:inline-block;animation:bob 1.4s ease-in-out infinite}
-@keyframes bob{50%{transform:translateY(5px)}}
-@media(max-width:900px){.scene__pin{padding-top:calc(env(safe-area-inset-top,0px) + 84px)}.tile{width:50px;height:50px;margin:-25px 0 0 -25px}.tile__f svg{width:24px;height:24px}.scene__cta .cta{width:100%;max-width:420px}}
-/* textos que sobem acompanhando o dedo */
-[data-rise]{will-change:transform}
-/* faixa de confiança */
+.micro{display:flex;flex-wrap:wrap;gap:4px 16px;justify-content:center;margin-top:12px;font-size:14px;color:var(--mute)}
+.micro span::before{content:'✓ ';color:var(--green);font-weight:800}
+.hero{position:relative;height:230vh}
+.hero__pin{position:sticky;top:0;height:100vh;height:100svh;display:grid;grid-template-rows:auto 1fr auto;padding:calc(76px + env(safe-area-inset-top,0px)) 0 calc(20px + env(safe-area-inset-bottom,0px));overflow:hidden}
+.hero__txt{text-align:center;padding:0 22px}
+.hero h1{font-size:clamp(36px,6.4vw,76px);line-height:1;margin:10px auto 10px;max-width:16ch}
+.hero__rot{font-size:clamp(18px,2.4vw,26px);font-weight:750;letter-spacing:-.02em;color:var(--ink2);min-height:1.35em}
+.hero__rot b{color:var(--pink)}
+.hero__rot b::after{content:'';display:inline-block;width:3px;height:1em;margin-left:2px;vertical-align:-.12em;background:var(--pink);animation:caret 1s steps(1) infinite}
+@keyframes caret{50%{opacity:0}}
+.hero__3d{position:relative;min-height:0}
+.hero__3d canvas{position:absolute;inset:0;width:100%!important;height:100%!important;display:block}
+.hero__fallback{position:absolute;inset:0;display:none;place-items:center}
+.hero__fallback img{height:92%;width:auto;border-radius:28px;box-shadow:0 30px 60px rgba(0,0,0,.2)}
+.no3d .hero__fallback{display:grid}
+.hero__cta{text-align:center;padding:6px 22px 0}
+@media(max-width:700px){.hero__cta .cta{width:100%;max-width:420px}}
 .strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--soft)}
-.strip .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding-top:22px;padding-bottom:22px}
-.strip div{display:flex;align-items:center;gap:12px;font-size:15px;font-weight:600;color:var(--ink)}
-.strip svg{width:24px;height:24px;color:var(--pink);flex:none}
-@media(max-width:820px){.strip .wrap{grid-template-columns:1fr 1fr}}
-
-/* seções */
+.strip .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding-top:20px;padding-bottom:20px}
+.strip div{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:650}
+.strip svg{color:var(--pink)}
+@media(max-width:820px){.strip .wrap{grid-template-columns:1fr 1fr}.strip div{font-size:14px}}
 section{padding:96px 0}
-.head{max-width:740px;margin-bottom:44px}
-.head.c{margin-left:auto;margin-right:auto;text-align:center}
-.head h2{font-size:clamp(32px,4.4vw,50px);line-height:1.05;font-weight:850;margin:12px 0 14px}
-.head p{font-size:19px;margin:0}
-
-/* dor */
-.pain{background:#0B0B0F;color:#fff}
-.pain h2,.pain b{color:#fff}.pain p{color:#B4B4BC}
-.pain .eyebrow{color:#FF6B85}
+.head{max-width:760px;margin:0 auto 48px;text-align:center}
+.head h2{font-size:clamp(32px,4.6vw,52px);line-height:1.04;margin:12px 0 14px}
+.head p{font-size:19px}
+.dev{--dw:260px;position:relative;width:var(--dw);padding:calc(var(--dw)*.034);border-radius:calc(var(--dw)*.175);background:linear-gradient(150deg,#3a3a40,#111113 40%,#1f1f23);box-shadow:0 40px 80px rgba(11,11,15,.22),inset 0 0 0 1.5px #4a4a52,inset 0 0 0 4px #0a0a0b;margin:0 auto}
+.dev .scr{position:relative;aspect-ratio:430/932;border-radius:calc(var(--dw)*.14);overflow:hidden;background:#000}
+.dev .scr img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.dev .island{position:absolute;top:calc(var(--dw)*.031);left:50%;width:calc(var(--dw)*.3);height:calc(var(--dw)*.088);transform:translateX(-50%);border-radius:99px;background:#000;z-index:2}
+.tour{background:var(--soft)}
+.tour .grid{display:grid;grid-template-columns:1fr 1fr;gap:64px}
+.tour .ph{position:sticky;top:calc(50vh - 290px);height:580px;display:grid;place-items:center}
+.tour .ph .dev{--dw:270px}
+.tour .ph .scr img{transition:opacity .45s ease}
+.tstep{min-height:70vh;display:flex;flex-direction:column;justify-content:center;opacity:.28;transition:opacity .35s}
+.tstep.on{opacity:1}
+.tstep .num{font-size:14px;font-weight:800;color:var(--pink);letter-spacing:.08em}
+.tstep h3{font-size:clamp(28px,3.4vw,42px);line-height:1.06;margin:10px 0 14px}
+.tstep p{font-size:18.5px;max-width:470px}
+.tstep .dev{display:none}
+@media(max-width:900px){.tour .grid{grid-template-columns:1fr;gap:0}.tour .ph{display:none}.tstep{min-height:0;opacity:1;padding:0 0 64px;text-align:center;align-items:center}.tstep .dev{display:block;--dw:220px;margin:28px auto 0}.tstep p{margin:0 auto}}
+.pain{background:#0B0B0F}
+.pain h2,.pain b{color:#fff}.pain p{color:#B4B4BE}.pain .eyebrow{color:#FF6B85}
 .cards4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.pc{background:#16161B;border:1px solid rgba(255,255,255,.07);border-radius:var(--r);padding:24px}
-.pc .ic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:rgba(255,45,85,.14);color:#FF6B85;margin-bottom:16px}
-.pc .ic svg{width:24px;height:24px}
+.pc{background:#16161B;border:1px solid rgba(255,255,255,.07);border-radius:22px;padding:24px}
+.pc .ic{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;background:rgba(255,45,85,.14);color:#FF6B85;margin-bottom:16px}
 .pc b{display:block;font-size:19px;margin-bottom:6px}
-.pc p{margin:0;font-size:15.5px}
-.verdict{margin-top:34px;padding:26px 28px;border-radius:var(--r);background:linear-gradient(135deg,rgba(255,45,85,.16),rgba(255,45,85,.04));border:1px solid rgba(255,45,85,.3);font-size:20px;line-height:1.45;color:#fff}
+.pc p{font-size:15.5px}
+.verdict{margin-top:30px;padding:24px 26px;border-radius:22px;border:1px solid rgba(255,45,85,.35);background:rgba(255,45,85,.08);font-size:20px;line-height:1.45;color:#fff}
 @media(max-width:900px){.cards4{grid-template-columns:1fr 1fr}}@media(max-width:560px){.cards4{grid-template-columns:1fr}}
-
-/* como funciona */
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;counter-reset:s}
-.st{position:relative;padding:28px;border-radius:var(--r);background:var(--soft)}
-.st::before{counter-increment:s;content:'0' counter(s);font-size:14px;font-weight:800;color:var(--pink);letter-spacing:.06em}
-.st .ic{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;color:#fff;margin:16px 0 18px;box-shadow:0 12px 26px rgba(0,0,0,.14)}
-.st .ic svg{width:28px;height:28px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.st{padding:28px;border-radius:22px;background:var(--soft)}
+.st .n{font-size:14px;font-weight:800;color:var(--pink);letter-spacing:.06em}
+.st .ic{width:54px;height:54px;border-radius:15px;display:grid;place-items:center;color:#fff;margin:14px 0 16px}
+.st .ic svg{width:26px;height:26px}
 .st b{display:block;font-size:21px;margin-bottom:8px}
-.st p{margin:0;font-size:16px}
+.st p{font-size:16px}
 @media(max-width:900px){.steps{grid-template-columns:1fr}}
-
-/* recursos em destaque */
-.feat{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;padding:40px 0}
-.feat.rev .txt{order:2}
-.feat h3{font-size:clamp(28px,3.4vw,40px);line-height:1.08;font-weight:850;margin:10px 0 14px}
-.feat p{font-size:18px;margin:0 0 18px}
-.ticks{list-style:none;padding:0;margin:0;display:grid;gap:12px}
-.ticks li{display:flex;gap:12px;font-size:16.5px;color:var(--ink2)}
-.ticks svg{width:22px;height:22px;color:var(--green);flex:none;margin-top:1px}
-.shot{position:relative;display:grid;place-items:center;min-height:640px;padding:40px 0;border-radius:32px;background:linear-gradient(160deg,#F7F7FA,#ECECF2);overflow:hidden}
-.shot .device{--dw:250px}
-.shot .badge{position:absolute;display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:16px;background:#fff;box-shadow:0 14px 34px rgba(11,11,15,.14);font-size:14px;font-weight:700;will-change:transform}
-.shot .badge i{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff}
-.shot .badge i svg{width:17px;height:17px}
-@media(max-width:900px){.feat{grid-template-columns:1fr;gap:28px}.feat.rev .txt{order:0}.shot{min-height:600px}.shot .device{--dw:232px}}
-
-/* profissões em movimento */
-.marq{overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
-.marq .row{display:flex;gap:10px;width:max-content;animation:mq 46s linear infinite;margin-bottom:10px}
-.marq .row.b{animation-direction:reverse;animation-duration:52s}
+.marq{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.marq .row{display:flex;gap:10px;width:max-content;animation:mq 50s linear infinite;margin-bottom:10px}
+.marq .row.b{animation-direction:reverse;animation-duration:58s}
 .marq span{display:inline-flex;align-items:center;gap:8px;font-size:16px;font-weight:650;padding:12px 18px;border-radius:999px;background:#fff;border:1px solid var(--line);white-space:nowrap}
 .marq span i{width:8px;height:8px;border-radius:50%}
-@keyframes mq{to{transform:translateX(-50%)}}
-
-/* comparação */
-.cmp{border-radius:var(--r);border:1px solid var(--line);overflow:hidden;background:#fff}
+@keyframes mq{to{transform:translate3d(-50%,0,0)}}
+.cmp{border-radius:22px;border:1px solid var(--line);overflow:hidden}
 .cmp .r{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;align-items:center;border-top:1px solid var(--line)}
 .cmp .r:first-child{border-top:0;background:var(--soft);font-weight:800;font-size:14px}
-.cmp .r>*{padding:16px 18px}
+.cmp .r>*{padding:15px 18px}
 .cmp .r>:not(:first-child){text-align:center}
-.cmp .r>:nth-child(2){background:rgba(255,45,85,.05);font-weight:700}
-.cmp .y{color:var(--green)}.cmp .n{color:#C2C2CA}
-.cmp svg{width:22px;height:22px;vertical-align:middle}
-@media(max-width:640px){.cmp .r{grid-template-columns:1.4fr .8fr .8fr .8fr;font-size:14px}.cmp .r>*{padding:12px 8px}}
-
-/* preço */
-.priceband{background:var(--soft)}
+.cmp .r>:nth-child(2){background:rgba(255,45,85,.05);font-weight:800}
+.cmp .y{color:var(--green);font-weight:800}.cmp .n{color:#C4C4CC}
+@media(max-width:640px){.cmp .r{grid-template-columns:1.5fr .8fr .8fr .7fr;font-size:14px}.cmp .r>*{padding:12px 8px}}
+.price{background:var(--soft)}
 .prices{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:860px;margin:0 auto}
 .pr{position:relative;border-radius:26px;padding:30px;background:#fff;border:1px solid var(--line)}
-.pr.best{background:var(--ink);color:#fff;border-color:var(--ink);box-shadow:0 30px 70px rgba(11,11,15,.25)}
-.pr.best p,.pr.best li{color:#C9C9D1}.pr.best b,.pr.best .v,.pr.best .n{color:#fff}
-.pr .tag{position:absolute;top:-13px;left:24px;background:var(--pink);color:#fff;font-size:12.5px;font-weight:800;padding:5px 12px;border-radius:999px;letter-spacing:.02em}
-.pr .n{font-size:16px;font-weight:700;color:var(--mute)}
-.pr .v{font-size:52px;font-weight:850;letter-spacing:-.04em;margin:6px 0 2px;color:var(--ink)}
+.pr.best{background:var(--ink);border-color:var(--ink)}
+.pr.best p,.pr.best li{color:#C9C9D2}.pr.best .v,.pr.best .nm{color:#fff}
+.pr .tag{position:absolute;top:-13px;left:24px;background:var(--pink);color:#fff;font-size:12.5px;font-weight:800;padding:5px 12px;border-radius:999px}
+.pr .nm{font-size:16px;font-weight:750;color:var(--mute)}
+.pr .v{font-size:50px;font-weight:850;letter-spacing:-.04em;margin:6px 0 4px;color:var(--ink)}
 .pr .v small{font-size:17px;font-weight:600;letter-spacing:0}
-.pr ul{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:10px}
-.pr li{display:flex;gap:10px;font-size:15.5px}
-.pr li svg{width:20px;height:20px;color:var(--green);flex:none}
-.anchor{max-width:860px;margin:26px auto 0;display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;padding:22px 24px;border-radius:20px;background:#fff;border:1px dashed rgba(11,11,15,.18)}
-.anchor .ic{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;background:#FFF3D6;color:var(--amber)}
-.anchor .ic svg{width:26px;height:26px}
-.anchor p{margin:0;font-size:16.5px}
-.guar{max-width:860px;margin:16px auto 0;display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
-.guar span{display:inline-flex;align-items:center;gap:8px;font-size:14.5px;font-weight:650;padding:10px 14px;border-radius:999px;background:#fff;border:1px solid var(--line)}
-.guar svg{width:18px;height:18px;color:var(--green)}
+.pr ul{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:9px}
+.pr li{font-size:15.5px}.pr li::before{content:'✓  ';color:var(--green);font-weight:800}
+.anchor{max-width:860px;margin:24px auto 0;padding:22px 24px;border-radius:20px;background:#fff;border:1px dashed rgba(11,11,15,.2);font-size:16.5px;color:var(--ink2)}
+.guar{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:16px}
+.guar span{font-size:14.5px;font-weight:650;padding:10px 14px;border-radius:999px;background:#fff;border:1px solid var(--line)}
 @media(max-width:760px){.prices{grid-template-columns:1fr}}
-
-/* perguntas */
 .faq{max-width:820px;margin:0 auto}
 details{border-bottom:1px solid var(--line);padding:20px 4px}
-summary{font-weight:750;cursor:pointer;color:var(--ink);font-size:18px;list-style:none;display:flex;justify-content:space-between;gap:16px}
+summary{font-weight:750;cursor:pointer;font-size:18px;list-style:none;display:flex;justify-content:space-between;gap:16px}
 summary::-webkit-details-marker{display:none}
 summary::after{content:'+';font-weight:400;font-size:26px;line-height:1;color:var(--mute);transition:transform .2s}
 details[open] summary::after{transform:rotate(45deg)}
-details p{margin:12px 0 0;font-size:16.5px}
-
-/* chamada final */
-.final{position:relative;overflow:hidden;background:#0B0B0F;color:#fff;text-align:center;padding:110px 0}
-.final::before{content:'';position:absolute;inset:0;background:radial-gradient(50% 60% at 50% 100%,rgba(255,45,85,.35),transparent 70%)}
-.final .wrap{position:relative}
-.final h2{color:#fff;font-size:clamp(34px,5vw,58px);line-height:1.04;font-weight:850;margin:0 0 16px}
-.final p{color:#C9C9D1;font-size:19px;margin:0 0 30px}
-.final .micro{justify-content:center;color:#A1A1AA}
-
-footer{background:#0B0B0F;color:#8E8E96;border-top:1px solid rgba(255,255,255,.08);padding:26px 0 calc(env(safe-area-inset-bottom,0px) + 96px);font-size:14px}
+details p{margin-top:12px;font-size:16.5px}
+.final{background:#0B0B0F;text-align:center;padding:110px 0}
+.final h2{color:#fff;font-size:clamp(32px,5vw,56px);line-height:1.05;margin:0 0 16px}
+.final p{color:#C9C9D2;font-size:19px;margin:0 auto 28px;max-width:640px}
+.final .micro{color:#A1A1AA}
+footer{background:#0B0B0F;color:#8E8E98;border-top:1px solid rgba(255,255,255,.08);padding:26px 0 calc(env(safe-area-inset-bottom,0px) + 96px);font-size:14px}
 footer .wrap{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between}
-footer a{color:#B4B4BC}
+footer a{color:#B4B4BE}
 footer a.wa{color:#fff;background:#25D366;padding:6px 12px;border-radius:999px;text-decoration:none;font-weight:700;margin-right:6px}
-
-/* barra fixa no celular */
-.sticky{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:60;display:none;transform:translateY(140%);transition:transform .3s}
+.sticky{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:60;display:none;transform:translate3d(0,140%,0);transition:transform .3s}
 .sticky.show{transform:none}
-.sticky .cta{width:100%;min-height:56px;font-size:17px}
+.sticky .cta{width:100%;min-height:54px;font-size:17px}
 @media(max-width:900px){.sticky{display:block}}
-
-/* animações ao rolar */
-.rv{opacity:0;transform:translateY(28px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.rv{opacity:0;transform:translate3d(0,26px,0);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
 .rv.in{opacity:1;transform:none}
-.rv.d1{transition-delay:.08s}.rv.d2{transition-delay:.16s}.rv.d3{transition-delay:.24s}
-.pop{transform:scale(.6) rotate(-12deg);opacity:0;transition:transform .7s cubic-bezier(.3,1.6,.5,1),opacity .4s}
-.in .pop,.pop.in{transform:none;opacity:1}
-@media (prefers-reduced-motion:reduce){.rv,.pop{opacity:1;transform:none;transition:none}.marq .row{animation:none}}
+.d1{transition-delay:.08s}.d2{transition-delay:.16s}.d3{transition-delay:.24s}
+@media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}.marq .row{animation:none}}
 </style></head>
 <body>
-<nav class="nav" id="nav"><div class="wrap">
-  <img src="../media/marca/completa-preto.png" alt="Lembra">
-  <div class="links"><a class="hide" href="#como">Como funciona</a><a class="hide" href="#preco">Preço</a><a href="../" data-keep>Entrar</a><a class="go" href="../#/cadastro" data-keep>Testar grátis</a></div>
+<nav class="nav"><div class="wrap">
+  <img src="../media/marca/completa-preto.png" alt="Lembra" width="120" height="38">
+  <div class="links"><a class="hide" href="#tour">Como funciona</a><a class="hide" href="#preco">Preço</a><a href="../" data-keep>Entrar</a><a class="go" href="../#/cadastro" data-keep>Testar grátis</a></div>
 </div></nav>
-
 <main>
-<!-- TOPO: cena 3D que acompanha a rolagem -->
-<header class="scene" id="scene"><div class="scene__pin">
-  <div class="scene__txt">
+<header class="hero" id="hero"><div class="hero__pin">
+  <div class="hero__txt">
     <span class="eyebrow">Agenda inteligente para profissionais</span>
-    <h1 class="split" data-split>Pare de depender da memória.</h1>
-    <p class="scene__sub" data-fade>Nunca mais esqueça <b id="rot">o cliente das 9h</b></p>
+    <h1>Pare de depender da memória.</h1>
+    <p class="hero__rot" aria-hidden="true">Nunca mais esqueça <b id="rot">o cliente das 9h</b></p>
   </div>
-  <div class="scene__3d">
-    <div class="device" id="heroDev"><div class="scr"><img src="../media/lp/hoje.jpg" alt="Tela Hoje do Lembra" width="645" height="1398" fetchpriority="high"><div class="drop" id="drop"><i style="background:#FF2D55"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></i><div><b>LEMBRA · agora</b><span id="dropB">Consulta com Ana Paula em 30 min</span></div></div><i class="island"></i><i class="glare"></i></div></div>
-    <div class="tile" data-x="-1.0" data-y="-0.55" style="--c:#0A84FF"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3c-2 0-3.5 1.6-3.5 4 0 3 1.5 4 2 7s1 7 2.5 7 1.5-4 2.5-6c.3-.6.7-1 1.5-1s1.2.4 1.5 1c1 2 1 6 2.5 6s2-4 2.5-7 2-4 2-7c0-2.4-1.5-4-3.5-4-1.8 0-3 1-5 1S8.8 3 7 3Z"/></svg></div></div><div class="tile" data-x="1.05" data-y="-0.62" style="--c:#FF2D55"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-8H4v8M2 21h20M12 13v-3M12 7a1.5 1.5 0 0 1-1.5-1.5C10.5 4 12 3 12 3s1.5 1 1.5 2.5A1.5 1.5 0 0 1 12 7Z"/></svg></div></div><div class="tile" data-x="-1.18" data-y="0.12" style="--c:#8B5CF6"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></div></div><div class="tile" data-x="1.2" data-y="0.05" style="--c:#F59E0B"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h20M4 18v-3a8 8 0 0 1 16 0v3M10 7V5h4v2"/></svg></div></div><div class="tile" data-x="-0.92" data-y="0.72" style="--c:#16A34A"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8M12 16v4"/></svg></div></div><div class="tile" data-x="0.95" data-y="0.78" style="--c:#FF3B30"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z"/></svg></div></div><div class="tile" data-x="0.0" data-y="-1.05" style="--c:#FF9F0A"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div></div><div class="tile" data-x="0.05" data-y="1.05" style="--c:#EC4899"><div class="tile__b"></div><div class="tile__f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></div></div>
+  <div class="hero__3d" id="stage3d"><div class="hero__fallback"><img src="../media/lp/hoje.jpg" alt="Tela Hoje do Lembra"></div></div>
+  <div class="hero__cta">
+    <a class="cta" href="../#/cadastro" data-keep>Começar meu teste grátis →</a>
+    <div class="micro"><span>24 horas com tudo liberado</span><span>Sem cartão</span><span>Pronto em 2 minutos</span></div>
   </div>
-  <div class="scene__cta" data-fade2>
-    <p class="lead">O Lembra se adapta à sua profissão, calcula quantos avisos <b>você</b> precisa e cobra você quando atrasa — até que esquecer deixe de ser uma opção.</p>
-    <a class="cta" href="../#/cadastro" data-keep>Começar meu teste grátis <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-    <div class="micro"><span>✓ 24 horas com tudo liberado</span><span>✓ Sem cartão</span><span>✓ Pronto em 2 minutos</span></div>
-  </div>
-  <div class="scene__hint" id="hint">Role para ver <span>↓</span></div>
 </div></header>
-
 <div class="strip"><div class="wrap">
-  <div class="rv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Mais de 230 profissões</div>
-  <div class="rv d1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>Avisos calculados para você</div>
-  <div class="rv d2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Dados protegidos (LGPD)</div>
-  <div class="rv d3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>7 dias de garantia</div>
+  <div><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Mais de 230 profissões</div>
+  <div><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>Avisos calculados para você</div>
+  <div><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Dados protegidos (LGPD)</div>
+  <div><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>7 dias de garantia</div>
 </div></div>
-
-
-<!-- PASSEIO PELO APP -->
-<section class="tour" id="tour"><div class="wrap">
-  <div class="ph"><div class="device" id="tourDev"><div class="scr">
-    <img data-t="0" src="../media/lp/hoje.jpg" alt="" loading="lazy"><img data-t="1" src="../media/lp/novo.jpg" alt="" loading="lazy" style="opacity:0"><img data-t="2" src="../media/lp/pessoal.jpg" alt="" loading="lazy" style="opacity:0"><img data-t="3" src="../media/lp/calendario.jpg" alt="" loading="lazy" style="opacity:0">
-    <i class="island"></i><i class="glare"></i></div></div></div>
-  <div class="steps-col" style="position:relative"><div class="bar"><i id="tbar"></i></div>
-    <div class="tstep" data-step="0"><div class="tc"><span class="num">01 · HOJE</span><h3>Abra o app e saiba exatamente o que fazer.</h3><p>O próximo compromisso, quanto falta e o que está atrasado, na primeira tela. Sem procurar, sem adivinhar.</p></div></div>
-    <div class="tstep" data-step="1"><div class="tc"><span class="num">02 · MARCAR</span><h3>Marque em segundos. O Lembra confere por você.</h3><p>Tipos prontos da sua profissão e um assistente que avisa na hora se aquilo já foi marcado ou se bate com outro horário.</p></div></div>
-    <div class="tstep" data-step="2"><div class="tc"><span class="num">03 · PESSOAL</span><h3>Sua vida fora do trabalho também não fica para trás.</h3><p>Aniversários, contas, saúde e listas no modo Pessoal — com mensagens de ânimo, versículos e lembretes de cuidado ao longo do dia.</p></div></div>
-    <div class="tstep" data-step="3"><div class="tc"><span class="num">04 · VISÃO DO MÊS</span><h3>Veja o mês inteiro e quem está onde.</h3><p>Calendário com tudo o que vem pela frente, atrasos em destaque e a agenda da equipe no mesmo lugar.</p></div></div>
-  </div>
-</div></section>
-
-<!-- DOR -->
 <section class="pain"><div class="wrap">
-  <div class="head rv" data-rise><span class="eyebrow">O custo invisível</span><h2>Esquecer nunca sai de graça.<br>E a conta sempre chega.</h2><p>Você não percebe na hora. Mas cada esquecimento cobra a conta depois — em dinheiro, em reputação ou em relacionamentos.</p></div>
+  <div class="head rv"><span class="eyebrow">O custo invisível</span><h2>Esquecer nunca sai de graça.</h2><p>Cada esquecimento cobra a conta depois — em dinheiro, em reputação ou em relacionamentos.</p></div>
   <div class="cards4">
-    <div class="pc rv"><div class="ic pop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5m0-5-5 5"/></svg></div><b>O cliente que não volta</b><p>Um horário esquecido é suficiente para ele procurar outro profissional. E ele não avisa que foi embora.</p></div>
-    <div class="pc rv d1"><div class="ic pop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M7 15h4"/></svg></div><b>Juros, multas e taxas</b><p>Boleto vencido, imposto atrasado, documento fora do prazo. Dinheiro perdido por um lembrete que não existiu.</p></div>
-    <div class="pc rv d2"><div class="ic pop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></div><b>Quem você ama</b><p>O aniversário que passou, a consulta do filho, a promessa feita no fim de semana. Isso não se compra de volta.</p></div>
-    <div class="pc rv d3"><div class="ic pop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z"/><path d="M9 21h6"/></svg></div><b>A cabeça que nunca desliga</b><p>Tentar lembrar de tudo sozinho cansa. A ansiedade de “estou esquecendo alguma coisa” não deixa você descansar.</p></div>
+    <div class="pc rv"><div class="ic"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5m0-5-5 5"/></svg></div><b>O cliente que não volta</b><p>Um horário esquecido basta para ele procurar outro profissional. E ele não avisa que foi embora.</p></div>
+    <div class="pc rv d1"><div class="ic"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M7 15h4"/></svg></div><b>Juros, multas e taxas</b><p>Boleto vencido, imposto atrasado, documento fora do prazo. Dinheiro perdido por um lembrete que não existiu.</p></div>
+    <div class="pc rv d2"><div class="ic"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></div><b>Quem você ama</b><p>O aniversário que passou, a consulta do filho, a promessa do fim de semana. Isso não se compra de volta.</p></div>
+    <div class="pc rv d3"><div class="ic"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2Z"/><path d="M9 21h6"/></svg></div><b>A cabeça que nunca desliga</b><p>A sensação de “estou esquecendo alguma coisa” não deixa você descansar.</p></div>
   </div>
-  <div class="verdict rv">Agendas comuns guardam compromissos. <b>O Lembra garante que eles aconteçam.</b> A diferença está em quem toma a iniciativa: no Lembra, é ele que vai atrás de você.</div>
+  <div class="verdict rv">Agendas comuns guardam compromissos. <b>O Lembra garante que eles aconteçam</b> — porque é ele que vai atrás de você.</div>
 </div></section>
-
-<!-- COMO FUNCIONA -->
-<section id="como"><div class="wrap">
-  <div class="head c rv" data-rise><span class="eyebrow">Como funciona</span><h2>Três passos. Nenhum esquecimento.</h2><p>Você configura uma vez. O Lembra trabalha todos os dias.</p></div>
+<section class="tour" id="tour"><div class="wrap">
+  <div class="head rv"><span class="eyebrow">Como funciona</span><h2>Do celular para a sua rotina.</h2></div>
+  <div class="grid">
+    <div class="ph"><div class="dev"><div class="scr"><img data-t="0" src="../media/lp/hoje.jpg" alt="" loading="lazy"><img data-t="1" src="../media/lp/novo.jpg" alt="" loading="lazy" style="opacity:0"><img data-t="2" src="../media/lp/pessoal.jpg" alt="" loading="lazy" style="opacity:0"><img data-t="3" src="../media/lp/calendario.jpg" alt="" loading="lazy" style="opacity:0"><i class="island"></i></div></div></div>
+    <div>
+      <div class="tstep" data-step="0"><span class="num">01 · HOJE</span><h3>Abra o app e saiba exatamente o que fazer.</h3><p>O próximo compromisso, quanto falta e o que está atrasado, na primeira tela.</p><div class="dev"><div class="scr"><img src="../media/lp/hoje.jpg" alt="Tela Hoje" loading="lazy"><i class="island"></i></div></div></div>
+      <div class="tstep" data-step="1"><span class="num">02 · MARCAR</span><h3>Marque em segundos. O Lembra confere por você.</h3><p>Tipos prontos da sua profissão e um assistente que avisa se aquilo já foi marcado ou bate com outro horário.</p><div class="dev"><div class="scr"><img src="../media/lp/novo.jpg" alt="Novo compromisso" loading="lazy"><i class="island"></i></div></div></div>
+      <div class="tstep" data-step="2"><span class="num">03 · PESSOAL</span><h3>Sua vida fora do trabalho também não fica para trás.</h3><p>Aniversários, contas, saúde e listas — com mensagens de ânimo e lembretes de cuidado ao longo do dia.</p><div class="dev"><div class="scr"><img src="../media/lp/pessoal.jpg" alt="Modo Pessoal" loading="lazy"><i class="island"></i></div></div></div>
+      <div class="tstep" data-step="3"><span class="num">04 · EQUIPE</span><h3>O mês inteiro, e quem está onde.</h3><p>Calendário com tudo o que vem pela frente, atrasos em destaque e a agenda da equipe no mesmo lugar.</p><div class="dev"><div class="scr"><img src="../media/lp/calendario.jpg" alt="Calendário" loading="lazy"><i class="island"></i></div></div></div>
+    </div>
+  </div>
+</div></section>
+<section><div class="wrap">
+  <div class="head rv"><span class="eyebrow">Em 3 passos</span><h2>Configure uma vez. Ele trabalha todos os dias.</h2></div>
   <div class="steps">
-    <div class="st rv"><div class="ic pop" style="background:#0A84FF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></div><b>Responda a ficha de 2 minutos</b><p>Sua profissão, sua rotina e o quanto você costuma esquecer. O app inteiro se molda a você: nomes, tipos de compromisso, cores e dicas.</p></div>
-    <div class="st rv d1"><div class="ic pop" style="background:#F59E0B"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div><b>Receba os avisos na medida certa</b><p>Quem esquece mais recebe mais avisos — 1 dia antes, 2 horas antes, 30 minutos antes. Tudo calculado para você, nunca de madrugada.</p></div>
-    <div class="st rv d2"><div class="ic pop" style="background:#FF2D55"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><b>Seja cobrado quando atrasar</b><p>Passou do horário? O Lembra insiste com firmeza até você resolver. Concluiu? Ele comemora com você.</p></div>
+    <div class="st rv"><span class="n">01</span><div class="ic" style="background:#0A84FF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></div><b>Responda a ficha de 2 minutos</b><p>Profissão, rotina e o quanto você costuma esquecer. O app inteiro se molda a você.</p></div>
+    <div class="st rv d1"><span class="n">02</span><div class="ic" style="background:#F59E0B"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div><b>Receba os avisos na medida certa</b><p>1 dia antes, 2 horas antes, 30 minutos antes — calculado para você, nunca de madrugada.</p></div>
+    <div class="st rv d2"><span class="n">03</span><div class="ic" style="background:#FF2D55"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><b>Seja cobrado quando atrasar</b><p>Passou do horário? O Lembra insiste até você resolver. Concluiu? Ele comemora com você.</p></div>
   </div>
 </div></section>
-
-<!-- RECURSOS -->
-<section style="padding-top:20px"><div class="wrap">
-  <div class="feat">
-    <div class="txt rv"><span class="eyebrow">Trabalho</span><h3>Uma agenda que fala a língua da sua profissão.</h3><p>Dentista marca consultas e retornos. Confeiteira marca encomendas e entregas. Professor marca aulas e provas. O Lembra já vem pronto para o seu dia a dia.</p>
-      <ul class="ticks"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Tipos de compromisso e campos próprios da sua área</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Avisa quando algo foi marcado duas vezes</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Assistente que organiza e reorganiza a agenda por você</li></ul></div>
-    <div class="shot rv d1"><div class="device" data-tilt><div class="scr"><img src="../media/lp/novo.jpg" alt="Novo compromisso no Lembra" loading="lazy" width="620" height="1343"><i class="island"></i><i class="glare"></i></div></div>
-      <div class="badge" data-par="-0.12" style="top:60px;right:24px"><i style="background:#FF3B30"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></i>Isso já foi marcado</div>
-      <div class="badge" data-par="0.14" style="bottom:70px;left:22px"><i style="background:#0A84FF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.8H20l-4.9 3.6 1.9 5.8L12 14.6l-4.9 3.6 1.9-5.8L4 8.8h6.1Z"/></svg></i>Assistente</div></div>
-  </div>
-  <div class="feat rev">
-    <div class="txt rv"><span class="eyebrow">Vida pessoal</span><h3>E um modo Pessoal só seu, com um toque.</h3><p>Aniversários, contas, consultas, listas de compras e cuidados com você. Separado do trabalho e visível só para você.</p>
-      <ul class="ticks"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Sugestões pensadas para a sua idade e o seu momento</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Mensagens de ânimo, versículos e lembretes de cuidado ao longo do dia</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Coisas que se repetem: o Lembra lembra sozinho, para sempre</li></ul></div>
-    <div class="shot rv d1" style="background:linear-gradient(160deg,#FFF1F4,#FFE3EA)"><div class="device" data-tilt><div class="scr"><img src="../media/lp/pessoal.jpg" alt="Modo Pessoal do Lembra" loading="lazy" width="620" height="1343"><i class="island"></i><i class="glare"></i></div></div>
-      <div class="badge" data-par="0.12" style="top:70px;left:22px"><i style="background:#FF2D55"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></i>Só você vê</div>
-      <div class="badge" data-par="-0.14" style="bottom:80px;right:22px"><i style="background:#8B5CF6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/></svg></i>Versículo do dia</div></div>
-  </div>
-  <div class="feat">
-    <div class="txt rv"><span class="eyebrow">Equipe</span><h3>Divida a agenda com quem trabalha com você.</h3><p>Sócio, equipe ou família no mesmo calendário. Cada um vê o que precisa, recebe os próprios avisos e é notificado na hora quando algo muda.</p>
-      <ul class="ticks"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Bilhetes com marcação de pessoas</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Quem você convida não paga nada</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Calendário do mês inteiro, com quem está onde</li></ul></div>
-    <div class="shot rv d1" style="background:linear-gradient(160deg,#EEF6FF,#E1EEFF)"><div class="device" data-tilt><div class="scr"><img src="../media/lp/calendario.jpg" alt="Calendário do Lembra" loading="lazy" width="620" height="1343"><i class="island"></i><i class="glare"></i></div></div>
-      <div class="badge" data-par="-0.12" style="top:80px;right:20px"><i style="background:#16A34A"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></i>Agenda da equipe</div></div>
-  </div>
-</div></section>
-
-<!-- PROFISSÕES -->
-<section style="padding:70px 0;background:var(--soft)">
-  <div class="wrap"><div class="head c rv" data-rise><span class="eyebrow">Para a sua profissão</span><h2>Feito para quem trabalha de verdade.</h2><p>Escolha a sua na ficha. O Lembra muda por inteiro.</p></div></div>
+<section style="padding:72px 0;background:var(--soft)">
+  <div class="wrap"><div class="head rv" style="margin-bottom:32px"><span class="eyebrow">Para a sua profissão</span><h2>Feito para quem trabalha de verdade.</h2></div></div>
   <div class="marq">
     <div class="row"><span><i style="background:#0A84FF"></i>Dentista</span><span><i style="background:#FF2D55"></i>Confeiteira</span><span><i style="background:#8B5CF6"></i>Barbeiro</span><span><i style="background:#F59E0B"></i>Engenheiro civil</span><span><i style="background:#16A34A"></i>Professora</span><span><i style="background:#FF3B30"></i>Enfermeira</span><span><i style="background:#0EA5E9"></i>Advogado</span><span><i style="background:#EC4899"></i>Manicure</span><span><i style="background:#14B8A6"></i>Personal trainer</span><span><i style="background:#6366F1"></i>Social media</span><span><i style="background:#0A84FF"></i>Dentista</span><span><i style="background:#FF2D55"></i>Confeiteira</span><span><i style="background:#8B5CF6"></i>Barbeiro</span><span><i style="background:#F59E0B"></i>Engenheiro civil</span><span><i style="background:#16A34A"></i>Professora</span><span><i style="background:#FF3B30"></i>Enfermeira</span><span><i style="background:#0EA5E9"></i>Advogado</span><span><i style="background:#EC4899"></i>Manicure</span><span><i style="background:#14B8A6"></i>Personal trainer</span><span><i style="background:#6366F1"></i>Social media</span></div>
     <div class="row b"><span><i style="background:#F97316"></i>Eletricista</span><span><i style="background:#0EA5E9"></i>Corretor de imóveis</span><span><i style="background:#84CC16"></i>Nutricionista</span><span><i style="background:#A855F7"></i>Psicóloga</span><span><i style="background:#EF4444"></i>Fisioterapeuta</span><span><i style="background:#22C55E"></i>Motorista</span><span><i style="background:#3B82F6"></i>Contador</span><span><i style="background:#E11D48"></i>Cabeleireira</span><span><i style="background:#0891B2"></i>Estudante</span><span><i style="background:#6B7280"></i>+ 220 profissões</span><span><i style="background:#F97316"></i>Eletricista</span><span><i style="background:#0EA5E9"></i>Corretor de imóveis</span><span><i style="background:#84CC16"></i>Nutricionista</span><span><i style="background:#A855F7"></i>Psicóloga</span><span><i style="background:#EF4444"></i>Fisioterapeuta</span><span><i style="background:#22C55E"></i>Motorista</span><span><i style="background:#3B82F6"></i>Contador</span><span><i style="background:#E11D48"></i>Cabeleireira</span><span><i style="background:#0891B2"></i>Estudante</span><span><i style="background:#6B7280"></i>+ 220 profissões</span></div>
   </div>
 </section>
-
-<!-- COMPARAÇÃO -->
 <section><div class="wrap">
-  <div class="head c rv" data-rise><span class="eyebrow">Comparação</span><h2>Não é mais uma agenda.</h2><p>É a diferença entre anotar e realmente fazer.</p></div>
+  <div class="head rv"><span class="eyebrow">Comparação</span><h2>Não é mais uma agenda.</h2><p>É a diferença entre anotar e realmente fazer.</p></div>
   <div class="cmp rv">
     <div class="r"><span>Recurso</span><span>Lembra</span><span>Agenda comum</span><span>Papel</span></div>
     <div class="r"><span>Adapta-se à sua profissão</span><span class="y">✓</span><span class="n">—</span><span class="n">—</span></div>
-    <div class="r"><span>Quantidade de avisos calculada para você</span><span class="y">✓</span><span class="n">—</span><span class="n">—</span></div>
+    <div class="r"><span>Avisos calculados para você</span><span class="y">✓</span><span class="n">—</span><span class="n">—</span></div>
     <div class="r"><span>Cobra você quando atrasa</span><span class="y">✓</span><span class="n">—</span><span class="n">—</span></div>
     <div class="r"><span>Detecta compromissos repetidos</span><span class="y">✓</span><span class="n">—</span><span class="n">—</span></div>
     <div class="r"><span>Trabalho e vida pessoal separados</span><span class="y">✓</span><span class="n">—</span><span class="n">—</span></div>
-    <div class="r"><span>Assistente que organiza por você</span><span class="y">✓</span><span class="n">—</span><span class="n">—</span></div>
     <div class="r"><span>Avisos no celular</span><span class="y">✓</span><span class="y">✓</span><span class="n">—</span></div>
   </div>
 </div></section>
-
-<!-- PREÇO -->
-<section class="priceband" id="preco"><div class="wrap">
-  <div class="head c rv" data-rise><span class="eyebrow">Preço</span><h2>Menos que um compromisso perdido.</h2><p>Teste 24 horas com tudo liberado, sem cartão. Depois, escolha como continuar.</p></div>
+<section class="price" id="preco"><div class="wrap">
+  <div class="head rv"><span class="eyebrow">Preço</span><h2>Menos que um compromisso perdido.</h2><p>Teste 24 horas com tudo liberado, sem cartão. Depois, escolha.</p></div>
   <div class="prices">
-    <div class="pr rv"><span class="n">Mensal</span><div class="v">R$ 9,90<small>/mês</small></div><p>Cancele quando quiser, direto no app.</p>
-      <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Todos os recursos do Lembra</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Ranking semanal: o nº 1 do mês ganha o mês seguinte grátis</li></ul></div>
-    <div class="pr best rv d1"><span class="tag">Melhor escolha</span><span class="n">Vitalício</span><div class="v">R$ 150<small> uma única vez</small></div><p>Pague uma vez. Use para sempre.</p>
-      <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Sem mensalidade, nunca mais</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Todas as novidades incluídas</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Preço travado e selo Vitalício</li><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Agenda compartilhada mais barata</li></ul></div>
+    <div class="pr rv"><span class="nm">Mensal</span><div class="v">R$ 9,90<small>/mês</small></div><p>Cancele quando quiser, direto no app.</p><ul><li>Todos os recursos do Lembra</li><li>Ranking semanal: o nº 1 do mês ganha o mês seguinte grátis</li></ul></div>
+    <div class="pr best rv d1"><span class="tag">Melhor escolha</span><span class="nm">Vitalício</span><div class="v">R$ 150<small> uma única vez</small></div><p>Pague uma vez. Use para sempre.</p><ul><li>Sem mensalidade, nunca mais</li><li>Todas as novidades incluídas</li><li>Preço travado e selo Vitalício</li><li>Agenda compartilhada mais barata</li></ul></div>
   </div>
-  <div class="anchor rv"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><p><b>Faça a conta:</b> um único cliente que não volta, uma multa ou um boleto com juros já custa mais do que um ano inteiro de Lembra. O Vitalício se paga em 15 meses — e continua funcionando depois disso.</p></div>
-  <div class="guar rv"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>7 dias de garantia: devolvemos o seu dinheiro</span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Pagamento seguro pela Stripe</span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>Cancele o mensal quando quiser</span></div>
-  <p class="rv" style="text-align:center;max-width:760px;margin:22px auto 0;font-size:15px;color:var(--mute)">Agenda compartilhada é um complemento à parte: Dupla R$ 6,90/mês ou Equipe R$ 14,90/mês (no Vitalício, R$ 4,90 e R$ 9,90). Quem você convida não paga.</p>
+  <div class="anchor rv"><b>Faça a conta:</b> um único cliente que não volta, uma multa ou um boleto com juros já custa mais do que um ano inteiro de Lembra.</div>
+  <div class="guar rv"><span>↩︎ 7 dias de garantia</span><span>🔒 Pagamento seguro pela Stripe</span><span>✕ Cancele o mensal quando quiser</span></div>
 </div></section>
-
-<!-- PERGUNTAS -->
 <section><div class="wrap">
-  <div class="head c rv" data-rise><span class="eyebrow">Dúvidas</span><h2>Perguntas frequentes</h2></div>
+  <div class="head rv"><span class="eyebrow">Dúvidas</span><h2>Perguntas frequentes</h2></div>
   <div class="faq rv">
-    <details><summary>Preciso de cartão para testar?</summary><p>Não. Você cria a conta, responde a ficha e começa o teste: 24 horas com tudo liberado, sem informar nenhum dado de pagamento.</p></details>
-    <details><summary>Funciona no iPhone e no Android?</summary><p>Sim. Abra o link no celular e adicione à tela de início (no iPhone: Safari → Compartilhar → Adicionar à Tela de Início). Ele funciona como um aplicativo, com ícone e notificações.</p></details>
-    <details><summary>E se eu esquecer de abrir o app?</summary><p>É exatamente para isso que o Lembra existe. Ele avisa você no celular, na hora certa, mesmo com o app fechado. E, se você ficar horas sem abrir, ele pergunta se há algo novo para anotar.</p></details>
-    <details><summary>Como cancelo o plano mensal?</summary><p>No próprio app: Ajustes → Seu plano → Gerenciar. O acesso continua até o fim do período já pago.</p></details>
-    <details><summary>E se eu não gostar?</summary><p>Você tem 7 dias para pedir o dinheiro de volta, sem precisar justificar.</p></details>
-    <details><summary>Meus dados estão seguros?</summary><p>Sim. Cada conta acessa apenas os próprios dados, o pagamento é processado pela Stripe (nós nunca vemos o seu cartão) e seguimos a LGPD: você pode baixar ou apagar tudo quando quiser.</p></details>
+    <details><summary>Preciso de cartão para testar?</summary><p>Não. Você cria a conta, responde a ficha e começa o teste: 24 horas com tudo liberado.</p></details>
+    <details><summary>Funciona no iPhone e no Android?</summary><p>Sim. Abra o link no celular e adicione à tela de início (iPhone: Safari → Compartilhar → Adicionar à Tela de Início). Ele funciona como um aplicativo, com ícone e notificações.</p></details>
+    <details><summary>E se eu esquecer de abrir o app?</summary><p>É para isso que o Lembra existe: ele avisa no celular, na hora certa, mesmo com o app fechado. E, se você ficar horas sem abrir, pergunta se há algo novo para anotar.</p></details>
+    <details><summary>Como cancelo o plano mensal?</summary><p>No app: Ajustes → Seu plano → Gerenciar. O acesso continua até o fim do período pago.</p></details>
+    <details><summary>E se eu não gostar?</summary><p>Você tem 7 dias para pedir o dinheiro de volta, sem justificar.</p></details>
+    <details><summary>Meus dados estão seguros?</summary><p>Sim. Cada conta acessa só os próprios dados, o pagamento é processado pela Stripe (nunca vemos o seu cartão) e seguimos a LGPD.</p></details>
   </div>
 </div></section>
-
-<!-- CHAMADA FINAL -->
 <section class="final"><div class="wrap rv">
-  <h2>Quantos clientes, prazos e pessoas<br>você ainda pode perder?</h2>
+  <h2>Quantos clientes, prazos e pessoas você ainda pode perder?</h2>
   <p>Cada dia sem um sistema é mais um dia correndo esse risco. Configure em 2 minutos e teste 24 horas, sem cartão.</p>
-  <a class="cta" href="../#/cadastro" data-keep>Começar meu teste grátis <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-  <div class="micro"><span>Sem cartão</span><span>·</span><span>Cancele quando quiser</span><span>·</span><span>7 dias de garantia</span></div>
+  <a class="cta" href="../#/cadastro" data-keep>Começar meu teste grátis →</a>
+  <div class="micro"><span>Sem cartão</span><span>Cancele quando quiser</span><span>7 dias de garantia</span></div>
 </div></section>
 </main>
 <footer><div class="wrap"><span>© Lembra</span><span> <a href="../termos/">Termos de Uso</a> · <a href="../privacidade/">Privacidade</a> · <a href="mailto:icarlxs@gmail.com">icarlxs@gmail.com</a></span></div></footer>
 <div class="sticky" id="sticky"><a class="cta" href="../#/cadastro" data-keep>Testar grátis por 24 horas</a></div>
-
 <script>
-  // de onde a pessoa veio (anúncio, Instagram, WhatsApp…): guardado só neste aparelho e enviado junto com o cadastro.
-  // Sem rastreadores de terceiros.
+  (function () { try {
+    var q = new URLSearchParams(location.search), o = {};
+    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function (k) { var v = q.get(k); if (v) o[k.replace('utm_', '')] = v.slice(0, 60); });
+    if (q.get('fbclid')) o.source = o.source || 'facebook';
+    if (q.get('gclid')) o.source = o.source || 'google';
+    if (!o.source && document.referrer && !/github\.io|lembra/.test(document.referrer)) { try { o.source = new URL(document.referrer).hostname.replace(/^www\./, '').slice(0, 60); } catch (e) {} }
+    if (o.source && !localStorage.getItem('lembra.origem')) localStorage.setItem('lembra.origem', JSON.stringify(Object.assign(o, { page: 'conheca', at: Date.now() })));
+  } catch (e) {} })();
   (function () {
-    try {
-      var q = new URLSearchParams(location.search), keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
-      var o = {}; keys.forEach(function (k) { var v = q.get(k); if (v) o[k.replace('utm_', '')] = v.slice(0, 60); });
-      if (q.get('fbclid')) o.source = o.source || 'facebook';
-      if (q.get('gclid')) o.source = o.source || 'google';
-      if (!o.source && document.referrer && !/github\.io|lembra/.test(document.referrer)) { try { o.source = new URL(document.referrer).hostname.replace(/^www\./, '').slice(0, 60); } catch (e) {} }
-      if (o.source && !localStorage.getItem('lembra.origem')) localStorage.setItem('lembra.origem', JSON.stringify(Object.assign(o, { page: 'conheca', at: Date.now() })));
-    } catch (e) {}
-  })();
-
-
-  // CENA 3D DO TOPO: tudo é amarrado à rolagem (acompanha o dedo, para e volta junto)
-  (function () {
-    var sc = document.getElementById('scene'); if (!sc) return;
-    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var h1 = sc.querySelector('[data-split]');
-    h1.innerHTML = h1.textContent.split(' ').map(function (w) { return '<span class="w"><span>' + w + '</span></span>'; }).join(' ');
-    var words = h1.querySelectorAll('.w>span'), dev = document.getElementById('heroDev'), tiles = sc.querySelectorAll('.tile');
-    var txt = sc.querySelector('.scene__txt'), cta = sc.querySelector('[data-fade2]'), hint = document.getElementById('hint'), sub = sc.querySelector('[data-fade]');
-    var cl = function (v) { return Math.max(0, Math.min(1, v)); }, ease = function (x) { return 1 - Math.pow(1 - x, 3); };
-    var intro = 0, t0 = performance.now();
-    function draw() {
-      var r = sc.getBoundingClientRect(), total = sc.offsetHeight - window.innerHeight;
-      var p = reduce ? 1 : cl(-r.top / total);           // 0 → 1 enquanto a cena está presa
-      var it = ease(cl((performance.now() - t0) / 1100)); // entrada automática do título
-      words.forEach(function (w, i) { var k = ease(cl(it * 1.6 - i * 0.12)); w.style.transform = 'translateY(' + ((1 - k) * 105) + '%)'; });
-      sub.style.opacity = cl(it * 1.4 - 0.4);
-      // celular: começa deitado e longe, levanta e vem para frente
-      var a = ease(cl(p / 0.45));
-      var vw = window.innerWidth, small = vw < 700;
-      dev.style.transform = 'translate3d(0,' + ((1 - a) * 120 - (small ? 0 : 10)) + 'px,' + (-260 * (1 - a)) + 'px) rotateX(' + (62 * (1 - a) + 4) + 'deg) rotateY(' + (-18 * (1 - a) + Math.sin(p * 6) * 6 * a) + 'deg) rotateZ(' + (8 * (1 - a)) + 'deg) scale(' + (0.78 + 0.22 * a) + ')';
-      // título sobe e some quando o celular chega
-      txt.style.transform = 'translateY(' + (-a * 70) + 'px) scale(' + (1 - a * 0.12) + ')';
-      txt.style.opacity = 1 - cl((p - 0.35) / 0.25) * 0.85;
-      // blocos 3D saem de dentro da tela e orbitam
-      var o = ease(cl((p - 0.3) / 0.4)), R = (small ? Math.min(vw * 0.29, 140) : 250);
-      tiles.forEach(function (t, i) {
-        var x = +t.dataset.x, y = +t.dataset.y, ry = Math.sin(p * 9 + i) * 28 - x * 18, rx = Math.cos(p * 7 + i) * 18 + y * 14;
-        t.style.opacity = cl(o * 3);
-        t.style.transform = 'translate3d(' + (x * R * o) + 'px,' + (y * R * 1.15 * o) + 'px,' + (o * 180 + Math.sin(p * 8 + i) * 30) + 'px) rotateX(' + rx + 'deg) rotateY(' + ry + 'deg) scale(' + (0.4 + 0.6 * o) + ')';
-      });
-      var c = ease(cl((p - 0.62) / 0.25));
-      cta.style.opacity = c; cta.style.transform = 'translateY(' + ((1 - c) * 40) + 'px)';
-      hint.style.opacity = 1 - cl(p / 0.08);
-      // textos das outras seções sobem um pouco mais rápido que a página (profundidade)
-      document.querySelectorAll('[data-rise]').forEach(function (el) { var b = el.getBoundingClientRect(); var k = (b.top + b.height / 2 - window.innerHeight / 2) / window.innerHeight; el.style.transform = 'translateY(' + (k * 60).toFixed(1) + 'px)'; });
-      requestAnimationFrame(draw);
-    }
-    requestAnimationFrame(draw);
-  })();
-  // frase que se reescreve no topo
-  (function () {
-    var el = document.getElementById('rot'); if (!el) return;
-    var words = ['o cliente das 9h', 'o boleto de sexta', 'o aniversário da mãe', 'a reunião de segunda', 'o remédio das 20h', 'a entrega da encomenda'];
-    var i = 0, j = words[0].length, del = true;
-    setInterval(function () {
-      var w = words[i];
-      if (del) { j--; if (j <= 0) { del = false; i = (i + 1) % words.length; } }
-      else { j++; if (j >= words[i].length) { del = true; j = words[i].length + 6; } }
-      el.textContent = words[i].slice(0, Math.max(0, Math.min(j, words[i].length)));
-    }, 70);
-  })();
-  // avisos chegando no celular do topo, um atrás do outro
-  (function () {
-    var d = document.getElementById('drop'); if (!d) return;
-    var msgs = [['Consulta com Ana Paula em 30 min', '#F59E0B'], ['Boleto da internet vence hoje', '#FF3B30'], ['Amanhã: aniversário da mãe 🎂', '#FF2D55'], ['Atrasado 10 min: ligar para o cliente', '#0A84FF'], ['Dia 100% concluído. Orgulho de você! ✓', '#16A34A']];
-    var k = 0;
-    function next() { var m = msgs[k++ % msgs.length]; document.getElementById('dropB').textContent = m[0]; d.querySelector('i').style.background = m[1]; d.classList.remove('go'); void d.offsetWidth; d.classList.add('go'); var dev = d.closest('.device'); dev.classList.remove('shake'); void dev.offsetWidth; }
-    setTimeout(next, 900); setInterval(next, 3600);
-  })();
-  // passeio: a tela do celular muda conforme o texto rola
-  (function () {
-    var steps = document.querySelectorAll('.tstep'), imgs = document.querySelectorAll('#tourDev img'), bar = document.getElementById('tbar'), dev = document.getElementById('tourDev');
-    if (!steps.length) return;
-    function set(n) {
-      steps.forEach(function (s, i) { s.classList.toggle('on', i === n); });
-      imgs.forEach(function (im) { im.style.opacity = +im.dataset.t === n ? 1 : 0; });
-      bar.style.height = ((n + 1) / steps.length * 100) + '%';
-      dev.style.transform = 'rotateY(' + (n % 2 ? 10 : -10) + 'deg) rotateX(4deg)';
-    }
-    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) set(+e.target.dataset.step); }); }, { rootMargin: '-45% 0px -45% 0px' });
-    steps.forEach(function (s) { io.observe(s); });
-    set(0);
-  })();
-  // animações ao rolar: elementos aparecem, ícones "saltam", cartões flutuantes andam em velocidades diferentes
-  (function () {
-    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     var els = document.querySelectorAll('.rv');
-    if (reduce || !('IntersectionObserver' in window)) { els.forEach(function (e) { e.classList.add('in'); }); }
-    else {
-      var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { threshold: .15, rootMargin: '0px 0px -40px 0px' });
-      els.forEach(function (e) { io.observe(e); });
-    }
-    var nav = document.getElementById('nav'), sticky = document.getElementById('sticky');
-    var par = document.querySelectorAll('[data-par]'), tilt = document.querySelectorAll('[data-tilt]');
-    var ticking = false;
-    function frame() {
-      ticking = false;
-      var y = window.scrollY, vh = window.innerHeight;
-      nav.classList.toggle('is-scrolled', y > 8);
-      var sc = document.getElementById('scene'); sticky.classList.toggle('show', y > (sc ? sc.offsetHeight - vh * 0.5 : vh * 0.8) && y < document.body.scrollHeight - vh * 1.6);
-      if (reduce) return;
-      par.forEach(function (el) {
-        var r = el.parentElement.getBoundingClientRect(), c = (r.top + r.height / 2 - vh / 2);
-        el.style.transform = 'translate3d(0,' + (c * parseFloat(el.dataset.par)).toFixed(1) + 'px,0)';
-      });
-      tilt.forEach(function (el, i) {
-        var r = el.getBoundingClientRect(), k = Math.max(-1, Math.min(1, (r.top + r.height / 2 - vh / 2) / vh));
-        var base = el.closest('.hero') ? 'rotateY(' + (-14 + k * 10).toFixed(2) + 'deg) rotateX(' + (6 - k * 6).toFixed(2) + 'deg)' : 'rotate(' + (-2 + k * 2.5).toFixed(2) + 'deg) translateY(' + (k * -18).toFixed(1) + 'px)';
-        el.style.transform = base;
-      });
-    }
-    window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(frame); } }, { passive: true });
-    window.addEventListener('resize', frame);
-    frame();
+    if (!('IntersectionObserver' in window)) els.forEach(function (e) { e.classList.add('in'); });
+    else { var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { threshold: .12 }); els.forEach(function (e) { io.observe(e); }); }
+    var rot = document.getElementById('rot'), words = ['o cliente das 9h', 'o boleto de sexta', 'o aniversário da mãe', 'a reunião de segunda', 'a entrega da encomenda'], i = 0, j = words[0].length, back = true, wait = 0;
+    setInterval(function () { if (wait) { wait--; return; } if (back) { j--; if (j <= 0) { back = false; i = (i + 1) % words.length; } } else { j++; if (j >= words[i].length) { back = true; wait = 22; } } rot.textContent = words[i].slice(0, j); }, 55);
+    var steps = document.querySelectorAll('.tstep'), imgs = document.querySelectorAll('.ph img');
+    var so = new IntersectionObserver(function (es) { es.forEach(function (e) { if (!e.isIntersecting) return; var n = +e.target.dataset.step; steps.forEach(function (s, k) { s.classList.toggle('on', k === n); }); imgs.forEach(function (im) { im.style.opacity = +im.dataset.t === n ? 1 : 0; }); }); }, { rootMargin: '-45% 0px -45% 0px' });
+    steps.forEach(function (s) { so.observe(s); });
+    var sticky = document.getElementById('sticky'), hero = document.getElementById('hero'), ticking = false;
+    window.addEventListener('scroll', function () { if (ticking) return; ticking = true; requestAnimationFrame(function () { ticking = false; var y = scrollY; sticky.classList.toggle('show', y > hero.offsetHeight - innerHeight * 0.4 && y < document.body.scrollHeight - innerHeight * 1.7); }); }, { passive: true });
   })();
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from '../vendor/three/RoundedBoxGeometry.js';
+import { RoomEnvironment } from '../vendor/three/RoomEnvironment.js';
+const host = document.getElementById('stage3d'), hero = document.getElementById('hero');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' }); }
+catch (e) { document.documentElement.classList.add('no3d'); throw e; }
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+host.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const pm = new THREE.PMREMGenerator(renderer);
+scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(3, 4, 5); scene.add(key);
+let dirty = true, spread = 1;
+const loader = new THREE.TextureLoader();
+const tex = (url) => { const t = loader.load(url, () => (dirty = true)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t; };
+function rrect(w, h, r) {
+  const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r); s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r); s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+  const g = new THREE.ShapeGeometry(s, 16), p = g.attributes.position, uv = g.attributes.uv;
+  for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) - x) / w, (p.getY(i) - y) / h);
+  return g;
+}
+/* celular com a proporção de um iPhone (tela 430 × 932) */
+const W = 1, SH = W * 932 / 430, H = SH + 0.07, D = 0.085;
+const phone = new THREE.Group();
+const metal = new THREE.MeshPhysicalMaterial({ color: 0x2b2b30, metalness: 0.9, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.15 });
+phone.add(new THREE.Mesh(new RoundedBoxGeometry(W + 0.07, H, D, 6, 0.04), metal));
+const bezel = new THREE.Mesh(rrect(W + 0.04, H - 0.03, 0.15), new THREE.MeshBasicMaterial({ color: 0x050505 })); bezel.position.z = D / 2 + 0.001; phone.add(bezel);
+const screen = new THREE.Mesh(rrect(W, SH, 0.13), new THREE.MeshBasicMaterial({ map: tex('../media/lp/hoje.jpg'), toneMapped: false })); screen.position.z = D / 2 + 0.002; phone.add(screen);
+const island = new THREE.Mesh(rrect(0.3, 0.088, 0.044), new THREE.MeshBasicMaterial({ color: 0x000000 })); island.position.set(0, SH / 2 - 0.075, D / 2 + 0.004); phone.add(island);
+const glass = new THREE.Mesh(rrect(W, SH, 0.13), new THREE.MeshPhysicalMaterial({ transparent: true, opacity: 0.1, roughness: 0.05, metalness: 0, clearcoat: 1, color: 0xffffff })); glass.position.z = D / 2 + 0.005; phone.add(glass);
+[[0.55, 0.12], [0.36, 0.2], [0.12, 0.2]].forEach(([y, h]) => { const b = new THREE.Mesh(new RoundedBoxGeometry(0.02, h, 0.04, 2, 0.008), metal); b.position.set(-(W + 0.07) / 2 - 0.006, y, 0); phone.add(b); });
+const pw = new THREE.Mesh(new RoundedBoxGeometry(0.02, 0.28, 0.04, 2, 0.008), metal); pw.position.set((W + 0.07) / 2 + 0.006, 0.4, 0); phone.add(pw);
+scene.add(phone);
+const shc = document.createElement('canvas'); shc.width = shc.height = 128;
+{ const g = shc.getContext('2d'), r = g.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, 'rgba(0,0,0,.35)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); }
+const shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.6), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(shc), transparent: true, depthWrite: false }));
+shadow.rotation.x = -Math.PI / 2; shadow.position.y = -H / 2 - 0.2; scene.add(shadow);
+/* ícones 3D: blocos sólidos com o símbolo na frente */
+const ICONS = [
+  ['#0A84FF', 'M7 3c-2 0-3.5 1.6-3.5 4 0 3 1.5 4 2 7s1 7 2.5 7 1.5-4 2.5-6c.3-.6.7-1 1.5-1s1.2.4 1.5 1c1 2 1 6 2.5 6s2-4 2.5-7 2-4 2-7c0-2.4-1.5-4-3.5-4-1.8 0-3 1-5 1S8.8 3 7 3Z', -1.05, 0.7, 0.35],
+  ['#FF2D55', 'M20 21v-8H4v8M2 21h20M12 13v-3M12 7a1.5 1.5 0 0 1-1.5-1.5C10.5 4 12 3 12 3s1.5 1 1.5 2.5A1.5 1.5 0 0 1 12 7Z', 1.05, 0.85, 0.2],
+  ['#8B5CF6', 'M8.5 6a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM8.5 18a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM20 4 8 16M14.5 14.5 20 20M8 8l4 4', -1.12, -0.15, 0.25],
+  ['#F59E0B', 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0', 1.1, -0.05, 0.4],
+  ['#16A34A', 'M20 6 9 17l-5-5', -0.95, -0.95, 0.2],
+  ['#FF3B30', 'M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z', 0.98, -0.9, 0.3],
+];
+const tiles = ICONS.map(([color, d, x, y, z]) => {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d'); g.fillStyle = color; g.fillRect(0, 0, 256, 256);
+  g.translate(56, 56); g.scale(6, 6); g.strokeStyle = '#fff'; g.lineWidth = 2.1; g.lineCap = g.lineJoin = 'round'; g.stroke(new Path2D(d));
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const grp = new THREE.Group();
+  const box = new THREE.Mesh(new RoundedBoxGeometry(0.36, 0.36, 0.13, 5, 0.07), new THREE.MeshPhysicalMaterial({ color, roughness: 0.3, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.12 }));
+  const face = new THREE.Mesh(rrect(0.3, 0.3, 0.06), new THREE.MeshBasicMaterial({ map: t, toneMapped: false }));
+  face.position.z = 0.066; grp.add(box, face);
+  grp.userData = { x, y, z, seed: Math.random() * 6 };
+  scene.add(grp); return grp;
+});
+/* cartão de aviso 3D que desce na frente da tela */
+const nc = document.createElement('canvas'); nc.width = 1024; nc.height = 240;
+const ntex = new THREE.CanvasTexture(nc); ntex.colorSpace = THREE.SRGBColorSpace;
+const MSGS = [['Consulta com Ana Paula em 30 min', '#F59E0B'], ['Boleto da internet vence hoje', '#FF3B30'], ['Amanhã: aniversário da mãe', '#FF2D55'], ['Dia 100% concluído. Mandou bem!', '#16A34A']];
+let mi = 0;
+function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function drawNote() {
+  const [txt, col] = MSGS[mi % MSGS.length], g = nc.getContext('2d');
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, 1024, 240);
+  g.fillStyle = 'rgba(255,255,255,.97)'; rr(g, 8, 8, 1008, 224, 56); g.fill();
+  g.fillStyle = col; rr(g, 44, 52, 136, 136, 34); g.fill();
+  g.save(); g.translate(76, 84); g.scale(3, 3); g.strokeStyle = '#fff'; g.lineWidth = 3.6; g.lineCap = g.lineJoin = 'round'; g.stroke(new Path2D('M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0')); g.restore();
+  g.fillStyle = '#8E8E93'; g.font = '600 38px -apple-system,Inter,Arial,sans-serif'; g.fillText('LEMBRA · agora', 214, 100);
+  g.fillStyle = '#0B0B0F'; g.font = '700 50px -apple-system,Inter,Arial,sans-serif'; g.fillText(txt, 214, 166);
+  ntex.needsUpdate = true; dirty = true;
+}
+const note = new THREE.Mesh(new THREE.PlaneGeometry(1.25, 0.293), new THREE.MeshBasicMaterial({ map: ntex, transparent: true, toneMapped: false }));
+scene.add(note);
+drawNote(); setInterval(() => { mi++; drawNote(); }, 3200);
+/* o celular e os ícones sempre cabem inteiros na área 3D (nunca invadem o texto) */
+function size() {
+  const w = host.clientWidth, h = host.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h, false); camera.aspect = w / h;
+  const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  // a altura manda: o celular ocupa quase toda a área; os ícones se aproximam dele em telas estreitas
+  const need = Math.max((H + 0.35) / 2 / tan, (W + 0.5) / 2 / tan / camera.aspect);
+  const halfW = need * tan * camera.aspect;
+  spread = Math.min(1, (halfW - 0.32) / 1.12);
+  camera.position.set(0, 0, need); camera.lookAt(0, 0, 0); camera.updateProjectionMatrix(); dirty = true;
+}
+new ResizeObserver(size).observe(host); size();
+/* a rolagem dá o alvo; a cena chega nele suavemente (fluido em 60 ou 120 Hz) */
+const cl = (v) => Math.max(0, Math.min(1, v)), ease = (x) => 1 - Math.pow(1 - x, 3);
+let target = 0, cur = 0, visible = true, last = performance.now(), t = 0;
+const read = () => { const r = hero.getBoundingClientRect(), total = hero.offsetHeight - innerHeight; target = reduce ? 1 : cl(-r.top / Math.max(1, total)); };
+addEventListener('scroll', read, { passive: true }); read();
+const intro0 = performance.now();
+new IntersectionObserver((e) => { const v = e[0].isIntersecting; if (v && !visible) { last = performance.now(); requestAnimationFrame(loop); } visible = v; }).observe(hero);
+function loop(now) {
+  if (!visible) return;
+  const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
+  cur += (target - cur) * (1 - Math.exp(-dt * 9));
+  const intro = reduce ? 1 : ease(cl((now - intro0) / 1300)), p = cur;
+  const a = ease(cl(p / 0.35)) * 0.5 + intro * 0.5;
+  phone.rotation.set(-0.9 * (1 - a) + 0.05 + Math.sin(t * 0.8) * 0.015, -0.55 * (1 - a) + (p - 0.4) * 0.6 + Math.sin(t * 0.6) * 0.03, 0.12 * (1 - a));
+  phone.position.set(0, -0.35 * (1 - a) + Math.sin(t * 1.1) * 0.02, -1.2 * (1 - a));
+  shadow.material.opacity = 0.4 + 0.6 * a;
+  const o = ease(cl((p - 0.1) / 0.4)) * 0.8 + intro * 0.2;
+  tiles.forEach((g) => {
+    const u = g.userData, w = Math.sin(t * 0.9 + u.seed);
+    g.position.set(u.x * o * spread, u.y * o + w * 0.04, (u.z + (1 - spread) * 0.35) * o + 0.05);
+    g.rotation.set(0.25 * Math.sin(t * 0.7 + u.seed) - u.y * 0.25, -u.x * 0.35 + 0.3 * Math.sin(t * 0.5 + u.seed), 0.08 * w);
+    g.scale.setScalar(0.12 + 0.88 * o);
+  });
+  const n = ease(cl((p - 0.04) / 0.3)) * 0.6 + intro * 0.4;
+  note.position.set(0, SH * 0.28 + (1 - n) * 0.5, 0.25 + n * 0.25);
+  note.rotation.set(-0.06, phone.rotation.y * 0.6, 0);
+  note.material.opacity = n;
+  renderer.render(scene, camera);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
 </script>
 </body></html>
