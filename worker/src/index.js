@@ -541,6 +541,19 @@ async function handle(req, env) {
   return reply(env, req, { error: 'não encontrado' }, 404);
 }
 
+/* Avisos únicos para uma pessoa (manda uma vez só, no próximo minuto do relógio; depois marca como enviado) */
+const ONE_SHOT = [
+  { key: 'upd-matheus-2026-11', member: 'matheus', title: '📲 Atualize o Lembra, Matheus', body: 'Saiu uma versão nova com muita coisa. Abra o app: vai aparecer o link para instalar a versão nova pelo Safari.', tag: 'atualizar', url: './#/atualizar' },
+];
+async function oneShot(env) {
+  for (const m of ONE_SHOT) {
+    const k = `oneshot:${m.key}`;
+    if (await env.CAL.get(k)) continue;
+    await env.CAL.put(k, String(Date.now()));
+    await sendToMember(env, m.member, { title: m.title, body: m.body, tag: m.tag, url: m.url }, null);
+  }
+}
+
 export default {
   fetch: (req, env) => handle(req, env).catch((e) => reply(env, req, { error: 'erro interno: ' + e.message }, 500)),
   scheduled: (_event, env, ctx) => {
@@ -550,6 +563,7 @@ export default {
       safe('pessoal', runPersonal(env)),
       safe('coach', runCoach(env, sendToMember, team)),
       safe('amigo', runPersonalCoach(env, sendToMember, team)),
+      safe('aviso único', oneShot(env)),
     ])));
   },
 };

@@ -10,7 +10,7 @@ import { ui, saveUi } from './ui.js';
 import { esc, isStandalone, todayKey, addDays, addMonths, monthKey, uid, toMin, nowMin } from './utils.js';
 import { TYPES, TYPE_ORDER, WORK, ent, isMarketing, applyArch, crew } from './constants.js';
 import { icon } from './icons.js';
-import { openSheets, toast, confirmDialog, avatar } from './components.js';
+import { openSheets, openSheet, toast, confirmDialog, avatar } from './components.js';
 import { renderToday, renderMonth } from './views/calendar.js';
 import { renderCompanies, openCompany, openCompanyEditor } from './views/companies.js';
 import { renderSettings, settingsActions } from './views/settings.js';
@@ -581,6 +581,29 @@ function checkReminders() {
   push.updateBadge(store.eventsOn(now.date, { person: store.me }).filter((e) => e.status !== 'feito').length);
 }
 
+/* Aviso único (ex.: Matheus usa uma instalação antiga): pede para abrir o site no Safari e instalar de novo */
+const REINSTALL_FOR = ['matheus'];
+const REINSTALL_HASH = /^#\/atualizar/.test(location.hash);
+function askReinstall() {
+  const forced = REINSTALL_HASH;
+  if (forced) history.replaceState(null, '', location.pathname + location.search);
+  let seen = false; try { seen = localStorage.getItem('lembra.reinstall.2611') === '1'; } catch { /* ok */ }
+  if (!forced && (seen || !REINSTALL_FOR.includes(store.me))) return;
+  const site = CONFIG.siteUrl || 'https://icarlxs-code.github.io/Calend-rio-/';
+  const s = openSheet({
+    className: 'sheet--dialog',
+    html: `<div class="dialog">
+      <h3>📲 Tem versão nova do Lembra</h3>
+      <p>Para receber todas as novidades, instale o app de novo:</p>
+      <p><b>1.</b> Toque em “Abrir no Safari” abaixo.<br><b>2.</b> No Safari, toque em <b>Compartilhar</b> (o quadrado com a seta) → <b>Adicionar à Tela de Início</b>.<br><b>3.</b> Entre com a sua conta e pode apagar o ícone antigo.</p>
+      <a class="btn btn--primary btn--block" href="${site}?v=${Date.now()}" target="_blank" rel="noopener" data-ok>Abrir no Safari</a>
+      <button class="btn-text btn--block" data-close>Agora não</button>
+    </div>`,
+  });
+  try { localStorage.setItem('lembra.reinstall.2611', '1'); } catch { /* ok */ }
+  return s;
+}
+
 /* Abre o lugar certo quando a pessoa toca numa notificação (#/e/ID ou #/d/DATA) */
 function openDeepLink(hash = location.hash, tries = 0) {
   const m = /^#\/(e|d|p)\/([\w-]+)/.exec(hash || '');
@@ -819,6 +842,7 @@ function startApp() {
   render();
   store.on(rerenderAll);
   startPersonal();
+  setTimeout(askReinstall, 2500); // aviso de instalar a versão nova (só para quem precisa)
   personal.on(() => { if (ui.space === 'personal') rerenderAll(); });
   store.onDenied = (msg) => toast(msg, { ms: 5000 });
   store.onError = (err) => {
