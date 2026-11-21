@@ -56,6 +56,9 @@ test('checkout: monta a assinatura de R$ 9,90 e o vitalício de R$ 150', async (
   assert.equal(r.url, 'https://checkout.stripe.com/c/x');
   const b1 = calls[0].body;
   assert.equal(b1.get('mode'), 'subscription');
+  // a Stripe recusa payment_intent_data em assinatura ("You can not pass payment_intent_data in subscription mode")
+  assert.equal([...b1.keys()].some((k) => k.startsWith('payment_intent_data')), false, 'assinatura sem payment_intent_data');
+  assert.equal(b1.get('subscription_data[metadata][plan]'), 'pro_mes');
   assert.equal(b1.get('line_items[0][price_data][unit_amount]'), '1990');
   assert.equal(b1.get('line_items[0][price_data][currency]'), 'brl');
   assert.equal(b1.get('line_items[0][price_data][recurring][interval]'), 'month');
@@ -186,6 +189,7 @@ test('Pix: anual pago no Pix vale 12 meses (sem renovar sozinho) e pagar antes d
   await createCheckout(env, user('V'), { plan: 'pro_ano', returnUrl: 'https://x.test/' }, ok);
   const last = calls[calls.length - 1];
   assert.equal(last.get('mode'), 'subscription');
+  assert.equal([...last.keys()].some((k) => k.startsWith('payment_intent_data')), false);
   assert.equal(last.get('subscription_data[trial_end]'), String(Math.floor(b7.prepaidUntil / 1000)));
   // e também pode renovar no Pix de novo (soma ao que falta)
   await createCheckout(env, user('V'), { plan: 'pro_ano_pix', returnUrl: 'https://x.test/' }, ok);

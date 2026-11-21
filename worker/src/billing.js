@@ -262,10 +262,11 @@ export async function createCheckout(env, me, { plan, returnUrl }, fetchImpl = f
     metadata: { uid: me.ws, plan },
   };
   if (b.customer) params.customer = b.customer; else params.customer_email = me.email;
-  if (p.mode === 'subscription') params.subscription_data = { metadata: { uid: me.ws, plan } };
-  // trocando do Pix para o cartão perto de vencer: a 1ª cobrança só acontece quando o Pix acaba (não paga em dobro)
-  if (p.mode === 'subscription' && !p.addon && prepaidLeft > 2 * 864e5) params.subscription_data.trial_end = Math.floor(b.prepaidUntil / 1000);
-  else params.payment_intent_data = { metadata: { uid: me.ws, plan } };
+  if (p.mode === 'subscription') {
+    params.subscription_data = { metadata: { uid: me.ws, plan } };
+    // trocando do Pix para o cartão perto de vencer: a 1ª cobrança só acontece quando o Pix acaba (não paga em dobro)
+    if (!p.addon && prepaidLeft > 2 * 864e5) params.subscription_data.trial_end = Math.floor(b.prepaidUntil / 1000);
+  } else params.payment_intent_data = { metadata: { uid: me.ws, plan } }; // (a Stripe recusa payment_intent_data em assinatura)
   if (p.mode === 'payment') params.payment_method_options = { pix: { expires_after_seconds: 86400 } }; // o QR do Pix vale 24h
   let s;
   const go = async () => {
