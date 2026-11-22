@@ -2519,3 +2519,5 @@ html.has-vip, html.has-vip body { overflow: hidden; }
 .ptitlerow { display: flex; align-items: center; gap: 10px; }
 .ptitlerow > span { flex: none; display: grid; }
 .ptitlerow .input { flex: 1; min-width: 0; }
+.login__moved { display: flex; gap: 10px; align-items: flex-start; text-align: left; padding: 12px 14px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); color: var(--accent); font-size: 14px; line-height: 1.4; max-width: 420px; margin: 0 auto 8px; }
+.login__moved span { color: var(--text); }

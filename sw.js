@@ -1,10 +1,10 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-weuelwz4'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-qs35c4ny'/*CACHE*/;
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster5.jpg',
   ...Array.from({ length: 67 }, (_, i) => `media/intro5/f${String(i + 1).padStart(3, '0')}.webp`),
   'media/logos/pura-vida.jpg', 'media/lembra-logo.jpg', 'media/marca/completa-preto.png', 'media/marca/completa-branco.png', 'media/marca/simbolo-preto.png', 'media/marca/simbolo-branco.png', 'media/marca/palavra-preto.png', 'media/marca/palavra-branco.png', 'media/marca/letra-preto.png', 'media/marca/letra-branco.png', 'version.json', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/c-ENOFYUOR.js', 'dist/c-RIOR7KXE.js', 'dist/c-3MX3NLRU.js', 'dist/c-JOGD2422.js', 'dist/c-DC6UNASQ.js', 'dist/c-BNWQ2SIB.js', 'dist/c-E24DZ6NZ.js', 'dist/c-T6BMJDHD.js', 'dist/c-FT255VBF.js', 'dist/c-CVZHF3RH.js', 'dist/c-ZRQBZTOI.js', 'dist/c-ILORSG3U.js', 'dist/c-XJKOYBXE.js', 'dist/c-UEXQA7XE.js', 'dist/c-GCICR3FV.js', 'dist/c-QYTOTSRL.js', 'dist/c-FNDYT64Q.js', 'dist/c-BTDGQNTW.js', 'dist/c-TEIFAKV3.js', 'dist/a-WEUELWZ4.js', 'dist/c-EAMBCUCI.js', 'dist/c-OXDTMUQZ.js', 'dist/c-BLTIG6KL.js', 'dist/c-UVDBU2CL.js', 'dist/c-2UHNSJ6S.js', 'dist/c-W22YW5EX.js', 'dist/c-L7QOPXH5.js', 'dist/c-YMPOWFG5.js', 'dist/c-CRZHTHM3.js', 'dist/c-MDFKI6ZU.js', 'dist/c-6TJ27YDP.js', 'dist/c-WELIAQAT.js', 'dist/c-JHVW3DFW.js', 'dist/c-6HAW3ETO.js', 'dist/c-DGLE4QC7.js', 'dist/c-BOLTR3TY.js', 'dist/c-JIFETJGI.js', 'dist/c-4RMSGGPJ.js', 'dist/c-BGIERWEY.js', 'dist/c-ELILZWVM.js', 'dist/c-PKD6LF5E.js', 'dist/c-6PVVLET6.js', 'dist/c-M4XCDZUV.js', 'dist/c-Q4J7C4JJ.js', 'dist/c-R5BEH4C3.js', 'dist/c-XQMLTXRG.js', 'dist/c-FQJ5CCBF.js', 'dist/c-DWBEWQEH.js', 'dist/c-BNWVJMGC.js', 'dist/c-ZUAJ4OTH.js', 'dist/c-PVDXWGYP.js', 'dist/c-BRVTFY66.js', 'dist/c-TPZLRKKC.js', 'dist/c-QNVVQCNA.js',
+  /*FILES*/ 'dist/c-LVHBOZVW.js', 'dist/c-GFC6R2QS.js', 'dist/c-NIJAVNVA.js', 'dist/c-XNY4FKGZ.js', 'dist/c-NFZFZ2OU.js', 'dist/c-K6HYUHC4.js', 'dist/c-C4HNEWMD.js', 'dist/c-LIRAESJF.js', 'dist/c-DKTM2NSF.js', 'dist/c-HSXXTKJU.js', 'dist/c-OIXJIQBO.js', 'dist/c-JWIODFQ4.js', 'dist/c-VDWHZQD4.js', 'dist/c-M43IEAKP.js', 'dist/c-5OXQ5IWP.js', 'dist/c-ZRMGHRJR.js', 'dist/c-CYUQFZOV.js', 'dist/c-QN4CAXMD.js', 'dist/c-EL32QZ4E.js', 'dist/a-QS35C4NY.js', 'dist/c-CV55DU2B.js', 'dist/c-RZ5E7RNU.js', 'dist/c-GZQVOQOM.js', 'dist/c-6NLZL4NO.js', 'dist/c-AS7TKGEK.js', 'dist/c-HSZMIEW4.js', 'dist/c-3PAVU7GV.js', 'dist/c-BEG7QM3E.js', 'dist/c-OBC3WBWS.js', 'dist/c-IC423XP5.js', 'dist/c-S6NB4DXK.js', 'dist/c-UINEQJHG.js', 'dist/c-AZMVRSTW.js', 'dist/c-QUYPDDQK.js', 'dist/c-3WTNKMMI.js', 'dist/c-N7O6YQ2T.js', 'dist/c-BZGWRRKY.js', 'dist/c-6NZNLSLE.js', 'dist/c-AT457GOD.js', 'dist/c-WLXJZIDF.js', 'dist/c-DJOCKSBY.js', 'dist/c-6PVVLET6.js', 'dist/c-AS2IJQRI.js', 'dist/c-Q4J7C4JJ.js', 'dist/c-BH3E2GZI.js', 'dist/c-XQMLTXRG.js', 'dist/c-FQJ5CCBF.js', 'dist/c-DWBEWQEH.js', 'dist/c-5R5O7WQK.js', 'dist/c-ZUAJ4OTH.js', 'dist/c-RYDJTKZS.js', 'dist/c-BRVTFY66.js', 'dist/c-TPZLRKKC.js', 'dist/c-DUMIWBGU.js',
 ];
 
 self.addEventListener('install', (e) => {
@@ -34,6 +34,10 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     fetch(req, { cache: 'no-cache' })
       .then((res) => {
+        // o app mudou de endereço (ex.: github.io → meulembra.com.br): a abertura segue o novo endereço.
+        // Sem isto, o navegador recusa a resposta redirecionada e mostra uma página de erro.
+        if (res.redirected && e.request.mode === 'navigate') return Response.redirect(res.url, 302);
+        if (res.redirected && new URL(res.url).origin !== location.origin) return res; // arquivo vindo do endereço novo: usa, mas não guarda
         if (res.ok && res.status === 200) {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(e.request, copy));

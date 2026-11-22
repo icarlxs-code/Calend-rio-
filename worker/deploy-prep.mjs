@@ -26,7 +26,8 @@ const out = process.env.GITHUB_OUTPUT;
 const vals = {
   team: JSON.stringify(team),
   project: CONFIG.firebase?.projectId || '',
-  origin: 'https://icarlxs-code.github.io',
+  // endereços de onde o app pode chamar o servidor (o antigo continua valendo para quem ainda não mudou)
+  origin: 'https://icarlxs-code.github.io,https://meulembra.com.br,https://www.meulembra.com.br',
 };
 if (out) for (const [k, v] of Object.entries(vals)) appendFileSync(out, `${k}=${v}\n`);
 console.log('KV:', ns.id, '| equipe:', team.map((m) => m.name).join(', '), '| projeto:', vals.project);

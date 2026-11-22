@@ -9,8 +9,9 @@ export const CONFIG = {
   adminEmail: 'icarlxs@gmail.com',
 
   // Endereço oficial do app (links de convite, volta do pagamento, termos e privacidade).
-  // Quando comprar o domínio, troque aqui por 'https://lembra.com.br/' e rode npm run build.
-  siteUrl: 'https://icarlxs-code.github.io/Calend-rio-/',
+  // Aberto pelo domínio novo (meulembra.com.br), os links já saem com ele; no endereço antigo, com o antigo.
+  // As páginas públicas (prévia do link, termos) usam o valor da compilação: passa para o novo quando o domínio virar.
+  siteUrl: typeof location !== 'undefined' && /(^|\.)meulembra\.com\.br$/.test(location.hostname) ? 'https://meulembra.com.br/' : 'https://icarlxs-code.github.io/Calend-rio-/',
   // LGPD: quem responde pelos dados (aparece nos Termos e na Política de Privacidade).
   // Se abrir empresa, coloque a razão social e o CNPJ, ex.: 'Lembra Tecnologia LTDA (CNPJ 00.000.000/0001-00)'.
   legalName: 'Lembra',

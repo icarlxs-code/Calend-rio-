@@ -454,8 +454,13 @@ async function handle(req, env) {
     if (subs[id] && subs[id].member !== me.id) id = `${me.id}:${id}`.slice(0, 120);
     // o mesmo endereço de notificação não pode ficar registrado em nome de duas pessoas
     for (const [k, d] of Object.entries(subs)) if (k !== id && d.subscription?.endpoint === s.endpoint && d.member !== me.id) delete subs[k];
+    // mudança de endereço do app (github.io → meulembra.com.br): o mesmo celular ativa os avisos de novo no endereço novo;
+    // a inscrição do endereço antigo (mesma pessoa, mesmo aparelho) sai, para não chegar cada aviso duas vezes
+    const from = clean(req.headers.get('Origin') || '', 80), ua = clean(req.headers.get('User-Agent') || '', 200);
+    if (from && ua) for (const [k, d] of Object.entries(subs)) if (k !== id && d.member === me.id && d.ua === ua && d.origin && d.origin !== from) delete subs[k];
     subs[id] = {
       member: me.id,
+      ...(from ? { origin: from } : {}), ...(ua ? { ua } : {}),
       subscription: { endpoint: s.endpoint, keys: { p256dh: clean(s.keys.p256dh, 200), auth: clean(s.keys.auth, 100) } },
       prefs: { reminders: body.prefs?.reminders !== false, partner: body.prefs?.partner !== false, daily: body.prefs?.daily !== false, coach: body.prefs?.coach !== false },
       updatedAt: Date.now(),
