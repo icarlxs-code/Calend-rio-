@@ -1470,6 +1470,7 @@ window.addEventListener('hashchange', () => {
 });
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  // updateViaCache 'none': o celular sempre busca o service worker novo (nunca fica preso num antigo)
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((r) => r.update().catch(() => {})).catch(() => {});
 }
 boot();
