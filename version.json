@@ -1,12 +1,12 @@
 {
-  "version": "2.7.0",
-  "build": "x3547qps",
+  "version": "2.7.1",
+  "build": "plupb4u6",
   "date": "2026-11-22",
   "min": "2.2.0",
   "title": "Nova abertura",
   "notes": [
-    "Abertura nova: o Sininho se transforma no ícone do Lembra, peça por peça.",
-    "Pequenas melhorias e correções."
+    "Abertura com sons sincronizados a cada movimento do Sininho.",
+    "Cores do Sininho iguais às do ícone."
   ],
-  "builtAt": "2026-11-22T20:28:23.462Z"
+  "builtAt": "2026-11-22T20:37:28.069Z"
 }

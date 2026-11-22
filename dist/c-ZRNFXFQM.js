@@ -1,0 +1,1 @@
+var s=Object.defineProperty;var d=(n,o)=>{for(var i in o)s(n,i,{get:o[i],enumerable:!0})};var r=["Abertura com sons sincronizados a cada movimento do Sininho.","Cores do Sininho iguais \xE0s do \xEDcone."];export{d as a,r as b};

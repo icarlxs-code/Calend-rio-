@@ -11,7 +11,7 @@ import { esc } from './utils.js';
 const R = 'assets/mascot/rig/';
 const VIEW = { x: 400, y: -40, w: 1160, h: 1080 };         // área do desenho (espaço das peças)
 const FEET = [965, 1009];                                  // ponto de apoio (inclinação e achatamento)
-const SKIN = 'rgb(247,97,40)', SKIN_EDGE = 'rgb(226,78,26)', INK = '#3B2620';
+const SKIN = 'rgb(253,109,21)', SKIN_EDGE = 'rgb(232,84,10)', INK = '#3B2620';
 const SH = { l: [668, 612], r: [1272, 620] };              // ombros: por dentro da borda do sino (medido no vídeo: o braço nasce atrás do corpo)
 const ARM = {                                              // peça, ponto de encaixe (fração da peça) e ângulo de descanso
   'baixo-l': [0.66, 0.1], 'baixo-r': [0.34, 0.1], 'cima-l': [0.72, 0.9], 'cima-r': [0.28, 0.9], 'aberto-l': [0.85, 0.75], 'aberto-r': [0.15, 0.75],

@@ -9,6 +9,7 @@
      3 Despertar – ele cochila, o sino balança (dim-dom), acorda surpreso;
      4 Espiada   – o quadrado aparece, ele espia por trás, olha, pula para dentro. */
 import { sininho, alive } from './sininho.js';
+import { sfx, warm } from './sfx.js';
 
 /* ===== AJUSTES ===== */
 export const MODELO = 1;            // roteiro usado no app (1 a 4)
@@ -89,6 +90,24 @@ export function runIntro(ab, { onEnd, model } = {}) {
   const END = MS + 2.15;
   if (R) { R.next.idle = 1e9; R.next.blink = 1e9; R.setMood(M_ === 3 ? 'sono' : 'feliz', true); }
   const cue = {}, once = (n, t, at, fn) => { if (!cue[n] && t >= at) { cue[n] = 1; fn(); } };
+  /* SFX: cada som no instante exato do seu movimento */
+  warm();
+  const STEPS = M_ === 2 ? Array.from({ length: 7 }, (_, i) => 0.08 + i * 0.156) : [];
+  const SFX = [
+    ...({
+      1: [['queda', 0.0], ['splash', 0.26], ['pulo', 0.32], ['gotinha', 0.44, { i: 0 }], ['gotinha', 0.52, { i: 1 }], ['gotinha', 0.61, { i: 2 }], ['gotinha', 0.7, { i: 3 }], ['pouso', 0.74],
+        ['piscada', 1.0], ['olhada', 1.12], ['piscada', 1.42], ['olhada', 1.52], ['sobrancelha', 1.54], ['piscada', 1.82]],
+      2: [...STEPS.map((x) => ['passo', x]), ['derrapa', 0.95], ['poeira', 0.98], ['olhada', 0.97], ['piscada', 1.45], ['sobrancelha', 1.6]],
+      3: [['ronco', 0.15], ['dim', 0.45], ['dom', 0.8], ['ronco', 0.9], ['susto', 1.32], ['pulo', 1.34], ['pouso', 1.62], ['piscada', 1.95], ['olhada', 2.02]],
+      4: [['aparece', 0.04], ['espia', 0.6], ['olhada', 1.0], ['piscada', 1.22], ['olhada', 1.32], ['sobrancelha', 1.58], ['pulo', 1.82], ['pouso', 2.1]],
+    }[M_] || []),
+    ['vira', MS], ['quadrado', MS + 0.45],
+    ['encaixe', MS + 0.56, { n: 0 }], ['encaixe', MS + 0.6, { n: 1 }], ['encaixe', MS + 0.64, { n: 2 }], ['encaixe', MS + 0.67, { n: 3 }], ['encaixe', MS + 0.71, { n: 4 }],
+    ['piscada', MS + 1.61],
+    ...LET.map((_, i) => ['letra', MS + 1.12 + i * 0.055 + 0.3, { n: i }]),
+    ['final', MS + 1.78],
+  ];
+  const playSfx = (t) => SFX.forEach(([n, at, o], i) => once('s' + i, t, at, () => sfx(n, o, at)));
   const zEnd = T / RS;
   /* retângulo da marca → coordenadas do desenho do boneco (dado o transform atual dele) */
   const toView = ([x, y, w, h], rx, ry, rz) => [400 + ((x - rx) / rz + RS / 2) / U, -40 + ((y - ry) / rz + RSH / 2) / U, w / rz / U, h / rz / U];
@@ -100,6 +119,7 @@ export function runIntro(ab, { onEnd, model } = {}) {
     if (!t0) t0 = now;
     const t = calm ? END : ((now - t0) / 1000) * SPEED;
     const m = t - MS;
+    if (!calm) playSfx(t);
 
     /* ---------- roteiro ---------- */
     let rx = 0, ry = 0, rz = 0.47, rop = 1, by = 0, bw = 0, bh = 0, brad = 50, bop = 0, shOp = 0, shX = 0, shS = 1, rigBehind = false;
