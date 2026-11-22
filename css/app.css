@@ -2536,3 +2536,6 @@ html.has-vip, html.has-vip body { overflow: hidden; }
 .sinbox__n { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--danger); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; }
 .sinbox.is-loading { opacity: .5; }
 .tcard__champ { color: #C98B12 !important; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+/* tela de entrar: espaço no fim para a barra do Safari não cobrir os últimos botões */
+.login { padding-bottom: calc(env(safe-area-inset-bottom) + 110px) !important; }
+.consent--remember { align-items: center; margin-top: 4px; }

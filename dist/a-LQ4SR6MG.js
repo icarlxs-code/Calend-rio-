@@ -463,7 +463,7 @@ ${$s(y.date)} ${y.date.split("-").reverse().join("/")}:`),O=y.date);let Z=(y.ass
       ${t?`<p class="login__err" role="alert">${g(t)}</p>`:""}
       <button class="btn btn--primary btn--block" type="submit" data-go>${M?"Criar minha conta":"Entrar"}</button>
       <label class="consent consent--remember"><input type="checkbox" name="remember" ${Wa?"checked":""}><span class="consent__dot" aria-hidden="true">${h("check",14)}</span>
-        <span>Lembrar de mim neste celular<small>Voc\xEA continua conectado e, se sair, o e-mail j\xE1 vem preenchido. A senha fica no cofre de senhas do celular, nunca com o Lembra.</small></span></label>
+        <span>Lembrar de mim neste celular</span></label>
       ${M?"":'<button class="btn-text btn-text--sm" type="button" data-reset>Esqueci minha senha</button>'}
       ${po()?"":`<button class="btn btn--soft btn--block login__install" type="button" data-installguide>${h("phone",16)} Instalar na tela inicial do celular</button>`}
       <div class="login__switch">${M?"J\xE1 tem conta?":"Ainda n\xE3o tem conta?"} <button class="btn-text btn-text--sm" type="button" data-mode>${M?"Entrar":"Criar conta"}</button></div>

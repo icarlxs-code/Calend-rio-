@@ -818,7 +818,7 @@ function showLogin(errMsg = '') {
       ${msg ? `<p class="login__err" role="alert">${esc(msg)}</p>` : ''}
       <button class="btn btn--primary btn--block" type="submit" data-go>${signupMode ? 'Criar minha conta' : 'Entrar'}</button>
       <label class="consent consent--remember"><input type="checkbox" name="remember" ${rememberMe ? 'checked' : ''}><span class="consent__dot" aria-hidden="true">${icon('check', 14)}</span>
-        <span>Lembrar de mim neste celular<small>Você continua conectado e, se sair, o e-mail já vem preenchido. A senha fica no cofre de senhas do celular, nunca com o Lembra.</small></span></label>
+        <span>Lembrar de mim neste celular</span></label>
       ${signupMode ? '' : '<button class="btn-text btn-text--sm" type="button" data-reset>Esqueci minha senha</button>'}
       ${isStandalone() ? '' : `<button class="btn btn--soft btn--block login__install" type="button" data-installguide>${icon('phone', 16)} Instalar na tela inicial do celular</button>`}
       <div class="login__switch">${signupMode ? 'Já tem conta?' : 'Ainda não tem conta?'} <button class="btn-text btn-text--sm" type="button" data-mode>${signupMode ? 'Entrar' : 'Criar conta'}</button></div>
