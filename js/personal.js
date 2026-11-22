@@ -322,7 +322,16 @@ const QUOTES = [
   ['Navegar é preciso; viver não é preciso.', 'Fernando Pessoa, citando Pompeu'],
 ];
 /* frase do dia: { t: texto, a: autor } — a mesma o dia inteiro, nunca repete em dias seguidos */
-export const quoteOfDay = (k = todayKey()) => { const d = Math.floor(Date.UTC(+k.slice(0, 4), +k.slice(5, 7) - 1, +k.slice(8, 10)) / 864e5); const q = QUOTES[(d * 37) % QUOTES.length]; return { t: q[0], a: q[1] }; };
+/* frase do dia de CADA pessoa: muda todo dia e é diferente para cada conta (sorteio pela conta + data),
+   puxando um pouco para o que a pessoa marcou na ficha (fé → versículos; quem não quer fé, não recebe) */
+const hashS = (str) => { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+export const quoteOfDay = (k = todayKey()) => {
+  const who = store.user?.uid || store.me || 'x';
+  const faith = !!store.profile?.faith;
+  const pool = QUOTES.filter((q) => faith || !/^(Filipenses|Salmos|Eclesiastes|\d? ?Coríntios)/.test(q[1]));
+  const q = pool[hashS(`${who}|${k}`) % pool.length];
+  return { t: q[0], a: q[1] };
+};
 export const phraseOfDay = (k) => quoteOfDay(k).t;
 
 /* ---------- mensagens de amigo (humanizadas) ---------- */
