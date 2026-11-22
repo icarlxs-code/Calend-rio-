@@ -15,7 +15,8 @@ import * as push from '../avisos.js';
 import { usagePlaceholder, fillUsage } from '../usage.js';
 import { onDone, streak } from '../reward.js';
 import { suggestions, addSuggestion, hideSuggestion, forYouLead } from '../foryou.js';
-import { sininho, greetLine, interactive, say, alive } from '../sininho.js';
+import { sininho, greetLine, interactive, say, alive, LIVE } from '../sininho.js';
+import { sininhoVivo, live } from '../sininho-vivo.js';
 import { offensive } from '../game.js';
 import { esc, todayKey, addDays, dayLabel, fmtTime, fromKey, toKey, diffDays, greeting, fmtDayLong, monthKey, addMonths, fmtMonth, WD_LETTER, MONTHS } from '../utils.js';
 
@@ -260,7 +261,8 @@ function heroMascotHtml(pending, late) {
   const h = new Date().getHours();
   const key = `${todayKey()}|${pending}|${late}|${off}|${offToday}|${h >= 23 || h < 5}`;
   if (greet.key !== key) greet = { key, g: greetLine({ first: (firstName() || '').split(' ')[0], pending, late, off, offToday }), typed: false };
-  return `<div class="snhwrap snhwrap--hero" data-snh-hero>${sininho(greet.g.mood, { size: 92 })}<div class="snhb"><span class="snhb__txt">${greet.typed ? esc(greet.g.text) : ''}</span></div></div>`;
+  const fig = LIVE.includes(greet.g.mood) ? sininhoVivo(112) : sininho(greet.g.mood, { size: 92 });
+  return `<div class="snhwrap snhwrap--hero" data-snh-hero>${fig}<div class="snhb"><span class="snhb__txt">${greet.typed ? esc(greet.g.text) : ''}</span></div></div>`;
 }
 export function renderPersonalSpace() {
   const tab = ui.ptab || 'p-hoje';
@@ -283,7 +285,13 @@ export function bindPersonal(view) {
   const hero = view.querySelector('[data-snh-hero]');
   if (hero && greet.g) {
     const el = hero.querySelector('[data-snh]'), bubble = hero.querySelector('.snhb__txt');
-    interactive(el, { bubble }); alive();
+    const lv = hero.querySelector('[data-snhv]');
+    if (lv) {
+      // Sininho vivo: chega acenando na 1ª vez; depois fica respirando; toque = acena e ri
+      const p = live(lv, { start: greet.typed ? 'idle' : 'oi' });
+      lv.style.cursor = 'pointer';
+      lv.onclick = () => { p.play('festa'); try { navigator.vibrate && navigator.vibrate(10); } catch { /* ok */ } say(null, ['Oi oi! Tô aqui com você!', 'Bora fazer o dia render!', 'Hehe, cócegas!', 'Você tá mandando bem!'][Math.floor(Math.random() * 4)], { bubble }); };
+    } else { interactive(el, { bubble }); alive(); }
     if (!window.__stkWarm) { window.__stkWarm = 1; const w = () => import('../streak.js').then((m) => m.preloadStreak()).catch(() => {}); ('requestIdleCallback' in window) ? requestIdleCallback(w, { timeout: 4000 }) : setTimeout(w, 2500); }
     if (!greet.typed) { greet.typed = true; setTimeout(() => say(el, greet.g.text, { bubble }), 350); }
   }

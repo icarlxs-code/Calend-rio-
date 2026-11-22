@@ -3002,3 +3002,9 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .stk__go:active { translate: 0 3px; box-shadow: 0 1px 0 #c94a1f; }
 .stk--marco .stk__title { font-size: 28px; }
 .ofs__snh { position: absolute; right: 6px; top: 4px; padding: 0; border: 0; background: none; cursor: pointer; z-index: 2; }
+/* Sininho vivo (animação quadro a quadro em vídeo com transparência) */
+.snhv { display: inline-block; position: relative; width: var(--s); aspect-ratio: 540 / 440; flex: none; -webkit-tap-highlight-color: transparent; }
+.snhv img, .snhv canvas { position: absolute; inset: 0; width: 100%; height: 100%; -webkit-user-drag: none; pointer-events: none; }
+.snhv canvas { opacity: 0; transition: opacity .2s; }
+.snhv.is-live canvas { opacity: 1; }
+.snhv.is-live img { opacity: 0; transition: opacity .2s .05s; }

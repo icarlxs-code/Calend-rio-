@@ -8,6 +8,8 @@
    - espia da borda da tela, acena, fala e volta; reage ao toque. */
 import { esc } from './utils.js';
 
+/* emoções que já têm animação quadro a quadro (vídeo) */
+export const LIVE = ['feliz', 'acena', 'comemora', 'danca'];
 export const MOODS = ['feliz', 'acena', 'comemora', 'sono', 'desconfiado', 'amor', 'danca', 'bravo', 'triste'];
 const src = (m) => `assets/mascot/${MOODS.includes(m) ? m : 'feliz'}.webp`;
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -87,15 +89,15 @@ export function say(el, text, { bubble, speed = 32 } = {}) {
   clearInterval(b._t);
   const box = b.closest('.snhb');
   if (box) { box.classList.remove('is-in'); void box.offsetWidth; box.classList.add('is-in'); }
-  if (calm() || !el) { b.textContent = text; return Promise.resolve(); }
-  el.classList.add('is-talk');
+  if (calm()) { b.textContent = text; return Promise.resolve(); }
+  el?.classList.add('is-talk');
   return new Promise((res) => {
     let i = 0;
     b.textContent = '';
     b._t = setInterval(() => {
       i += 1;
       b.textContent = text.slice(0, i);
-      if (i >= text.length) { clearInterval(b._t); el.classList.remove('is-talk'); res(); }
+      if (i >= text.length) { clearInterval(b._t); el?.classList.remove('is-talk'); res(); }
     }, speed);
   });
 }
@@ -133,10 +135,13 @@ export async function peek(mood, text, { ms = 3400, gesture } = {}) {
   peekOn?.remove();
   const w = document.createElement('div');
   w.className = 'snhpeek snhwrap';
-  w.innerHTML = `<div class="snhb snhb--peek"><span class="snhb__txt"></span></div>${sininho(mood, { size: 110 })}`;
+  const vivo = LIVE.includes(mood) && !calm();
+  const V = vivo ? await import('./sininho-vivo.js') : null;
+  w.innerHTML = `<div class="snhb snhb--peek"><span class="snhb__txt"></span></div>${vivo ? V.sininhoVivo(128) : sininho(mood, { size: 110 })}`;
   document.body.appendChild(w);
   peekOn = w;
   const el = $(w, '[data-snh]');
+  if (vivo) { V.live($(w, '[data-snhv]'), { start: 'festa' }); ms = Math.max(ms, 5200); }
   let gone = false;
   const close = () => {
     if (gone) return; gone = true;
