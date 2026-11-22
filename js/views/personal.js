@@ -109,6 +109,7 @@ function forYou() {
   return `<section class="block foryou">
     <h2 class="block__title"><span class="ptitle">${tile('sparkles', ['#C78BFF', '#7C5CFF'], 26)}Feito para você</span></h2>
     <p class="foryou__lead">${esc(forYouLead())}</p>
+    ${!(store.profile?.likes || []).length ? `<button class="foryou__likes" data-action="p-likes">${icon('heart', 16)}<span><b>Conte o que você curte</b><small>Leitura, academia, música, cozinhar… e as sugestões ficam do seu gosto</small></span>${icon('right', 16)}</button>` : ''}
     <div class="foryou__list">${list.map((x) => `<div class="foryou__item">
       <div class="foryou__add">${itemLook(x.title || '') ? itemTile({ title: x.title, cat: x.cat }, 36) : x.ic ? tile(x.ic, x.g, 36) : catTile(x.cat, 36)}<span><b>${esc(x.title)}</b><small>${esc(x.why)}</small></span><button class="foryou__plus" data-action="p-sug" data-id="${x.id}" aria-label="Adicionar ${esc(x.title)}">${icon('plus', 16)}</button></div>
       <button class="foryou__x" data-action="p-sug-x" data-id="${x.id}" aria-label="Não quero esta sugestão">${icon('x', 14)}</button>
@@ -349,6 +350,12 @@ export const personalActions = {
     if (!it) return;
     // só entra quando a pessoa toca no + (e dá para desfazer na hora)
     toast(`Adicionado: ${it.title} · ${REPEATS[it.repeat] ? REPEATS[it.repeat].toLowerCase() : ''}`, { action: 'Desfazer', onAction: () => removePersonal(it.id), ms: 5000 });
+  },
+  'p-likes': async () => {
+    const [{ openPicker }, { LIKES }, { saveUserProfile }] = await Promise.all([import('../picker.js'), import('./ficha.js'), import('../store.js')]);
+    openPicker({ title: 'O que você curte fazer no tempo livre?', hint: 'Marque o que quiser: o “Feito pra você” passa a sugerir coisas do seu gosto.', multi: true, value: store.profile?.likes || [],
+      options: LIKES.map(([v, l]) => ({ v, l })),
+      onDone: async (v) => { try { await saveUserProfile({ likes: v }); toast('Pronto! Sugestões do seu gosto 💜'); } catch { toast('Não consegui salvar agora.'); } } });
   },
   'p-sug-x': (b) => { hideSuggestion(b.dataset.id); toast('Ok, não sugiro mais essa'); },
   'p-nudge-test': async () => {

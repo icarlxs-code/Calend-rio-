@@ -13,6 +13,7 @@ import { getDevices, removeDevices, addDevice, upgradeSubs } from './devices.js'
 import { runTick, planReminders, planPersonal, seedPerson, upgradeLegacy, usageMeter } from './tick.js';
 import { dueOf } from './kvsql.js';
 import { regGet, regPut, regDel, regAll, idOfWs } from './registry.js';
+import { boardOf } from './leaderboard.js';
 import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling, untilOf, statusOf, grantComp, markVipSent, vipMigrate } from './billing.js';
 
 const SUBJECT = 'mailto:avisos@calendario.app';
@@ -240,7 +241,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30 };
+const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/lb/report': 20, '/lb/board': 40 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -472,6 +473,7 @@ async function handle(req, env) {
   if (url.pathname === '/account/delete') {
     const out = await closeBilling(env, me);
     const devices = await removeDevices(env, me.id, Object.keys(await getDevices(env, me.id)));
+    await boardOf(env).remove(me.ws).catch(() => {});
     await Promise.all([`pitems:${me.id}`, `pprofile:${me.id}`, `psent:${me.id}`, `pc:${me.id}`, `co:${me.id}`, `seen:${me.id}`, `card:${me.ws}`].map((k) => env.CAL.delete(k)));
     const D = dueOf(env);
     await Promise.all([`per:${me.id}`, `amg:${me.id}`, `cch:${me.id}`, `rem:${me.ws}`].map((k) => D.del(k)));
@@ -729,6 +731,17 @@ async function handle(req, env) {
       // estimativa: cada mensagem escrita pela IA gasta ~40 "neurônios" de 10.000 grátis por dia
       iaPercent: Math.min(100, Math.round((aiMsgs * 40) / 10000 * 100)),
     });
+  }
+
+  // ---------- ranking mundial (geral e mensal): todo mundo vê o top e a própria posição ----------
+  if (url.pathname === '/lb/report') {
+    const uid = me.solo && !me.guest ? me.ws : null;
+    if (!uid || !/^[A-Za-z0-9]{6,64}$/.test(uid)) return reply(env, req, { ok: true });
+    const e = await boardOf(env).report(uid, body);
+    return reply(env, req, { ok: true, xp: e.xp, mxp: e.mxp });
+  }
+  if (url.pathname === '/lb/board') {
+    return reply(env, req, { ok: true, ...(await boardOf(env).view(me.ws, body.kind === 'month' ? 'month' : 'all', { limit: Math.max(10, Math.min(100, Number(body.limit) || 50)) })) });
   }
 
   // ---------- presença ao vivo (Painel do dono): fica na memória do servidor, sem gravar no banco ----------

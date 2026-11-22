@@ -6,6 +6,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { safeHandle, cronTick } from './index.js';
 import { makeKv, makeDue } from './kvsql.js';
+import { sqlBoard } from './leaderboard.js';
 import { NET } from './webpush.js';
 
 const HUB = 'lembra';
@@ -37,7 +38,7 @@ export class Hub extends DurableObject {
     this.runs = [];
     this.presence = new Map();
     this.presSaved = 0; this.presSig = '';
-    const base = { ...env, CAL: this.kv, DUE: this.due, PRESENCE: this.presence, KV_OLD: env.CAL, METER: this.meter, RUNS: this.runs };
+    const base = { ...env, LB: sqlBoard(ctx.storage.sql, this.meter), CAL: this.kv, DUE: this.due, PRESENCE: this.presence, KV_OLD: env.CAL, METER: this.meter, RUNS: this.runs };
     this.http = { ...base, AI: limitedAI(env.AI, this.kv, 9500) };   // assistente: quase tudo
     this.bg = { ...base, AI: limitedAI(env.AI, this.kv, 6000) };     // mensagens automáticas: até 6.000
     this.bg.USAGE = this.http.USAGE = base.USAGE = { date: '', amigo: { sent: 0, ai: 0 }, coach: { sent: 0, ai: 0 } };

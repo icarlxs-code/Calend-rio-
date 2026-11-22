@@ -13,7 +13,10 @@ export function who() {
   const pronoun = ['f', 'm', 'n'].includes(p.pronoun) ? p.pronoun : /^mulher/.test(gender) ? 'f' : /^homem/.test(gender) ? 'm' : 'n';
   // cuidado pessoal segue o tratamento escolhido (uma mulher trans recebe as sugestões femininas, um homem trans as masculinas)
   const style = /^mulher/.test(gender) ? 'f' : /^homem/.test(gender) ? 'm' : pronoun;
-  return { age: ageOf(p.birth), gender, pronoun, style, diffs: new Set(p.difficulties || []), faith: !!p.faith, sleep: p.sleep || '22:30', wake: p.wake || '06:30', name: p.nickname || (p.name || '').split(' ')[0] || '' };
+  const set = (a) => new Set(Array.isArray(a) ? a : []);
+  return { age: ageOf(p.birth), gender, pronoun, style, diffs: set(p.difficulties), faith: !!p.faith, religion: p.religion || '', sleep: p.sleep || '22:30', wake: p.wake || '06:30', lunch: p.lunch || '12:00',
+    name: p.nickname || (p.name || '').split(' ')[0] || '', goal: p.goal || '', journey: p.journey || '', traits: set(p.traits), focus: set(p.focus), likes: set(p.likes),
+    selfesteem: p.selfesteem || '', anxiety: p.anxiety || '', motivation: p.motivationLevel || '', workDays: Array.isArray(p.workDays) ? p.workDays : [1, 2, 3, 4, 5], profession: p.profession || '' };
 }
 /* palavra no gênero da pessoa */
 export const gx = (m, f, n) => g(m, f, n, who().pronoun);
@@ -23,6 +26,7 @@ const nextDow = (dow, from = todayKey()) => { let d = from; for (let i = 0; i < 
 const minus = (hm, min) => { const [h, m] = hm.split(':').map(Number); const t = (h * 60 + m - min + 1440) % 1440; return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
 const nextDate = (mmdd) => { const t = todayKey(); const y = +t.slice(0, 4); const d = `${y}-${mmdd}`; return d >= t ? d : `${y + 1}-${mmdd}`; };
 
+const FAITH_TITLE = { catolica: 'Oração do dia (terço ou Palavra)', evangelica: 'Devocional: oração e leitura da Bíblia', protestante: 'Devocional: oração e leitura da Bíblia', crista: 'Momento de oração e Palavra', adventista: 'Devocional da manhã', espirita: 'Prece e leitura do Evangelho', umbanda: 'Momento de oração e firmeza', candomble: 'Momento de reza e conexão', judaica: 'Momento de oração (tefilá)', islamica: 'Salah: lembrete de oração', budista: 'Meditação da manhã', hindu: 'Momento de oração e meditação', espiritualizado: 'Momento de silêncio e gratidão' };
 /* Catálogo de sugestões. score: quanto maior, mais no topo. */
 function catalog(w) {
   const a = w.age ?? 30;
@@ -63,8 +67,63 @@ function catalog(w) {
     if (+t.slice(8) > 5) { m++; if (m > 12) { m = 1; y++; } }
     return `${y}-${String(m).padStart(2, '0')}-05`;
   })(), '09:00', 'Todo dia 5: sem juros, sem susto', 58);
-  if (w.faith) add('fe', 'Momento de oração', 'lembrete', 'daily', todayKey(), w.wake > '07:00' ? w.wake : '07:00', 'Todo dia, ao acordar', 45);
-  return out;
+  if (w.faith) add('fe', FAITH_TITLE[w.religion] || 'Momento de oração', 'lembrete', 'daily', todayKey(), w.wake > '07:00' ? w.wake : '07:00', 'Todo dia, ao acordar · você pediu mensagens de fé', 62);
+  if (w.faith && /catolica|evangelica|protestante|crista|adventista|ortodoxa|sud|testemunha/.test(w.religion)) add('culto', w.religion === 'catolica' ? 'Missa de domingo' : w.religion === 'adventista' ? 'Culto de sábado' : 'Culto / reunião da igreja', 'compromisso', 'weekly', nextDow(w.religion === 'adventista' ? 6 : 0), w.religion === 'adventista' ? '09:00' : '18:00', 'Toda semana · da sua religião', 66);
+  if (w.faith && w.religion === 'espirita') add('estudo_espirita', 'Estudo / palestra no centro espírita', 'compromisso', 'weekly', nextDow(3), '20:00', 'Toda semana · da sua crença', 60);
+
+  // o que a pessoa quer trabalhar em si (ficha "Você por dentro")
+  const F = w.focus, T = w.traits;
+  if (F.has('autoestima') || w.selfesteem === 'baixa') add('gratidao3', 'Escrever 3 coisas boas sobre mim', 'lembrete', 'daily', todayKey(), minus(w.sleep, 45), 'Todo dia antes de dormir · para fortalecer a autoestima', 74 + (w.selfesteem === 'baixa' ? 10 : 0));
+  if (F.has('ansiedade') || w.anxiety === 'muita') add('respirar', 'Pausa de 5 minutos para respirar', 'lembrete', 'daily', todayKey(), '15:00', 'Todo dia à tarde · você marcou ansiedade', 82);
+  if (F.has('foco') || T.has('procrastinador') || w.diffs.has('procrastinar')) add('foco25', 'Bloco de foco: 25 min sem celular', 'lembrete', 'daily', todayKey(), minus(w.wake, -180), 'Todo dia de manhã · técnica Pomodoro, ótima pra quem deixa pra depois', 76);
+  if (F.has('disciplina')) add('rotina_manha', 'Rotina da manhã: cama, água e plano do dia', 'lembrete', 'daily', todayKey(), minus(w.wake, -10), 'Todo dia ao acordar · disciplina começa pequena', 70);
+  if (F.has('relacionamentos')) add('ligar', 'Ligar para alguém que eu gosto', 'lembrete', 'weekly', nextDow(3), '19:30', 'Toda semana · relacionamentos se cultivam', 68);
+  if (F.has('dinheiro') || w.goal === 'carreira') add('financas', 'Revisar gastos e guardar um pouco', 'pagar', 'weekly', nextDow(0), '18:00', 'Toda semana, 10 minutos · você quer cuidar do dinheiro', 72);
+  if (F.has('gratidao')) add('gratidao', 'Agradecer por 1 coisa do dia', 'lembrete', 'daily', todayKey(), minus(w.sleep, 20), 'Todo dia antes de dormir · gratidão muda o humor', 64);
+  if (F.has('descanso')) add('desligar', 'Desligar do trabalho e descansar', 'lembrete', 'daily', todayKey(), '19:00', 'Todo dia · descanso também é produtividade', 66);
+  if (F.has('saude') || w.goal === 'saude') add('agua2l', 'Garrafa de água cheia na mesa', 'saude', 'daily', todayKey(), minus(w.wake, -60), 'Todo dia de manhã · você quer cuidar do corpo', 63);
+  if (T.has('perfeccionista')) add('feito', 'Entregar algo “bom o suficiente” hoje', 'lembrete', 'weekly', nextDow(2), '10:00', 'Feito é melhor que perfeito · pra quem é perfeccionista', 58);
+  if (T.has('sonhador')) add('sonho', 'Um passo pequeno no meu sonho', 'lembrete', 'weekly', nextDow(6), '11:00', 'Toda semana · sonho com prazo vira plano', 62);
+  if (T.has('competitivo')) add('meta_sem', 'Definir a meta da semana (e bater!)', 'lembrete', 'weekly', nextDow(1), minus(w.wake, -45), 'Segunda cedo · pra quem gosta de desafio', 61);
+  if (w.motivation === 'baixa') add('vitoria', 'Comemorar uma pequena vitória', 'lembrete', 'daily', todayKey(), '18:00', 'Todo dia · motivação nasce de vitórias pequenas', 70);
+
+  // o que a pessoa curte fazer
+  const L = w.likes, wkend = nextDow(6);
+  const LIKE = {
+    leitura: ['ler', 'Ler 10 páginas de um livro', 'lembrete', 'daily', todayKey(), minus(w.sleep, 60), 'Todo dia antes de dormir · você curte ler'],
+    esporte: ['treino', 'Treino / academia', 'saude', 'weekly', nextDow(1), '07:00', 'Toda semana · você curte esporte'],
+    corrida: ['corrida', 'Corrida ou caminhada ao ar livre', 'saude', 'weekly', wkend, '07:00', 'Fim de semana de manhã · você curte correr'],
+    musica: ['musica', 'Playlist nova pra semana', 'lembrete', 'weekly', nextDow(1), '08:00', 'Toda segunda · você curte música'],
+    cozinhar: ['receita', 'Testar uma receita nova', 'compromisso', 'weekly', wkend, '11:00', 'Fim de semana · você curte cozinhar'],
+    series: ['filme', 'Noite de filme ou série (sem culpa)', 'compromisso', 'weekly', nextDow(5), '20:30', 'Sexta à noite · você curte séries'],
+    games: ['games', 'Jogar depois das tarefas do dia', 'lembrete', 'weekly', nextDow(5), '21:00', 'Recompensa da semana · você curte games'],
+    natureza: ['natureza', 'Passeio ao ar livre (parque, praia, trilha)', 'compromisso', 'monthly', wkend, '09:00', 'Todo mês · você curte natureza'],
+    viagem: ['viagem', 'Planejar a próxima viagem', 'lembrete', 'monthly', nextDow(0), '16:00', 'Todo mês, 20 minutos · você curte viajar'],
+    arte: ['arte', 'Tempo criativo: desenhar, pintar, criar', 'lembrete', 'weekly', wkend, '15:00', 'Toda semana · você curte arte'],
+    danca: ['danca', 'Dançar uma música inteira', 'lembrete', 'weekly', nextDow(3), '19:00', 'Toda semana · você curte dançar'],
+    pets: ['pet', 'Vacina e vermífugo do pet', 'saude', 'yearly', addDays(todayKey(), 20), '10:00', 'Todo ano · você tem/curte pets'],
+    moda: ['guarda_roupa', 'Organizar o guarda-roupa', 'lembrete', 'monthly', wkend, '10:00', 'Todo mês · você curte moda'],
+    estudar: ['curso', 'Estudar algo novo (30 min)', 'lembrete', 'weekly', nextDow(2), '20:00', 'Toda semana · você curte aprender'],
+    amigos: ['amigos', 'Marcar algo com os amigos', 'compromisso', 'biweekly', nextDow(5), '19:00', 'A cada 2 semanas · você curte sair com amigos'],
+    familia: ['familia', 'Tempo de qualidade com quem eu amo', 'compromisso', 'weekly', nextDow(0), '16:00', 'Toda semana, sem celular · você curte a família'],
+    igreja: ['culto', 'Culto / reunião da igreja', 'compromisso', 'weekly', nextDow(0), '18:00', 'Toda semana · você curte a comunidade'],
+    meditacao: ['meditar', 'Meditação ou yoga (10 min)', 'lembrete', 'daily', todayKey(), minus(w.wake, -20), 'Todo dia de manhã · você curte meditar'],
+    jardinagem: ['regar', 'Regar as plantas', 'lembrete', 'weekly', nextDow(3), '08:00', 'Toda semana · você curte plantas'],
+    voluntariado: ['ajudar', 'Ajudar alguém ou fazer voluntariado', 'compromisso', 'monthly', wkend, '09:00', 'Todo mês · você curte ajudar'],
+  };
+  for (const k of L) if (LIKE[k]) { const [id, title, cat, rep, date, time, why] = LIKE[k]; if (!out.some((x) => x.id === id)) add(id, title, cat, rep, date, time, why, 86); else { const o = out.find((x) => x.id === id); o.score = Math.max(o.score, 86); o.why = why; } }
+
+  // objetivo e jornada
+  if (w.goal === 'tempo') add('folga', 'Bloquear 1h só pra mim', 'compromisso', 'weekly', nextDow(3), '19:00', 'Toda semana · seu objetivo é ter mais tempo livre', 72);
+  if (w.goal === 'carreira') add('carreira', 'Atualizar currículo / aprender algo da área', 'lembrete', 'monthly', nextDow(6), '10:00', 'Todo mês · seu objetivo é crescer na carreira', 68);
+  if (w.journey === 'plantao' || w.journey === 'turnos') add('sono_plantao', 'Dormir depois do plantão (proteger o descanso)', 'lembrete', 'weekly', nextDow(2), '08:00', 'Quem trabalha em escala precisa repor o sono', 67);
+  if (w.journey === 'estudo') add('revisao', 'Revisar a matéria da semana', 'lembrete', 'weekly', nextDow(6), '15:00', 'Toda semana · você estuda', 74);
+  if (w.diffs.has('agua')) add('agua2l', 'Garrafa de água cheia na mesa', 'saude', 'daily', todayKey(), minus(w.wake, -60), 'Todo dia · você marcou que esquece de beber água', 77);
+  if (w.diffs.has('comer')) add('almoco', 'Parar para almoçar de verdade', 'lembrete', 'daily', todayKey(), w.lunch, `Todo dia às ${w.lunch.replace(':', 'h')} · você marcou que pula refeições`, 80);
+  // a mesma sugestão pode ter vindo de dois lugares: fica a de maior peso
+  const best = new Map();
+  for (const x of out) if (!best.has(x.id) || best.get(x.id).score < x.score) best.set(x.id, x);
+  return [...best.values()];
 }
 
 /* Sugestões que ainda não viraram lembrete (as mais relevantes primeiro) */
@@ -87,6 +146,6 @@ export function hideSuggestion(id) {
 /* frase do topo da seção, no tom da pessoa */
 export function forYouLead() {
   const w = who();
-  const bits = [w.age ? `seus ${w.age} anos` : '', w.diffs.size ? 'o que você marcou na ficha' : 'a sua rotina'].filter(Boolean);
-  return `Pensado para ${bits.join(' e ')}. Um toque e vira lembrete que se repete sozinho.`;
+  const bits = [w.age ? `seus ${w.age} anos` : '', w.likes.size ? 'o que você curte' : '', w.focus.size || w.diffs.size ? 'o que você quer melhorar' : 'a sua rotina'].filter(Boolean);
+  return `Pensado para ${bits.slice(0, -1).join(', ')}${bits.length > 1 ? ' e ' : ''}${bits.at(-1)}. Um toque e vira lembrete que se repete sozinho.`;
 }

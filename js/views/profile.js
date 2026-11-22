@@ -35,24 +35,48 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
       const list = [...earned.map((b) => ({ b, p: { done: true, at: st.badges[b.id] } })), ...locked].filter((x) => cat === 'todas' || x.b.cat === cat);
       return `<div class="pcats">${[['todas', 'Todas'], ...Object.entries(CATS).map(([k, v]) => [k, v.name])].map(([k, l]) => `<button class="pcats__b${cat === k ? ' is-on' : ''}" data-cat="${k}">${esc(l)}</button>`).join('')}</div>
         <div class="bgrid">${list.map(({ b, p }) => `<button class="bgrid__it${p.done ? '' : ' is-locked'}" data-badge="${b.id}">
-          ${badgeArt(b, 84, { locked: !p.done })}
+          <span class="b3d${p.done ? ' is-on' : ''}" style="--d:${(b.id.length * 37) % 50 / 10}s">${badgeArt(b, 84, { locked: !p.done })}</span>
           <b>${esc(b.name())}</b>
           ${p.done ? `<small>${RARITY[b.rarity].label}</small>` : `<span class="bgrid__p"><i style="width:${Math.round(p.pct * 100)}%"></i></span><small>${fmt(p.value)}/${fmt(p.goal)}</small>`}
         </button>`).join('')}</div>`;
     };
-    const levels = () => `<div class="lvlist">${TIERS.map((t, i) => {
-      const to = TIERS[i + 1] ? TIERS[i + 1].from - 1 : 100;
-      const state = L.level >= t.from && L.level <= to ? 'is-cur' : L.level > to ? 'is-done' : '';
-      const need = Math.max(0, G.xpFor(t.from) - L.xp);
-      return `<div class="lvlist__it ${state}">${crest(t.from, 64, { locked: !state })}<div><b>${esc(t.name())}</b><small>${t.from === to ? `Nível ${t.from}` : `Níveis ${t.from}–${to}`}</small>
-        ${state === 'is-cur' ? `<small class="lvlist__now">Você está aqui · faltam ${fmt(L.need)} XP para o nível ${Math.min(100, L.level + 1)}</small>` : state === 'is-done' ? '<small class="lvlist__ok">Conquistado ✓</small>' : `<small>Faltam ${fmt(need)} XP</small>`}</div></div>`;
-    }).join('')}</div>
+    const levels = () => {
+      const curT = L.tier, idx = TIERS.indexOf(TIERS.find((t, i) => L.level >= t.from && (!TIERS[i + 1] || L.level < TIERS[i + 1].from)));
+      const nextT = TIERS[idx + 1];
+      return `<div class="lvhero" style="--h:${curT.hue}">
+        <div class="lvhero__stage"><div class="spin3d">${crest(L.level, 132)}</div><div class="lvhero__floor"></div></div>
+        <b class="lvhero__t">${esc(curT.name())}</b><small>Nível ${L.level}${L.level >= 100 ? ' · máximo' : ''}</small>
+        <div class="lvhero__bar"><i style="width:${Math.round(L.pct * 100)}%"></i></div>
+        <small class="lvhero__need">${L.level >= 100 ? 'Você chegou ao topo. Lenda do Lembra!' : `<b>${fmt(L.need)} XP</b> para o nível ${L.level + 1}`}</small>
+        ${nextT ? `<div class="lvhero__next">${crest(nextT.from, 44, { locked: true })}<span><small>Próximo brasão</small><b>${esc(nextT.name())} · nível ${nextT.from}</b><small>faltam ${fmt(Math.max(0, G.xpFor(nextT.from) - L.xp))} XP</small></span></div>` : ''}
+      </div>
+      <div class="lvpath">${TIERS.map((t, i) => {
+        const to = TIERS[i + 1] ? TIERS[i + 1].from - 1 : 100;
+        const state = L.level >= t.from && L.level <= to ? 'is-cur' : L.level > to ? 'is-done' : '';
+        const need = Math.max(0, G.xpFor(t.from) - L.xp);
+        return `<div class="lvpath__it ${state}" style="--h:${t.hue}"><span class="lvpath__dot"></span><span class="b3d${state ? ' is-on' : ''}" style="--d:${i * 0.4}s">${crest(t.from, 58, { locked: !state })}</span>
+          <div><b>${esc(t.name())}</b><small>${t.from === to ? `Nível ${t.from}` : `Níveis ${t.from}–${to}`}</small>
+          ${state === 'is-cur' ? '<small class="lvlist__now">Você está aqui</small>' : state === 'is-done' ? '<small class="lvlist__ok">Conquistado ✓</small>' : `<small>${icon('lock', 11)} faltam ${fmt(need)} XP</small>`}</div></div>`;
+      }).join('')}</div>
       <p class="fhelp">Como ganhar XP: concluir no horário +20 · concluir atrasado +8 · lembrete do Pessoal +12 · marcar compromisso +5 · bilhete +3 · abrir o app no dia +10 · dia 100% +40 · voltar depois de uns dias +30 · cada emblema dá XP extra.</p>`;
-    const nums = () => `<div class="pnums">
-      ${[['Concluídos no horário', onTime, 'clock'], ['Concluídos com atraso', late, 'alert'], ['Compromissos marcados', m.created || 0, 'calendar'], ['Dias 100%', m.perfectDays || 0, 'star'],
-        ['Melhor sequência', `${m.bestStreak || 0} ${(m.bestStreak || 0) === 1 ? 'dia' : 'dias'}`, 'flame'], ['Lembretes do Pessoal feitos', m.personalDone || 0, 'heart'], ['Bilhetes', m.notes || 0, 'note'], ['Dias usando o Lembra', m.activeDays || 0, 'cal2'],
-        ['Voltas por cima', m.comebacks || 0, 'refresh'], ['XP total', fmt(L.xp), 'sparkles']].map(([l, v, ic]) => `<div class="pnums__it">${icon(ic, 18)}<b>${typeof v === 'number' ? fmt(v) : esc(v)}</b><small>${esc(l)}</small></div>`).join('')}
-    </div>`;
+    };
+    const nums = () => {
+      const off = G.offensive(), days = new Set([...(st.od || []), ...(st.days || [])]);
+      const lvlF = off.days >= 100 ? 'f5' : off.days >= 30 ? 'f4' : off.days >= 14 ? 'f3' : off.days >= 7 ? 'f2' : off.days >= 1 ? 'f1' : 'f0';
+      const fireName = { f0: 'Acenda a sua ofensiva hoje', f1: 'Chama acesa', f2: 'Pegando fogo!', f3: 'Fogo forte', f4: 'Chama azul: raríssima', f5: 'Chama lendária' }[lvlF];
+      const wk = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); const k = d.toISOString().slice(0, 10); const kk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; return { on: days.has(kk) || days.has(k), l: 'DSTQQSS'[d.getDay()], today: i === 6 }; });
+      const goal = [3, 7, 14, 30, 60, 100, 365].find((x) => x > off.days) || off.days + 100;
+      const T = [['clock', 'No horário', onTime, '#34C759'], ['alert', 'Com atraso', late, '#FF9500'], ['calendar', 'Marcados', m.created || 0, '#0A84FF'], ['star', 'Dias 100%', m.perfectDays || 0, '#FFB800'],
+        ['heart', 'Lembretes do Pessoal', m.personalDone || 0, '#FF2D55'], ['note', 'Bilhetes', m.notes || 0, '#AF52DE'], ['cal2', 'Dias usando o Lembra', m.activeDays || 0, '#5AC8FA'], ['refresh', 'Voltas por cima', m.comebacks || 0, '#30B0C7']];
+      return `<div class="ofs ofs--${lvlF}">
+        <div class="ofs__fire"><span class="fire"><i></i><i></i><i></i><i class="fire__core"></i></span></div>
+        <div class="ofs__txt"><small>Ofensiva</small><b>${off.days} ${off.days === 1 ? 'dia' : 'dias'}</b><span>${fireName}</span></div>
+        <div class="ofs__week">${wk.map((d) => `<span class="${d.on ? 'is-on' : ''}${d.today ? ' is-today' : ''}"><i>${d.on ? icon('flame', 12) : ''}</i><small>${d.l}</small></span>`).join('')}</div>
+        <div class="ofs__goal"><span><i style="width:${Math.min(100, Math.round((off.days / goal) * 100))}%"></i></span><small>${off.today ? `Próxima meta: <b>${goal} dias</b>` : '<b>Abra o Lembra hoje</b> para não perder a ofensiva'} · recorde ${Math.max(off.best, m.bestStreak || 0)} dias</small></div>
+      </div>
+      <div class="xpbig"><span class="xpbig__ic">${icon('sparkles', 22)}</span><div><small>XP total</small><b>${fmt(L.xp)}</b></div><div class="xpbig__m"><small>Este mês</small><b>${fmt(G.monthXp())}</b></div><button class="btn btn--soft btn--sm" data-action="ranking">${icon('trophy', 14)} Ranking</button></div>
+      <div class="pnums2">${T.map(([ic, l, v, c]) => `<div class="pn2" style="--c:${c}"><span class="pn2__ic">${icon(ic, 18)}</span><b>${fmt(v)}</b><small>${esc(l)}</small></div>`).join('')}</div>`;
+    };
     return `${sheetHead(esc((me.name || 'Perfil').split(' ')[0]), { left: '<button class="btn-text" data-close>Fechar</button>', right: '<button class="btn-text" data-edit>Editar</button>' })}
     <div class="prof">
       <div class="prof__top">
@@ -70,18 +94,19 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
       <div class="prof__name"><b>${esc(me.name || '')}</b>${prof.phoneVerified ? `<span class="prof__ok" title="Celular confirmado">${icon('check', 11)}</span>` : ''}</div>
       ${prof.profession ? `<div class="prof__job">${esc(professionFor(prof.profession, prof.pronoun))}${prof.role ? ' · ' + esc(prof.role) : ''}</div>` : ''}
       ${prof.bio ? `<div class="prof__bio">${esc(prof.bio)}</div>` : ''}
+      ${(() => { const o = G.offensive(); return o.days ? `<button class="prof__fire${o.days >= 30 ? ' is-blue' : o.days >= 7 ? ' is-hot' : ''}" data-tab="numeros"><span class="fire fire--sm"><i></i><i></i><i></i><i class="fire__core"></i></span><b>${o.days}</b><small>${o.days === 1 ? 'dia de ofensiva' : 'dias de ofensiva'}</small></button>` : ''; })()}
       <button class="prof__lv" data-tab="niveis">
         <span class="prof__crest">${crest(L.level, 54)}</span>
         <span class="prof__lvtxt"><b>Nível ${L.level} · ${esc(L.tier.name())}</b>
           <span class="prof__bar"><i style="width:${Math.round(L.pct * 100)}%;background:${L.tier.hue}"></i></span>
           <small>${L.level >= 100 ? 'Nível máximo! Você é lenda.' : `${fmt(L.xp - L.cur)} / ${fmt(L.next - L.cur)} XP para o nível ${L.level + 1}`}</small></span>
       </button>
-      <div class="prof__btns"><button class="btn btn--soft btn--sm" data-edit>Editar perfil</button><button class="btn btn--soft btn--sm" data-action="friends">${icon('users', 15)} Amigos</button><button class="btn btn--soft btn--sm" data-share>${icon('share', 15)} Compartilhar</button></div>
+      <div class="prof__btns"><button class="btn btn--soft btn--sm" data-edit>Editar perfil</button><button class="btn btn--soft btn--sm" data-action="ranking">${icon('trophy', 15)} Ranking</button><button class="btn btn--soft btn--sm" data-action="friends">${icon('users', 15)} Amigos</button><button class="btn btn--soft btn--sm" data-share>${icon('share', 15)} Compartilhar</button></div>
       ${earned.length ? `<div class="prof__hl">${earned.slice(0, 8).map((b) => `<button class="prof__hlit" data-badge="${b.id}"><span>${badgeArt(b, 58)}</span><small>${esc(b.name())}</small></button>`).join('')}</div>` : ''}
       <div class="prof__tabs" role="tablist">
         <button role="tab" class="${cur === 'emblemas' ? 'is-on' : ''}" data-tab="emblemas" aria-label="Emblemas">${icon('grid', 20)}</button>
         <button role="tab" class="${cur === 'niveis' ? 'is-on' : ''}" data-tab="niveis" aria-label="Níveis">${icon('trophy', 20)}</button>
-        <button role="tab" class="${cur === 'numeros' ? 'is-on' : ''}" data-tab="numeros" aria-label="Números">${icon('chart', 20)}</button>
+        <button role="tab" class="${cur === 'numeros' ? 'is-on' : ''}" data-tab="numeros" aria-label="Ofensiva e números">${icon('flame', 20)}</button>
       </div>
       <div class="prof__body">${cur === 'emblemas' ? grid() : cur === 'niveis' ? levels() : nums()}</div>
       ${store.mode === 'cloud' ? `<button class="logoutbig" data-action="logout">${icon('logout', 20)}<span>Sair da conta</span></button><p class="fhelp center">${esc(store.user?.email || '')}</p>` : ''}

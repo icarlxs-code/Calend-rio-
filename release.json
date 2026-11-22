@@ -1,10 +1,12 @@
 {
-  "version": "2.2.0",
+  "version": "2.3.0",
   "date": "2026-11-22",
   "min": "2.2.0",
-  "title": "Mais rápido e mais estável",
+  "title": "Ranking e conquistas",
   "notes": [
-    "O Lembra agora abre mais rápido e funciona melhor com a internet fraca: a sua agenda fica guardada no celular e só o que mudou é buscado.",
-    "Lembretes e avisos mais confiáveis, mesmo nos horários em que muita gente usa o app ao mesmo tempo."
+    "Ranking do Lembra: veja quem está no topo deste mês e de todos os tempos, e a sua posição.",
+    "Ofensiva: dias seguidos usando o Lembra, com o fogo que muda de cor conforme você avança.",
+    "Níveis, emblemas e números com um visual novo, e um “Feito para você” ainda mais do seu jeito.",
+    "A tela da sua rotina ficou mais simples de preencher."
   ]
 }

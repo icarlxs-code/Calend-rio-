@@ -32,7 +32,7 @@ const CAPS = { createXp: 10, noteXp: 5, personalXp: 20, dayXp: 900, createCount:
 const XP = { onTime: 20, late: 8, quick: 2, personal: 12, create: 5, note: 3, open: 10, perfect: 40, comeback: 30 };
 
 /* ---------- estado ---------- */
-const blank = () => ({ v: 1, xp: 0, badges: {}, c: {}, d: { day: '', xp: 0, created: 0, notes: 0, personal: 0, done: 0, times: [] }, ids: [], days: [], mon: {}, seeded: false });
+const blank = () => ({ v: 1, od: [], mxp: { m: '', xp: 0 }, xp: 0, badges: {}, c: {}, d: { day: '', xp: 0, created: 0, notes: 0, personal: 0, done: 0, times: [] }, ids: [], days: [], mon: {}, seeded: false });
 let S = null, uidKey = '';
 const LS = () => `lembra.game.${store.user?.uid || store.me || 'x'}`;
 function load() {
@@ -57,20 +57,25 @@ function merge(a, b) {
   for (const [k, v] of Object.entries(b.c || {})) if (typeof v === 'number') out.c[k] = Math.max(out.c[k] || 0, v); else if (typeof v === 'string' && (!out.c[k] || v > out.c[k])) out.c[k] = v;
   out.ids = [...new Set([...(a.ids || []), ...(b.ids || [])])].slice(-500);
   out.days = [...new Set([...(a.days || []), ...(b.days || [])])].sort().slice(-400);
+  out.od = [...new Set([...(a.od || []), ...(b.od || [])])].sort().slice(-400);
   out.mon = { ...(a.mon || {}) };
   for (const [k, v] of Object.entries(b.mon || {})) out.mon[k] = Math.max(out.mon[k] || 0, v);
   out.d = (a.d?.day || '') >= (b.d?.day || '') ? a.d : b.d;
+  // XP do mês (ranking mensal): vale o mês mais novo; no mesmo mês, o maior
+  const ma = a.mxp || { m: '', xp: 0 }, mb = b.mxp || { m: '', xp: 0 };
+  out.mxp = ma.m === mb.m ? { m: ma.m, xp: Math.max(ma.xp || 0, mb.xp || 0) } : ma.m > mb.m ? ma : mb;
   return out;
 }
 function clean(g) {
   const n = (v, max = 1e9) => (Number.isFinite(+v) ? Math.max(0, Math.min(max, +v)) : 0);
   const ok = (k) => /^[a-z0-9_]{1,24}$/i.test(k);
   return {
-    v: 1, xp: n(g.xp, 5e6), seeded: !!g.seeded,
+    v: 1, xp: n(g.xp, 5e6), seeded: !!g.seeded, mxp: g.mxp && /^\d{4}-\d{2}$/.test(g.mxp.m || '') ? { m: g.mxp.m, xp: n(g.mxp.xp, 2e5) } : { m: '', xp: 0 },
     badges: Object.fromEntries(Object.entries(g.badges || {}).filter(([k, t]) => ok(k) && badgeById(k) && Number.isFinite(+t)).map(([k, t]) => [k, +t])),
     c: Object.fromEntries(Object.entries(g.c || {}).filter(([k]) => ok(k)).map(([k, v]) => [k, typeof v === 'string' ? v.slice(0, 12) : n(v)])),
     d: g.d && typeof g.d === 'object' ? { day: String(g.d.day || '').slice(0, 10), xp: n(g.d.xp), created: n(g.d.created), notes: n(g.d.notes), personal: n(g.d.personal), done: n(g.d.done), times: (Array.isArray(g.d.times) ? g.d.times : []).filter(Number.isFinite).slice(-6) } : blank().d,
     ids: (Array.isArray(g.ids) ? g.ids : []).filter((x) => typeof x === 'string').map((x) => x.slice(0, 60)).slice(-500),
+    od: (Array.isArray(g.od) ? g.od : []).filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)).slice(-400),
     days: (Array.isArray(g.days) ? g.days : []).filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)).slice(-400),
     mon: Object.fromEntries(Object.entries(g.mon || {}).filter(([k]) => /^\d{4}-\d{2}$/.test(k)).slice(-14).map(([k, v]) => [k, n(v, 31)])),
   };
@@ -92,14 +97,45 @@ function save(now = false) {
     const sig = `${levelOf(S.xp)}|${Object.keys(S.badges).length}`;
     if (sig !== lastSig) { lastSig = sig; store.backendApi?.touchStats?.(store.user.uid, { game: { level: levelOf(S.xp), xp: S.xp, badges: Object.keys(S.badges).length } }).catch(() => {}); }
     teamLevel();
+    reportRank();
   };
   if (now) return go();
   saveT = setTimeout(go, Math.max(4000, 3 * 60e3 - (Date.now() - lastCloud)));
 }
 if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && pending) { clearTimeout(saveT); save(true); } });
+/* ranking mundial: manda XP total e do mês (o servidor confere e calcula a posição) */
+let rankSig = '';
+async function reportRank() {
+  try {
+    if (store.mode !== 'cloud' || !store.user || store.shared) return;
+    const me = store.member(store.me) || {};
+    const off = offensive();
+    S.c.bestOff = Math.max(S.c.bestOff || 0, off.days);
+    const body = { xp: S.xp, mxp: monthXp(), month: monthNow(), level: levelOf(S.xp), streak: off.days, name: (store.profile?.nickname || me.name || '').split(' ')[0], color: me.color, vip: !!(store.billing?.plan === 'lifetime' && store.billing?.vip), hide: !!store.profile?.rankHide };
+    const sig = JSON.stringify(body);
+    if (sig === rankSig) return;
+    const { api, server } = await import('./avisos.js');
+    if (!server()) return;
+    if (me.photo && !rankSig) { const { smallPhoto } = await import('./equipe.js'); Object.assign(body, await smallPhoto(me.photo)); }
+    await api('/lb/report', body);
+    rankSig = sig;
+  } catch (e) { console.warn('ranking', e.message); }
+}
+export const reportRankNow = () => { rankSig = ''; return reportRank(); };
 const dayReset = () => { const t = todayKey(); if (S.d.day !== t) S.d = { day: t, xp: 0, created: 0, notes: 0, personal: 0, done: 0, times: [] }; };
 
 /* ---------- XP ---------- */
+const monthNow = () => todayKey().slice(0, 7);
+function addMonth(n) { const m = monthNow(); if (!S.mxp || S.mxp.m !== m) S.mxp = { m, xp: 0 }; S.mxp.xp += n; }
+export const monthXp = () => { load(); return S.mxp && S.mxp.m === monthNow() ? S.mxp.xp : 0; };
+/* dias seguidos usando o app (ofensiva, como no Duolingo): hoje conta se já abriu; se ainda não abriu, vale até ontem */
+export function offensive() {
+  load();
+  const set = new Set([...(S.od || []), ...(S.days || [])]), t = todayKey();
+  let d = set.has(t) ? t : addDays(t, -1), n = 0;
+  while (set.has(d)) { n++; d = addDays(d, -1); }
+  return { days: n, today: set.has(t), best: Math.max(n, S.c.bestOff || 0) };
+}
 let listeners = [];
 export const onGame = (fn) => { listeners.push(fn); return () => { listeners = listeners.filter((f) => f !== fn); }; };
 function gain(xp, why = '', { fly = true } = {}) {
@@ -107,7 +143,7 @@ function gain(xp, why = '', { fly = true } = {}) {
   const room = Math.max(0, CAPS.dayXp - S.d.xp);
   const got = Math.max(0, Math.min(xp, room));
   if (!got) return 0;
-  S.xp += got; S.d.xp += got;
+  S.xp += got; S.d.xp += got; addMonth(got);
   if (fly) xpFly(got, why);
   return got;
 }
@@ -120,7 +156,7 @@ function settle({ quiet = false } = {}) {
     const m = metrics();
     const now = BADGES.filter((b) => !S.badges[b.id] && (m[b.metric] || 0) >= b.goal);
     if (!now.length) break;
-    for (const b of now) { S.badges[b.id] = Date.now(); fresh.push(b); S.xp += RARITY[b.rarity].xp; }
+    for (const b of now) { S.badges[b.id] = Date.now(); fresh.push(b); S.xp += RARITY[b.rarity].xp; if (S.seeded) addMonth(RARITY[b.rarity].xp); }
   }
   const after = levelOf(S.xp);
   S.c._lvl = after;
@@ -285,6 +321,7 @@ export function startGame() {
   load(); dayReset();
   if (!S.seeded) seed();
   const t = todayKey(), c = S.c;
+  if (!(S.od || []).includes(t)) S.od = [...(S.od || []), t].slice(-400); // ofensiva: abriu o app no dia
   if (c.lastOpen !== t) {
     c.lastOpen = t;
     c.activeDays = (c.activeDays || 0) + 1;

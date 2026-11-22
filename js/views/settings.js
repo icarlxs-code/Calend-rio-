@@ -241,21 +241,31 @@ function planSection() {
   </section>`;
 }
 
+/* "Seu dia de trabalho": perguntas simples, uma por cartão, com o resumo em uma frase no topo */
 function routineSection() {
   const r = routine();
-  const mins = [0, 15, 30, 45, 60, 90];
+  const hh = (t) => String(t || '').replace(/^0/, '').replace(':00', 'h').replace(':', 'h');
+  const WD_FULL = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  const offs = r.daysOff.map((i) => WD_FULL[i]);
+  const resumo = `Você trabalha das <b>${hh(r.workStart)}</b> às <b>${hh(r.workEnd)}</b>, almoça das <b>${hh(r.lunchStart)}</b> às <b>${hh(r.lunchEnd)}</b>${offs.length ? ` e folga ${offs.length === 1 ? 'no' : 'em'} <b>${offs.join(', ').replace(/, ([^,]*)$/, ' e $1')}</b>` : ' e não tem dia de folga'}.`;
+  const travel = [[0, 'Não preciso de tempo entre eles'], [15, '15 minutos'], [30, '30 minutos'], [45, '45 minutos'], [60, '1 hora'], [90, '1 hora e meia']];
   return `<section class="block">
-    <h2 class="block__title">${icon('clock', 16)} Rotina e tempo livre</h2>
-    <form class="list" data-routine-form onsubmit="return false">
-      <label class="list__row"><span>Expediente</span><input type="time" name="workStart" value="${r.workStart}"> <input type="time" name="workEnd" value="${r.workEnd}"></label>
-      <label class="list__row"><span>Almoço</span><input type="time" name="lunchStart" value="${r.lunchStart}"> <input type="time" name="lunchEnd" value="${r.lunchEnd}"></label>
-      <label class="list__row"><span>Deslocamento entre lugares</span><select name="travelMin">${mins.map((m) => `<option value="${m}"${r.travelMin === m ? ' selected' : ''}>${m ? m + ' min' : 'não considerar'}</option>`).join('')}</select></label>
-      <label class="list__row"><span>Máximo de tarefas/dia</span><select name="maxTasks">${[4, 5, 6, 7, 8, 10, 12, 15, 20].map((n) => `<option value="${n}"${r.maxTasks === n ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
-      <div class="list__row list__row--col"><span>Dias de folga</span>
-        <div class="daysoff">${WD_SHORT.map((w, i) => `<label class="dayoff"><input type="checkbox" name="off" value="${i}"${r.daysOff.includes(i) ? ' checked' : ''}><span>${w}</span></label>`).join('')}</div>
-      </div>
+    <h2 class="block__title">${icon('clock', 16)} Seu dia de trabalho</h2>
+    <p class="rt__lead">Conte como é o seu dia. Com isso o Lembra <b>não marca nada</b> no seu almoço, na sua folga ou fora do expediente, e avisa quando o dia estiver cheio demais.</p>
+    <div class="rt__resumo">${icon('sparkles', 16)}<span>${resumo}</span></div>
+    <form class="rt" data-routine-form onsubmit="return false">
+      <div class="rt__card"><div class="rt__q"><span class="rt__ic" style="--c:#0A84FF">${icon('briefcase', 18)}</span><div><b>Que horas você começa e termina de trabalhar?</b><small>Fora desse horário o Lembra não marca compromisso de trabalho.</small></div></div>
+        <div class="rt__times"><span>Das</span><input type="time" name="workStart" value="${r.workStart}" aria-label="Começo do expediente"><span>às</span><input type="time" name="workEnd" value="${r.workEnd}" aria-label="Fim do expediente"></div></div>
+      <div class="rt__card"><div class="rt__q"><span class="rt__ic" style="--c:#FF9500">${icon('utensils', 18)}</span><div><b>Que horas é o seu almoço?</b><small>Esse horário fica livre: nada é marcado em cima dele.</small></div></div>
+        <div class="rt__times"><span>Das</span><input type="time" name="lunchStart" value="${r.lunchStart}" aria-label="Começo do almoço"><span>às</span><input type="time" name="lunchEnd" value="${r.lunchEnd}" aria-label="Fim do almoço"></div></div>
+      <div class="rt__card"><div class="rt__q"><span class="rt__ic" style="--c:#34C759">${icon('sun', 18)}</span><div><b>Em quais dias você NÃO trabalha?</b><small>Toque nos dias de folga (eles ficam verdes). Nesses dias o Lembra deixa você descansar.</small></div></div>
+        <div class="rt__days">${WD_SHORT.map((w, i) => `<label class="rt__day"><input type="checkbox" name="off" value="${i}"${r.daysOff.includes(i) ? ' checked' : ''}><span><b>${w}</b><small>${r.daysOff.includes(i) ? 'folga' : 'trabalho'}</small></span></label>`).join('')}</div></div>
+      <div class="rt__card"><div class="rt__q"><span class="rt__ic" style="--c:#AF52DE">${icon('car', 18)}</span><div><b>Quanto tempo você leva de um compromisso para o outro?</b><small>O Lembra deixa esse intervalo livre entre eles (trânsito, deslocamento).</small></div></div>
+        <select class="rt__sel" name="travelMin">${travel.map(([m, l]) => `<option value="${m}"${r.travelMin === m ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="rt__card"><div class="rt__q"><span class="rt__ic" style="--c:#FF3B30">${icon('listcheck', 18)}</span><div><b>Quantos compromissos você aguenta num dia?</b><small>Passou disso, o Lembra avisa que o dia está pesado.</small></div></div>
+        <select class="rt__sel" name="maxTasks">${[4, 5, 6, 7, 8, 10, 12, 15, 20].map((n) => `<option value="${n}"${r.maxTasks === n ? ' selected' : ''}>Até ${n} por dia</option>`).join('')}</select></div>
     </form>
-    <p class="fhelp">O assistente usa isso para não marcar nada em cima do almoço, da folga ou fora do expediente, e para proteger o ${store.team.length > 1 ? 'tempo livre de vocês' : 'seu tempo livre'}.</p>
+    <p class="fhelp">Muda na hora, sem botão de salvar.</p>
   </section>`;
 }
 

@@ -26,6 +26,7 @@ const STEPS = ['inicio', 'voce', 'trabalho', 'rotina', 'dificuldades', 'estilo',
 const MOOD = { motivation: [['baixa', 'Baixa'], ['media', 'Mais ou menos'], ['alta', 'Alta']], selfesteem: [['baixa', 'Baixa'], ['oscila', 'Oscila'], ['boa', 'Boa']], anxiety: [['muita', 'Muito'], ['as_vezes', 'Às vezes'], ['pouca', 'Pouco']] };
 const TRAITS = [['ansioso', ''], ['impulsivo', 'Impulsivo(a)'], ['perfeccionista', 'Perfeccionista'], ['procrastinador', 'Deixo tudo pra depois'], ['organizado', 'Organizado(a)'], ['sensivel', 'Sensível'], ['competitivo', 'Competitivo(a)'], ['sonhador', 'Sonhador(a)'], ['pratico', 'Prático(a)']].filter(([, l]) => l);
 const FOCUS = [['autoestima', 'Autoestima'], ['ansiedade', 'Ansiedade'], ['foco', 'Foco'], ['disciplina', 'Disciplina'], ['relacionamentos', 'Relacionamentos'], ['saude', 'Saúde e corpo'], ['dinheiro', 'Dinheiro'], ['gratidao', 'Gratidão'], ['descanso', 'Descanso e sono']];
+export const LIKES = [['leitura', 'Ler'], ['esporte', 'Esporte / academia'], ['corrida', 'Correr / caminhar'], ['musica', 'Música'], ['cozinhar', 'Cozinhar'], ['series', 'Filmes e séries'], ['games', 'Games'], ['natureza', 'Natureza / ar livre'], ['viagem', 'Viajar'], ['arte', 'Arte / desenho'], ['danca', 'Dançar'], ['pets', 'Pets'], ['moda', 'Moda e beleza'], ['estudar', 'Aprender coisas novas'], ['amigos', 'Sair com amigos'], ['familia', 'Tempo com a família'], ['igreja', 'Igreja / comunidade'], ['meditacao', 'Meditação / yoga'], ['jardinagem', 'Plantas'], ['voluntariado', 'Ajudar os outros']];
 const RELIGIONS = [['catolica', 'Católica'], ['evangelica', 'Evangélica'], ['protestante', 'Protestante'], ['crista', 'Cristã (sem denominação)'], ['adventista', 'Adventista'], ['testemunha', 'Testemunha de Jeová'], ['ortodoxa', 'Cristã ortodoxa'], ['sud', 'Santos dos Últimos Dias'], ['espirita', 'Espírita'], ['umbanda', 'Umbanda'], ['candomble', 'Candomblé'], ['judaica', 'Judaica'], ['islamica', 'Islâmica'], ['budista', 'Budista'], ['hindu', 'Hinduísta'], ['espiritualizado', 'Espiritualizado(a), sem religião'], ['agnostico', 'Agnóstico(a)'], ['ateu', 'Ateu / ateia'], ['outra', 'Outra'], ['nao_dizer', 'Prefiro não dizer']];
 const WATER = [[0, 'Não precisa'], [60, 'A cada 1h'], [90, 'A cada 1h30'], [120, 'A cada 2h'], [180, 'A cada 3h']];
 
@@ -35,7 +36,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     pronoun: '', gender: '', volume: '', method: '',
     journey: 'comercial', workStart: '08:00', workEnd: '18:00', workDays: [1, 2, 3, 4, 5], wake: '06:30', sleep: '22:30', lunch: '12:00',
     difficulties: [], forget: 3, lead: '', tone: 'firme', freq: '', faith: false, water: true, meals: true, goal: 'lembrar', consent: false,
-    motivationLevel: '', selfesteem: '', anxiety: '', traits: [], focus: [], wantsMotivation: true, religion: '', perDay: 7, waterEvery: 180,
+    motivationLevel: '', selfesteem: '', anxiety: '', traits: [], focus: [], likes: [], wantsMotivation: true, religion: '', perDay: 7, waterEvery: 180,
     ...initial,
   };
   let step = initial.onboardedAt ? 1 : 0, q = '', err = '', sub = 0, calcDone = false;
@@ -68,6 +69,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     anxiety: { label: 'Você se considera uma pessoa ansiosa?', options: () => MOOD.anxiety.map(([v, l]) => ({ v, l })) },
     traits: { label: 'Como você se descreve?', multi: true, options: () => TRAITS.map(([v, l]) => ({ v, l })) },
     focus: { label: 'O que você quer trabalhar em você?', multi: true, options: () => FOCUS.map(([v, l]) => ({ v, l })) },
+    likes: { label: 'O que você curte fazer?', title: 'O que você curte fazer no tempo livre?', hint: 'Marque o que quiser: o “Feito pra você” sugere coisas do seu gosto.', multi: true, options: () => LIKES.map(([v, l]) => ({ v, l })) },
     religion: { label: 'Qual é a sua religião ou crença?', options: () => RELIGIONS.map(([v, l]) => ({ v, l })) },
     waterEvery: { label: 'Lembrar de beber água', options: () => WATER.map(([v, l]) => ({ v, l })) },
   };
@@ -149,7 +151,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     mente: () => {
       return `<h2>Você por dentro</h2><p class="ficha__sub">Para o Lembra falar com você como um amigo que te conhece — e não mandar a mesma coisa que manda para todo mundo. Fica só na sua conta.</p>
       ${field('motivationLevel')}${field('selfesteem')}${field('anxiety')}
-      ${field('traits')}${field('focus')}
+      ${field('traits')}${field('focus')}${field('likes')}
       <div class="list ficha__toggles">
         <label class="list__row"><span><b>Mensagens de motivação</b><small>frases de ânimo do seu jeito</small></span><input type="checkbox" class="switch" data-chk="wantsMotivation" ${f.wantsMotivation ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Mensagens de fé</b><small>da sua religião, se você tiver</small></span><input type="checkbox" class="switch" data-chk="faith" data-rerender ${f.faith ? 'checked' : ''}></label>
@@ -391,7 +393,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
 /* ---------- salvar e quando pedir a ficha ---------- */
 const KEYS = ['name', 'nickname', 'pronoun', 'gender', 'birth', 'cpf', 'phone', 'profession', 'area', 'arch', 'role', 'workplace', 'journey', 'volume', 'method', 'workStart', 'workEnd', 'workDays',
   'wake', 'sleep', 'lunch', 'difficulties', 'forget', 'lead', 'tone', 'freq', 'faith', 'water', 'meals', 'goal',
-  'motivationLevel', 'selfesteem', 'anxiety', 'traits', 'focus', 'wantsMotivation', 'religion', 'perDay', 'waterEvery'];
+  'motivationLevel', 'selfesteem', 'anxiety', 'traits', 'focus', 'likes', 'wantsMotivation', 'religion', 'perDay', 'waterEvery'];
 
 /* A ficha vira: perfil da conta + perfil de trabalho do espaço + lembretes da pessoa + mensagens do Pessoal */
 export async function saveFicha(r) {
