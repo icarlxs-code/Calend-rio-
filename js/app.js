@@ -1336,6 +1336,12 @@ function captureOrigin() {
   } catch { /* ok */ }
 }
 
+/* App de verdade não dá zoom: o iPhone às vezes ignora o "sem zoom" da página, então bloqueia o gesto de pinça
+   e o toque duplo (telas que usam dois dedos de propósito, como o recorte da foto, continuam funcionando) */
+['gesturestart', 'gesturechange', 'gestureend'].forEach((t) => document.addEventListener(t, (e) => { if (!e.target.closest?.('.crop__area')) e.preventDefault(); }, { passive: false }));
+document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 && !e.target.closest?.('.crop__area')) e.preventDefault(); }, { passive: false });
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (e) => { const now = Date.now(); if (now - lastTouchEnd < 300 && !e.target.closest?.('input, textarea, select, .crop__area')) e.preventDefault(); lastTouchEnd = now; }, { passive: false });
 async function boot() {
   // só nos testes automáticos no computador (emulador local): o robô enxerga o estado do app
   try { if (['localhost', '127.0.0.1'].includes(location.hostname) && localStorage.getItem('cal.emulator') === '1') window.__lembraStore = store; } catch { /* ok */ }

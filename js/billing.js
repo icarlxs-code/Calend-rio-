@@ -188,11 +188,14 @@ export function openPlans({ blocking = false } = {}) {
     </div>
     <p class="paywall__err" data-err hidden></p>
     <p class="pw-fine">${icon('lock', 11)} Pagamento seguro pela Stripe. Cartão de crédito (renova sozinho até você cancelar) ou Pix no anual e no Fundadores (vale 12 meses, sem renovação automática). Cancele quando quiser em Ajustes → Gerenciar assinatura. Reembolso integral em até 7 dias. Preços em reais, com impostos.</p>
-    <div class="paywall__foot">
-      <button class="btn-text btn-text--sm" data-paid>Já paguei — verificar</button>
-      ${blocking ? '<button class="btn-text btn-text--sm" data-pclose>Só olhar o app</button><button class="btn-text btn-text--sm" data-action="logout">Sair da conta</button>' : '<button class="btn-text btn-text--sm" data-pclose>Agora não</button>'}
+    <div class="pw-links">
+      <button data-paid>${icon('refresh', 13)} Já paguei? Verificar</button>
+      ${blocking ? '<span>·</span><button data-pclose>Só olhar o app</button><span>·</span><button data-action="logout">Sair da conta</button>' : '<span>·</span><button data-pclose>Agora não</button>'}
     </div>
-    <div class="paywall__cta"><button class="btn btn--primary btn--block btn--big${canTrial ? ' btn--alt' : ''}" data-buy>${esc(PLAN_INFO[chosen].cta)}</button></div>
+    <div class="paywall__cta">
+      <button class="pw-buy${canTrial ? ' pw-buy--alt' : ''}" data-buy></button>
+      <div class="pw-trust"><span>${icon('lock', 11)} Pagamento seguro</span><span>${icon('check', 11)} Cancele quando quiser</span><span>${icon('shield', 11)} Garantia de 7 dias</span></div>
+    </div>
   </div>`;
   document.body.appendChild(w);
   requestAnimationFrame(() => w.classList.add('is-open'));
@@ -211,6 +214,12 @@ export function openPlans({ blocking = false } = {}) {
       <span class="plan__note">${p.note}</span>
       ${yearly ? `<span class="plan__save">${p.tier === 'pro' ? 'Economize R$ 58,90 por ano' : 'Economize R$ 34,90 por ano'}</span>` : ''}
     </button>`; };
+  // botão de assinar em duas linhas: o que é e quanto custa (por dia, quando dá)
+  const setBuy = () => {
+    const k = finalPlan(), cta = PLAN_INFO[k].cta, [what, price] = cta.split(' · ');
+    const day = PER_DAY[k.replace(/_pix$/, '')];
+    buy.innerHTML = `<b>${esc(what)}</b>${price ? `<small>${esc(price)}${day ? ` · só ${day} por dia` : ''}</small>` : ''}`;
+  };
   const paint = () => {
     box.innerHTML = [yearly ? 'essencial_ano' : 'essencial_mes', yearly ? 'pro_ano' : 'pro_mes'].map(card).join('');
     w.querySelectorAll('[data-period]').forEach((x) => x.classList.toggle('is-on', (x.dataset.period === 'ano') === yearly));
@@ -222,7 +231,7 @@ export function openPlans({ blocking = false } = {}) {
         <button class="paymeth__b${pm === 'card' ? ' is-on' : ''}" data-pm="card" role="radio" aria-checked="${pm === 'card'}">${icon('card', 18)}<span><b>Cartão de crédito</b><small>Renova sozinho todo ano</small></span></button>
         <button class="paymeth__b${pm === 'pix' ? ' is-on' : ''}" data-pm="pix" role="radio" aria-checked="${pm === 'pix'}"><span class="paymeth__pix">PIX</span><span><b>Pix</b><small>Paga uma vez, vale 12 meses</small></span></button>`
         : `<p class="paymeth__note">${icon('info', 14)} No mensal o pagamento é no cartão. Prefere Pix? Escolha o <b>Anual</b>.</p>`;
-    buy.textContent = PLAN_INFO[finalPlan()].cta;
+    setBuy();
   };
   w.addEventListener('click', (e) => {
     const per = e.target.closest('[data-period]');
@@ -238,8 +247,8 @@ export function openPlans({ blocking = false } = {}) {
   buy.onclick = async () => {
     err.hidden = true;
     buy.disabled = true; buy.classList.add('is-busy');
-    const label = buy.textContent;
-    buy.textContent = 'Abrindo o pagamento seguro…';
+    const label = buy.innerHTML;
+    buy.innerHTML = '<b>Abrindo o pagamento seguro…</b>';
     try {
       const plan = finalPlan();
       const r = await api('/billing/checkout', { plan, returnUrl: location.href });
@@ -249,7 +258,7 @@ export function openPlans({ blocking = false } = {}) {
     } catch (e) {
       err.textContent = /[a-z]{3,} [a-z]{3,} [a-z]{3,}/.test(e.message || '') && !/[ãçéêóõíá]/.test(e.message || '') ? 'O pagamento está temporariamente indisponível. Tente de novo em alguns minutos.' : e.message || 'Não consegui abrir o pagamento agora. Tente de novo.';
       err.hidden = false;
-      buy.disabled = false; buy.classList.remove('is-busy'); buy.textContent = label;
+      buy.disabled = false; buy.classList.remove('is-busy'); buy.innerHTML = label;
       err.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
   };
