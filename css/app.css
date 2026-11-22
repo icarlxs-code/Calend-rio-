@@ -2893,3 +2893,24 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .pw-trust { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: 11.5px; color: rgba(255,255,255,.55); }
 .pw-trust span { display: inline-flex; align-items: center; gap: 4px; } .pw-trust svg { color: #34C759; }
 @media (prefers-reduced-motion: reduce) { .pw-buy *, .pw-buy__glow::after { animation: none !important; transition: none !important; } }
+
+/* ===== Tela de planos: visual sóbrio (preto, branco e um verde), sem efeitos de neon ===== */
+.paywall .pw-why li span { background: #1C1C1E !important; color: #fff; box-shadow: none !important; border: 1px solid rgba(255,255,255,.1); }
+.paywall .plan--best::before { display: none; }
+.paywall .plan--best { background: #1C1C1E !important; border: 1.5px solid rgba(255,255,255,.22) !important; animation: none !important; }
+.paywall .plan.is-on { border-color: #fff !important; box-shadow: 0 0 0 1px #fff inset !important; }
+.paywall .plan:not(.plan--founder) { opacity: 1 !important; }
+.paywall .plan__tag { background: #fff !important; color: #000 !important; }
+.paywall .plan__day { background: rgba(255,255,255,.08) !important; color: rgba(255,255,255,.85) !important; }
+.paywall .plan__day svg { display: none; }
+.paywall .plan__was s { text-decoration-color: rgba(255,255,255,.5) !important; }
+.paywall .pw-guar { background: #111 !important; border: 1px solid rgba(255,255,255,.12) !important; }
+.paywall .pw-team { background: #111 !important; border: 1px solid rgba(255,255,255,.12) !important; }
+.paywall .pw-team__tag { color: rgba(255,255,255,.55) !important; }
+.paywall .pw-team__prices .is-best { background: rgba(255,255,255,.06) !important; border: 1px solid rgba(255,255,255,.35) !important; }
+.paywall .pw-team__faces i { background: #3A3A3C !important; }
+/* botão: Profissional = branco sólido; Essencial = cinza escuro. Troca na hora, letras sempre visíveis */
+.pw-buy, .pw-buy.is-cold { background: #2C2C2E !important; color: #fff !important; box-shadow: none !important; animation: none !important; transition: background-color .2s ease, color .2s ease, transform .12s !important; }
+.pw-buy.is-hot { background: #fff !important; color: #000 !important; }
+.pw-buy > i { display: none !important; }
+.pw-buy__s { opacity: .7; }

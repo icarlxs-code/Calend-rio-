@@ -219,12 +219,12 @@ export function openPlans({ blocking = false } = {}) {
     const k = finalPlan(), cta = PLAN_INFO[k].cta, [what, price] = cta.split(' · ');
     const day = PER_DAY[k.replace(/_pix$/, '')];
     // o botão é montado uma vez só (recriar a cada toque reiniciava a animação e ela "engasgava")
-    if (!buy.querySelector('.pw-buy__t')) buy.innerHTML = '<i class="pw-buy__aura"></i><i class="pw-buy__glow"></i><i class="pw-buy__edge"></i><i class="pw-buy__sp"></i><i class="pw-buy__sp"></i><i class="pw-buy__sp"></i><i class="pw-buy__sp"></i><b class="pw-buy__t"></b><small class="pw-buy__s"></small>';
+    if (!buy.querySelector('.pw-buy__t')) buy.innerHTML = '<b class="pw-buy__t"></b><small class="pw-buy__s"></small>';
     buy.querySelector('.pw-buy__t').textContent = what;
     buy.querySelector('.pw-buy__s').textContent = price ? `${price}${day ? ` · só ${day} por dia` : ''}` : '';
     // só o Profissional (e o Fundadores) "acende" o botão, com a luz varrendo da esquerda para a direita
     const hot = PLAN_INFO[k].tier === 'pro';
-    if (hot !== buy.classList.contains('is-hot')) { buy.classList.remove('is-hot', 'is-cold'); void buy.offsetWidth; buy.classList.add(hot ? 'is-hot' : 'is-cold'); }
+    buy.classList.toggle('is-hot', hot);
   };
   const paint = () => {
     box.innerHTML = [yearly ? 'essencial_ano' : 'essencial_mes', yearly ? 'pro_ano' : 'pro_mes'].map(card).join('');
