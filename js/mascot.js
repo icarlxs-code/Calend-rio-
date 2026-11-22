@@ -20,8 +20,8 @@ const MOUTH = {
   desconfiado: '<path d="M92 142 Q100 137 108 142" stroke="#3B2620" stroke-width="3.5" fill="none" stroke-linecap="round"/>',
   amor: '<path d="M92 137 Q100 145 108 137" stroke="#3B2620" stroke-width="3.5" fill="none" stroke-linecap="round"/>',
   danca: '<path d="M87 134 Q100 154 113 134 Q100 139 87 134Z" fill="#7A2318"/><path d="M93 141 Q100 148 107 141 Q100 143 93 141Z" fill="#FF5A4E"/>',
-  bravo: '<path d="M88 146 Q100 132 112 146 Q100 142 88 146Z" fill="#7A2318"/>',
-  triste: '<path d="M89 147 Q100 134 111 147" stroke="#3B2620" stroke-width="3.5" fill="none" stroke-linecap="round"/>',
+  bravo: '<path d="M90 146 Q100 134 110 146" stroke="#A8180C" stroke-width="5" fill="none" stroke-linecap="round"/>',
+  triste: '<path d="M91 147 Q100 137 109 147" stroke="#A8180C" stroke-width="5" fill="none" stroke-linecap="round"/>',
 };
 const BROW = {
   up: ['M64 80 Q76 70 88 78', 'M112 78 Q124 70 136 80'],
@@ -58,7 +58,7 @@ export function mascot(mood = 'feliz', size = 120, { label = 'Sininho, o mascote
     bravo: '<g class="msc-steam" fill="#FF9C7A"><circle cx="34" cy="50" r="10"/><circle cx="44" cy="40" r="8"/><circle cx="166" cy="50" r="10"/><circle cx="156" cy="40" r="8"/></g>',
     comemora: '<g class="msc-conf"><rect x="28" y="40" width="10" height="10" rx="2" fill="#FF6B3D" transform="rotate(20 33 45)"/><rect x="160" y="34" width="10" height="10" rx="2" fill="#FFB020" transform="rotate(-25 165 39)"/><rect x="48" y="16" width="8" height="8" rx="2" fill="#FF4D8D"/><rect x="146" y="12" width="8" height="8" rx="2" fill="#FF6B3D"/></g>',
   }[mood] || '';
-  const tears = e.tears ? `<g class="msc-tears" fill="#9FDCFF"><path d="M66 120c-4 8-6 14 0 16s6-8 0-16z"/><path d="M134 120c-4 8-6 14 0 16s6-8 0-16z"/></g>` : '';
+  const tears = e.tears ? `<g class="msc-tears" fill="#9FDCFF"><ellipse cx="68" cy="122" rx="9" ry="6"/><ellipse cx="132" cy="122" rx="9" ry="6"/></g>` : '';
   const blush = ['amor', 'feliz', 'danca', 'comemora'].includes(mood) ? `<ellipse cx="62" cy="132" rx="10" ry="6" fill="${C.blush}" opacity=".55"/><ellipse cx="138" cy="132" rx="10" ry="6" fill="${C.blush}" opacity=".55"/>` : '';
   return `<span class="msc msc--${mood}" style="--s:${size}px" role="img" aria-label="${label}">
   <svg viewBox="0 0 200 220" width="${size}" height="${Math.round(size * 1.1)}" aria-hidden="true">
