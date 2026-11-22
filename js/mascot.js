@@ -1,7 +1,7 @@
 /* Sininho, o mascote do Lembra: desenhado em SVG com peças separadas (corpo, alça, aba, olhos, pupilas,
    pálpebras, sobrancelhas, boca, bracinhos e pezinhos), para cada parte se mexer sozinha.
    Humores: feliz, comemora, sono, desconfiado, amor, danca, bravo, triste. As animações ficam no CSS (.msc). */
-const C = { body: '#FF6B3D', shade: '#F25A2B', rim: '#E5512A', arm: '#E8522A', foot: '#D9461F', ink: '#3B2620', blush: '#FF9C7A' };
+const C = { body: '#FF6B3D', shade: '#F25A2B', rim: '#FF4F2E', arm: '#E64A19', foot: '#E64A19', ink: '#3B2620', blush: '#FF9C7A' };
 
 const EYES = {
   feliz: { lid: 0, brow: 'up', pupil: [0, 0] },
@@ -40,10 +40,10 @@ function eye(cx, mood) {
   const e = EYES[mood] || EYES.feliz;
   if (e.closed) return `<path d="M${cx - 15} 106 Q${cx} 92 ${cx + 15} 106" stroke="${C.ink}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
   const [px, py] = e.pupil || [0, 0];
-  const lid = e.lid ? `<rect class="msc-lid" x="${cx - 23}" y="${83}" width="46" height="${Math.round(46 * e.lid)}" fill="${C.body}"/>` : '';
-  return `<g class="msc-eye"><circle cx="${cx}" cy="104" r="21" fill="#fff"/>
-    <g class="msc-pupil"><circle cx="${cx + px}" cy="${108 + py}" r="10.5" fill="${C.ink}"/><circle cx="${cx + px - 4}" cy="${104 + py}" r="3.6" fill="#fff"/></g>
-    ${lid}<rect class="msc-blink" x="${cx - 23}" y="83" width="46" height="46" fill="${C.body}"/></g>`;
+  const lid = e.lid ? `<rect class="msc-lid" x="${cx - 26}" y="78" width="52" height="${Math.round(52 * e.lid)}" fill="${C.body}"/>` : '';
+  return `<g class="msc-eye"><circle cx="${cx}" cy="104" r="24" fill="#fff"/>
+    <g class="msc-pupil"><circle cx="${cx + px}" cy="${108 + py}" r="12" fill="${C.ink}"/><circle cx="${cx + px - 4}" cy="${104 + py}" r="3.6" fill="#fff"/></g>
+    ${lid}<rect class="msc-blink" x="${cx - 26}" y="78" width="52" height="52" fill="${C.body}"/></g>`;
 }
 
 export function mascot(mood = 'feliz', size = 120, { label = 'Sininho, o mascote do Lembra' } = {}) {
@@ -65,12 +65,12 @@ export function mascot(mood = 'feliz', size = 120, { label = 'Sininho, o mascote
     <ellipse class="msc-shadow" cx="100" cy="210" rx="56" ry="7" fill="#000" opacity=".12"/>
     ${extras}
     <g class="msc-body">
-      <g class="msc-feet"><ellipse class="msc-foot msc-foot--l" cx="78" cy="194" rx="16" ry="11" fill="${C.foot}"/><ellipse class="msc-foot msc-foot--r" cx="122" cy="194" rx="16" ry="11" fill="${C.foot}"/></g>
-      <g class="msc-arm msc-arm--l" style="--r:${a1}deg"><ellipse cx="38" cy="128" rx="12" ry="17" fill="${C.arm}"/></g>
-      <g class="msc-arm msc-arm--r" style="--r:${a2}deg"><ellipse cx="162" cy="128" rx="12" ry="17" fill="${C.arm}"/></g>
-      <circle cx="100" cy="42" r="15" fill="${C.body}"/>
-      <path d="M100 46 C62 46 52 82 50 120 C49 146 40 158 30 166 L170 166 C160 158 151 146 150 120 C148 82 138 46 100 46Z" fill="${C.body}"/>
-      <ellipse cx="100" cy="166" rx="70" ry="10" fill="${C.rim}"/><ellipse cx="100" cy="166" rx="62" ry="6" fill="#B8361A"/>
+      <g class="msc-feet"><ellipse class="msc-foot msc-foot--l" cx="78" cy="194" rx="18" ry="13" fill="${C.foot}"/><ellipse class="msc-foot msc-foot--r" cx="122" cy="194" rx="18" ry="13" fill="${C.foot}"/></g>
+      <g class="msc-arm msc-arm--l" style="--r:${a1}deg"><ellipse cx="30" cy="124" rx="12" ry="17" fill="${C.arm}"/></g>
+      <g class="msc-arm msc-arm--r" style="--r:${a2}deg"><ellipse cx="170" cy="124" rx="12" ry="17" fill="${C.arm}"/></g>
+      <path fill-rule="evenodd" d="M78 52 V38 a22 22 0 0 1 44 0 V52 Z M90 52 V40 a10 10 0 0 1 20 0 V52 Z" fill="${C.body}"/>
+      <path d="M100 48 C48 48 40 92 40 126 C40 146 32 156 24 166 L176 166 C168 156 160 146 160 126 C160 92 152 48 100 48Z" fill="${C.body}"/>
+      <ellipse cx="100" cy="166" rx="76" ry="10" fill="${C.rim}"/><ellipse cx="100" cy="166" rx="68" ry="6" fill="#B8361A"/>
       <g class="msc-clap"><rect x="97" y="160" width="6" height="16" rx="3" fill="#B8361A"/><circle cx="100" cy="180" r="10" fill="${C.shade}"/></g>
       <path d="M64 78 C72 62 84 54 98 52" stroke="#fff" stroke-width="5" opacity=".25" fill="none" stroke-linecap="round"/>
       ${blush}
