@@ -20,5 +20,5 @@ binding = "CAL"
 PROJECT_ID = "calendario-48fdb"
 ALLOWED_ORIGINS = "https://icarlxs-code.github.io,https://meulembra.com.br,https://www.meulembra.com.br"
 # endereço oficial do app (volta do pagamento). Passa para "https://meulembra.com.br/" quando o domínio estiver no ar
-SITE_URL = "https://icarlxs-code.github.io/Calend-rio-/"
+SITE_URL = "https://meulembra.com.br/"
 TEAM = '[{"id":"henrique","name":"Henrique","email":"icarlxs@gmail.com"},{"id":"matheus","name":"Matheus","email":"contatopedrazzi1@gmail.com"}]'
