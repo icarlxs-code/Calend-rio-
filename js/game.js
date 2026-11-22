@@ -32,7 +32,7 @@ const CAPS = { createXp: 10, noteXp: 5, personalXp: 20, dayXp: 900, createCount:
 const XP = { onTime: 20, late: 8, quick: 2, personal: 12, create: 5, note: 3, open: 10, perfect: 40, comeback: 30 };
 
 /* ---------- estado ---------- */
-const blank = () => ({ v: 1, od: [], mxp: { m: '', xp: 0 }, xp: 0, badges: {}, c: {}, d: { day: '', xp: 0, created: 0, notes: 0, personal: 0, done: 0, times: [] }, ids: [], days: [], mon: {}, seeded: false });
+const blank = () => ({ v: 1, rm: {}, od: [], mxp: { m: '', xp: 0 }, xp: 0, badges: {}, c: {}, d: { day: '', xp: 0, created: 0, notes: 0, personal: 0, done: 0, times: [] }, ids: [], days: [], mon: {}, seeded: false });
 let S = null, uidKey = '';
 const LS = () => `lembra.game.${store.user?.uid || store.me || 'x'}`;
 function load() {
@@ -53,6 +53,10 @@ function merge(a, b) {
   const out = { ...a, xp: Math.max(a.xp || 0, b.xp || 0), seeded: !!(a.seeded || b.seeded) };
   out.badges = { ...(b.badges || {}) };
   for (const [k, t] of Object.entries(a.badges || {})) out.badges[k] = Math.min(t, out.badges[k] || t);
+  // emblemas retirados (ex.: o Vitalício quando o acesso acaba): não voltam pela outra cópia; só se for ganho de novo depois
+  out.rm = { ...(a.rm || {}) };
+  for (const [k, t] of Object.entries(b.rm || {})) out.rm[k] = Math.max(out.rm[k] || 0, t);
+  for (const [k, t] of Object.entries(out.rm)) if (out.badges[k] && out.badges[k] <= t) delete out.badges[k];
   out.c = { ...(a.c || {}) };
   for (const [k, v] of Object.entries(b.c || {})) if (typeof v === 'number') out.c[k] = Math.max(out.c[k] || 0, v); else if (typeof v === 'string' && (!out.c[k] || v > out.c[k])) out.c[k] = v;
   out.ids = [...new Set([...(a.ids || []), ...(b.ids || [])])].slice(-500);
@@ -70,7 +74,7 @@ function clean(g) {
   const n = (v, max = 1e9) => (Number.isFinite(+v) ? Math.max(0, Math.min(max, +v)) : 0);
   const ok = (k) => /^[a-z0-9_]{1,24}$/i.test(k);
   return {
-    v: 1, xp: n(g.xp, 5e6), seeded: !!g.seeded, mxp: g.mxp && /^\d{4}-\d{2}$/.test(g.mxp.m || '') ? { m: g.mxp.m, xp: n(g.mxp.xp, 2e5) } : { m: '', xp: 0 },
+    v: 1, xp: n(g.xp, 5e6), seeded: !!g.seeded, rm: Object.fromEntries(Object.entries(g.rm || {}).filter(([k, t]) => /^[a-z0-9_]{1,24}$/i.test(k) && Number.isFinite(+t)).map(([k, t]) => [k, +t])), mxp: g.mxp && /^\d{4}-\d{2}$/.test(g.mxp.m || '') ? { m: g.mxp.m, xp: n(g.mxp.xp, 2e5) } : { m: '', xp: 0 },
     badges: Object.fromEntries(Object.entries(g.badges || {}).filter(([k, t]) => ok(k) && badgeById(k) && Number.isFinite(+t)).map(([k, t]) => [k, +t])),
     c: Object.fromEntries(Object.entries(g.c || {}).filter(([k]) => ok(k)).map(([k, v]) => [k, typeof v === 'string' ? v.slice(0, 12) : n(v)])),
     d: g.d && typeof g.d === 'object' ? { day: String(g.d.day || '').slice(0, 10), xp: n(g.d.xp), created: n(g.d.created), notes: n(g.d.notes), personal: n(g.d.personal), done: n(g.d.done), times: (Array.isArray(g.d.times) ? g.d.times : []).filter(Number.isFinite).slice(-6) } : blank().d,
@@ -148,8 +152,19 @@ function gain(xp, why = '', { fly = true } = {}) {
   return got;
 }
 /* depois de qualquer mudança: confere emblemas, nível e salva */
+/* o dono tirou o acesso Vitalício: o emblema (e o XP que ele deu) sai também */
+function revokeVip() {
+  const b = store.billing;
+  if (!S.badges.vitalicio || !b || ['checking', 'offline'].includes(b.plan) || store.mode !== 'cloud') return false;
+  if (b.plan === 'lifetime' && b.vip) return false;
+  delete S.badges.vitalicio;
+  S.rm = { ...(S.rm || {}), vitalicio: Date.now() };
+  S.xp = Math.max(0, S.xp - RARITY.lendario.xp);
+  return true;
+}
 function settle({ quiet = false } = {}) {
   load();
+  if (revokeVip()) { publishRing(); save(); }
   const before = S.c._lvl ?? levelOf(S.xp);
   const fresh = [];
   for (let round = 0; round < 3; round++) {
@@ -298,6 +313,8 @@ export function onNote(note) {
 }
 /* entrega emblemas pendentes sem comemoração (ex.: Vitalício, que já tem a própria revelação) */
 export function quietSettle() { settle({ quiet: true }); }
+/* depois de conferir o plano: tira o emblema Vitalício se o acesso acabou */
+export function checkVipBadge() { load(); if (revokeVip()) { publishRing(); save(true); listeners.forEach((f) => { try { f(); } catch { /* ok */ } }); } }
 export function onInvite() { load(); S.c.invites = (S.c.invites || 0) + 1; settle(); }
 /* ranking: guarda a melhor liga e pódios (vem da tela do ranking) */
 export function onRank(board) {

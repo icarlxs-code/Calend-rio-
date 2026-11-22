@@ -53,6 +53,7 @@ export async function checkBilling() {
     // o teste grátis NÃO começa sozinho: a pessoa escolhe começar (botão na tela de planos)
     const st = await api('/billing/status', {});
     store.billing = st;
+    import('./game.js').then((g) => g.checkVipBadge && g.checkVipBadge()).catch(() => {});
     saveLast(st);
   } catch (e) {
     // sem conexão com o servidor: usa a última situação conhecida, se ainda estiver no prazo (não trava quem já pagou).
