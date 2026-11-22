@@ -205,6 +205,7 @@ const actions = {
   'edit-profile': async () => (await import('./views/profile.js')).openProfile(),
   profile: async () => (await import('./views/profile.js')).openProfilePage(),
   'team-board': async () => (await import('./views/teamboard.js')).openTeamBoard(),
+  friends: async () => (await import('./friends.js')).openFriends(),
   'confirm-phone': async () => (await import('./phone.js')).confirmPhone(() => render()),
   support: async () => {
     // o dono do app abre a caixa com as mensagens dos clientes (para responder); os outros, o próprio chat
@@ -697,6 +698,8 @@ function openDeepLink(hash = location.hash, tries = 0) {
     if (store.solo && store.mode === 'cloud') checkBilling().then(() => { render(); import('./vip.js').then((v) => v.maybeShowVip()); }).catch(() => {});
     return true;
   }
+  if (/^#\/amigos$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./friends.js').then((m) => m.openFriends()); return true; }
+  if (/^#\/amigo\//.test(hash || '')) { import('./friends.js').then((m) => { m.captureFriendLink(hash); m.processFriendLink(); }); return true; }
   if (/^#\/ranking$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./views/ranking.js').then((m) => m.openRanking()); return true; }
   if (/^#\/suporte(-dono)?$/.test(hash || '')) {
     history.replaceState(null, '', location.pathname + location.search);
@@ -1117,6 +1120,8 @@ function startApp() {
   };
   store.hooks.note = (n) => import('./game.js').then((gm) => gm.onNote(n)).catch(() => {});
   setTimeout(() => import('./game.js').then((gm) => { gm.startGame(); gm.onGame(() => refreshLevelRings()); refreshLevelRings(); }).catch((e) => console.warn('conquistas', e)), 1800);
+  // amizades: publica o cartão (nível, emblemas) e, se veio por um link de amizade, mostra o pedido
+  setTimeout(() => import('./friends.js').then((f) => { f.publishCard(); f.processFriendLink(); import('./game.js').then((gm) => gm.onGame(() => { clearTimeout(window.__cardT); window.__cardT = setTimeout(f.publishCard, 8000); })); }).catch(() => {}), 5000);
   setTimeout(askReinstall, 2500); // aviso de instalar a versão nova (só para quem precisa)
   // versão: confere se há nova ao voltar para o app (atualiza sozinho) e mostra as novidades uma vez
   import('./version.js').then((v) => {
@@ -1337,6 +1342,7 @@ async function boot() {
   captureOrigin();
   // link de convite para a agenda compartilhada: guarda para depois do login
   captureInvite();
+  import('./friends.js').then((f) => f.captureFriendLink()).catch(() => {});
   loadInviteInfo();
   const hash = location.hash || '';
   const fb = CONFIG.firebase;
@@ -1449,7 +1455,7 @@ navigator.serviceWorker?.addEventListener('message', (ev) => {
 window.addEventListener('hashchange', () => {
   // abriu um convite com o app já aberto
   if (/^#\/convite\//.test(location.hash)) { captureInvite(); return maybeAcceptInvite(); }
-  if (/^#\/((e|d|p)\/|suporte|ranking|vitalicio)/.test(location.hash)) return openDeepLink();
+  if (/^#\/((e|d|p)\/|suporte|ranking|vitalicio|amigos|amigo\/)/.test(location.hash)) return openDeepLink();
   if (/^#\/(c|v)\//.test(location.hash)) location.reload();
 });
 

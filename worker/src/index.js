@@ -279,7 +279,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20 };
+const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -563,6 +563,68 @@ async function handle(req, env) {
     f[me.id] = Date.now();
     await env.CAL.put(key, JSON.stringify(f));
     return reply(env, req, { ok: true });
+  }
+
+  // ---------- amizades: convite por link → pedido na conta da pessoa → ela aceita ----------
+  if (url.pathname.startsWith('/friends/')) {
+    const meU = me.solo && !me.guest ? me.ws : null; // a própria conta (nunca a agenda de outra pessoa)
+    if (!meU || !/^[A-Za-z0-9]{6,64}$/.test(meU)) return reply(env, req, { error: 'Entre com a sua conta para ter amigos.' }, 400);
+    const getL = async (k) => (await env.CAL.get(k, 'json')) || [];
+    const vipOfU = async (u) => { const b = await getBill(env, u); return b && b.lifetime && b.comp && b.vip ? { no: b.vip.no } : null; };
+    const cardOf = async (u) => {
+      const c = (await env.CAL.get(`card:${u}`, 'json')) || {};
+      return { uid: u, name: c.name || 'Alguém', photo: c.photo || null, color: c.color || '#7C5CFF', level: c.level || 0, xp: c.xp || 0, badges: c.badges || [], tier: c.tier || '', since: c.since || null, vip: await vipOfU(u) };
+    };
+    if (url.pathname === '/friends/card') {
+      const photo = typeof body.photo === 'string' && body.photo.length < 90000 && /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(body.photo) ? body.photo : null;
+      const card = { name: clean(body.name, 40) || me.name, photo, color: /^#[0-9a-fA-F]{6}$/.test(body.color || '') ? body.color : '#7C5CFF', level: Math.max(0, Math.min(100, Math.round(Number(body.level) || 0))), xp: Math.max(0, Math.round(Number(body.xp) || 0)), tier: clean(body.tier, 30), since: Number(body.since) || null,
+        badges: (Array.isArray(body.badges) ? body.badges : []).filter((x) => typeof x === 'string' && /^[a-z0-9_-]{1,30}$/.test(x)).slice(0, 150), at: Date.now() };
+      await env.CAL.put(`card:${meU}`, JSON.stringify(card));
+      return reply(env, req, { ok: true });
+    }
+    if (url.pathname === '/friends/link') {
+      const token = Array.from(crypto.getRandomValues(new Uint8Array(18)), (x) => 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'[x % 56]).join('');
+      await env.CAL.put(`flink:${token}`, JSON.stringify({ uid: meU, at: Date.now() }), { expirationTtl: 14 * 86400 });
+      return reply(env, req, { ok: true, token });
+    }
+    if (url.pathname === '/friends/open') {
+      const token = clean(body.token, 40);
+      const l = /^[A-Za-z0-9]{10,40}$/.test(token) ? await env.CAL.get(`flink:${token}`, 'json') : null;
+      if (!l) return reply(env, req, { error: 'Este convite de amizade não existe mais. Peça um novo.' }, 404);
+      if (l.uid === meU) return reply(env, req, { ok: true, self: true });
+      if ((await getL(`friends:${meU}`)).includes(l.uid)) return reply(env, req, { ok: true, already: true, from: await cardOf(l.uid) });
+      const reqs = (await getL(`freq:${meU}`)).filter((r) => r.from !== l.uid);
+      reqs.unshift({ from: l.uid, at: Date.now() });
+      await env.CAL.put(`freq:${meU}`, JSON.stringify(reqs.slice(0, 50)));
+      return reply(env, req, { ok: true, from: await cardOf(l.uid) });
+    }
+    if (url.pathname === '/friends/answer') {
+      const from = clean(body.from, 64);
+      const reqs = await getL(`freq:${meU}`);
+      if (!reqs.some((r) => r.from === from)) return reply(env, req, { error: 'Pedido não encontrado.' }, 404);
+      await env.CAL.put(`freq:${meU}`, JSON.stringify(reqs.filter((r) => r.from !== from)));
+      if (body.ok === true) {
+        const a = await getL(`friends:${meU}`), b = await getL(`friends:${from}`);
+        await env.CAL.put(`friends:${meU}`, JSON.stringify([...new Set([from, ...a])].slice(0, 300)));
+        await env.CAL.put(`friends:${from}`, JSON.stringify([...new Set([meU, ...b])].slice(0, 300)));
+        const mine = await cardOf(meU);
+        await sendToMember(env, 'u' + from.replace(/[^A-Za-z0-9]/g, '').slice(0, 24), { title: '🤝 Nova amizade no Lembra', body: `${mine.name} aceitou o seu convite. Veja o perfil, o nível e os emblemas.`, tag: `amigo-${meU}`, url: './#/amigos' }).catch(() => 0);
+      }
+      return reply(env, req, { ok: true });
+    }
+    if (url.pathname === '/friends/remove') {
+      const other = clean(body.uid, 64);
+      await env.CAL.put(`friends:${meU}`, JSON.stringify((await getL(`friends:${meU}`)).filter((x) => x !== other)));
+      await env.CAL.put(`friends:${other}`, JSON.stringify((await getL(`friends:${other}`)).filter((x) => x !== meU)));
+      return reply(env, req, { ok: true });
+    }
+    if (url.pathname === '/friends/list') {
+      const [fr, rq] = [await getL(`friends:${meU}`), await getL(`freq:${meU}`)];
+      const friends = await Promise.all(fr.slice(0, 200).map(cardOf));
+      const requests = await Promise.all(rq.slice(0, 30).map(async (r) => ({ ...(await cardOf(r.from)), at: r.at })));
+      return reply(env, req, { ok: true, friends: friends.sort((x, y) => y.level - x.level || y.xp - x.xp), requests, me: await cardOf(meU) });
+    }
+    return reply(env, req, { error: 'não encontrado' }, 404);
   }
 
   // ---------- suporte: chat da pessoa com o dono do app ----------

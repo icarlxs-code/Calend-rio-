@@ -56,7 +56,7 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
     return `${sheetHead(esc((me.name || 'Perfil').split(' ')[0]), { left: '<button class="btn-text" data-close>Fechar</button>', right: '<button class="btn-text" data-edit>Editar</button>' })}
     <div class="prof">
       <div class="prof__top">
-        <button class="prof__pic" data-pic aria-label="Foto do perfil" style="--ring:${ring}">
+        <button class="prof__pic${store.billing?.plan === 'lifetime' && store.billing?.vip ? ' prof__pic--vip' : ''}" data-pic aria-label="Foto do perfil" style="--ring:${ring}">
           <span class="prof__ring">${avatar(store.me, 96)}</span>
           <span class="prof__cam">${icon('camera', 15)}</span>
         </button>
@@ -66,6 +66,7 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
           <div><b>${fmt(Object.keys(st.badges).length)}</b><small>${Object.keys(st.badges).length === 1 ? 'emblema' : 'emblemas'}</small></div>
         </div>
       </div>
+      ${store.billing?.plan === 'lifetime' && store.billing?.vip ? `<div class="prof__vipline">${icon('crown', 13)} Lembra Vitalício · Nº ${String(store.billing.vip.no).padStart(3, '0')}</div>` : ''}
       <div class="prof__name"><b>${esc(me.name || '')}</b>${prof.phoneVerified ? `<span class="prof__ok" title="Celular confirmado">${icon('check', 11)}</span>` : ''}</div>
       ${prof.profession ? `<div class="prof__job">${esc(professionFor(prof.profession, prof.pronoun))}${prof.role ? ' · ' + esc(prof.role) : ''}</div>` : ''}
       ${prof.bio ? `<div class="prof__bio">${esc(prof.bio)}</div>` : ''}
@@ -75,7 +76,7 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
           <span class="prof__bar"><i style="width:${Math.round(L.pct * 100)}%;background:${L.tier.hue}"></i></span>
           <small>${L.level >= 100 ? 'Nível máximo! Você é lenda.' : `${fmt(L.xp - L.cur)} / ${fmt(L.next - L.cur)} XP para o nível ${L.level + 1}`}</small></span>
       </button>
-      <div class="prof__btns"><button class="btn btn--soft btn--sm" data-edit>Editar perfil</button><button class="btn btn--soft btn--sm" data-share>${icon('share', 15)} Compartilhar</button></div>
+      <div class="prof__btns"><button class="btn btn--soft btn--sm" data-edit>Editar perfil</button><button class="btn btn--soft btn--sm" data-action="friends">${icon('users', 15)} Amigos</button><button class="btn btn--soft btn--sm" data-share>${icon('share', 15)} Compartilhar</button></div>
       ${earned.length ? `<div class="prof__hl">${earned.slice(0, 8).map((b) => `<button class="prof__hlit" data-badge="${b.id}"><span>${badgeArt(b, 58)}</span><small>${esc(b.name())}</small></button>`).join('')}</div>` : ''}
       <div class="prof__tabs" role="tablist">
         <button role="tab" class="${cur === 'emblemas' ? 'is-on' : ''}" data-tab="emblemas" aria-label="Emblemas">${icon('grid', 20)}</button>
