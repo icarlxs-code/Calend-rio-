@@ -1,3 +1,4 @@
+import { regAll } from './registry.js';
 /* Cobrança do Lembra (Stripe) + teste grátis de 24h.
    - Planos: mensal R$ 9,90 (assinatura) e vitalício R$ 150 (pagamento único).
    - Complemento mensal, à parte: Agenda compartilhada Dupla R$ 6,90 (+1 pessoa) ou Equipe R$ 14,90 (+4).
@@ -444,7 +445,7 @@ export async function markVipSent(env, uid, sent) {
 export async function vipMigrate(env, notify, now = Date.now()) {
   if (await env.CAL.get('vip-migrated-1')) return 0;
   await env.CAL.put('vip-migrated-1', String(now));
-  const reg = (await env.CAL.get('users', 'json')) || {};
+  const reg = await regAll(env);
   const seen = new Set(), olds = [];
   for (const u of Object.values(reg)) {
     if (!u || !u.ws || seen.has(u.ws) || !/^[A-Za-z0-9]{6,64}$/.test(u.ws)) continue;
@@ -481,7 +482,7 @@ async function syncSpent(env, ws, b, fetchImpl) {
   return b;
 }
 export async function billingAll(env, fetchImpl = fetch) {
-  const reg = (await env.CAL.get('users', 'json')) || {};
+  const reg = await regAll(env);
   const out = {};
   await Promise.all(Object.values(reg).map(async (u) => {
     let b = await getBill(env, u.ws);

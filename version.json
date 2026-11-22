@@ -1,11 +1,12 @@
 {
-  "version": "2.1.0",
-  "build": "mbjcadps",
+  "version": "2.2.0",
+  "build": "ujb75sa5",
   "date": "2026-11-22",
-  "min": "",
-  "title": "Melhorias",
+  "min": "2.2.0",
+  "title": "Mais rápido e mais estável",
   "notes": [
-    "Atualizamos o Lembra regularmente para corrigir erros, deixar tudo mais rápido e melhorar a sua experiência. Obrigado por usar o Lembra!"
+    "O Lembra agora abre mais rápido e funciona melhor com a internet fraca: a sua agenda fica guardada no celular e só o que mudou é buscado.",
+    "Lembretes e avisos mais confiáveis, mesmo nos horários em que muita gente usa o app ao mesmo tempo."
   ],
-  "builtAt": "2026-11-22T09:55:15.349Z"
+  "builtAt": "2026-11-22T11:26:29.089Z"
 }

@@ -944,6 +944,8 @@ function showForgot(state = 'form', msg = '') {
       const code = err && err.code;
       showForgot('form', code === 'timeout' ? 'O servidor demorou para responder. Verifique a internet e tente de novo.'
         : code === 'auth/too-many-requests' ? 'Muitos pedidos seguidos. Espere alguns minutos e tente de novo (ou use “Pedir ajuda”).'
+        // limite diário de e-mails do plano grátis do Firebase: a pessoa não fica sem saída
+        : code === 'auth/quota-exceeded' || /QUOTA|quota/.test(String(err?.message || '')) ? 'O envio de e-mails do Lembra está muito movimentado hoje. Toque em “Pedir ajuda” abaixo: a gente libera o seu acesso pelo suporte, ou tente de novo amanhã cedo.'
         : LOGIN_ERRORS[code] || 'Não consegui enviar agora. Tente de novo em instantes.');
     }
   };
@@ -1335,6 +1337,8 @@ function captureOrigin() {
 }
 
 async function boot() {
+  // só nos testes automáticos no computador (emulador local): o robô enxerga o estado do app
+  try { if (['localhost', '127.0.0.1'].includes(location.hostname) && localStorage.getItem('cal.emulator') === '1') window.__lembraStore = store; } catch { /* ok */ }
   startErrorLog();
   startTracking();
   // versão: confere já na abertura (também na tela de entrar); versão antiga → atualiza ou mostra o botão "Atualizar"

@@ -14,6 +14,7 @@ const env = {
     get: async (k, t) => (kv.has(k) ? (t === 'json' ? JSON.parse(kv.get(k)) : kv.get(k)) : null),
     put: async (k, v) => kv.set(k, v),
     delete: async (k) => kv.delete(k),
+    scan: async (p) => [...kv.entries()].filter(([k]) => k.startsWith(p)),
   },
   TEAM: JSON.stringify([{ id: 'henrique', name: 'Henrique', email: 'dono@teste.local' }, { id: 'matheus', name: 'Matheus', email: 'socio@teste.local' }]),
   ADMIN_EMAIL: 'dono@teste.local',
@@ -117,9 +118,7 @@ test('quem ganhou o "para sempre" antes da surpresa existir recebe número e avi
   const old = { uid: 'lorenaUid0000001', lifetime: true, comp: true, lifetimeAt: Date.now() - 3600e3 };
   kv.set('bill:lorenaUid0000001', JSON.stringify(old));
   kv.set('bill:pagouUid00000001', JSON.stringify({ uid: 'pagouUid00000001', lifetime: true, lifetimeAt: Date.now() - 7200e3 })); // pagou: não é presente
-  const reg = JSON.parse(kv.get('users') || '{}');
-  reg.ulorenaUid0000001 = { ws: 'lorenaUid0000001' }; reg.upagouUid00000001 = { ws: 'pagouUid00000001' };
-  kv.set('users', JSON.stringify(reg));
+  kv.set('reg:ulorenaUid0000001', JSON.stringify({ ws: 'lorenaUid0000001' })); kv.set('reg:upagouUid00000001', JSON.stringify({ ws: 'pagouUid00000001' }));
   const told = [];
   const n = await vipMigrate(env, async (uid) => { told.push(uid); return 1; });
   assert.equal(n, 1);
@@ -139,7 +138,7 @@ test('o painel guarda se o aviso chegou no celular', async () => {
   const r = await call('/admin/grant', { ...DONO, body: { uid: 'semAvisoUid00001', on: true } });
   assert.equal(r.data.sent, 0);
   assert.equal(r.data.status.vip.sent, 0);
-  const reg = JSON.parse(kv.get('users') || '{}'); reg.usemAvisoUid00001 = { ws: 'semAvisoUid00001' }; kv.set('users', JSON.stringify(reg));
+  kv.set('reg:usemAvisoUid00001', JSON.stringify({ ws: 'semAvisoUid00001' }));
   const all = (await call('/billing/all', DONO)).data;
   assert.equal(all.byWs.semAvisoUid00001.vip.sent, 0, 'o painel sabe que o aviso não chegou');
 });

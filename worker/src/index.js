@@ -3,98 +3,61 @@
    - Lembretes no horário certo: o app envia a lista (/schedule) e o servidor
      confere a cada minuto, mesmo com os celulares fechados
    - Conversa com o Claude dentro do app (/ask), se houver chave da Anthropic
-   Dados guardados no KV "CAL": chaves VAPID, aparelhos e lista de lembretes. */
+   Dados guardados num Durable Object com SQLite (veja entry.js e kvsql.js): chaves VAPID, aparelhos,
+   listas de lembretes e a fila do relógio. O código usa a mesma interface do KV (env.CAL). */
 import { generateVapid, sendPush } from './webpush.js';
 import { verifyIdToken } from './auth.js';
-import { runCoach } from './coach.js';
-import { runPersonalCoach } from './pcoach.js';
 import { recordAct, getBoard, adminBoard, monthlyAward, eligible as rankEligible, standing as rankStanding, weekKey as rankWeek } from './rank.js';
 import { getBill, putBill, stripe as stripeApi } from './billing.js';
+import { getDevices, removeDevices, addDevice, upgradeSubs } from './devices.js';
+import { runTick, planReminders, planPersonal, seedPerson, upgradeLegacy, usageMeter } from './tick.js';
+import { dueOf } from './kvsql.js';
+import { regGet, regPut, regDel, regAll, idOfWs } from './registry.js';
 import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling, untilOf, statusOf, grantComp, markVipSent, vipMigrate } from './billing.js';
 
 const SUBJECT = 'mailto:avisos@calendario.app';
 
+const vapidMem = new WeakMap();
 async function getVapid(env) {
+  const hit = vapidMem.get(env.CAL);
+  if (hit) return hit;
   let v = await env.CAL.get('vapid', 'json');
   if (!v) {
     v = await generateVapid();
     await env.CAL.put('vapid', JSON.stringify(v));
   }
+  vapidMem.set(env.CAL, v);
   return v;
 }
-const getSubs = async (env) => (await env.CAL.get('subs', 'json')) || {};
-const getSchedule = async (env) => (await env.CAL.get('schedule', 'json')) || { items: [] };
-/* "Já enviados" ficam em chaves próprias, escritas só pelo relógio do servidor:
-   assim o app atualizando a lista nunca apaga o registro (evita aviso repetido). */
-async function getSent(env, key, legacy) {
-  const s = await env.CAL.get(key, 'json');
-  return s || (legacy && legacy.sent) || {};
-}
-const prune = (sent, now) => { for (const [k, t] of Object.entries(sent)) if (t < now - 3 * 86400e3) delete sent[k]; return sent; };
 
-/* Manda para todos os aparelhos de uma pessoa, respeitando as preferências do aparelho */
-async function sendToMember(env, member, msg, pref, statuses = []) {
-  const [subs, vapid] = await Promise.all([getSubs(env), getVapid(env)]);
-  let sent = 0, changed = false;
-  await Promise.all(Object.entries(subs).map(async ([id, d]) => {
-    if (d.member !== member) return;
-    if (pref && d.prefs && d.prefs[pref] === false) return;
+/* Manda para todos os aparelhos de uma pessoa, respeitando as preferências do aparelho.
+   meter.pushes conta as tentativas (o relógio para o lote antes de passar do limite grátis). */
+async function sendToMember(env, member, msg, pref, statuses = [], meter = null) {
+  const devs = await getDevices(env, member);
+  const list = Object.entries(devs).filter(([, d]) => !(pref && d.prefs && d.prefs[pref] === false));
+  if (!list.length) return 0;
+  const vapid = await getVapid(env);
+  let sent = 0;
+  const dead = [];
+  await Promise.all(list.map(async ([id, d]) => {
+    if (meter) meter.pushes = (meter.pushes || 0) + 1;
     try {
-      const status = await sendPush(d.subscription, msg, vapid, { subject: SUBJECT });
-      console.log(`envio para ${member}: ${status} — ${msg.title}`);
+      let status;
+      try { status = await sendPush(d.subscription, msg, vapid, { subject: SUBJECT }); }
+      catch (e) { await new Promise((r) => setTimeout(r, 400)); status = await sendPush(d.subscription, msg, vapid, { subject: SUBJECT }); } // falha de rede: mais uma tentativa
+      // serviço de push ocupado ou fora do ar por um instante: tenta mais uma vez
+      if (status === 429 || status >= 500) status = await sendPush(d.subscription, msg, vapid, { subject: SUBJECT });
+      if (status >= 300) console.log(`envio para ${member}: ${status}`); // só os problemas (cada log custa processamento)
       statuses.push(status);
-      if (status === 404 || status === 410) {
-        delete subs[id];
-        changed = true;
-      } else if (status < 300) sent++;
+      if (status === 404 || status === 410) dead.push(id);
+      else if (status < 300) sent++;
     } catch (e) {
       console.log('falha no envio', member, e.message);
       statuses.push('erro: ' + e.message);
     }
   }));
-  if (changed) await env.CAL.put('subs', JSON.stringify(subs));
+  if (dead.length) await removeDevices(env, member, dead);
   return sent;
-}
-
-/* ---------- lembretes (a cada minuto) ---------- */
-async function runSchedule(env) {
-  const now = Date.now();
-  const sch = await getSchedule(env);
-  const reg = await registry(env, now);
-  const others = await Promise.all([...new Set(activeRegs(reg, now).map(([, u]) => u.ws))].map((ws) => env.CAL.get(`schedule:${ws}`, 'json')));
-  const allItems = [...(sch.items || []), ...others.flatMap((o) => (o && o.items) || [])];
-  const due0 = allItems.filter((it) => it.at <= now && it.at > now - 15 * 60e3);
-  if (!due0.length) return 0;
-  const sent = await getSent(env, 'schedule-sent', sch);
-  const due = due0.filter((it) => !sent[it.id]);
-  if (!due.length) return 0;
-  for (const it of due) sent[it.id] = now;
-  // grava antes de enviar: se o envio demorar, o minuto seguinte não manda de novo
-  await env.CAL.put('schedule-sent', JSON.stringify(prune(sent, now)));
-  for (const it of due) await sendToMember(env, it.member, { title: it.title, body: it.body, tag: it.tag, url: it.url, badge: it.badge }, it.kind);
-  return due.length;
-}
-
-/* Lembretes da agenda pessoal: cada lista vai só para o celular do dono */
-async function runPersonal(env) {
-  const now = Date.now();
-  const team = (await everyone(env)).map((m) => m.id);
-  const lists = await Promise.all(team.map((m) => env.CAL.get(`pitems:${m}`, 'json')));
-  let legacy = null;
-  if (lists.some((l) => !l)) legacy = await env.CAL.get('personal', 'json'); // formato antigo
-  const due0 = [];
-  team.forEach((m, i) => {
-    const list = lists[i] || legacy?.byMember?.[m] || [];
-    for (const it of list) if (it.at <= now && it.at > now - 15 * 60e3) due0.push([m, it]);
-  });
-  if (!due0.length) return 0;
-  const sent = await getSent(env, 'personal-sent', legacy);
-  const due = due0.filter(([, it]) => !sent[it.id]);
-  if (!due.length) return 0;
-  for (const [, it] of due) sent[it.id] = now;
-  await env.CAL.put('personal-sent', JSON.stringify(prune(sent, now)));
-  for (const [member, it] of due) await sendToMember(env, member, { title: it.title, body: it.body, tag: it.tag, url: it.url });
-  return due.length;
 }
 
 /* ---------- HTTP ---------- */
@@ -115,6 +78,9 @@ const reply = (env, req, data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...SEC, ...cors(env, req) } });
 
 const clean = (s, n) => String(s || '').slice(0, n);
+/* quem está com o app aberto agora (na memória do servidor) */
+const presences = new WeakMap();
+const presenceOf = (env) => env.PRESENCE || presences.get(env.CAL) || (presences.set(env.CAL, new Map()), presences.get(env.CAL));
 /* Endereço de uma notificação: só telas do próprio app ("./" ou "./#/e/<id>"), nunca um site de fora */
 const appUrl = (u) => { const v = String(u || ''); return /^\.\/(#\/[\w/-]{0,120})?$/.test(v) ? v : './'; };
 const MEMBERS = (env) => JSON.parse(env.TEAM || '[]').map((m) => m.id);
@@ -134,12 +100,11 @@ const scheduleKey = (me) => (me.ws === 'main' ? 'schedule' : `schedule:${me.ws}`
 /* Contas próprias conhecidas pelo servidor (para os lembretes e mensagens rodarem para elas também) */
 async function registerUser(env, me, st = null) {
   if (me.ws === 'main' || me.guest) return; // convidado: o relógio já roda pela agenda do dono
-  const reg = (await env.CAL.get('users', 'json')) || {};
-  const cur = reg[me.id];
+  const cur = await regGet(env, me.id);
   const until = st ? untilOf(st) : cur?.until;
   if (cur && cur.name === me.name && cur.ws === me.ws && cur.until === until) return; // já conhecido: não gasta gravação
-  reg[me.id] = { name: me.name, ws: me.ws, at: cur?.at || Date.now(), ...(until !== undefined ? { until } : {}) };
-  await env.CAL.put('users', JSON.stringify(reg));
+  await regPut(env, me.id, { name: me.name, ws: me.ws, at: cur?.at || Date.now(), ...(until !== undefined ? { until } : {}) });
+  if ((until || 0) > Date.now()) await seedPerson(env, me.id);
 }
 /* Conta nova abriu o app pela primeira vez: avisa o dono do app no celular (nome e e-mail).
    Quem já existia (já tem cobrança ou já está no registro) é só marcado, sem aviso. */
@@ -148,8 +113,7 @@ async function announceNewUser(env, me) {
   const key = `known:${me.id}`;
   if (await env.CAL.get(key)) return;
   await env.CAL.put(key, String(Date.now()));
-  const reg = (await env.CAL.get('users', 'json')) || {};
-  if (reg[me.id] || (await env.CAL.get(`bill:${me.ws}`))) return; // conta antiga
+  if ((await regGet(env, me.id)) || (await env.CAL.get(`bill:${me.ws}`))) return; // conta antiga
   const em = (env.ADMIN_EMAIL || JSON.parse(env.TEAM || '[]')[0]?.email || '').toLowerCase();
   if ((me.email || '').toLowerCase() === em || me.founder) return;
   const owner = await adminMember(env);
@@ -163,10 +127,11 @@ async function refreshUntil(env, ws) {
   if (!ws || ws === 'main') return;
   const st = await billingStatus(env, { ws, id: '' });
   const until = untilOf(st);
-  const reg = (await env.CAL.get('users', 'json')) || {};
-  let changed = false;
-  for (const u of Object.values(reg)) if (u.ws === ws && u.until !== until) { u.until = until; changed = true; }
-  if (changed) await env.CAL.put('users', JSON.stringify(reg));
+  const id = idOfWs(ws), u = await regGet(env, id);
+  if (!u || u.until === until) return;
+  const back = until > Date.now() && !((u.until || 0) > Date.now());
+  await regPut(env, id, { ...u, until });
+  if (back) await seedPerson(env, id); // voltou a ter plano: o relógio volta a olhar a pessoa
 }
 /* Tem plano ativo? (teste, mensal, vitalício, convidado de agenda compartilhada ativa ou a dupla).
    Sem plano: o servidor não guarda lembretes, não manda mensagens e o assistente não responde. */
@@ -177,12 +142,8 @@ async function entitled(env, me) {
 const LOCKED = { error: 'Sem plano ativo: comece o teste grátis ou assine para usar.', locked: true };
 /* Registro com o prazo do plano; contas antigas (sem prazo) são conferidas uma vez */
 async function registry(env, now = Date.now()) {
-  const reg = (await env.CAL.get('users', 'json')) || {};
-  const legacy = Object.values(reg).filter((u) => u.until === undefined);
-  if (legacy.length) {
-    await Promise.all(legacy.map(async (u) => { u.until = untilOf(statusOf(await env.CAL.get(`bill:${u.ws}`, 'json'), { ws: u.ws }, now), now); }));
-    await env.CAL.put('users', JSON.stringify(reg));
-  }
+  const reg = await regAll(env);
+  for (const [id, u] of Object.entries(reg)) if (u.until === undefined) { u.until = untilOf(statusOf(await env.CAL.get(`bill:${u.ws}`, 'json'), { ws: u.ws }, now), now); await regPut(env, id, u); }
   return reg;
 }
 const activeRegs = (reg, now = Date.now()) => Object.entries(reg).filter(([, u]) => (u.until || 0) > now);
@@ -388,7 +349,7 @@ async function handle(req, env) {
     const st = { ...(await billingStatus(env, me)), foundersLeft: Math.max(0, 200 - Number(await env.CAL.get('founders-count') || 0)) };
     if (st.vip) st.vip.total = Math.max(st.vip.no, Number(await env.CAL.get('vip-count') || 0));
     // mantém o prazo do relógio em dia (ex.: o teste acabou, o mensal renovou)
-    if (me.ws !== 'main') { const reg = (await env.CAL.get('users', 'json')) || {}; if ((reg[me.id] || me.founder) && reg[me.id]?.until !== untilOf(st)) await registerUser(env, me, st); }
+    if (me.ws !== 'main') { const cur = await regGet(env, me.id); if ((cur || me.founder) && cur?.until !== untilOf(st)) await registerUser(env, me, st); }
     return reply(env, req, st);
   }
   if (url.pathname === '/billing/trial') {
@@ -459,28 +420,17 @@ async function handle(req, env) {
   }
 
   if (url.pathname === '/subscribe') {
-    const s = body.subscription;
-    if (!s?.endpoint || !/^https:\/\//.test(s.endpoint) || !s.keys?.p256dh || !s.keys?.auth) return reply(env, req, { error: 'aparelho inválido' }, 400);
-    const subs = await getSubs(env);
-    let id = clean(body.id, 80) || s.endpoint.slice(-40);
-    // o identificador do aparelho de outra pessoa não pode ser reaproveitado (não dá para "sequestrar" os avisos dela)
-    if (subs[id] && subs[id].member !== me.id) id = `${me.id}:${id}`.slice(0, 120);
-    // o mesmo endereço de notificação não pode ficar registrado em nome de duas pessoas
-    for (const [k, d] of Object.entries(subs)) if (k !== id && d.subscription?.endpoint === s.endpoint && d.member !== me.id) delete subs[k];
-    // mudança de endereço do app (github.io → meulembra.com.br): o mesmo celular ativa os avisos de novo no endereço novo;
-    // a inscrição do endereço antigo (mesma pessoa, mesmo aparelho) sai, para não chegar cada aviso duas vezes
+    const sub = body.subscription;
+    // endereço de push precisa ser https (no modo de teste local, aceita o simulador em 127.0.0.1)
+    const okEp = /^https:\/\//.test(sub?.endpoint || '') || (env.ALLOW_EMULATOR_TOKENS === '1' && /^http:\/\/127\.0\.0\.1:\d+\//.test(sub?.endpoint || ''));
+    if (!okEp || !sub.keys?.p256dh || !sub.keys?.auth) return reply(env, req, { error: 'aparelho inválido' }, 400);
     const from = clean(req.headers.get('Origin') || '', 80), ua = clean(req.headers.get('User-Agent') || '', 200);
-    if (from && ua) for (const [k, d] of Object.entries(subs)) if (k !== id && d.member === me.id && d.ua === ua && d.origin && d.origin !== from) delete subs[k];
-    // a antiga dupla virou conta própria: os aparelhos guardados com o id antigo (henrique/matheus) saem
-    if (me.founder) for (const [k, d] of Object.entries(subs)) if (d.member === me.founder) delete subs[k];
-    subs[id] = {
-      member: me.id,
-      ...(from ? { origin: from } : {}), ...(ua ? { ua } : {}),
-      subscription: { endpoint: s.endpoint, keys: { p256dh: clean(s.keys.p256dh, 200), auth: clean(s.keys.auth, 100) } },
+    const id = await addDevice(env, me, {
+      id: clean(body.id, 80) || sub.endpoint.slice(-40),
+      subscription: { endpoint: clean(sub.endpoint, 1000), keys: { p256dh: clean(sub.keys.p256dh, 200), auth: clean(sub.keys.auth, 100) } },
       prefs: { reminders: body.prefs?.reminders !== false, partner: body.prefs?.partner !== false, daily: body.prefs?.daily !== false, coach: body.prefs?.coach !== false },
-      updatedAt: Date.now(),
-    };
-    await env.CAL.put('subs', JSON.stringify(subs));
+      origin: from, ua, founder: me.founder,
+    });
     await registerUser(env, me);
     return reply(env, req, { ok: true, id });
   }
@@ -488,10 +438,9 @@ async function handle(req, env) {
   // saiu da conta neste celular: o aparelho para de receber os avisos dela
   if (url.pathname === '/unsubscribe') {
     const endpoint = clean(body.endpoint, 1000), id = clean(body.id, 120);
-    const subs = await getSubs(env);
-    let n = 0;
-    for (const [k, d] of Object.entries(subs)) if (d.member === me.id && (k === id || (endpoint && d.subscription?.endpoint === endpoint))) { delete subs[k]; n++; }
-    if (n) await env.CAL.put('subs', JSON.stringify(subs));
+    const devs = await getDevices(env, me.id);
+    const ids = Object.entries(devs).filter(([k, d]) => k === id || (endpoint && d.subscription?.endpoint === endpoint)).map(([k]) => k);
+    const n = await removeDevices(env, me.id, ids);
     return reply(env, req, { ok: true, removed: n });
   }
 
@@ -511,7 +460,10 @@ async function handle(req, env) {
       .slice(0, 1500)
       .map((it) => ({ id: clean(it.id, 120), at: it.at, member: it.member, title: clean(it.title, 120), body: clean(it.body, 300), tag: clean(it.tag, 80), url: appUrl(it.url), kind: ['reminders', 'daily'].includes(it.kind) ? it.kind : 'reminders', badge: Number.isFinite(it.badge) ? it.badge : undefined }));
     const prev = await env.CAL.get(scheduleKey(me), 'json');
-    if (!prev || JSON.stringify(prev.items) !== JSON.stringify(items)) await env.CAL.put(scheduleKey(me), JSON.stringify({ items, updatedAt: now, by: me.id }));
+    if (!prev || JSON.stringify(prev.items) !== JSON.stringify(items)) {
+      await env.CAL.put(scheduleKey(me), JSON.stringify({ items, updatedAt: now, by: me.id }));
+      await planReminders(env, me.ws, items, now);
+    }
     await registerUser(env, me, plan);
     return reply(env, req, { ok: true, count: items.length });
   }
@@ -519,15 +471,13 @@ async function handle(req, env) {
   // Excluir conta (LGPD): assinaturas, aparelhos, lembretes, mensagens e registro de uso
   if (url.pathname === '/account/delete') {
     const out = await closeBilling(env, me);
-    const subs = await getSubs(env);
-    let devices = 0;
-    for (const [id, d] of Object.entries(subs)) if (d.member === me.id) { delete subs[id]; devices++; }
-    if (devices) await env.CAL.put('subs', JSON.stringify(subs));
-    await Promise.all([`pitems:${me.id}`, `pprofile:${me.id}`].map((k) => env.CAL.delete(k)));
+    const devices = await removeDevices(env, me.id, Object.keys(await getDevices(env, me.id)));
+    await Promise.all([`pitems:${me.id}`, `pprofile:${me.id}`, `psent:${me.id}`, `pc:${me.id}`, `co:${me.id}`, `seen:${me.id}`, `card:${me.ws}`].map((k) => env.CAL.delete(k)));
+    const D = dueOf(env);
+    await Promise.all([`per:${me.id}`, `amg:${me.id}`, `cch:${me.id}`, `rem:${me.ws}`].map((k) => D.del(k)));
     if (me.ws !== 'main') {
-      await Promise.all([`schedule:${me.ws}`, `coach-ctx:${me.ws}`].map((k) => env.CAL.delete(k)));
-      const reg = (await env.CAL.get('users', 'json')) || {};
-      if (reg[me.id]) { delete reg[me.id]; await env.CAL.put('users', JSON.stringify(reg)); }
+      await Promise.all([`schedule:${me.ws}`, `coach-ctx:${me.ws}`, `ssent:${me.ws}`].map((k) => env.CAL.delete(k)));
+      await regDel(env, me.id);
     }
     return reply(env, req, { ok: true, devices, ...out });
   }
@@ -535,8 +485,7 @@ async function handle(req, env) {
   if (url.pathname === '/test') {
     const statuses = [];
     const sent = await sendToMember(env, me.id, { title: 'Notificações ativadas ✓', body: 'É assim que os lembretes e os avisos do parceiro vão chegar.', tag: 'teste', url: './' }, null, statuses);
-    const subs = await getSubs(env);
-    return reply(env, req, { ok: true, sent, devices: Object.values(subs).filter((d) => d.member === me.id).length, statuses });
+    return reply(env, req, { ok: true, sent, devices: Object.keys(await getDevices(env, me.id)).length, statuses });
   }
 
   if (url.pathname === '/coach') {
@@ -558,10 +507,9 @@ async function handle(req, env) {
     return reply(env, req, { ok: true });
   }
   if (url.pathname === '/coach-test' || url.pathname === '/pnudge-test') {
-    const key = url.pathname === '/coach-test' ? 'coach-force' : 'pnudge-force';
-    const f = (await env.CAL.get(key, 'json')) || {};
-    f[me.id] = Date.now();
-    await env.CAL.put(key, JSON.stringify(f));
+    const coach = url.pathname === '/coach-test';
+    await env.CAL.put(`${coach ? 'cof' : 'pcf'}:${me.id}`, String(Date.now()));
+    await dueOf(env).set(`${coach ? 'cch' : 'amg'}:${me.id}`, Date.now());
     return reply(env, req, { ok: true });
   }
 
@@ -735,13 +683,20 @@ async function handle(req, env) {
       .filter((it) => it && typeof it.at === 'number')
       .map((it) => ({ id: clean(it.id, 120), at: it.at, title: clean(it.title, 80), body: clean(it.body, 200), tag: clean(it.tag, 80), url: appUrl(it.url) }));
     const prevItems = await env.CAL.get(`pitems:${me.id}`);
-    if (prevItems !== JSON.stringify(items)) await env.CAL.put(`pitems:${me.id}`, JSON.stringify(items));
+    if (prevItems !== JSON.stringify(items)) {
+      await env.CAL.put(`pitems:${me.id}`, JSON.stringify(items));
+      await planPersonal(env, me.id, items);
+    }
     if (body.profile && typeof body.profile === 'object') {
       const { updatedAt, ...prof } = cleanProfile(body.profile, me);
       const old = await env.CAL.get(`pprofile:${me.id}`, 'json');
       const { updatedAt: u0, ...oldProf } = old || {};
       // grava se mudou ou a cada 3h (o "hoje" do servidor se baseia nesse resumo)
-      if (!old || JSON.stringify(oldProf) !== JSON.stringify(prof) || Date.now() - (u0 || 0) > 3 * 3600e3) await env.CAL.put(`pprofile:${me.id}`, JSON.stringify({ ...prof, updatedAt: Date.now() }));
+      if (!old || JSON.stringify(oldProf) !== JSON.stringify(prof) || Date.now() - (u0 || 0) > 3 * 3600e3) {
+        await env.CAL.put(`pprofile:${me.id}`, JSON.stringify({ ...prof, updatedAt: Date.now() }));
+        // primeiro resumo (ou mudou a rotina): o amigo recalcula logo
+        if (!old || JSON.stringify(old.prefs) !== JSON.stringify(prof.prefs)) await dueOf(env).set(`amg:${me.id}`, Date.now());
+      }
     }
     await registerUser(env, me, plan);
     return reply(env, req, { ok: true, count: items.length });
@@ -763,29 +718,40 @@ async function handle(req, env) {
     return reply(env, req, { titles: [] });
   }
 
-  // Uso de hoje (para a pessoa saber se está dentro do limite grátis)
+  // Uso de hoje (para o dono saber se está dentro do limite grátis)
   if (url.pathname === '/usage') {
     if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
-    const dayStart = Date.parse(new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10) + 'T00:00:00-03:00');
-    const [ss, ps, pc, co] = await Promise.all(['schedule-sent', 'personal-sent', 'pcoach', 'coach'].map((k) => env.CAL.get(k, 'json')));
-    const today = (o) => Object.values(o || {}).filter((t) => t >= dayStart).length;
-    const date = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
-    const amigo = Object.values(pc || {}).reduce((acc, st) => (st.usage?.date === date ? { sent: acc.sent + st.usage.sent, ai: acc.ai + st.usage.ai } : acc), { sent: 0, ai: 0 });
-    const coach = co?.usage?.date === date ? co.usage : { sent: 0, ai: 0 };
-    const aiMsgs = amigo.ai + coach.ai;
+    const u = env.USAGE || { amigo: { sent: 0, ai: 0 }, coach: { sent: 0, ai: 0 } };
+    const aiMsgs = (u.amigo?.ai || 0) + (u.coach?.ai || 0);
     return reply(env, req, {
-      ok: true,
-      lembretes: today(ss), pessoais: today(ps), amigo, coach,
+      ok: true, lembretes: u.lembretes || 0, pessoais: u.pessoais || 0, amigo: u.amigo, coach: u.coach,
+      fila: await dueOf(env).size(), banco: env.METER || null, relogio: env.RUNS || null, neuronios: Number(await env.CAL.get(`ai-neurons:${new Date().toISOString().slice(0, 10)}`)) || 0,
       // estimativa: cada mensagem escrita pela IA gasta ~40 "neurônios" de 10.000 grátis por dia
       iaPercent: Math.min(100, Math.round((aiMsgs * 40) / 10000 * 100)),
     });
   }
 
+  // ---------- presença ao vivo (Painel do dono): fica na memória do servidor, sem gravar no banco ----------
+  if (url.pathname === '/presence') {
+    const P = presenceOf(env);
+    const prev = P.get(me.ws) || {};
+    // sinais podem chegar fora de ordem (ex.: o "saí" da página velha depois do "entrei" da nova): vale o mais novo
+    const t = Number(body.t) || 0;
+    if (t && prev.t && t < prev.t) return reply(env, req, { ok: true, ignored: true });
+    const on = body.state !== 'off';
+    const app = body.app && typeof body.app === 'object' ? { v: clean(body.app.v, 20), b: clean(body.app.b, 20) } : prev.app;
+    P.set(me.ws, { t: t || prev.t || 0, online: on, lastPing: Date.now(), ...(on ? { lastOpen: body.state === 'open' ? Date.now() : prev.lastOpen || Date.now() } : { closedAt: Date.now(), lastOpen: prev.lastOpen }), ...(app ? { app } : {}) });
+    if (P.size > 20000) { const old = [...P.entries()].sort((x, y) => x[1].lastPing - y[1].lastPing).slice(0, 5000); for (const [k] of old) P.delete(k); }
+    return reply(env, req, { ok: true });
+  }
+  if (url.pathname === '/admin/presence') {
+    if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
+    return reply(env, req, { ok: true, now: Date.now(), byUid: Object.fromEntries(presenceOf(env)) });
+  }
+
   if (url.pathname === '/devices') {
-    const subs = Object.values(await getSubs(env));
     const counts = {};
-    const mine = membersOf(me, env);
-    for (const d of subs) if (mine.includes(d.member)) counts[d.member] = (counts[d.member] || 0) + 1;
+    for (const m of membersOf(me, env)) { const n = Object.keys(await getDevices(env, m)).length; if (n) counts[m] = n; }
     return reply(env, req, { ok: true, counts });
   }
 
@@ -820,30 +786,30 @@ async function oneShot(env) {
 /* aviso do presente Vitalício: não diz o que é nem quem deu (a surpresa fica para quando a pessoa abrir) */
 const vipNotify = (env, uid) => sendToMember(env, 'u' + String(uid).replace(/[^A-Za-z0-9]/g, '').slice(0, 24), { title: 'Você recebeu algo raro.', body: 'Poucas pessoas no mundo vão ver o que está esperando por você no Lembra.', tag: 'vitalicio', url: './#/vitalicio' }).catch(() => 0);
 
-export default {
-  fetch: (req, env) => handle(req, env).catch((e) => reply(env, req, { error: 'erro interno: ' + e.message }, 500)),
-  scheduled: (_event, env, ctx) => {
+/* Uma rodada do relógio (chamada pelo Durable Object a cada minuto e nas continuações) */
+export async function cronTick(env, { now = Date.now(), meter = { pushes: 0 }, maxPushes = 8, maxKeys = 15, kinds = null } = {}) {
+  const send = (e, m, msg, pref) => sendToMember(e, m, msg, pref, [], meter);
+  const wk = rankWeek(now);
+  let board = null;
+  const rankInfo = async (ws) => {
+    board = board || (await env.CAL.get(`rank:${wk}`, 'json')) || {};
+    const s = rankStanding(board, ws);
+    if (!s || !s.pos) return null;
+    const ahead = s.pos > 1 ? s.group[s.pos - 2][1].pts - s.pts + 1 : 0;
+    return { pos: s.pos, week: wk, leagueName: { bronze: 'Bronze', prata: 'Prata', ouro: 'Ouro' }[s.league], ahead };
+  };
+  const r = await runTick(env, { now, send, maxPushes, maxKeys, meter, rankInfo, kinds });
+  // tarefas raras (cada uma confere uma marca e sai na hora quando não há nada a fazer)
+  if (!r.more && !kinds) {
     const safe = (name, p) => p.catch((e) => console.log(name, e.message));
-    ctx.waitUntil(everyone(env).then((team) => Promise.all([
-      safe('lembretes', runSchedule(env)),
-      safe('pessoal', runPersonal(env)),
-      safe('coach', runCoach(env, sendToMember, team)),
-      safe('amigo', (async () => {
-        const wk = rankWeek(Date.now());
-        let board = null;
-        const rankInfo = async (ws) => {
-          board = board || (await env.CAL.get(`rank:${wk}`, 'json')) || {};
-          const s = rankStanding(board, ws);
-          if (!s || !s.pos) return null;
-          const ahead = s.pos > 1 ? s.group[s.pos - 2][1].pts - s.pts + 1 : 0;
-          return { pos: s.pos, week: wk, leagueName: { bronze: 'Bronze', prata: 'Prata', ouro: 'Ouro' }[s.league], ahead };
-        };
-        return runPersonalCoach(env, sendToMember, team, rankInfo);
-      })()),
-      safe('aviso único', oneShot(env)),
-      safe('vitalício (quem ganhou antes da surpresa)', vipMigrate(env, (uid) => vipNotify(env, uid))),
-      safe('ranking', monthlyAward(env, { stripe: stripeApi, getBill, putBill, notify: (id, msg) => sendToMember(env, id, msg) })),
-    ])));
-  },
-};
-export { runSchedule, runPersonal, handle, sendToMember };
+    await safe('aviso único', oneShot(env));
+    await safe('vitalício (quem ganhou antes da surpresa)', vipMigrate(env, (uid) => vipNotify(env, uid)));
+    await safe('ranking', monthlyAward(env, { stripe: stripeApi, getBill, putBill, notify: (id, msg) => send(env, id, msg) }));
+  }
+  const more = r.more || (await dueOf(env).dueBefore(now, 1)).length > 0;
+  return { ...r, more, pushes: meter.pushes };
+}
+
+/* resposta de erro com os cabeçalhos certos (o app sempre recebe uma resposta legível) */
+export const safeHandle = (req, env) => handle(req, env).catch((e) => { console.log('erro interno', e.stack || e.message); return reply(env, req, { error: 'erro interno: ' + e.message }, 500); });
+export { handle, sendToMember };

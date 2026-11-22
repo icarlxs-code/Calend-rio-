@@ -32,19 +32,31 @@ export async function generateVapid() {
   };
 }
 
+/* A assinatura VAPID vale 12h para cada serviço de push (Apple, Google, Mozilla…): é feita uma vez
+   e reaproveitada, em vez de assinar de novo a cada aviso (economiza processamento no plano grátis). */
+const vapidCache = new Map();
+let vapidKey = null;
 async function vapidAuth(endpoint, vapid, subject) {
   const aud = new URL(endpoint).origin;
+  const now = Math.floor(Date.now() / 1000);
+  const hit = vapidCache.get(aud);
+  if (hit && hit.pub === vapid.publicKey && hit.exp - now > 3600) return hit.value;
+  const exp = now + 12 * 3600;
   const header = b64u.enc(enc.encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
-  const claims = b64u.enc(enc.encode(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: subject })));
-  const key = await crypto.subtle.importKey('jwk', vapid.privateJwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
-  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, enc.encode(`${header}.${claims}`));
-  return `vapid t=${header}.${claims}.${b64u.enc(sig)}, k=${vapid.publicKey}`;
+  const claims = b64u.enc(enc.encode(JSON.stringify({ aud, exp, sub: subject })));
+  if (!vapidKey || vapidKey.pub !== vapid.publicKey) vapidKey = { pub: vapid.publicKey, key: await crypto.subtle.importKey('jwk', vapid.privateJwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']) };
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, vapidKey.key, enc.encode(`${header}.${claims}`));
+  const value = `vapid t=${header}.${claims}.${b64u.enc(sig)}, k=${vapid.publicKey}`;
+  vapidCache.set(aud, { value, exp, pub: vapid.publicKey });
+  return value;
 }
 
 /* ---------- criptografia da mensagem (aes128gcm) ---------- */
+
 export async function encryptPayload(subscription, payloadText) {
   const uaPublic = b64u.dec(subscription.keys.p256dh);
   const authSecret = b64u.dec(subscription.keys.auth);
+  // chave temporária nova para cada mensagem (como manda a RFC 8291)
   const local = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
   const asPublic = new Uint8Array(await crypto.subtle.exportKey('raw', local.publicKey));
   const uaKey = await crypto.subtle.importKey('raw', uaPublic, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
@@ -61,12 +73,19 @@ export async function encryptPayload(subscription, payloadText) {
 }
 
 /* Envia uma notificação. Retorna o status HTTP (404/410 = aparelho não existe mais) */
+/* tempo esperando a rede (não conta como processamento): usado para medir o trabalho de verdade de cada rodada */
+export const NET = { ms: 0 };
 export async function sendPush(subscription, payload, vapid, { subject = 'mailto:avisos@example.com', ttl = 3600, urgency = 'high' } = {}) {
   const body = await encryptPayload(subscription, typeof payload === 'string' ? payload : JSON.stringify(payload));
+  const auth = await vapidAuth(subscription.endpoint, vapid, subject);
+  const t0 = performance.now();
+  try { return await post(subscription, body, auth, ttl, urgency); } finally { NET.ms += performance.now() - t0; }
+}
+async function post(subscription, body, auth, ttl, urgency) {
   const res = await fetch(subscription.endpoint, {
     method: 'POST',
     headers: {
-      Authorization: await vapidAuth(subscription.endpoint, vapid, subject),
+      Authorization: auth,
       'Content-Encoding': 'aes128gcm',
       'Content-Type': 'application/octet-stream',
       TTL: String(ttl),

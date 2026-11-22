@@ -434,57 +434,99 @@ Responda SÓ com JSON: {"title":"até 38 caracteres, com 1 emoji","body":"até 1
   return null;
 }
 
-/* Roda a cada minuto (cron) */
-export async function runPersonalCoach(env, sendToMember, team, rankInfo = null) {
-  const now = Date.now();
+/* Um "amigo" para UMA pessoa (o relógio chama só quando é a vez dela).
+   Estado por pessoa em pc:{id}; pedido de teste em pcf:{id}. Retorna quantos avisos saíram e quando olhar de novo. */
+export async function amigoOne(env, sendToMember, m, now = Date.now(), rankInfo = null, usage = null) {
   const br = brNow(now);
   const clock = br.h * 60 + br.m;
-  const [state, force] = await Promise.all([env.CAL.get('pcoach', 'json'), env.CAL.get('pnudge-force', 'json')]);
-  const all = state || {};
-  let sent = 0, changed = false;
-  for (const m of team) {
-    const st = { ...(all[m.id] || {}) };
-    if (force && force[m.id] && force[m.id] > (st.forcedAt || 0)) { st.next = 0; st.forcedAt = force[m.id]; changed = true; }
-    // janela do dia guardada no estado (relida da ficha a cada 3h): fora dela, nem lê nada
-    const fresh = st.win && now - (st.winAt || 0) < 3 * 3600e3;
-    if (fresh) {
-      const w = st.win, L = spanOf(w), mins = relOf(clock, w);
-      if (mins > L) continue;
-      const waterMaybe = mins >= 40 && mins <= L - 45 && now >= (st.nextWater || 0);
-      if ((st.next || 0) > now && !waterMaybe && !anchorsFor(w).some((a) => mins >= a.from && mins <= a.to && !(st.day === br.date && st.done?.[a.key]))) continue;
+  const key = `pc:${m.id}`;
+  const st = { ...((await env.CAL.get(key, 'json')) || {}) };
+  let changed = false;
+  const force = Number(await env.CAL.get(`pcf:${m.id}`)) || 0;
+  if (force && force > (st.forcedAt || 0)) { st.next = 0; st.forcedAt = force; changed = true; }
+  // janela do dia guardada no estado (relida da ficha a cada 3h): fora dela, nem lê nada
+  const fresh = st.win && now - (st.winAt || 0) < 3 * 3600e3;
+  if (fresh) {
+    const w = st.win, L = spanOf(w), mins = relOf(clock, w);
+    const waterMaybe = mins >= 40 && mins <= L - 45 && now >= (st.nextWater || 0);
+    if (mins > L || ((st.next || 0) > now && !waterMaybe && !anchorsFor(w).some((a) => mins >= a.from && mins <= a.to && !(st.day === br.date && st.done?.[a.key])))) {
+      if (changed) await env.CAL.put(key, JSON.stringify(st));
+      return { sent: 0, nextAt: amigoNextAt(st, now) };
     }
-    const prof = await env.CAL.get(`pprofile:${m.id}`, 'json');
-    if (!prof) continue; // a pessoa ainda não abriu o app novo
-    st.win = dayWindow(prof.prefs || {});
-    st.winAt = now;
-    if (!fresh) { all[m.id] = { ...(all[m.id] || {}), ...st }; changed = true; }
-    // resumo de outro dia (a pessoa não abriu o app hoje): ajusta "hoje" e "amanhã"
-    const seenRaw = await env.CAL.get(`seen:${m.id}`);
-    let sn = {}; try { sn = seenRaw && seenRaw.startsWith('{') ? JSON.parse(seenRaw) : { last: Number(seenRaw) || 0 }; } catch { sn = {}; }
-    // posição no ranking (para avisar quando cair) — só para quem participa
-    let rank = null;
-    if (m.ws && m.ws !== 'main' && rankInfo) { const b = await rankInfo(m.ws); if (b) rank = b; }
-    let p = { ...prof, uid: m.id, name: prof.prefs?.nickname || prof.name || m.name, seenAt: sn.last || 0, seen: sn, rank, mind: prof.prefs?.mind || null, age: prof.prefs?.age || null };
-    if (prof.date && prof.date !== br.date) {
-      const yesterday = new Date(Date.parse(br.date) - 864e5).toISOString().slice(0, 10);
-      p = { ...p, today: prof.date === yesterday ? prof.tomorrow || [] : [], tomorrow: [] };
-    }
-    const r = nextNudge(p, st, now);
-    if (!r) { all[m.id] = st; continue; }
-    // 7 em cada 10 mensagens escritas pela IA (as outras do banco variado): quase nunca iguais
-    let out = r.msg;
-    const u = r.state.usage && r.state.usage.date === br.date ? r.state.usage : { date: br.date, sent: 0, ai: 0 };
-    if (Math.random() < 0.7 && r.msg.kind !== 'water') {
-      const h = await humanize(env, r.msg, p, st.recent, br).catch(() => null);
-      if (h) { out = { ...r.msg, body: h.body }; /* título fica o do tipo */ u.ai++; r.state.recent = [...(r.state.recent || []).slice(0, -1), h.body].slice(-12); }
-    }
-    u.sent++;
-    r.state.usage = u;
-    all[m.id] = r.state;
-    changed = true;
-    const { kind, fact, verse, ...push } = out;
-    sent += await sendToMember(env, m.id, push);
   }
-  if (changed) await env.CAL.put('pcoach', JSON.stringify(all));
+  const prof = await env.CAL.get(`pprofile:${m.id}`, 'json');
+  if (!prof) { if (changed) await env.CAL.put(key, JSON.stringify(st)); return { sent: 0, nextAt: null }; } // ainda não abriu o app novo
+  if (!fresh) { st.win = dayWindow(prof.prefs || {}); st.winAt = now; changed = true; }
+  // resumo de outro dia (a pessoa não abriu o app hoje): ajusta "hoje" e "amanhã"
+  const seenRaw = await env.CAL.get(`seen:${m.id}`);
+  let sn = {}; try { sn = seenRaw && seenRaw.startsWith('{') ? JSON.parse(seenRaw) : { last: Number(seenRaw) || 0 }; } catch { sn = {}; }
+  // posição no ranking (para avisar quando cair) — só para quem participa
+  let rank = null;
+  if (m.ws && m.ws !== 'main' && rankInfo) { const b = await rankInfo(m.ws); if (b) rank = b; }
+  let p = { ...prof, uid: m.id, name: prof.prefs?.nickname || prof.name || m.name, seenAt: sn.last || 0, seen: sn, rank, mind: prof.prefs?.mind || null, age: prof.prefs?.age || null };
+  if (prof.date && prof.date !== br.date) {
+    const yesterday = new Date(Date.parse(br.date) - 864e5).toISOString().slice(0, 10);
+    p = { ...p, today: prof.date === yesterday ? prof.tomorrow || [] : [], tomorrow: [] };
+  }
+  const r = nextNudge(p, st, now);
+  if (!r) { if (changed) await env.CAL.put(key, JSON.stringify(st)); return { sent: 0, nextAt: amigoNextAt(st, now) }; }
+  // 7 em cada 10 mensagens escritas pela IA (as outras do banco variado): quase nunca iguais
+  let out = r.msg, ai = false;
+  if (Math.random() < 0.7 && r.msg.kind !== 'water') {
+    const h = await humanize(env, r.msg, p, st.recent, br).catch(() => null);
+    if (h) { out = { ...r.msg, body: h.body }; ai = true; r.state.recent = [...(r.state.recent || []).slice(0, -1), h.body].slice(-12); }
+  }
+  delete r.state.usage;
+  // grava ANTES de mandar: se algo cair no meio, a mesma mensagem nunca sai duas vezes
+  await env.CAL.put(key, JSON.stringify(r.state));
+  if (usage) usage('amigo', ai);
+  const { kind, fact, verse, ...push } = out;
+  const sent = await sendToMember(env, m.id, push);
+  return { sent, nextAt: amigoNextAt(r.state, now) };
+}
+
+/* Quando olhar a pessoa de novo: o próximo horário sorteado, a próxima água, o próximo momento fixo do dia
+   (bom dia, almoço, jantar, boa noite) ou, no máximo, daqui a 30 min (avisos de "volta aqui"). */
+export function amigoNextAt(st, now = Date.now()) {
+  const MIN = 60e3, CAP = 30 * MIN;
+  if (!st || !st.win) return now + CAP;
+  const br = brNow(now), clock = br.h * 60 + br.m;
+  const w = st.win, L = spanOf(w), mins = relOf(clock, w);
+  if (mins > L) return now + (((w.start - clock + 1440) % 1440) || 1440) * MIN + 30e3; // começo da próxima janela
+  const at = (rel) => now + (rel - mins) * MIN;
+  const c = [now + CAP];
+  const after = (t) => { if (Number.isFinite(t) && t > now) c.push(t); };
+  after(st.next);
+  after(st.nextWater);
+  after((st.lastAny || 0) + (st.minGap || 25) * MIN);
+  const done = st.day === br.date ? st.done || {} : {};
+  for (const a of anchorsFor(w)) {
+    if (done[a.key]) continue;
+    if (a.from > mins) after(at(a.from));
+    else if (a.to >= mins) after(Math.max(now + 2 * MIN, (st.lastAny || 0) + 20 * MIN));
+  }
+  if (mins < 70) after(at(70));
+  after(at(L) + MIN);
+  return Math.max(now + MIN, Math.min(...c));
+}
+
+/* Compatível com a versão antiga (todo mundo de uma vez): usada nos testes */
+export async function runPersonalCoach(env, sendToMember, team, rankInfo = null) {
+  await splitLegacyAmigo(env);
+  let sent = 0;
+  for (const m of team) sent += (await amigoOne(env, sendToMember, m, Date.now(), rankInfo)).sent;
   return sent;
+}
+/* Uma vez só: o estado antigo (uma chave com todo mundo) vira um por pessoa */
+export async function splitLegacyAmigo(env) {
+  const all = await env.CAL.get('pcoach', 'json');
+  if (all && typeof all === 'object') {
+    for (const [id, st] of Object.entries(all)) if (st && !(await env.CAL.get(`pc:${id}`))) await env.CAL.put(`pc:${id}`, JSON.stringify(st));
+    await (env.CAL.delete ? env.CAL.delete('pcoach') : env.CAL.put('pcoach', 'null'));
+  }
+  const force = await env.CAL.get('pnudge-force', 'json');
+  if (force && typeof force === 'object') {
+    for (const [id, t] of Object.entries(force)) await env.CAL.put(`pcf:${id}`, String(t));
+    await (env.CAL.delete ? env.CAL.delete('pnudge-force') : env.CAL.put('pnudge-force', 'null'));
+  }
 }

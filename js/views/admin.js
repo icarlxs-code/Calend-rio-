@@ -7,7 +7,14 @@ import { CONFIG } from '../../config.js';
 import { DIFFICULTIES, GOALS, JOURNEYS, GENDERS, TONES, METHODS, VOLUMES } from '../persona.js';
 
 /* "no app agora": sinal de presença do último 2,5 min (o app manda 1 por minuto enquanto está aberto) */
-const isOnline = (u) => !!u.online && u.lastPing && Date.now() - u.lastPing < 150e3;
+const isOnline = (u) => !!u.online && u.lastPing && Date.now() - u.lastPing < 6 * 60e3; // o app avisa a cada 4 min
+/* "no app agora": vem do servidor de avisos (memória, sem gastar o banco) e completa o resumo de cada conta */
+let pres = {};
+const withPresence = (list) => list.map((u) => {
+  const p = pres[u.uid];
+  if (!p || (u.lastPing && u.lastPing > p.lastPing)) return u;
+  return { ...u, online: p.online, lastPing: p.lastPing, ...(p.closedAt ? { closedAt: p.closedAt } : {}), ...(p.lastOpen ? { lastOpen: Math.max(p.lastOpen, u.lastOpen || 0), lastSeen: Math.max(p.lastPing, u.lastSeen || 0) } : {}), ...(p.app && p.app.v ? { app: p.app } : {}) };
+});
 const when = (ms) => (ms ? new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—');
 const ago = (ms) => {
   if (!ms) return '—';
@@ -328,7 +335,7 @@ function cleanStat(u) {
 }
 
 export async function openAdmin() {
-  let stop = null, tick = null, plansAt = Date.now();
+  let stop = null, tick = null, plansAt = Date.now(), raw = null, lastSig = '';
   let users = null, err = null, openUid = null, q = '', plans = {}, errors = null, tab = 'resumo';
   const html = () => {
     const head = sheetHead('Painel do dono', { right: '<span class="alive"><i></i>Ao vivo</span>' });
@@ -490,7 +497,8 @@ export async function openAdmin() {
   });
   const load = async () => {
     try {
-      users = (await store.backendApi.listStats()).map(cleanStat); err = null;
+      try { const { api: call } = await import('../avisos.js'); pres = (await call('/admin/presence', {})).byUid || {}; } catch { pres = {}; }
+      users = withPresence((await store.backendApi.listStats()).map(cleanStat)); err = null;
       try { latestVer = await (await import('../version.js')).fetchLatest(); } catch { latestVer = null; }
       try { const { api } = await import('../avisos.js'); plans = (await api('/billing/all', {})).byWs || {}; } catch { plans = {}; }
       try { const { api } = await import('../avisos.js'); errors = (await api('/admin/errors', {})).errors || []; } catch { errors = null; }
@@ -511,12 +519,20 @@ export async function openAdmin() {
   const live = () => {
     if (stop || !store.backendApi.watchStats) return;
     stop = store.backendApi.watchStats(async (list) => {
-      users = list.map(cleanStat);
+      raw = list.map(cleanStat);
+      users = withPresence(raw);
       // planos e pagamentos: atualiza junto, no máximo a cada 20 s
-      if (Date.now() - plansAt > 20e3) { plansAt = Date.now(); try { const { api: call } = await import('../avisos.js'); plans = (await call('/billing/all', {})).byWs || plans; } catch { /* mantém */ } }
+      if (Date.now() - plansAt > 60e3) { plansAt = Date.now(); try { const { api: call } = await import('../avisos.js'); plans = (await call('/billing/all', {})).byWs || plans; } catch { /* mantém */ } }
       redraw();
     }, (e) => console.warn('painel ao vivo', e));
-    tick = setInterval(redraw, 30e3); // "no app agora" → "saiu há 1 min" mesmo sem novidade
+    // a cada 5 s: quem abriu ou fechou o app (do servidor de avisos) e "saiu há 1 min" sem precisar de novidade
+    let n = 0;
+    tick = setInterval(async () => {
+      if (document.hidden) return;
+      try { const { api: call } = await import('../avisos.js'); pres = (await call('/admin/presence', {})).byUid || pres; } catch { /* mantém */ }
+      if (raw) users = withPresence(raw);
+      if (++n % 6 === 0 || JSON.stringify(users.map((u) => [u.online, u.lastPing])) !== lastSig) { lastSig = JSON.stringify(users.map((u) => [u.online, u.lastPing])); redraw(); }
+    }, 5e3);
   };
   load();
   return api;

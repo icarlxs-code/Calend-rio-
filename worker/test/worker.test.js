@@ -6,13 +6,17 @@ import crypto from 'node:crypto';
 import { createRequire } from 'node:module';
 const require = createRequire(new URL('../../functions/package.json', import.meta.url));
 const ece = require('http_ece');
-const { handle, runSchedule } = await import('../src/index.js');
+const { handle, cronTick } = await import('../src/index.js');
+const runSchedule = async (e) => (await cronTick(e, { kinds: ['rem'] })).sent;
+const devicesAll = () => [...kv.entries()].filter(([k]) => k.startsWith('dev:')).flatMap(([, v]) => Object.values(JSON.parse(v)));
 
 const kv = new Map();
 const env = {
   CAL: {
     get: async (k, t) => (kv.has(k) ? (t === 'json' ? JSON.parse(kv.get(k)) : kv.get(k)) : null),
     put: async (k, v) => kv.set(k, v),
+    delete: async (k) => kv.delete(k),
+    scan: async (p) => [...kv.entries()].filter(([k]) => k.startsWith(p)),
   },
   TEAM: JSON.stringify([{ id: 'henrique', name: 'Henrique', email: 'icarlxs@gmail.com' }, { id: 'matheus', name: 'Matheus', email: 'contatopedrazzi1@gmail.com' }]),
   PROJECT_ID: 'demo',
@@ -121,7 +125,7 @@ test('aparelho que desinstalou é removido', async () => {
   globalThis.fetch = async () => new Response(null, { status: 410 });
   await call('/notify', { as: 'contatopedrazzi1@gmail.com', body: { to: [ID.h], title: 'x', body: 'y' } });
   globalThis.fetch = saved;
-  assert.equal(Object.values(JSON.parse(kv.get('subs'))).filter((d) => d.member === ID.h).length, 0);
+  assert.equal(devicesAll().filter((d) => d.member === ID.h).length, 0);
 });
 
 test('CORS para o site do app', async () => {
@@ -200,9 +204,9 @@ test('sem plano ativo o servidor não guarda lembretes, não manda avisos e o as
   assert.equal((await t.json()).plan, 'trial');
   const ok = await req('/schedule', { items: [{ id: 'y', at: Date.now() + 60e3, member: 'uSEMPLANO123', title: 'ok' }] });
   assert.equal(ok.status, 200);
-  assert.ok(JSON.parse(kv.get('users')).uSEMPLANO123.until > Date.now(), 'o relógio sabe até quando vale');
+  assert.ok(JSON.parse(kv.get('reg:uSEMPLANO123')).until > Date.now(), 'o relógio sabe até quando vale');
   // o teste acabou: o relógio para de mandar (sem o app precisar avisar)
-  const reg = JSON.parse(kv.get('users')); reg.uSEMPLANO123.until = Date.now() - 1; kv.set('users', JSON.stringify(reg));
+  const reg = JSON.parse(kv.get('reg:uSEMPLANO123')); reg.until = Date.now() - 1; kv.set('reg:uSEMPLANO123', JSON.stringify(reg));
   const { everyone } = await import('../src/index.js');
   assert.ok(!(await everyone(env)).some((m) => m.id === 'uSEMPLANO123'));
 });
@@ -217,14 +221,14 @@ test('segurança: notificação nunca leva para site de fora; sair da conta tira
   assert.deepEqual(phones.matheus.inbox.map((x) => x.url), ['./', './', './#/e/e_abc123']);
   // sair da conta: o aparelho deixa de receber
   await call('/subscribe', { as: m, body: { id: 'm-sair', subscription: phone('sair') } });
-  const before = Object.values(JSON.parse(kv.get('subs'))).filter((d) => d.subscription.endpoint === phones.sair.endpoint).length;
+  const before = devicesAll().filter((d) => d.subscription.endpoint === phones.sair.endpoint).length;
   assert.equal(before, 1);
   // outra pessoa não consegue tirar o aparelho de alguém
   await call('/unsubscribe', { as: h, body: { id: 'm-sair', endpoint: phones.sair.endpoint } });
-  assert.equal(Object.values(JSON.parse(kv.get('subs'))).filter((d) => d.subscription.endpoint === phones.sair.endpoint).length, 1);
+  assert.equal(devicesAll().filter((d) => d.subscription.endpoint === phones.sair.endpoint).length, 1);
   const r = await call('/unsubscribe', { as: m, body: { id: 'm-sair', endpoint: phones.sair.endpoint } });
   assert.equal(r.data.removed, 1);
-  assert.equal(Object.values(JSON.parse(kv.get('subs'))).filter((d) => d.subscription.endpoint === phones.sair.endpoint).length, 0);
+  assert.equal(devicesAll().filter((d) => d.subscription.endpoint === phones.sair.endpoint).length, 0);
   // rajada: o limite por minuto devolve 429
   let last = 0;
   for (let i = 0; i < 14; i++) last = (await call('/log', { as: m, body: { msg: `erro ${i}` } })).status;

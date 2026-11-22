@@ -132,61 +132,56 @@ function chooseCompany(list) {
   return list[0];
 }
 
-export async function runCoach(env, sendToMember, team) {
-  const now = Date.now(), br = brNow(now);
+/* Dicas de trabalho para UMA pessoa (o relógio chama só quando é a vez dela).
+   Estado por pessoa em co:{id} (próximo horário e últimas mensagens); pedido de teste em cof:{id}. */
+const OPEN = 8 * 60 + 30, CLOSE = 21 * 60 + 30;
+export function coachNextOpen(now = Date.now()) {
+  const br = brNow(now), mins = br.h * 60 + br.m;
+  const wait = mins < OPEN ? OPEN - mins : 1440 - mins + OPEN;
+  return now + wait * 60e3 + Math.floor(Math.random() * 40) * 60e3; // cada pessoa num minuto diferente
+}
+export async function coachOne(env, sendToMember, m, now = Date.now(), cache = {}, usage = null) {
+  const br = brNow(now);
   const mins = br.h * 60 + br.m;
-  if (mins < 8 * 60 + 30 || mins > 21 * 60 + 30) return 0;
-  const [st0, force] = await Promise.all([env.CAL.get('coach', 'json'), env.CAL.get('coach-force', 'json')]);
-  const st = { next: {}, recent: {}, forced: {}, ...(st0 || {}) };
-  for (const m of team) if (force && force[m.id] > (st.forced[m.id] || 0)) { st.next[m.id] = 0; st.forced[m.id] = force[m.id]; }
-  const due = team.filter((m) => (st.next[m.id] || 0) <= now);
-  if (!due.length) return 0;
-  // a parte que o app manda (empresas) fica em outra chave; o formato antigo ainda é aceito
-  // cada espaço tem as próprias empresas (a dupla: 'coach-ctx'; contas próprias: 'coach-ctx:{uid}')
+  const key = `co:${m.id}`;
+  const st = { recent: [], ...((await env.CAL.get(key, 'json')) || {}) };
+  const force = Number(await env.CAL.get(`cof:${m.id}`)) || 0;
+  if (force && force > (st.forced || 0)) { st.next = 0; st.forced = force; }
+  if (mins < OPEN || mins > CLOSE) return { sent: 0, nextAt: Math.max(st.next || 0, coachNextOpen(now)) };
+  if ((st.next || 0) > now) return { sent: 0, nextAt: st.next };
   const today = `${br.date} (${['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][br.wd]})`;
-  const ctxCache = {};
-  const ctxOf = async (m) => {
-    const key = m.ctxKey || 'coach-ctx';
-    if (!ctxCache[key]) ctxCache[key] = { ...((await env.CAL.get(key, 'json')) || (key === 'coach-ctx' && st.ctx) || { companies: [] }), today };
-    return ctxCache[key];
-  };
-  const dates = upcomingDates(br.date);
-  let trendsP = null;
-  const trendsOf = () => (trendsP ||= getTrends(env));
-  let sent = 0;
+  const ctxKey = m.ctxKey || 'coach-ctx';
+  const ctx = { ...((await env.CAL.get(ctxKey, 'json')) || { companies: [] }), today };
   // grava o próximo horário antes de enviar: nunca manda duas vezes seguidas
-  for (const m of due) st.next[m.id] = now + (90 + Math.random() * 60) * 60e3;
-  await env.CAL.put('coach', JSON.stringify(st));
-  for (const m of due) {
-    const ctx = await ctxOf(m);
-    const recent0 = (st.recent[m.id] || []).slice(-5);
-    // outras profissões: dica da rotina, agenda, ânimo e pausa (não fala de posts)
-    if (ctx.work && ctx.work.arch && ctx.work.arch !== 'marketing') {
-      const kind = mins < 9 * 60 + 30 ? 'motivacao' : pick(WORK_KINDS);
-      const w = { ...ctx.work, me: m.id };
-      const useAI = kind !== 'agenda' || !w.late;
-      const msg = (useAI ? await aiWork(env, kind, w, m.name, today, recent0) : null) || workFallback(kind, w, m.name, br.date);
-      sent += await sendToMember(env, m.id, { title: msg.title, body: msg.body, tag: 'coach', url: './' }, 'coach');
-      st.recent[m.id] = [...recent0, msg.body].slice(-6);
-      const u = st.usage && st.usage.date === br.date ? st.usage : { date: br.date, sent: 0, ai: 0 };
-      u.sent++;
-      if (msg.byAI) u.ai++;
-      st.usage = u;
-      continue;
-    }
+  st.next = now + (90 + Math.random() * 60) * 60e3;
+  const recent = (st.recent || []).slice(-5);
+  let msg;
+  // outras profissões: dica da rotina, agenda, ânimo e pausa (não fala de posts)
+  if (ctx.work && ctx.work.arch && ctx.work.arch !== 'marketing') {
+    const kind = mins < 9 * 60 + 30 ? 'motivacao' : pick(WORK_KINDS);
+    const w = { ...ctx.work, me: m.id };
+    const useAI = kind !== 'agenda' || !w.late;
+    msg = (useAI ? await aiWork(env, kind, w, m.name, today, recent) : null) || workFallback(kind, w, m.name, br.date);
+  } else {
     const kind = mins < 9 * 60 + 30 ? 'motivacao' : pick(KINDS);
     const co = chooseCompany((ctx.companies || []).filter((c) => !c.onlyFor || c.onlyFor === m.id));
-    const recent = (st.recent[m.id] || []).slice(-5);
-    const trends = await trendsOf();
-    const msg = (co || kind === 'motivacao' ? await aiMessage(env, co ? kind : 'motivacao', co, m.name, ctx, trends, dates, recent) : null)
-      || fallback(co ? kind : 'motivacao', co, m.name, dates);
-    sent += await sendToMember(env, m.id, { title: msg.title, body: msg.body, tag: 'coach', url: './' }, 'coach');
-    st.recent[m.id] = [...recent, msg.body].slice(-6);
-    const u = st.usage && st.usage.date === br.date ? st.usage : { date: br.date, sent: 0, ai: 0 };
-    u.sent++;
-    if (msg.byAI) u.ai++;
-    st.usage = u;
+    const trends = co ? await (cache.trends ||= getTrends(env)) : [];
+    msg = (co || kind === 'motivacao' ? await aiMessage(env, co ? kind : 'motivacao', co, m.name, ctx, trends, upcomingDates(br.date), recent) : null)
+      || fallback(co ? kind : 'motivacao', co, m.name, upcomingDates(br.date));
   }
-  await env.CAL.put('coach', JSON.stringify(st));
+  st.recent = [...recent, msg.body].slice(-6);
+  await env.CAL.put(key, JSON.stringify(st));
+  if (usage) usage('coach', !!msg.byAI);
+  const sent = await sendToMember(env, m.id, { title: msg.title, body: msg.body, tag: 'coach', url: './' }, 'coach');
+  const close = Date.parse(`${br.date}T21:30:00-03:00`);
+  return { sent, nextAt: st.next > close ? coachNextOpen(close + 60e3) : st.next };
+}
+
+/* Compatível com a versão antiga (todo mundo de uma vez): usada nos testes */
+export async function runCoach(env, sendToMember, team) {
+  const now = Date.now();
+  const cache = {};
+  let sent = 0;
+  for (const m of team) sent += (await coachOne(env, sendToMember, m, now, cache)).sent;
   return sent;
 }

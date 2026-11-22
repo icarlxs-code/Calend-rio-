@@ -57,7 +57,8 @@ export async function connect(config) {
     verifyReset: (code) => authApi.verifyPasswordResetCode(auth, code),
     confirmReset: (code, pass) => authApi.confirmPasswordReset(auth, code, pass),
     applyCode: (code) => authApi.applyActionCode(auth, code),
-    signOut: () => authApi.signOut(auth),
+    // sair: a agenda guardada neste celular é apagada (celular emprestado não guarda nada de ninguém)
+    signOut: async () => { while (subs.length) subs.pop().stop(); await idb.clear().catch(() => {}); return authApi.signOut(auth); },
     signUp: async (email, pass, name) => {
       const cred = await authApi.createUserWithEmailAndPassword(auth, email, pass);
       if (name) await authApi.updateProfile(cred.user, { displayName: name }).catch(() => {});
@@ -87,6 +88,90 @@ const clean = (obj) => JSON.parse(JSON.stringify(obj)); // remove undefined
 let base = [];
 const col = (name) => fs.collection(db, ...base, name);
 const ref = (name, id) => fs.doc(db, ...base, name, id);
+
+/* ---------- agenda guardada no celular: ao abrir, o banco manda SÓ o que mudou ----------
+   Cada gravação leva "_u" (hora do servidor). O celular guarda tudo (IndexedDB) e, ao abrir, pede só os
+   documentos com _u depois da última vez — em vez de reler a agenda inteira a cada abertura (economiza a
+   cota grátis de leituras do Firebase). Apagar vira uma marca "_del" (os outros celulares ficam sabendo).
+   A cada 3 dias relê tudo, para conferir. Se o armazenamento do celular falhar, funciona como antes. */
+const SYNC_V = 1, FULL_EVERY = 3 * 864e5, OVERLAP = 10 * 60e3;
+const stamp = (item) => ({ ...clean(item), _u: fs.serverTimestamp() });
+const idb = (() => {
+  let dbp = null;
+  const open = () => (dbp ||= new Promise((res, rej) => {
+    try {
+      const r = indexedDB.open('lembra-agenda', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('c');
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+      setTimeout(() => rej(new Error('armazenamento lento')), 2500);
+    } catch (e) { rej(e); }
+  }).catch((e) => { dbp = null; throw e; }));
+  const run = (mode, fn) => open().then((d) => new Promise((res, rej) => {
+    const t = d.transaction('c', mode), r = fn(t.objectStore('c'));
+    t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+    setTimeout(() => rej(new Error('armazenamento lento')), 2500);
+  }));
+  return { get: (k) => run('readonly', (st) => st.get(k)), put: (k, v) => run('readwrite', (st) => st.put(v, k)), clear: () => run('readwrite', (st) => st.clear()) };
+})();
+const live = new Map(); // coleção → { docs, emit } (para as gravações deste celular aparecerem na hora)
+const liveKey = (path) => path.join('/');
+function syncCollection(path, onList, onErr) {
+  const key = `${SYNC_V}|${auth.currentUser?.uid || '-'}|${liveKey(path)}`;
+  const docs = new Map();
+  let since = 0, fullAt = 0, unsub = null, stopped = false, saveT = null, firstDone = false;
+  const list = () => [...docs.values()];
+  const emit = () => onList(list());
+  const save = () => { clearTimeout(saveT); saveT = setTimeout(() => idb.put(key, { docs: Object.fromEntries(docs), since, fullAt }).catch(() => {}), 1500); };
+  const me = { docs, emit, save };
+  live.set(liveKey(path), me);
+  const ready = new Promise((resolve) => {
+    const start = (full) => {
+      if (stopped) return;
+      const c = fs.collection(db, ...path);
+      const q = full ? c : fs.query(c, fs.where('_u', '>', fs.Timestamp.fromMillis(Math.max(0, since - OVERLAP))));
+      let first = true;
+      unsub = fs.onSnapshot(q, (snap) => {
+        if (first && full) docs.clear(); // releitura completa: vale o que o banco tem
+        // conta aproximada das leituras cobradas (para os testes de consumo)
+        if (!snap.metadata.fromCache) globalThis.__lembraReads = (globalThis.__lembraReads || 0) + Math.max(first ? 1 : 0, snap.docChanges().filter((c) => !c.doc.metadata.hasPendingWrites).length);
+        for (const ch of snap.docChanges()) {
+          if (ch.type === 'removed') { docs.delete(ch.doc.id); continue; }
+          const d = ch.doc.data({ serverTimestamps: 'estimate' });
+          const t = d._u && d._u.toMillis ? d._u.toMillis() : 0;
+          if (t > since && !ch.doc.metadata.hasPendingWrites) since = t;
+          if (d._del) docs.delete(ch.doc.id);
+          else { delete d._u; docs.set(ch.doc.id, { ...d, id: ch.doc.id }); }
+        }
+        if (first && full) fullAt = Date.now();
+        first = false;
+        emit(); save();
+        if (!firstDone) { firstDone = true; resolve(); }
+      }, (err) => {
+        console.error('Firestore', liveKey(path), err);
+        onErr && onErr(err);
+        if (!firstDone) { firstDone = true; resolve(); }
+      });
+    };
+    idb.get(key).then((c) => {
+      if (c && c.docs && typeof c.docs === 'object') {
+        for (const [id, d] of Object.entries(c.docs)) docs.set(id, d);
+        since = c.since || 0; fullAt = c.fullAt || 0;
+        if (docs.size) { emit(); firstDone = true; resolve(); } // abre na hora com o que está no celular
+      }
+      start(!c || Date.now() - fullAt > FULL_EVERY);
+    }).catch(() => start(true));
+  });
+  return { ready, stop: () => { stopped = true; live.delete(liveKey(path)); unsub && unsub(); } };
+}
+/* gravação deste celular: aparece na hora (o banco confirma depois) */
+function localApply(path, id, item) {
+  const l = live.get(liveKey(path));
+  if (!l) return;
+  if (item) l.docs.set(id, { ...clean(item), id }); else l.docs.delete(id);
+  l.emit(); l.save();
+}
+const subs = [];
 
 /* ---------- celular por SMS (Firebase Phone Auth) ----------
    Confirmar o celular: liga o número à conta já aberta.
@@ -147,7 +232,7 @@ const backend = {
     items = items.filter((it) => !have.has(it.id));
     for (let i = 0; i < items.length; i += 20) {
       const batch = fs.writeBatch(db);
-      for (const it of items.slice(i, i + 20)) batch.set(fs.doc(db, 'ws', uid, name, it.id), clean(it));
+      for (const it of items.slice(i, i + 20)) batch.set(fs.doc(db, 'ws', uid, name, it.id), stamp(it));
       await batch.commit();
     }
   },
@@ -258,59 +343,54 @@ const backend = {
     return res.data.answer;
   },
   async subscribe(cols, onData, onErr) {
-    await Promise.all(
-      cols.map(
-        (c) =>
-          new Promise((resolve) => {
-            let first = true;
-            fs.onSnapshot(
-              col(c),
-              (snap) => {
-                onData(c, snap.docs.map((d) => ({ ...d.data(), id: d.id })));
-                if (first) { first = false; resolve(); }
-              },
-              (err) => {
-                console.error('Firestore', c, err);
-                onErr && onErr(err);
-                if (first) { first = false; resolve(); }
-              },
-            );
-          }),
-      ),
-    );
+    while (subs.length) subs.pop().stop(); // trocou de agenda: para as anteriores
+    const started = cols.map((c) => { const s = syncCollection([...base, c], (list) => onData(c, list), onErr); subs.push(s); return s.ready; });
+    await Promise.all(started);
   },
   /* Agenda pessoal: pessoal/{uid}/itens — só o dono acessa */
   subscribePersonal(onData, onErr) {
     const u = auth.currentUser;
     if (!u) return () => {};
-    return fs.onSnapshot(fs.collection(db, 'pessoal', u.uid, 'itens'), (s) => onData(s.docs.map((d) => ({ ...d.data(), id: d.id }))), onErr);
+    const s = syncCollection(['pessoal', u.uid, 'itens'], onData, onErr);
+    return s.stop;
   },
   writePersonal(item) {
-    return fs.setDoc(fs.doc(db, 'pessoal', auth.currentUser.uid, 'itens', item.id), clean(item));
+    const path = ['pessoal', auth.currentUser.uid, 'itens'];
+    localApply(path, item.id, item);
+    return fs.setDoc(fs.doc(db, ...path, item.id), stamp(item));
   },
   delPersonal(id) {
-    return fs.deleteDoc(fs.doc(db, 'pessoal', auth.currentUser.uid, 'itens', id));
+    const path = ['pessoal', auth.currentUser.uid, 'itens'];
+    localApply(path, id, null);
+    return fs.setDoc(fs.doc(db, ...path, id), { _del: true, _u: fs.serverTimestamp() });
   },
   write(name, item) {
-    return fs.setDoc(ref(name, item.id), clean(item));
+    localApply([...base, name], item.id, item);
+    return fs.setDoc(ref(name, item.id), stamp(item));
   },
   async writeMany(ops) {
-    for (let i = 0; i < ops.length; i += 20) {
+    // até 400 por lote (cada item gravado uma vez só)
+    for (const { col: name, item } of ops) localApply([...base, name], item.id, item);
+    for (let i = 0; i < ops.length; i += 400) {
       const batch = fs.writeBatch(db);
-      ops.slice(i, i + 400).forEach(({ col: name, item }) => batch.set(ref(name, item.id), clean(item)));
+      ops.slice(i, i + 400).forEach(({ col: name, item }) => batch.set(ref(name, item.id), stamp(item)));
       await batch.commit();
     }
   },
   del(name, id) {
-    return fs.deleteDoc(ref(name, id));
+    localApply([...base, name], id, null);
+    return fs.setDoc(ref(name, id), { _del: true, _u: fs.serverTimestamp() });
   },
   async delMany(name, ids) {
-    for (let i = 0; i < ids.length; i += 20) {
+    for (const id of ids) localApply([...base, name], id, null);
+    for (let i = 0; i < ids.length; i += 400) {
       const batch = fs.writeBatch(db);
-      ids.slice(i, i + 400).forEach((id) => batch.delete(ref(name, id)));
+      ids.slice(i, i + 400).forEach((id) => batch.set(ref(name, id), { _del: true, _u: fs.serverTimestamp() }));
       await batch.commit();
     }
   },
+  /* sair da conta: apaga a agenda guardada neste celular */
+  clearLocal: () => idb.clear().catch(() => {}),
   async getDoc(path) {
     const s = await fs.getDoc(fs.doc(db, path));
     return s.exists() ? s.data() : null;

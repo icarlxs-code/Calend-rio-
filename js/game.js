@@ -76,20 +76,27 @@ function clean(g) {
   };
 }
 export const state = () => load();
-let saveT = null;
+/* As conquistas ficam no celular na hora e vão para a conta no máximo a cada 3 min (e ao fechar o app):
+   o plano grátis do Firebase tem 20 mil gravações por dia para todo mundo. */
+let saveT = null, lastCloud = 0, lastSig = '', pending = false;
 function save(now = false) {
   try { localStorage.setItem(LS(), JSON.stringify(S)); } catch { /* ok */ }
   clearTimeout(saveT);
+  pending = true;
   const go = () => {
-    if (store.mode !== 'cloud' || !store.user) return;
+    if (store.mode !== 'cloud' || !store.user || !pending) return;
+    pending = false; lastCloud = Date.now();
     const g = { ...S, ids: S.ids.slice(-300) };
     saveProfileQuiet({ game: g }).catch(() => {});
-    // resumo para o Painel do dono e para o placar da equipe
-    store.backendApi?.touchStats?.(store.user.uid, { game: { level: levelOf(S.xp), xp: S.xp, badges: Object.keys(S.badges).length } }).catch(() => {});
+    // resumo para o Painel do dono: só quando o nível ou os emblemas mudam
+    const sig = `${levelOf(S.xp)}|${Object.keys(S.badges).length}`;
+    if (sig !== lastSig) { lastSig = sig; store.backendApi?.touchStats?.(store.user.uid, { game: { level: levelOf(S.xp), xp: S.xp, badges: Object.keys(S.badges).length } }).catch(() => {}); }
     teamLevel();
   };
-  if (now) go(); else saveT = setTimeout(go, 4000);
+  if (now) return go();
+  saveT = setTimeout(go, Math.max(4000, 3 * 60e3 - (Date.now() - lastCloud)));
 }
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && pending) { clearTimeout(saveT); save(true); } });
 const dayReset = () => { const t = todayKey(); if (S.d.day !== t) S.d = { day: t, xp: 0, created: 0, notes: 0, personal: 0, done: 0, times: [] }; };
 
 /* ---------- XP ---------- */

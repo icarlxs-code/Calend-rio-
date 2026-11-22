@@ -1,0 +1,1 @@
+var m=Object.defineProperty;var r=(o,a)=>{for(var e in a)m(o,e,{get:a[e],enumerable:!0})};var n=["O Lembra agora abre mais r\xE1pido e funciona melhor com a internet fraca: a sua agenda fica guardada no celular e s\xF3 o que mudou \xE9 buscado.","Lembretes e avisos mais confi\xE1veis, mesmo nos hor\xE1rios em que muita gente usa o app ao mesmo tempo."];export{r as a,n as b};

@@ -39,19 +39,38 @@ const hashId = async (text) => {
 };
 
 /* Chamada autenticada ao servidor (manda o login do Firebase para provar quem é) */
+/* Chamada ao servidor de avisos. Se a rede falhar ou o servidor estiver ocupado por um instante,
+   tenta de novo sozinha (até 3 vezes, com pausa crescente) nas rotas em que repetir não duplica nada. */
+const RETRY_SAFE = /^\/(billing\/status|schedule|personal|coach|seen|presence|rank\/board|friends\/(list|card)|devices|share\/status|support\/thread|support\/inbox|admin\/presence|billing\/all|admin\/errors|vapid|usage)$/;
+let lastToken = '';
 export async function api(path, body) {
   if (!server()) throw Object.assign(new Error('Servidor de avisos não configurado.'), { code: 'no-server' });
   const token = await store.idToken();
   if (!token) throw Object.assign(new Error('Faça login para usar.'), { code: 'no-login' });
-  const res = await fetch(server() + path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    // agenda compartilhada: o servidor confere se a pessoa faz parte dela
-    body: JSON.stringify(store.shared && !(body && 'ws' in body) ? { ...(body || {}), ws: store.workspace } : body || {}),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw Object.assign(new Error(data.error || `Erro ${res.status}`), { status: res.status });
-  return data;
+  lastToken = token;
+  // agenda compartilhada: o servidor confere se a pessoa faz parte dela
+  const payload = JSON.stringify(store.shared && !(body && 'ws' in body) ? { ...(body || {}), ws: store.workspace } : body || {});
+  const safe = RETRY_SAFE.test(path);
+  for (let attempt = 0; ; attempt++) {
+    let res;
+    try {
+      res = await fetch(server() + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: payload });
+    } catch (e) {
+      if (safe && attempt < 2) { await new Promise((r) => setTimeout(r, 700 * (attempt + 1))); continue; }
+      throw e;
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (safe && attempt < 2 && (res.status === 429 || res.status >= 500) && !data.locked) { await new Promise((r) => setTimeout(r, 900 * (attempt + 1))); continue; }
+      throw Object.assign(new Error(data.error || `Erro ${res.status}`), { status: res.status });
+    }
+    return data;
+  }
+}
+/* Aviso rápido ao fechar o app (vai mesmo se a tela já estiver sumindo) */
+export function beacon(path, body = {}) {
+  if (!server() || !lastToken) return;
+  try { fetch(server() + path, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${lastToken}` }, body: JSON.stringify(body) }).catch(() => {}); } catch { /* ok */ }
 }
 
 /* Estado para a tela */

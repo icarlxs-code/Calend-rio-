@@ -6,7 +6,7 @@ const { handle } = await import('../src/index.js');
 
 const kv = new Map();
 const env = {
-  CAL: { get: async (k, t) => (kv.has(k) ? (t === 'json' ? JSON.parse(kv.get(k)) : kv.get(k)) : null), put: async (k, v) => kv.set(k, v), delete: async (k) => kv.delete(k) },
+  CAL: { get: async (k, t) => (kv.has(k) ? (t === 'json' ? JSON.parse(kv.get(k)) : kv.get(k)) : null), put: async (k, v) => kv.set(k, v), delete: async (k) => kv.delete(k), scan: async (p) => [...kv.entries()].filter(([k]) => k.startsWith(p)) },
   TEAM: '[]', PROJECT_ID: 'demo', ALLOW_EMULATOR_TOKENS: '1',
   ALLOWED_ORIGINS: 'https://icarlxs-code.github.io,https://meulembra.com.br,https://www.meulembra.com.br',
 };
@@ -17,7 +17,7 @@ const call = async (path, { uid, origin, ua = 'iPhone Safari 18', body = {} }) =
   const res = await handle(new Request(`https://w.dev${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: origin, 'User-Agent': ua, Authorization: `Bearer ${token(uid)}` }, body: JSON.stringify(body) }), env);
   return { status: res.status, cors: res.headers.get('Access-Control-Allow-Origin'), data: await res.json().catch(() => null) };
 };
-const subsOf = (uid) => Object.values(JSON.parse(kv.get('subs') || '{}')).filter((d) => d.member === 'u' + uid);
+const subsOf = (uid) => Object.values(JSON.parse(kv.get('dev:u' + uid) || '{}'));
 
 test('o servidor aceita chamadas dos dois endereços (antigo e novo)', async () => {
   for (const o of ['https://icarlxs-code.github.io', 'https://meulembra.com.br', 'https://www.meulembra.com.br']) {

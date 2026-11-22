@@ -2,7 +2,7 @@
 # Publicado pelo Cloudflare a partir do GitHub (pasta raiz: worker).
 # O armazenamento KV "CAL" é criado automaticamente na primeira publicação.
 name = "calend-rio"
-main = "src/index.js"
+main = "src/entry.js"
 compatibility_date = "2026-10-01"
 workers_dev = true
 
@@ -13,8 +13,18 @@ crons = ["* * * * *"]
 [ai]
 binding = "AI"
 
+# KV antigo: só para a cópia única dos dados para o banco novo (o servidor não grava mais nele)
 [[kv_namespaces]]
 binding = "CAL"
+
+# Banco do servidor: um Durable Object com SQLite (incluído no plano grátis da Cloudflare)
+[[durable_objects.bindings]]
+name = "HUB"
+class_name = "Hub"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Hub"]
 
 [vars]
 PROJECT_ID = "calendario-48fdb"

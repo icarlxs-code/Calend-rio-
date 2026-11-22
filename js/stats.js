@@ -26,12 +26,20 @@ function profileSummary() {
     at: p.onboardedAt,
   };
 }
+/* O resumo da conta vai para o banco no máximo a cada 20 min (ou quando o dia muda):
+   o plano grátis do Firebase tem 20 mil gravações por dia para TODO MUNDO. */
+const LS_STATS = 'lembra.stats.at';
 export function reportStats({ open = false, force = false } = {}) {
   const api = store.backendApi;
   if (store.mode !== 'cloud' || !api || !api.writeStats || !store.user) return;
   const now = Date.now();
-  if (!open && !force && now - lastFull < 60e3) return; // no máximo 1 vez por minuto
+  let prev = {};
+  try { prev = JSON.parse(localStorage.getItem(LS_STATS) || '{}'); } catch { prev = {}; }
+  const sameUser = prev.uid === store.user.uid, newDay = !sameUser || prev.day !== todayKey();
+  if (!newDay && now - Math.max(lastFull, sameUser ? prev.at || 0 : 0) < 20 * 60e3) return;
+  if (!open && !force && now - lastFull < 60e3) return;
   lastFull = now;
+  try { localStorage.setItem(LS_STATS, JSON.stringify({ uid: store.user.uid, at: now, day: todayKey() })); } catch { /* ok */ }
   const t = todayKey(), weekEnd = addDays(t, 6), monthAgo = addDays(t, -30);
   const me = store.member(store.me) || {};
   const evs = store.state.events;
@@ -89,7 +97,7 @@ export function reportStats({ open = false, force = false } = {}) {
 }
 /* Depois de mudanças na agenda, atualiza o resumo (com folga, para gastar pouco) */
 let deb = null;
-export function reportSoon() { clearTimeout(deb); deb = setTimeout(() => reportStats({ force: true }), 20000); }
+export function reportSoon() { clearTimeout(deb); deb = setTimeout(() => reportStats({ force: true }), 60000); }
 /* Lê os dias ativos já salvos (para não perder o histórico) */
 export async function loadStatsDays() {
   try {
@@ -102,18 +110,17 @@ export async function loadStatsDays() {
    "saiu há X" quando fecha. Um sinal por minuto só enquanto o app está na frente. */
 let beat = null;
 export function startPresence() {
-  const api = store.backendApi;
-  if (store.mode !== 'cloud' || !api || !api.touchStats || !store.user) return;
-  const uidv = store.user.uid;
-  const send = (data) => api.touchStats(uidv, data).catch(() => {});
+  if (store.mode !== 'cloud' || !store.user) return;
+  // "no app agora" fica na memória do servidor de avisos (não grava nada no banco a cada minuto)
+  const ping = (state) => import('./avisos.js').then((m) => (state === 'off' ? m.beacon('/presence', { state, t: Date.now() }) : m.server() && m.api('/presence', { state, t: Date.now(), app: appInfo() }))).catch(() => {});
   const on = () => {
-    send({ online: true, lastPing: Date.now(), lastOpen: Date.now(), app: appInfo() });
+    ping('open');
     clearInterval(beat);
-    beat = setInterval(() => send({ online: true, lastPing: Date.now() }), 60e3);
+    beat = setInterval(() => ping('on'), 4 * 60e3);
     seenServer();
     import('./rank.js').then((r) => r.rankAct('open', 'app')).catch(() => {});
   };
-  const off = () => { clearInterval(beat); send({ online: false, closedAt: Date.now(), lastPing: Date.now() }); };
+  const off = () => { clearInterval(beat); ping('off'); };
   document.addEventListener('visibilitychange', () => (document.visibilityState === 'visible' ? on() : off()));
   window.addEventListener('pagehide', off);
   if (document.visibilityState === 'visible') on();
