@@ -111,6 +111,9 @@ const PLAN_INFO = {
   essencial_ano_pix: { tier: 'essencial', name: 'Essencial', price: 'R$ 9,99', per: '/mês', note: 'R$ 119,90 no Pix, vale 12 meses', cta: 'Pagar com Pix · R$ 119,90 (12 meses)' },
   pro_ano_pix: { tier: 'pro', name: 'Profissional', price: 'R$ 14,99', per: '/mês', note: 'R$ 179,90 no Pix, vale 12 meses', cta: 'Pagar com Pix · R$ 179,90 (12 meses)' },
 };
+/* quanto custa por dia e o preço "cheio" (mensal × 12) para comparar */
+const PER_DAY = { essencial_mes: 'R$ 0,43', essencial_ano: 'R$ 0,33', pro_mes: 'R$ 0,66', pro_ano: 'R$ 0,49' };
+const ANCHOR = { essencial_ano: 'R$ 12,90', pro_ano: 'R$ 19,90' };
 const COMPARE = [
   ['Agenda com a cara da sua profissão', true, true],
   ['Modo Pessoal: aniversários, contas e listas', true, true],
@@ -153,6 +156,11 @@ export function openPlans({ blocking = false } = {}) {
     <div class="brandwrap">${brand('completa', { h: 96, on: 'dark' })}</div>
     <h1>${esc(title)}</h1>
     <p>${esc(sub)}</p>
+    ${!offline && !prepaid && !isMonthly ? `<ul class="pw-why">
+      <li><span style="--c:#34C759">${icon('bell', 16)}</span><b>Nunca mais esqueça um compromisso</b><small>O Lembra avisa na hora certa, mesmo com o celular fechado</small></li>
+      <li><span style="--c:#A06BFF">${icon('sparkles', 16)}</span><b>Um assistente que organiza por você</b><small>Fala o que precisa e ele marca, move e cobra</small></li>
+      <li><span style="--c:#FF9F0A">${icon('heart', 16)}</span><b>Sua vida pessoal também em dia</b><small>Aniversários, contas, saúde e listas no mesmo lugar</small></li>
+    </ul>` : ''}
     ${offline ? `<button class="btn btn--primary btn--block" data-retry>${icon('refresh', 18)} Tentar de novo</button>` : ''}
     ${canTrial ? `<button class="btn btn--trial btn--block" data-trial>${icon('sparkles', 18)} Começar meu teste grátis de 7 dias</button><p class="paywall__or">ou escolha seu plano</p>` : ''}
     <div class="period" role="tablist"><button data-period="mes" role="tab">Mensal</button><button data-period="ano" role="tab" class="is-on">Anual <span>-25%</span></button></div>
@@ -162,11 +170,23 @@ export function openPlans({ blocking = false } = {}) {
     <div class="cmp" aria-label="O que vem em cada plano">
       <div class="cmp__row cmp__row--head"><span>O que vem</span><span>Essencial</span><span>Pro</span></div>
       ${COMPARE.map(([t, m, v]) => `<div class="cmp__row"><span>${esc(t)}</span>${tick(m)}${tick(v)}</div>`).join('')}
-      <div class="cmp__row cmp__row--addon"><span>${icon('users', 14)} Agenda compartilhada com sócio ou equipe</span><span class="cmp__price">à parte<br><b>R$&nbsp;7,90</b><br>por pessoa</span><span class="cmp__price">à parte<br><b>R$&nbsp;7,90</b><br>por pessoa</span></div>
     </div>
-    <p class="paywall__addon">${icon('info', 14)}<span><b>Compartilhar a agenda é um complemento à parte</b>, cobrado por pessoa: +1 pessoa R$ 7,90/mês ou +4 pessoas R$ 29,90/mês (Fundadores pagam R$ 4,90 e R$ 19,90). Quem você convidar não paga nada.</span></p>
-    <p class="paywall__safe">${icon('lock', 13)} Pagamento seguro pela Stripe: cartão de crédito ou Pix (no anual e no Fundadores). Cancele quando quiser. Arrependeu? Devolvemos em até 7 dias.</p>
+    <div class="pw-guar"><span class="pw-guar__seal">${icon('shield', 22)}<b>7</b></span><div><b>Garantia de 7 dias</b><small>Não gostou? Devolvemos 100% do valor, sem perguntas.</small></div></div>
+    <div class="pw-team">
+      <div class="pw-team__top"><span class="pw-team__faces"><i style="--c:#7C5CFF">A</i><i style="--c:#0E9F6E">B</i><i style="--c:#D9480F">C</i><i class="pw-team__plus">+</i></span><span class="pw-team__tag">Para quem trabalha com alguém</span></div>
+      <h3>Sócio, equipe ou secretária esquecendo as coisas?</h3>
+      <p>Coloque todo mundo <b>na mesma agenda</b>. Você marca “Reunião com cliente · Ana” e <b>a Ana recebe o aviso no celular dela</b>, na hora certa.</p>
+      <ul>
+        <li>${icon('check', 14)} Cada pessoa com o próprio login (ninguém usa a sua senha)</li>
+        <li>${icon('check', 14)} Cada um recebe só o aviso do que é dele</li>
+        <li>${icon('check', 14)} Placar da semana: você vê quem cumpre o que marca</li>
+        <li>${icon('check', 14)} <b>Quem você convidar não paga nada</b></li>
+      </ul>
+      <div class="pw-team__prices"><div><small>Você + 1 pessoa</small><b>R$ 7,90</b><small>/mês</small></div><div class="is-best"><small>Você + até 4 pessoas</small><b>R$ 29,90</b><small>/mês · R$ 7,48 por pessoa</small></div></div>
+      <small class="pw-team__how">${icon('info', 12)} É um complemento: assine seu plano agora e ative a equipe depois em Ajustes → Agenda compartilhada.${founders ? ' Fundadores pagam menos (R$ 4,90 e R$ 19,90).' : ''}</small>
+    </div>
     <p class="paywall__err" data-err hidden></p>
+    <p class="pw-fine">${icon('lock', 11)} Pagamento seguro pela Stripe. Cartão de crédito (renova sozinho até você cancelar) ou Pix no anual e no Fundadores (vale 12 meses, sem renovação automática). Cancele quando quiser em Ajustes → Gerenciar assinatura. Reembolso integral em até 7 dias. Preços em reais, com impostos.</p>
     <div class="paywall__foot">
       <button class="btn-text btn-text--sm" data-paid>Já paguei — verificar</button>
       ${blocking ? '<button class="btn-text btn-text--sm" data-pclose>Só olhar o app</button><button class="btn-text btn-text--sm" data-action="logout">Sair da conta</button>' : '<button class="btn-text btn-text--sm" data-pclose>Agora não</button>'}
@@ -181,10 +201,12 @@ export function openPlans({ blocking = false } = {}) {
   const box = w.querySelector('[data-plans]');
   const card = (k) => { const p = PLAN_INFO[k]; const cur = isMonthly && b.tier === p.tier;
     return `<button class="plan${p.tier === 'pro' ? ' plan--best' : ''}${k === chosen ? ' is-on' : ''}" data-plan="${k}" role="radio" aria-checked="${k === chosen}"${cur ? ' disabled' : ''}>
-      ${p.tier === 'pro' ? '<span class="plan__tag">Mais escolhido</span>' : cur ? '<span class="plan__tag plan__tag--cur">Seu plano</span>' : ''}
+      ${p.tier === 'pro' ? `<span class="plan__tag">${yearly ? 'Melhor escolha' : 'Mais escolhido'}</span>` : cur ? '<span class="plan__tag plan__tag--cur">Seu plano</span>' : ''}
       <span class="plan__radio" aria-hidden="true">${icon('check', 13)}</span>
       <span class="plan__name">${p.name}</span>
+      ${ANCHOR[k] ? `<span class="plan__was"><s>${ANCHOR[k]}</s> no mensal</span>` : ''}
       <span class="plan__price"><b>${p.price}</b>${p.per}</span>
+      ${PER_DAY[k] ? `<span class="plan__day">${p.tier === 'pro' ? icon('sparkles', 12) + ' ' : ''}Só ${PER_DAY[k]} por dia</span>` : ''}
       <span class="plan__note">${p.note}</span>
       ${yearly ? `<span class="plan__save">${p.tier === 'pro' ? 'Economize R$ 58,90 por ano' : 'Economize R$ 34,90 por ano'}</span>` : ''}
     </button>`; };
