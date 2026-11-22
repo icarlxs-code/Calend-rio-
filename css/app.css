@@ -2537,7 +2537,8 @@ html.has-vip, html.has-vip body { overflow: hidden; }
 .sinbox.is-loading { opacity: .5; }
 .tcard__champ { color: #C98B12 !important; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
 /* tela de entrar: espaço no fim para a barra do Safari não cobrir os últimos botões */
-.login { padding-bottom: calc(env(safe-area-inset-bottom) + 90px) !important; }
+.login { padding-bottom: calc(env(safe-area-inset-bottom) + 12px) !important; padding-top: calc(var(--safe-t) + 12px) !important; gap: 8px; justify-content: flex-start; min-height: 100svh; box-sizing: border-box; }
+html, body { overscroll-behavior-y: none; }
 .consent--remember { align-items: center; margin-top: 4px; }
 /* tela de entrar compacta: tudo cabe na tela, sem rolar */
 .login__brand { margin-bottom: 4px; }
@@ -2605,3 +2606,7 @@ html:not(.intro-done) #app, html:not(.intro-done) .login { visibility: hidden; }
 .login__installtop .ic { stroke-width: 2.2; }
 @keyframes installpulse { 0%, 100% { transform: scale(1); box-shadow: 0 8px 24px rgba(10,132,255,.35); } 50% { transform: scale(1.04); box-shadow: 0 10px 34px rgba(94,92,230,.6); } }
 @media (prefers-reduced-motion: reduce) { .login__installtop { animation: none; } }
+/* login: a página não "balança" — só rola por dentro se o conteúdo realmente não couber */
+html:has(.login), html:has(.login) body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+.login { height: 100dvh; min-height: 0 !important; overflow-y: auto; overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
+.login > * { flex-shrink: 0; }
