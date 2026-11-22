@@ -1,0 +1,1 @@
+var r=Object.defineProperty;var i=(a,e)=>{for(var o in e)r(a,o,{get:e[o],enumerable:!0})};var s=["Abertura nova: o Sininho d\xE1 tchauzinho e vira o \xEDcone do Lembra.","Pequenas melhorias e corre\xE7\xF5es."];export{i as a,s as b};

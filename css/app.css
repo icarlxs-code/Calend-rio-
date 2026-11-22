@@ -965,8 +965,6 @@ html:not(.intro-done) .tabbar { opacity: 0; }
 }
 .client-preview .client__hero { padding-top: 34px; }
 .intro { background: #000; }
-.intro img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.intro canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .tipsbar { display: flex; align-items: center; gap: 10px; width: 100%; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); font-size: 15px; font-weight: 700; color: var(--text-2); text-align: left; }
 .tipsbar > span { flex: 1; display: flex; align-items: center; gap: 8px; }
 .tipsbar em { font-style: normal; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--text-3); }
@@ -2988,38 +2986,18 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 @media (prefers-reduced-motion: reduce) { .snhbud { transition: opacity .2s; } }
 /* cores da plataforma no tom do Sininho (o que era vermelho vira o laranja dele) */
 :root.snh-theme { --today: #FF6B3D; --danger: #F0561F; --danger-soft: rgba(255, 107, 61, .13); --red: #FF6B3D; }
-/* ===================== Abertura (motion design, fundo branco) ===================== */
-.intro { background: #FFFFFF; overflow: hidden; transition: opacity .5s ease, transform .55s cubic-bezier(.5, 0, .2, 1); }
-.intro.is-leaving { opacity: 0; transform: scale(1.04); filter: none; }
-.op { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 24px 4vh; box-sizing: border-box; }
-.op > * { opacity: 0; }
-.op__fig { position: relative; width: min(62vw, 36vh, 280px); }
-.op__fig .snh { width: 100%; position: relative; z-index: 1; }
-.op__dot { position: absolute; left: 50%; top: 52%; width: 120%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; background: radial-gradient(circle, #FFE7DA 0%, #FFF3EC 45%, rgba(255, 255, 255, 0) 70%); scale: 0; }
-.op__word { margin-top: min(2.4vh, 18px); height: min(9vh, 60px); overflow: hidden; display: flex; }
-.op__word img { height: 100%; width: auto; display: block; }
-.op__tag { margin: min(1.8vh, 14px) 0 0; font: 500 clamp(13px, 2vh, 16px)/1.3 system-ui, -apple-system, sans-serif; color: #6B5A52; text-align: center; white-space: nowrap; }
-.op__tag span { display: inline-block; }
-.op__cf { position: absolute; left: 50%; top: 40%; width: 9px; height: 14px; border-radius: 3px; background: #FF6B3D; opacity: 0; z-index: 2; }
-.op__cf--1 { --x: -46vw; --y: -18vh; --r: 300deg; background: #FFB020; } .op__cf--2 { --x: 40vw; --y: -22vh; --r: -260deg; }
-.op__cf--3 { --x: -36vw; --y: 6vh; --r: 200deg; background: #FF4D8D; } .op__cf--4 { --x: 44vw; --y: 2vh; --r: -320deg; background: #4DC3FF; }
-.op__cf--5 { --x: -20vw; --y: -30vh; --r: 240deg; background: #7AD65A; } .op__cf--6 { --x: 22vw; --y: -30vh; --r: -200deg; background: #FFB020; }
-/* coreografia (o boneco em si anima no canvas, a cada quadro) */
-.intro.is-on .op__fig { animation: opIn .7s cubic-bezier(.2, 1.1, .3, 1) both; }
-.intro.is-on .op__dot { animation: opDot .9s cubic-bezier(.2, .9, .3, 1) .05s both; }
-.intro.is-on .op__word { animation: opShow .01s 1.05s both; }
-.intro.is-on .op__word img { animation: opRise .75s cubic-bezier(.2, .9, .2, 1) 1.05s both; }
-.intro.is-on .op__tag { animation: opShow .01s 1.4s both; }
-.intro.is-on .op__tag span { animation: opUp .6s cubic-bezier(.2, .9, .2, 1) 1.4s both; }
-.intro.is-on .op__tag span + span { animation-delay: 1.52s; }
-.intro.is-on .op__cf { animation: opConf 1.2s cubic-bezier(.15, .8, .3, 1) 1.95s both; }
-.intro.is-on .op__cf--2 { animation-delay: 1.99s; } .intro.is-on .op__cf--3 { animation-delay: 2.03s; } .intro.is-on .op__cf--4 { animation-delay: 1.97s; } .intro.is-on .op__cf--5 { animation-delay: 2.06s; } .intro.is-on .op__cf--6 { animation-delay: 2.01s; }
-@keyframes opIn { 0% { opacity: 0; transform: translateY(18vh); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
-@keyframes opDot { from { scale: 0; } to { scale: 1; } }
-@keyframes opShow { from { opacity: 0; } to { opacity: 1; } }
-@keyframes opRise { from { transform: translateY(110%); } to { transform: none; } }
-@keyframes opUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-@keyframes opConf { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); } 15% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y) + 12vh)) rotate(var(--r)) scale(1); } }
-@media (prefers-reduced-motion: reduce) { .intro.is-on .op > *, .intro.is-on .op * { animation: opShow .3s both !important; } }
-.intro .op__word img { width: auto; height: 100%; object-fit: contain; }
-.intro .op img:not(.op__word img) { width: auto; height: auto; }
+/* ===================== Abertura (o Sininho vira o ícone) ===================== */
+.intro, html:not(.intro-done) .intro { background: #FFFFFF; overflow: hidden; transition: opacity .45s ease; }
+.intro.is-leaving { opacity: 0; transform: none; filter: none; }
+.ab { position: absolute; inset: 0; }
+.ab__stage { position: absolute; left: 50%; top: 47%; width: 0; height: 0; transform: scale(var(--fit, 1)); }
+.ab__mark { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+.ab__tile { position: absolute; left: 0; top: 0; width: 122px; height: 122px; border-radius: 30px; transform: translate(-50%, -50%) scale(0);
+  background: radial-gradient(120% 120% at 30% 20%, #FF9A1F 0%, #FF7410 45%, #F0560A 100%); box-shadow: 0 14px 34px rgba(240, 86, 10, .28); }
+.ab__rig { position: absolute; left: 0; top: 0; width: 132px; transform: translate(-50%, -50%); will-change: transform, clip-path; }
+.ab__rig .snh { width: 132px; display: block; }
+.intro .ab__icon { position: absolute; left: 0; top: 0; width: 122px; height: 122px; object-fit: cover; transform: translate(-50%, -50%); border-radius: 30px; opacity: 0; box-shadow: 0 14px 34px rgba(240, 86, 10, .28); }
+.ab__word { position: absolute; left: 0; top: 0; }
+.ab__l { position: absolute; top: 0; height: 100%; background-image: url('../media/marca/palavra-preto.png'); background-repeat: no-repeat; opacity: 0; transform-origin: 50% 100%; will-change: transform, opacity; }
+.ab__tag { position: absolute; left: 0; top: 54px; margin: 0; white-space: nowrap; transform: translate(-50%, 10px); opacity: 0;
+  font: 500 13.5px/1.3 system-ui, -apple-system, sans-serif; color: #7A6A62; letter-spacing: .01em; }

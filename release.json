@@ -1,10 +1,10 @@
 {
-  "version": "2.4.3",
+  "version": "2.5.0",
   "date": "2026-11-22",
   "min": "2.2.0",
   "title": "Nova abertura",
   "notes": [
-    "Abertura nova: o Sininho chega pulando, dá tchauzinho e comemora com você.",
+    "Abertura nova: o Sininho dá tchauzinho e vira o ícone do Lembra.",
     "Pequenas melhorias e correções."
   ]
 }
