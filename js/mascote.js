@@ -1,14 +1,14 @@
-/* Sininho, o companheiro do Lembra (como o Duo no Duolingo: presente, com personalidade, nunca chato).
-   - por enquanto SÓ para o dono (CONFIG.adminEmail); para todo mundo: CONFIG.mascotPublic = true
-   - fica no canto da tela meio escondido, "espiando"; às vezes some e aparece pelo outro lado
-   - toque: ele sobe, reage e pergunta coisas ("O que foi?", "Tá precisando marcar algo?"…)
-   - reage ao que acontece no app (concluiu, marcou, atrasou, ofensiva, dia 100%)
-   - easter eggs: cutucar várias vezes, segurar, madrugada, sexta, datas especiais, aniversário da pessoa
-   - nunca atrapalha: some quando abre janela, planos, ficha ou o teclado; respeita "reduzir movimento" */
+/* Lembra, o companheiro (Sininho). Ele é parte da plataforma, não só uma frase na tela:
+   - o balão pode trazer BOTÕES (Sim/Não e outras escolhas) que abrem as telas reais do app:
+     agendar, marcar um lembrete do Pessoal, ver os atrasados, ver o ranking, trocar de modo;
+   - fala sobre o que existe de verdade (compromissos de hoje, atrasados, lembretes do Pessoal, cabelo marcado…);
+   - aparece, fala e sai andando; volta sozinho em 15 s a 1 min (aleatório, nunca passa de 1 min);
+   - reage ao que acontece (concluir, marcar, atrasar, ofensiva, dia 100%);
+   - por enquanto SÓ para o dono (CONFIG.adminEmail); para todo mundo: CONFIG.mascotPublic = true. */
 import { store } from './store.js';
 import { CONFIG } from '../config.js';
-import { sininho, setMood, act } from './sininho.js';
-import { esc, todayKey } from './utils.js';
+import { sininho, setMood, act, say } from './sininho.js';
+import { todayKey } from './utils.js';
 
 export const isOwner = () => !!store.user && !!CONFIG.adminEmail && (store.user.email || '').toLowerCase() === CONFIG.adminEmail.toLowerCase();
 export const mascotOn = () => !!CONFIG.mascotPublic || isOwner();
@@ -17,129 +17,153 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const R = (a, b) => a + Math.random() * (b - a);
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/* ---------- quem é a pessoa / como está o dia ---------- */
+/* ---------- o que está acontecendo com a pessoa agora ---------- */
 function ctx() {
   const me = store.member && store.member(store.me);
-  const nm = (store.profile?.nickname || me?.name || store.user?.displayName || '').trim().split(' ')[0];
+  const nome = (store.profile?.nickname || me?.name || store.user?.displayName || '').trim().split(' ')[0];
   const t = todayKey(), h = new Date().getHours(), dow = new Date().getDay();
-  let pending = 0, late = 0, doneToday = 0;
+  let pend = [], late = [], feitos = 0, pessoal = [], cabelo = null;
   try {
     const evs = store.eventsOn ? store.eventsOn(t, { person: store.me || 'all' }) : [];
-    pending = evs.filter((e) => e.status !== 'feito').length; doneToday = evs.filter((e) => e.status === 'feito').length;
-    late = (store.state?.events || []).filter((e) => e.status !== 'feito' && e.date < t && e.date >= t.slice(0, 8) + '01').length;
+    pend = evs.filter((e) => e.status !== 'feito');
+    feitos = evs.filter((e) => e.status === 'feito').length;
+    late = (store.state?.events || []).filter((e) => e.status !== 'feito' && e.date < t && e.date >= t.slice(0, 8) + '01');
+    pessoal = (store.state?.personal || []).filter((p) => !p.done && p.date === t);
+    cabelo = (store.state?.events || []).find((e) => e.status === 'feito' && e.date === t && /cabel|escova|corte|penteado/i.test(e.title || ''));
   } catch { /* ok */ }
-  return { n: nm, h, dow, pending, late, doneToday };
+  return { nome, h, dow, pend, late, feitos, pessoal, cabelo, primeiro: nome ? `, ${nome}` : '' };
 }
-const nm = (c) => (c.n ? `, ${c.n}` : '');
 
-/* ---------- frases (combinadas: parecem infinitas e nunca repetem em seguida) ---------- */
-const TAP = {
-  curioso: ['O que foi?', 'Oi! Me chamou?', 'Tô aqui! 👀', 'Hm? Fala comigo', 'Diga!', 'Presente! 🔔', 'Opa, cheguei!', 'Me chamou ou foi sem querer?'],
-  pergunta: ['Tá precisando marcar algo?', 'Tá fazendo o quê?', 'Quer que eu te lembre de alguma coisa?', 'Bora organizar o dia?', 'Já bebeu água hoje?', 'Tem algum compromisso que eu não sei?', 'Como tá o seu dia?', 'Esqueceu de anotar alguma coisa?', 'Posso ajudar em quê?', 'Quer ver o que tem pra hoje?', 'Lembrou de tudo até agora?', 'E aí, tudo sob controle?'],
-  carinho: ['Gosto quando você aparece 🧡', 'Tô sempre por aqui, viu?', 'Você não tá sozinho(a) nessa.', 'Conta comigo!', 'Tô torcendo por você!', 'Que bom te ver!', 'Senti sua falta!'],
-  piada: ['Sabe por que o sino nunca se atrasa? Porque ele sempre dá o toque! 🔔', 'Eu não durmo, eu só fico em modo silencioso. 🤫', 'Meu esporte favorito? Badalar! 🏃', 'Já pensou se eu esquecesse algo? Seria o fim do mundo! 😅', 'Dizem que sou pequeno… mas faço barulho!'],
+/* ---------- falas: cada uma tem uma ação real (ou nenhuma) ---------- */
+/* ação: { label, go: função } — os botões aparecem no balão */
+const A = {
+  agendar: () => import('./views/event.js').then((m) => m.openEventEditor({ date: todayKey() })),
+  lembrete: () => import('./views/personal.js').then((m) => m.openPersonalEditor()),
+  atrasados: () => import('./views/event.js').then((m) => m.openEventEditor({ date: todayKey() })),
+  ranking: () => import('./views/ranking.js').then((m) => m.openRanking()),
+  perfil: () => import('./views/profile.js').then((m) => m.openProfile()),
+  trocarPessoal: () => { location.hash = '#/p/hoje'; return Promise.resolve(); },
 };
-function tapLine(c) {
-  const r = Math.random();
-  if (c.late && r < 0.35) return { t: c.late === 1 ? `Tem 1 coisa atrasada${nm(c)}. Bora resolver?` : `Tem ${c.late} coisas atrasadas${nm(c)}… vamos juntos?`, m: 'triste' };
-  if (c.pending && r < 0.5) return { t: pick([`Hoje ainda tem ${c.pending} ${c.pending === 1 ? 'coisa' : 'coisas'} pra fazer${nm(c)}.`, `Falta${c.pending > 1 ? 'm' : ''} ${c.pending} pra fechar o dia!`, `${c.pending} na lista. Qual a gente risca primeiro?`]), m: 'feliz' };
-  if (c.doneToday >= 3 && r < 0.6) return { t: pick([`Já foram ${c.doneToday} hoje! Que ritmo! 🔥`, `${c.doneToday} feitos hoje. Tô impressionado!`]), m: 'comemora' };
-  const kind = pick(['curioso', 'curioso', 'pergunta', 'pergunta', 'pergunta', 'carinho', 'piada']);
-  const base = pick(TAP[kind]);
-  return { t: kind === 'curioso' && c.n && Math.random() < 0.5 ? base.replace(/[?!]?$/, (x) => `${nm(c)}${x || '!'}`) : base, m: kind === 'carinho' ? 'amor' : kind === 'piada' ? 'comemora' : pick(['feliz', 'acena', 'surpreso']) };
-}
-const SPY = ['Psiu… tô de olho 👀', 'Só passando pra ver se tá tudo bem…', 'Hmm… o que você tá fazendo aí?', 'Não liga não, só tô espiando 🫣', 'Tudo certo por aí?', '…', 'Shhh 🤫', 'Achei você! 😄', 'Vim conferir sua agenda 🔍'];
-const IDLE = ['Ainda tá aí? 👀', 'Tá pensando em quê?', 'Se precisar, é só me chamar!', 'Tô aqui, viu?'];
-const DONE = ['Mandou bem! 🎉', 'Isso aí! Mais um riscado!', 'Arrasou!', 'Boa! Tô orgulhoso de você!', 'Uhuul! 🙌', 'Riscou! Que sensação boa, né?', 'Um a menos! 💪', 'Tá voando hoje!'];
-const DONE_LATE = ['Antes tarde do que nunca! 💪', 'Feito! O importante é não desistir.', 'Ufa! Resolvido 😮‍💨'];
-const CREATED = ['Anotado! Eu te lembro 🔔', 'Deixa comigo!', 'Guardei aqui, pode ficar tranquilo(a).', 'Marcado! ✍️', 'Pode esquecer que eu lembro 😉'];
 
-function special(c) {
+function falas(c) {
+  const out = [];
+  if (c.late.length) out.push({ t: c.late.length === 1 ? `Ficou 1 coisa atrasada${c.primeiro}. Quer resolver agora?` : `Ficaram ${c.late.length} coisas atrasadas${c.primeiro}. Quer ver?`, m: 'triste', acoes: [{ label: 'Ver atrasados', go: A.atrasados }, { label: 'Agora não' }] });
+  if (c.pend.length) out.push({ t: `Hoje ainda tem ${c.pend.length} ${c.pend.length === 1 ? 'coisa' : 'coisas'} pra fazer${c.primeiro}. Quer marcar mais alguma?`, m: 'acena', acoes: [{ label: 'Sim, agendar', go: A.agendar }, { label: 'Não' }] });
+  if (c.pessoal.length) out.push({ t: `Você tem ${c.pessoal.length} ${c.pessoal.length === 1 ? 'lembrete' : 'lembretes'} pessoal hoje. Já cuidou?`, m: 'feliz', acoes: [{ label: 'Ver', go: A.lembrete }, { label: 'Depois' }] });
+  if (c.cabelo) out.push({ t: `Vi que você foi ao cabeleireiro${c.primeiro}. Deve estar lindo, com certeza! Autoestima é tudo 💛`, m: 'amor' });
+  if (c.feitos >= 3) out.push({ t: `Já foram ${c.feitos} feitos hoje${c.primeiro}! Que ritmo 🔥`, m: 'comemora', acoes: [{ label: 'Ver meu ranking', go: A.ranking }, { label: 'Valeu' }] });
+  if (!c.pend.length && !c.late.length) out.push({ t: `Tudo em dia${c.primeiro}! Aproveita o descanso 🙌`, m: 'danca' });
+  const gen = [
+    { t: `Oi${c.primeiro}! Quer agendar alguma coisa?`, m: 'acena', acoes: [{ label: 'Sim', go: A.agendar }, { label: 'Não' }] },
+    { t: `Tá precisando marcar algo${c.primeiro}?`, m: 'feliz', acoes: [{ label: 'Sim', go: A.agendar }, { label: 'Agora não' }] },
+    { t: `Sua agenda tá em ordem? Quer dar uma olhada?`, m: 'surpreso', acoes: [{ label: 'Abrir', go: A.perfil }, { label: 'Não' }] },
+    { t: `Lembre de beber água hoje${c.primeiro} 💧`, m: 'feliz' },
+    { t: `Você é mais forte do que imagina${c.primeiro} 💪`, m: 'amor' },
+    { t: `Respira fundo. Um passo de cada vez${c.primeiro} 🌿`, m: 'sono' },
+    { t: `Tá fazendo o quê${c.primeiro}? Eu tô de olho 👀`, m: 'desconfiado' },
+    { t: `Toda vez que você marca algo, eu fico feliz${c.primeiro} 🧡`, m: 'amor' },
+  ];
+  return out.concat(gen);
+}
+/* madrugada, sexta, segunda, datas */
+function especiais(c) {
   const d = new Date(), md = `${d.getMonth() + 1}-${d.getDate()}`;
-  if (md === '12-25') return { t: 'Feliz Natal! 🎄🔔 Hoje eu toco especial!', m: 'danca' };
-  if (md === '12-31') return { t: 'Último dia do ano! Bora fechar com chave de ouro ✨', m: 'comemora' };
-  if (md === '1-1') return { t: 'Feliz Ano Novo! 🎆 Novo ano, nova agenda!', m: 'danca' };
-  const bd = store.profile?.birth || store.profile?.birthDate;
-  if (bd && bd.slice(5) === todayKey().slice(5)) return { t: `Feliz aniversário${nm(c)}! 🎂🎉 Hoje é o seu dia!`, m: 'danca' };
+  if (md === '12-25') return { t: `Feliz Natal${c.primeiro}! 🎄 Hoje eu toco especial!`, m: 'danca' };
+  if (md === '1-1') return { t: `Feliz Ano Novo${c.primeiro}! 🎆 Nova agenda!`, m: 'danca' };
   if (c.h >= 0 && c.h < 5) return { t: pick(['Acordado(a) a essa hora? 😴', 'Psiu… já é madrugada. Vai descansar!', 'Eu tava dormindo… mas tô aqui 🥱']), m: 'sono' };
   if (c.dow === 5 && c.h >= 17) return { t: pick(['Sextou! 🎉', 'Sexta-feira! Bora fechar a semana bonito?']), m: 'danca' };
   if (c.dow === 1 && c.h < 11) return { t: pick(['Segunda-feira… bora com calma ☕', 'Semana nova, agenda nova! 💪']), m: 'feliz' };
   return null;
 }
 
+const DONE = ['Mandou bem!', 'Isso aí! Mais um riscado!', 'Arrasou!', 'Boa! Tô orgulhoso de você!', 'Uhuul! 🙌', 'Riscou! Que sensação boa, né?'];
+const DONE_LATE = ['Antes tarde do que nunca! 💪', 'Feito! O importante é não desistir.', 'Ufa! Resolvido 😮‍💨'];
+const CREATED = ['Anotado! Eu te lembro 🔔', 'Deixa comigo!', 'Marcado! ✍️', 'Pode esquecer que eu lembro 😉'];
+const SPY = ['Psiu… tô de olho 👀', 'Só passando pra ver se tá tudo bem…', 'Shhh 🤫', 'Achei você! 😄'];
+
 /* ---------- o companheiro na tela ---------- */
-let B = null, last = '', taps = [], hideT = 0, spyT = 0, idleT = 0, holdT = 0, spies = 0, busyUntil = 0;
+let B = null, ultima = '', hideT = 0, spyT = 0, holdT = 0, busyUntil = 0, sumiuEm = 0, ultimoPapo = 0;
 const blocked = () => !!document.querySelector('.sheet-wrap.is-open, .paywall, .ficha, .photogate, .gx, .okfx, .stk, .snhpeek') ||
   (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName));
+const el = () => B && B.querySelector('[data-snh]');
+function state(s, side) { if (!B) return; B.dataset.st = s; if (side) B.dataset.side = side; }
 
-function el() { return B && B.querySelector('[data-snh]'); }
-function state(s, side) {
+/* o balão: texto digitado e, quando for o caso, botões de escolha */
+function balao(line, ms) {
   if (!B) return;
-  B.dataset.st = s;
-  if (side) B.dataset.side = side;
-}
-function bubble(text, ms) {
-  if (!B) return;
-  const b = B.querySelector('.snhbud__bub');
+  const box = B.querySelector('.snhbud__bub'), txt = box.querySelector('span'), btns = box.querySelector('.snhbud__acoes');
   clearTimeout(hideT);
-  b.querySelector('span').textContent = text;
-  b.classList.remove('is-in'); void b.offsetWidth; b.classList.add('is-in');
-  hideT = setTimeout(() => b.classList.remove('is-in'), ms || Math.min(7000, 2400 + text.length * 55));
-}
-function show(line, gesture, holdMs = 4200) {
-  if (!B) return;
-  const e = el();
-  last = line.t;
-  state('up');
-  setMood(e, line.m || 'feliz');
-  if (gesture) setTimeout(() => act(e, gesture), 220);
-  setTimeout(() => bubble(line.t), 260);
-  busyUntil = Date.now() + holdMs;
+  btns.innerHTML = '';
+  (line.acoes || []).forEach((a) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'snhbud__ac'; b.textContent = a.label;
+    b.onclick = (ev) => { ev.stopPropagation(); box.classList.remove('is-in'); btns.innerHTML = ''; if (a.go) a.go().catch(() => {}); };
+    btns.appendChild(b);
+  });
+  box.classList.remove('is-in'); void box.offsetWidth; box.classList.add('is-in');
+  say(el(), line.t, { bubble: txt, speed: 26 });
+  busyUntil = Date.now() + (ms || Math.min(9000, 3200 + line.t.length * 45));
+  hideT = setTimeout(() => { if (!box.matches(':hover') && !btns.children.length) box.classList.remove('is-in'); }, busyUntil - Date.now() + 200);
   clearTimeout(holdT);
-  holdT = setTimeout(() => { if (Date.now() >= busyUntil) settle(); }, holdMs + Math.min(4000, line.t.length * 55));
+  holdT = setTimeout(() => { if (Date.now() >= busyUntil && !btns.children.length) settle(); }, busyUntil - Date.now() + 300);
 }
-/* volta a ficar quietinho no canto, espiando */
+function fala(line, gesto) {
+  if (!B) return;
+  ultima = line.t; ultimoPapo = Date.now();
+  state('up');
+  setMood(el(), line.m || 'feliz');
+  if (gesto) setTimeout(() => act(el(), gesto), 220);
+  setTimeout(() => balao(line), 260);
+}
+/* volta a ficar quietinho no canto */
 function settle() {
   if (!B) return;
   B.querySelector('.snhbud__bub').classList.remove('is-in');
   setMood(el(), new Date().getHours() >= 23 || new Date().getHours() < 5 ? 'sono' : 'feliz');
   state('rest');
 }
-function unique(fn) { let l, i = 0; do { l = fn(); i++; } while (l.t === last && i < 6); return l; }
+function escolhe(lista) { let l, i = 0; do { l = pick(lista); i++; } while (l.t === ultima && i < 8); return l; }
 
+/* ao tocar: fala algo útil e relevante (com ação quando faz sentido) */
+let toques = [];
 function onTap() {
   const now = Date.now();
-  taps = taps.filter((t) => now - t < 3200); taps.push(now);
+  toques = toques.filter((t) => now - t < 3200); toques.push(now);
   try { navigator.vibrate && navigator.vibrate(8); } catch { /* ok */ }
-  // easter eggs
-  if (taps.length === 5) return show({ t: pick(['Ei! Para de me cutucar! 😤', 'Assim eu fico tonto! 😵‍💫', 'Cosquinha não! 🤭']), m: 'bravo' }, 'nao');
-  if (taps.length === 9) return show({ t: 'Tá bom, tá bom… FESTA! 🎉🎶', m: 'danca' }, 'pulo', 5200);
-  if (taps.length > 1 && taps.length < 5) return act(el(), pick(['pop', 'sim', 'riso']));
-  if (B.dataset.st === 'up' && Date.now() < busyUntil - 1500) return show(unique(() => tapLine(ctx())), pick(['sim', 'riso', 'pop']));
-  const sp = Math.random() < 0.18 ? special(ctx()) : null;
-  show(sp || unique(() => tapLine(ctx())), sp ? 'pulo' : pick(['tchau', 'sim', 'pop', 'riso']));
+  if (toques.length === 5) return fala({ t: pick(['Ei! Para de me cutucar! 😤', 'Assim eu fico tonto! 😵‍💫']), m: 'bravo' }, 'nao');
+  if (toques.length === 9) return fala({ t: 'Tá bom, tá bom… FESTA! 🎉', m: 'danca' }, 'pulo');
+  if (toques.length > 1 && toques.length < 5) return act(el(), pick(['pop', 'sim', 'riso']));
+  const c = ctx();
+  const e = especiais(c);
+  return fala(e && Math.random() < 0.4 ? e : escolhe(falas(c)), pick(['tchau', 'sim', 'pop', 'riso']));
 }
 
-/* espiada: some de um lado e aparece "escondido" por outro, olha, às vezes cochicha e vai embora */
-function spy() {
-  clearTimeout(spyT);
-  spyT = setTimeout(spy, R(70, 170) * 1000);
-  if (!B || document.hidden || blocked() || Date.now() < busyUntil || spies >= 8) return;
-  spies++;
-  const side = pick(['l', 'r', 'r', 'b']);
-  state('away');
-  setTimeout(() => {
-    if (!B) return;
-    state('spy', side);
-    setMood(el(), pick(['desconfiado', 'feliz', 'surpreso']));
-    setTimeout(() => { if (Math.random() < 0.55) bubble(pick(SPY), 2600); else act(el(), 'sim'); }, 900);
-    setTimeout(() => { if (B && B.dataset.st === 'spy') { act(el(), 'tchau'); setTimeout(() => { state('away'); setTimeout(() => { state('rest', pick(['l', 'r'])); settle(); }, 900); }, 1100); } }, R(3600, 5200));
-  }, 700);
+/* sai andando e aparece de novo, às vezes espiando e às vezes com algo a dizer */
+function sai() {
+  if (!B) return;
+  state('away', pick(['l', 'r']));
+  sumiuEm = Date.now();
 }
-/* parado muito tempo na mesma tela: ele dá um sinal de vida (uma vez) */
-function idleWatch() {
-  clearTimeout(idleT);
-  idleT = setTimeout(() => { if (B && !blocked() && !document.hidden && Date.now() > busyUntil && Math.random() < 0.6) show({ t: pick(IDLE), m: 'acena' }, 'tchau', 3200); }, 75e3);
+function volta() {
+  if (!B) return;
+  state('rest', pick(['l', 'r']));
+  settle();
+  const c = ctx();
+  if (Math.random() < 0.6) setTimeout(() => { if (!blocked()) fala(escolhe(falas(c))); }, 700);
+}
+/* o ciclo: some por 15 s a 1 min (aleatório), volta, fala quando tem algo; nunca passa de 1 min sumido */
+function ciclo() {
+  clearTimeout(spyT);
+  if (!B) return;
+  const sumido = B.dataset.st === 'away';
+  if (sumido) { spyT = setTimeout(() => { volta(); ciclo(); }, R(15, 60) * 1000); return; }
+  spyT = setTimeout(() => {
+    if (!B || document.hidden || blocked() || Date.now() < busyUntil) return ciclo();
+    if (Math.random() < 0.5) { // espia pela borda
+      const side = pick(['l', 'r']); state('spy', side); setMood(el(), pick(['desconfiado', 'feliz', 'surpreso']));
+      setTimeout(() => { if (Math.random() < 0.6) balao({ t: pick(SPY) }, 2600); else act(el(), 'sim'); }, 900);
+      setTimeout(() => { if (B && B.dataset.st === 'spy') { act(el(), 'tchau'); setTimeout(() => { sai(); ciclo(); }, 1100); } }, R(3600, 5200));
+    } else { sai(); ciclo(); }
+  }, R(20, 60) * 1000);
 }
 
 /* ---------- API ---------- */
@@ -149,40 +173,48 @@ export function start() {
   B = document.createElement('div');
   B.className = 'snhbud';
   B.dataset.st = 'away'; B.dataset.side = 'r';
-  B.innerHTML = `<div class="snhbud__bub" role="status" aria-live="polite"><span></span></div><button class="snhbud__fig" aria-label="Sininho, seu companheiro">${sininho('feliz', { size: 96 })}</button>`;
+  B.innerHTML = `<div class="snhbud__bub" role="status" aria-live="polite"><span></span><div class="snhbud__acoes"></div></div><button class="snhbud__fig" aria-label="Lembra, seu companheiro">${sininho('feliz', { size: 96 })}</button>`;
   document.body.appendChild(B);
   B.querySelector('.snhbud__fig').addEventListener('click', onTap);
-  // segurar: ele dorme / acorda
-  let hold;
-  B.querySelector('.snhbud__fig').addEventListener('pointerdown', () => { hold = setTimeout(() => { taps = []; show({ t: 'Zzz… me acorda se precisar 😴', m: 'sono' }, null, 6000); }, 700); });
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => B.querySelector('.snhbud__fig').addEventListener(ev, () => clearTimeout(hold)));
-  // fica fora do caminho
-  const guard = () => { if (B) B.classList.toggle('is-hidden', blocked()); };
-  B._mo = new MutationObserver(guard); B._mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-  document.addEventListener('focusin', guard); document.addEventListener('focusout', () => setTimeout(guard, 50));
-  ['pointerdown', 'keydown', 'scroll'].forEach((ev) => window.addEventListener(ev, idleWatch, { passive: true }));
-  // chega dando oi
+  let segurar;
+  B.querySelector('.snhbud__fig').addEventListener('pointerdown', () => { segurar = setTimeout(() => { toques = []; fala({ t: 'Zzz… me acorda se precisar 😴', m: 'sono' }, null); }, 700); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => B.querySelector('.snhbud__fig').addEventListener(ev, () => clearTimeout(segurar)));
+  const guarda = () => { if (B) B.classList.toggle('is-hidden', blocked()); };
+  B._mo = new MutationObserver(guarda); B._mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  document.addEventListener('focusin', guarda); document.addEventListener('focusout', () => setTimeout(guarda, 50));
+  // chega dando oi, com algo de verdade para dizer
   setTimeout(() => {
     state('rest');
-    const c = ctx(), sp = special(c);
-    const hello = sp || (c.late ? { t: `Oi${nm(c)}! Tem coisa atrasada, bora ver? 👀`, m: 'triste' } : { t: pick([`Oi${nm(c)}! 👋`, `Voltou${nm(c)}! 🧡`, `E aí${nm(c)}!`, `Bom te ver${nm(c)}!`]), m: 'acena' });
-    setTimeout(() => show(hello, 'tchau', 3400), 900);
+    const c = ctx(), e = especiais(c);
+    setTimeout(() => fala(e || (c.late.length ? { t: `Oi${c.primeiro}! Tem coisa atrasada, bora ver? 👀`, m: 'triste', acoes: [{ label: 'Ver', go: A.atrasados }, { label: 'Depois' }] } : escolhe(falas(c))), 'tchau'), 900);
   }, 1200);
-  spyT = setTimeout(spy, R(60, 120) * 1000);
-  idleWatch();
+  ciclo();
 }
 export function stop() {
   if (!B) return;
   B._mo && B._mo.disconnect(); B.remove(); B = null;
-  clearTimeout(spyT); clearTimeout(idleT); clearTimeout(hideT); clearTimeout(holdT);
+  clearTimeout(spyT); clearTimeout(hideT); clearTimeout(holdT);
   document.documentElement.classList.remove('snh-theme');
 }
 /* o app avisa o que aconteceu; ele reage */
 export function react(kind, o = {}) {
   if (!B || blocked()) return;
-  if (kind === 'done') return show(o.perfect ? { t: 'Dia 100%! Você zerou tudo! 🏆', m: 'danca' } : o.late ? { t: pick(DONE_LATE), m: 'feliz' } : { t: pick(DONE), m: 'comemora' }, 'pulo', 3600);
-  if (kind === 'created') return show({ t: pick(CREATED), m: 'feliz' }, 'sim', 2800);
-  if (kind === 'late') return show({ t: 'Ih… esse passou da hora. Bora remarcar? 🙈', m: 'triste' }, null, 3400);
+  if (kind === 'done') return fala(o.perfect ? { t: 'Dia 100%! Você zerou tudo! 🏆', m: 'danca' } : o.late ? { t: pick(DONE_LATE), m: 'feliz' } : { t: pick(DONE), m: 'comemora' }, 'pulo');
+  if (kind === 'created') return fala({ t: pick(CREATED), m: 'feliz' }, 'sim');
+  if (kind === 'late') return fala({ t: 'Ih… esse passou da hora. Quer remarcar?', m: 'triste', acoes: [{ label: 'Remarcar', go: A.agendar }, { label: 'Depois' }] }, null);
 }
 export const active = () => !!B;
-export const _spy = () => spy(); // (testes)
+/* mensagens de validação do cadastro: o Lembra fala, com um jeito de quem ajuda (não de quem repreende) */
+export function linhaDeErro(msg) {
+  const m = (msg || '').toLowerCase();
+  const sorrisoNome = 'Quase lá! Me diz seu nome completo, nome e sobrenome, pra eu te chamar direitinho 😊';
+  if (m.includes('nome completo') || m.includes('nome e sobrenome')) return { t: sorrisoNome, m: 'acena' };
+  if (m.includes('só letras')) return { t: 'Ops, esse nome tem número ou símbolo. Pode tirar pra mim? 🙂', m: 'desconfiado' };
+  if (m.includes('nascimento')) return { t: 'Qual foi o dia do seu nascimento? Eu quero te dar os parabéns no dia certo 🎂', m: 'feliz' };
+  if (m.includes('maiores de 13')) return { t: 'Ah, o Lembra é para quem tem 13 anos ou mais. Quando crescer, eu te espero 🌱', m: 'triste' };
+  if (m.includes('cpf')) return { t: 'Esse CPF não bateu aqui. Confere os números comigo? 🧐', m: 'desconfiado' };
+  if (m.includes('identifica')) return { t: 'Como você se identifica? Pode escolher “Prefiro não dizer” também 💛', m: 'feliz' };
+  if (m.includes('fala com você')) return { t: 'Como eu falo com você? Escolhe um jeito que você goste 😊', m: 'acena' };
+  if (m.includes('celular')) return { t: 'Esse celular ficou meio curto. DDD + número, tá? Ou pode deixar em branco 📱', m: 'triste' };
+  return { t: msg, m: 'feliz' };
+}

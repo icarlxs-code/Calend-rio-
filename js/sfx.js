@@ -9,7 +9,8 @@ function noise(ctx) {
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   noiseBuf.set(ctx, b); return b;
 }
-const env = (g, at, peak, a, dcy, sustain = 0.0001) => { g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(peak, at + a); g.gain.exponentialRampToValueAtTime(Math.max(sustain, 0.0001), at + a + dcy); };
+const VOL = 0.5; // volume geral dos efeitos (metade do anterior)
+const env = (g, at, peak, a, dcy, sustain = 0.0001) => { peak *= VOL; g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(peak, at + a); g.gain.exponentialRampToValueAtTime(Math.max(sustain, 0.0001), at + a + dcy); };
 function osc(ctx, out, at, { type = 'sine', f0, f1 = f0, dur, peak = 0.2, a = 0.006, curve = 'exp' }) {
   const o = ctx.createOscillator(), g = ctx.createGain();
   o.type = type; o.frequency.setValueAtTime(f0, at);

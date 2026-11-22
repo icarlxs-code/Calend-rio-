@@ -100,7 +100,7 @@ function switchSpace(space, from) {
   veil.innerHTML = `<div><span class="spaceveil__badge"><i class="sv-from">${icon(icFrom, 40)}</i><i class="sv-to">${icon(icTo, 40)}</i></span><strong>${label}</strong><small>${sub}</small></div>`;
   document.body.appendChild(veil);
   // a barra do topo (hora/bateria) entra na mesma cor da transição, quando o círculo chega lá em cima
-  const veilBar = space === 'personal' ? '#FF2D55' : '#000000';
+  const veilBar = space === 'personal' ? '#FF6B1A' : '#000000';
   setTimeout(() => setBarColor(veilBar), 180);
   if (navigator.vibrate) navigator.vibrate(8);
   chime(space);

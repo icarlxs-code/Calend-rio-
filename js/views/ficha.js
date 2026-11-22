@@ -273,7 +273,11 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     const e = wrap.querySelector('.ficha__err');
     if (!e) return render();
     e.textContent = err; e.hidden = !err;
-    if (err) e.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (err) {
+      e.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      // o Lembra fala o erro (o texto continua no campo para leitores de tela)
+      import('../mascote.js').then((M) => M.fala && M.fala(M.linhaDeErro(err))).catch(() => {});
+    }
   };
   const pickOne = (attr, value, set) => {
     set(value);

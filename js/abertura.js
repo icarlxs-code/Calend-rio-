@@ -12,7 +12,16 @@ import { sininho, alive } from './sininho.js';
 import { sfx, warm } from './sfx.js';
 
 /* ===== AJUSTES ===== */
-export const MODELO = 1;            // roteiro usado no app (1 a 4)
+export const MODELO = 1;            // roteiro fixo, se o sorteio for desligado (1 a 4)
+export const SORTEIO = true;        // a cada abertura escolhe um dos 4 (sem repetir o último)
+function sorteia() {
+  if (!SORTEIO) return MODELO;
+  let ult = 0; try { ult = +localStorage.getItem('lembra.abertura') || 0; } catch { /* ok */ }
+  const opc = [1, 2, 3, 4].filter((m) => m !== ult);
+  const m = opc[Math.floor(Math.random() * opc.length)];
+  try { localStorage.setItem('lembra.abertura', String(m)); } catch { /* ok */ }
+  return m;
+}
 export const FUNDO = 'branco';      // 'branco' ou 'preto'
 export const SPEED = 1;             // velocidade geral (0.8 = mais lenta, 1.2 = mais rápida)
 export const CURVE = {              // cubic-bezier, como no After Effects / Figma
@@ -68,7 +77,7 @@ export function mountIntro(host) {
 }
 
 export function runIntro(ab, { onEnd, model } = {}) {
-  const M_ = model || (typeof window !== 'undefined' && window.__abModel) || MODELO;
+  const M_ = model || (typeof window !== 'undefined' && window.__abModel) || sorteia();
   const $ = (s) => ab.querySelector(s), $$ = (s) => [...ab.querySelectorAll(s)];
   const mark = $('.ab__mark'), blob = $('.ab__blob'), rigEl = $('.ab__rig'), sh = $('.ab__sh'), word = $('.ab__word'), tag = $('.ab__tag'), ico = $('.ab__ico');
   const drops = $$('.ab__drop'), rips = $$('.ab__rip'), arcs = $$('.ab__arc'), dust = $$('.ab__dust'), ls = $$('.ab__l'), lds = $$('.ab__ld');

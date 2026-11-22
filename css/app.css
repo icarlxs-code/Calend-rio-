@@ -998,59 +998,59 @@ html:not(.intro-done) .tabbar { opacity: 0; }
 /* ==========================================================
    Modo Pessoal — visual próprio (como se fosse outro app)
    ========================================================== */
-:root { --p-accent: #7C5CFF; --p-accent-2: #FF5E8A; --p-grad: linear-gradient(135deg, #FF7AA2 0%, #A06BFF 55%, #6A7BFF 100%); }
+:root { --p-accent: #FF6B1A; --p-accent-2: #FFA43A; --p-grad: linear-gradient(135deg, #FFA43A 0%, #FF6B1A 100%); }
 :root[data-space="personal"] {
-  --bg: #F7F3FA;
+  --bg: #FFF8F3;
   --surface: #FFFFFF;
-  --surface-2: #F2ECF7;
-  --surface-3: #E8DFF1;
-  --text: #1E1426;
-  --text-2: #5B4E66;
-  --text-3: #968AA0;
-  --line: rgba(60, 20, 90, 0.08);
-  --ink: #7C5CFF;
+  --surface-2: #FFF0E6;
+  --surface-3: #FFE2CE;
+  --text: #1F1310;
+  --text-2: #6A4B3F;
+  --text-3: #A8877A;
+  --line: rgba(120, 50, 10, 0.09);
+  --ink: #FF6B1A;
   --ink-on: #FFFFFF;
-  --today: #FF4F7B;
-  --shadow: 0 1px 2px rgba(80, 30, 120, 0.05), 0 6px 22px rgba(80, 30, 120, 0.08);
-  --blur-bg: rgba(247, 243, 250, 0.84);
+  --today: #FF6B1A;
+  --shadow: 0 1px 2px rgba(120, 50, 10, 0.05), 0 6px 22px rgba(120, 50, 10, 0.08);
+  --blur-bg: rgba(255, 248, 243, 0.84);
   --tabbar-bg: rgba(255, 255, 255, 0.88);
 }
 @media (prefers-color-scheme: dark) {
   :root[data-space="personal"]:not([data-theme="light"]) {
-    --bg: #0E0A13;
-    --surface: #1A1421;
-    --surface-2: #241C2D;
-    --surface-3: #30263B;
-    --text: #F6F0FB;
-    --text-2: #C3B6CE;
-    --text-3: #8A7D96;
-    --line: rgba(255, 255, 255, 0.08);
-    --ink: #9B82FF;
-    --ink-on: #FFFFFF;
-    --today: #FF6F93;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
-    --blur-bg: rgba(14, 10, 19, 0.84);
-    --tabbar-bg: rgba(26, 20, 33, 0.88);
+    --bg: #000000;
+    --surface: #0F0F10;
+    --surface-2: #17171A;
+    --surface-3: #242428;
+    --text: #FFFFFF;
+    --text-2: #C9C9CE;
+    --text-3: #8A8A90;
+    --line: rgba(255, 107, 26, 0.16);
+    --ink: #FF7A2E;
+    --ink-on: #000000;
+    --today: #FF7A2E;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(255, 107, 26, 0.08);
+    --blur-bg: rgba(0, 0, 0, 0.84);
+    --tabbar-bg: rgba(15, 15, 16, 0.9);
   }
 }
 :root[data-space="personal"][data-theme="dark"] {
-    --bg: #0E0A13;
-    --surface: #1A1421;
-    --surface-2: #241C2D;
-    --surface-3: #30263B;
-    --text: #F6F0FB;
-    --text-2: #C3B6CE;
-    --text-3: #8A7D96;
-    --line: rgba(255, 255, 255, 0.08);
-    --ink: #9B82FF;
-    --ink-on: #FFFFFF;
-    --today: #FF6F93;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
-    --blur-bg: rgba(14, 10, 19, 0.84);
-    --tabbar-bg: rgba(26, 20, 33, 0.88);
+    --bg: #000000;
+    --surface: #0F0F10;
+    --surface-2: #17171A;
+    --surface-3: #242428;
+    --text: #FFFFFF;
+    --text-2: #C9C9CE;
+    --text-3: #8A8A90;
+    --line: rgba(255, 107, 26, 0.16);
+    --ink: #FF7A2E;
+    --ink-on: #000000;
+    --today: #FF7A2E;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(255, 107, 26, 0.08);
+    --blur-bg: rgba(0, 0, 0, 0.84);
+    --tabbar-bg: rgba(15, 15, 16, 0.9);
   }
 [data-space="personal"] body { background: var(--bg); }
-[data-space="personal"] .tabbar__fab { background: var(--p-grad); color: #fff; box-shadow: 0 8px 24px rgba(160, 107, 255, 0.45); }
+[data-space="personal"] .tabbar__fab { background: var(--p-grad); color: #fff; box-shadow: 0 8px 24px rgba(255, 107, 26, 0.4); }
 [data-space="personal"] .tabbar__btn.is-on { color: var(--ink); }
 [data-space="personal"] .btn--primary { background: var(--p-grad); color: #fff; border: 0; }
 [data-space="personal"] .switch:checked { background: var(--p-accent); }
@@ -1334,7 +1334,7 @@ body.is-client::before { display: none; }
 .login__logo { width: 150px; height: 150px; border-radius: 34px; box-shadow: 0 14px 40px rgba(0,0,0,.25); }
 
 /* Abertura: tela inteira preta (sem faixa branca embaixo) */
-html:not(.intro-done), html:not(.intro-done) body { background: #000; }
+html:not(.intro-done), html:not(.intro-done) body { background: #FFFFFF; }
 .intro { position: fixed; top: 0; left: 0; right: 0; bottom: 0; height: 100lvh; min-height: 100vh; }
 /* Cabeçalho do topo liso (sem efeito de vidro desfocado), na cor do app */
 .hdr { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
@@ -1696,8 +1696,8 @@ body.has-sheet .tabbar { visibility: hidden; }
   --tabbar-bg: rgba(255, 255, 255, 0.74);
   --glass-line: rgba(0, 0, 0, 0.08);
   --press: rgba(0, 0, 0, 0.06);
-  --p-accent: #FF2D55;
-  --p-grad: #FF2D55;
+  --p-accent: #FF6B1A;
+  --p-grad: linear-gradient(135deg, #FFA43A, #FF6B1A);
   --radius: 14px;
   --ease: cubic-bezier(.2, .8, .2, 1);
 }
@@ -1720,7 +1720,7 @@ body.has-sheet .tabbar { visibility: hidden; }
   --p-accent: #FF375F; --p-grad: #FF375F;
 }
 /* Pessoal: a mesma base neutra; o que muda é a cor de destaque (rosa do sistema) */
-:root[data-space="personal"] { --bg: #F2F2F7; --surface: #FFFFFF; --surface-2: #EFEFF4; --surface-3: #E3E3E8; --text: #0B0B0F; --text-2: #3C3C43; --text-3: #8A8A8E; --line: rgba(60, 60, 67, 0.13); --ink: #FF2D55; --ink-on: #FFFFFF; --today: #FF2D55; --shadow: 0 0.5px 0 rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.04); --tabbar-bg: rgba(255, 255, 255, 0.74); }
+:root[data-space="personal"] { --bg: #F2F2F7; --surface: #FFFFFF; --surface-2: #EFEFF4; --surface-3: #E3E3E8; --text: #0B0B0F; --text-2: #3C3C43; --text-3: #8A8A8E; --line: rgba(60, 60, 67, 0.13); --ink: #FF6B1A; --ink-on: #FFFFFF; --today: #FF6B1A; --shadow: 0 0.5px 0 rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.04); --tabbar-bg: rgba(255, 255, 255, 0.74); }
 @media (prefers-color-scheme: dark) {
   :root[data-space="personal"]:not([data-theme="light"]) { --bg: #000000; --surface: #1C1C1E; --surface-2: #2C2C2E; --surface-3: #3A3A3C; --text: #FFFFFF; --text-2: #D1D1D6; --text-3: #8E8E93; --line: rgba(84, 84, 88, 0.55); --ink: #FF375F; --ink-on: #FFFFFF; --today: #FF375F; --shadow: none; --tabbar-bg: rgba(30, 30, 32, 0.72); }
 }
@@ -1844,7 +1844,7 @@ button:active:not(:disabled), .btn:active, .pbig:active, .pchip:active, .prow:ac
 .foryou__lead { margin-top: -8px; }
 
 /* ---------- transição Trabalho ⇄ Pessoal: cor sólida do destino ---------- */
-.spaceveil--personal { background: #FF2D55; }
+.spaceveil--personal { background: #FF6B1A; }
 .spaceveil--work { background: #000; }
 .spaceveil__badge { background: rgba(255, 255, 255, 0.16); box-shadow: none; }
 
@@ -1853,7 +1853,7 @@ button:active:not(:disabled), .btn:active, .pbig:active, .pchip:active, .prow:ac
 .ficha__gauge { background: radial-gradient(closest-side, var(--surface) 76%, transparent 77%), conic-gradient(var(--text) calc(var(--v) * 1%), var(--surface-3) 0) !important; }
 .abars li i { background: linear-gradient(90deg, #0A84FF var(--w), var(--surface-3) var(--w)); }
 .gmode__ic--work { background: #1C1C1E; }
-.gmode__ic--life { background: #FF2D55; }
+.gmode__ic--life { background: #FF6B1A; }
 .assist-hero { background: var(--surface) !important; box-shadow: var(--shadow); }
 .dayprog__bar i { background: #34C759; }
 .vbadge { background: #F5C451; color: #3A2500; }
@@ -2710,7 +2710,8 @@ html:has(.login), html:has(.login) body { height: 100%; overflow: hidden; oversc
 
 /* ===================== Conquistas com vida: fogo, 3D e jornada ===================== */
 /* fogo animado (camadas que tremulam devagar); a cor muda com a ofensiva */
-.fire { --f1: #FFB800; --f2: #FF6A00; --f3: var(--red, #FF3B30); position: relative; width: 64px; height: 78px; display: inline-block; filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--f2) 55%, transparent)); }
+/* fogo com contorno branco fino e halo claro: aparece sobre qualquer cor do card */
+.fire { --f1: #FFB800; --f2: #FF6A00; --f3: var(--red, #FF3B30); position: relative; width: 64px; height: 78px; display: inline-block; filter: drop-shadow(0 0 1px rgba(255,255,255,.95)) drop-shadow(0 0 10px rgba(255,255,255,.55)) drop-shadow(0 6px 12px rgba(0,0,0,.25)); }
 .fire i { position: absolute; left: 50%; bottom: 6%; width: 64%; aspect-ratio: 1; border-radius: 50% 0 50% 50%; transform-origin: 50% 50%;
   background: radial-gradient(circle at 35% 65%, var(--f1) 0%, var(--f2) 50%, var(--f3) 100%); animation: fl1 1.9s ease-in-out infinite; }
 .fire i:nth-child(2) { width: 44%; left: 30%; bottom: 10%; opacity: .9; animation: fl2 1.5s ease-in-out infinite; }
@@ -2722,7 +2723,7 @@ html:has(.login), html:has(.login) body { height: 100%; overflow: hidden; oversc
 .fire--sm { width: 22px; height: 28px; filter: none; }
 .ofs--f0 .fire { --f1: #D1D1D6; --f2: #AEAEB2; --f3: #8E8E93; filter: grayscale(1); opacity: .7; }
 .ofs--f2 .fire, .is-hot .fire { --f1: #FFD23F; --f2: #FF5A1F; --f3: #E0161B; }
-.ofs--f3 .fire { --f1: #FFE066; --f2: #FF2D55; --f3: #B0003A; }
+.ofs--f3 .fire { --f1: #FFE066; --f2: #FF5A7A; --f3: #FF2D55; }
 .ofs--f4 .fire, .is-blue .fire { --f1: #C9F2FF; --f2: #3AA0FF; --f3: #3B3BFF; }
 .ofs--f5 .fire { --f1: #FFFFFF; --f2: #B57BFF; --f3: #FF3DA5; animation: hue 6s linear infinite; }
 @keyframes hue { to { filter: hue-rotate(360deg) drop-shadow(0 6px 14px rgba(180,120,255,.6)); } }
@@ -2730,7 +2731,7 @@ html:has(.login), html:has(.login) body { height: 100%; overflow: hidden; oversc
 .ofs { position: relative; overflow: hidden; display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; align-items: center; padding: 18px; border-radius: 24px; color: #fff; margin-bottom: 12px;
   background: radial-gradient(120% 140% at 0% 0%, #FF9F0A 0%, #FF5E3A 45%, #D6246E 100%); box-shadow: 0 14px 30px -14px rgba(255,94,58,.7); }
 .ofs--f0 { background: linear-gradient(135deg, #48484A, #6E6E73); box-shadow: none; }
-.ofs--f3 { background: radial-gradient(120% 140% at 0% 0%, #FF5E3A 0%, #E0245E 50%, #8E1D6B 100%); }
+.ofs--f3 { background: radial-gradient(120% 140% at 0% 0%, #FF7A3A 0%, #E8364A 55%, #B0245E 100%); }
 .ofs--f4 { background: radial-gradient(120% 140% at 0% 0%, #34AADC 0%, #3E5BF2 55%, #5B2EFF 100%); box-shadow: 0 14px 30px -14px rgba(62,91,242,.7); }
 .ofs--f5 { background: linear-gradient(135deg, #5B2EFF, #B43BFF, #FF3DA5, #FF9F0A); background-size: 300% 300%; animation: grad 8s ease infinite; }
 @keyframes grad { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
@@ -2957,7 +2958,9 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .stk__go { width: 100%; height: 52px; border-radius: 16px; background: #ff6b3d; color: #fff; font-size: 17px; font-weight: 800; border: 0; box-shadow: 0 4px 0 #c94a1f; }
 .stk__go:active { translate: 0 3px; box-shadow: 0 1px 0 #c94a1f; }
 .stk--marco .stk__title { font-size: 28px; }
-.ofs__snh { position: absolute; right: 6px; top: 4px; padding: 0; border: 0; background: none; cursor: pointer; z-index: 2; }
+.ofs__snh { position: absolute; right: 12px; top: 50%; translate: 0 -50%; width: 84px; height: 84px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; z-index: 2;
+  background: radial-gradient(circle, rgba(255,255,255,.95) 0%, rgba(255,255,255,.85) 55%, rgba(255,255,255,.0) 72%); display: grid; place-items: center; }
+.ofs__snh .snh { width: 70px; }
 /* ===================== Sininho companheiro (canto da tela) ===================== */
 .snhbud { position: fixed; z-index: 8000; right: 6px; bottom: calc(env(safe-area-inset-bottom, 0px) + 76px); width: 96px; pointer-events: none;
   transform: translate3d(0, 0, 0) rotate(0deg); transition: transform .7s cubic-bezier(.34, 1.36, .5, 1), opacity .3s; will-change: transform; }
@@ -3028,3 +3031,10 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 
 /* quadrado com as cores medidas no ícone (borda vermelho-alaranjada, centro laranja) */
 .ab__blob.is-tile { background: radial-gradient(70% 70% at 50% 46%, #FF6A0E 0%, #F65008 55%, #E43803 100%) !important; box-shadow: 0 14px 34px rgba(228, 56, 3, .26) !important; }
+
+/* balão do companheiro com botões de escolha (sim/não) */
+.snhbud__acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.snhbud__acoes:empty { display: none; }
+.snhbud__ac { font: 700 13px/1 system-ui, -apple-system, sans-serif; padding: 8px 12px; border-radius: 999px; border: 0; background: #FF6B1A; color: #fff; cursor: pointer; pointer-events: auto; -webkit-tap-highlight-color: transparent; }
+.snhbud__ac:last-child { background: var(--surface-2, #FFF0E6); color: var(--text, #1F1310); }
+.snhbud__bub { pointer-events: auto; }
