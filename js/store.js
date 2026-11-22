@@ -379,9 +379,15 @@ export async function initCloud(cloud, user) {
   backend = cloud;
   store.backendApi = cloud;
   // ficha da pessoa (profissão, rotina, dificuldades…): todas as contas têm
-  let prof = null;
-  try { prof = await Promise.race([cloud.getProfile(user.uid), new Promise((r) => setTimeout(() => r(null), 6000))]); } catch { prof = null; }
+  let prof = null, profOk = false;
+  try { prof = await Promise.race([cloud.getProfile(user.uid), new Promise((r) => setTimeout(() => r(undefined), 6000))]); profOk = prof !== undefined; } catch { prof = null; }
   store.profile = prof || {};
+  // fundadores já usavam o app antes da ficha existir: nunca são tratados como conta nova
+  if (founder && profOk && !store.profile.onboardedAt) {
+    const at = Date.parse(user.metadata?.creationTime || '') || Date.now();
+    store.profile = { ...store.profile, onboardedAt: at, consentAt: store.profile.consentAt || at, termsVersion: store.profile.termsVersion || CONFIG.termsVersion || '1.0' };
+    try { await cloud.saveProfile(user.uid, { onboardedAt: store.profile.onboardedAt, consentAt: store.profile.consentAt, termsVersion: store.profile.termsVersion }); } catch (e) { console.warn('ficha do fundador', e); }
+  }
   {
     // conta própria: espaço só dela, começa vazio
     store.workspace = user.uid;
@@ -409,7 +415,7 @@ export async function initCloud(cloud, user) {
   }
   // 1ª vez depois da separação: a agenda que era da dupla vem para o espaço próprio (uma vez só)
   const splitLocal = (() => { try { return localStorage.getItem(`lembra.split.${user.uid}`); } catch { return null; } })();
-  if (founder && prof && !store.profile.splitDone && !splitLocal && store.workspace === user.uid) {
+  if (founder && profOk && store.workspace === user.uid && ((!store.profile.splitDone && !splitLocal) || store.profile.splitCounts?.events === 0)) {
     try { await splitDupla(cloud, user, founder); } catch (e) { console.warn('separação da dupla: tenta de novo na próxima abertura', e); }
   }
   store.ready = false;
