@@ -2988,3 +2988,41 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 @media (prefers-reduced-motion: reduce) { .snhbud { transition: opacity .2s; } }
 /* cores da plataforma no tom do Sininho (o que era vermelho vira o laranja dele) */
 :root.snh-theme { --today: #FF6B3D; --danger: #F0561F; --danger-soft: rgba(255, 107, 61, .13); --red: #FF6B3D; }
+/* ===================== Abertura (motion design) ===================== */
+.intro { background: radial-gradient(120% 90% at 50% 38%, #3A1607 0%, #1A0A04 55%, #0D0503 100%); overflow: hidden; transition: opacity .55s ease, transform .6s cubic-bezier(.5, 0, .2, 1); }
+.intro.is-leaving { opacity: 0; transform: scale(1.06); filter: none; }
+.op { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding-bottom: 6vh; }
+.op > * { opacity: 0; }
+.op__glow { position: absolute; left: 50%; top: 40%; width: 120vmin; height: 120vmin; translate: -50% -50%; border-radius: 50%; background: radial-gradient(circle, rgba(255, 120, 40, .42), rgba(255, 90, 20, .12) 38%, transparent 64%); }
+.op__ring { position: absolute; left: 50%; top: 40%; width: 46vmin; height: 46vmin; max-width: 280px; max-height: 280px; translate: -50% -50%; border-radius: 50%; border: 2px solid rgba(255, 160, 90, .55); }
+.op__fig { position: relative; width: min(42vmin, 220px); aspect-ratio: 1; }
+.op__swing { width: 100%; height: 100%; transform-origin: 50% 6%; }
+.op__fig img { width: 100%; height: 100%; display: block; border-radius: 22%; box-shadow: 0 24px 60px rgba(255, 90, 20, .35), 0 8px 22px rgba(0, 0, 0, .4); }
+.op__word { margin-top: 30px; height: min(13vmin, 64px); overflow: hidden; }
+.op__word img { height: 100%; display: block; }
+.op__tag { margin: 14px 0 0; font: 500 15px/1.3 system-ui, -apple-system, sans-serif; color: rgba(255, 235, 220, .78); letter-spacing: .01em; text-align: center; }
+.op__tag span { display: inline-block; }
+.op__sp { position: absolute; left: 50%; top: 40%; width: 8px; height: 8px; border-radius: 2px; background: #FFB347; }
+/* coreografia */
+.intro.is-on .op__glow { animation: opGlow 2.6s ease-out both; }
+.intro.is-on .op__fig { animation: opDrop .9s cubic-bezier(.2, .9, .25, 1.25) .12s both; }
+.intro.is-on .op__swing { animation: opSwing 1.4s cubic-bezier(.36, 0, .3, 1) .7s both; }
+.intro.is-on .op__ring { animation: opRing 1s cubic-bezier(.15, .7, .3, 1) .78s both; }
+.intro.is-on .op__ring--2 { animation-delay: 1.02s; }
+.intro.is-on .op__word { animation: opFade .01s 1.0s both; }
+.intro.is-on .op__word img { animation: opRise .7s cubic-bezier(.2, .9, .2, 1) 1.0s both; }
+.intro.is-on .op__tag { animation: opFade .5s ease 1.45s both; }
+.intro.is-on .op__tag span { animation: opUp .6s cubic-bezier(.2, .9, .2, 1) 1.45s both; }
+.intro.is-on .op__tag span + span { animation-delay: 1.58s; }
+.intro.is-on .op__sp { animation: opSpark .9s cubic-bezier(.1, .7, .3, 1) .8s both; }
+.op__sp--1 { --x: -150px; --y: -110px; } .op__sp--2 { --x: 150px; --y: -90px; background: #FF6B3D; } .op__sp--3 { --x: -120px; --y: 60px; background: #FFD34D; } .op__sp--4 { --x: 130px; --y: 70px; }
+.intro.is-on .op__sp--2 { animation-delay: .86s; } .intro.is-on .op__sp--3 { animation-delay: .9s; } .intro.is-on .op__sp--4 { animation-delay: .94s; }
+@keyframes opGlow { 0% { opacity: 0; scale: .6; } 35% { opacity: 1; } 100% { opacity: 1; scale: 1.05; } }
+@keyframes opDrop { 0% { opacity: 0; transform: translateY(-38vh) scale(.6, .7); } 55% { opacity: 1; transform: translateY(0) scale(1.08, .9); } 75% { transform: translateY(-3%) scale(.97, 1.04); } 100% { opacity: 1; transform: none; } }
+@keyframes opSwing { 0% { rotate: 0deg; } 18% { rotate: -9deg; } 40% { rotate: 7deg; } 60% { rotate: -4deg; } 80% { rotate: 2deg; } 100% { rotate: 0deg; } }
+@keyframes opRing { 0% { opacity: .9; scale: .7; } 100% { opacity: 0; scale: 1.9; } }
+@keyframes opFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes opRise { from { transform: translateY(105%); } to { transform: none; } }
+@keyframes opUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes opSpark { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.3); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) rotate(200deg) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .intro.is-on .op > *, .intro.is-on .op * { animation: opFade .3s both !important; } }

@@ -1,12 +1,12 @@
 {
-  "version": "2.4.0",
-  "build": "s5hxqhmm",
+  "version": "2.4.1",
+  "build": "uoelewm3",
   "date": "2026-11-22",
   "min": "2.2.0",
-  "title": "Novo visual",
+  "title": "Nova abertura",
   "notes": [
-    "Nova logomarca e novo ícone do Lembra.",
+    "Nova abertura animada com o Sininho e a logomarca nova.",
     "Pequenas melhorias e correções."
   ],
-  "builtAt": "2026-11-22T19:32:51.008Z"
+  "builtAt": "2026-11-22T19:41:13.436Z"
 }

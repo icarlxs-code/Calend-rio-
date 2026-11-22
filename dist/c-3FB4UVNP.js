@@ -1,1 +1,0 @@
-var r=Object.defineProperty;var m=(a,e)=>{for(var o in e)r(a,o,{get:e[o],enumerable:!0})};var l=["Nova logomarca e novo \xEDcone do Lembra.","Pequenas melhorias e corre\xE7\xF5es."];export{m as a,l as b};
