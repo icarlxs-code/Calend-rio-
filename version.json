@@ -1,12 +1,12 @@
 {
-  "version": "2.3.1",
-  "build": "ltw5ncho",
+  "version": "2.4.0",
+  "build": "s5hxqhmm",
   "date": "2026-11-22",
   "min": "2.2.0",
-  "title": "Correções",
+  "title": "Novo visual",
   "notes": [
-    "Corrigimos um problema que, em alguns celulares, impedia o Lembra de abrir no Safari.",
+    "Nova logomarca e novo ícone do Lembra.",
     "Pequenas melhorias e correções."
   ],
-  "builtAt": "2026-11-22T14:34:53.774Z"
+  "builtAt": "2026-11-22T19:32:51.008Z"
 }

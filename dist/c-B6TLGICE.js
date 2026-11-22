@@ -1,1 +1,0 @@
-var i=Object.defineProperty;var o=(a,e)=>{for(var r in e)i(a,r,{get:e[r],enumerable:!0})};var u=["Corrigimos um problema que, em alguns celulares, impedia o Lembra de abrir no Safari.","Pequenas melhorias e corre\xE7\xF5es."];export{o as a,u as b};

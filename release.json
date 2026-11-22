@@ -1,10 +1,10 @@
 {
-  "version": "2.3.1",
+  "version": "2.4.0",
   "date": "2026-11-22",
   "min": "2.2.0",
-  "title": "Correções",
+  "title": "Novo visual",
   "notes": [
-    "Corrigimos um problema que, em alguns celulares, impedia o Lembra de abrir no Safari.",
+    "Nova logomarca e novo ícone do Lembra.",
     "Pequenas melhorias e correções."
   ]
 }
