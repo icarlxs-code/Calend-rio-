@@ -110,13 +110,13 @@ class Rig {
       if (this.pose[side] !== pose) {               // troca de peça no meio de um movimento rápido (o olho não percebe)
         const up = pose === 'aberto';
         sp.vel += (side === 'l' ? 1 : -1) * (up ? 500 : -500);
-        this.at(0.06, () => { this.pose[side] = pose; sp.v = ang + (side === 'l' ? -1 : 1) * (up ? 16 : -16); });
+        this.at(0.06, () => { this.pp = this.pp || {}; this.pp[side] = [this.pose[side], this.t, sp.v]; this.pose[side] = pose; sp.v = ang + (side === 'l' ? -1 : 1) * (up ? 16 : -16); });
       }
       sp.t = ang;
     };
     go('l', pl, al); go('r', pr, ar);
   }
-  setMouth(m) { if (m && m !== this.mouth && this.imgOk('boca-' + m)) { this.mouth = m; this.s.mz.v = 0.86; } }
+  setMouth(m) { if (m && m !== this.mouth && this.imgOk('boca-' + m)) { this.pm = this.mouth; this.pmT = this.t; this.mouth = m; this.s.mz.v = 0.9; } }
   imgOk(n) { return IMG && IMG[n] && IMG[n].naturalWidth; }
   blink(dbl) {
     if (this.s.lid.t >= 0.6) return;
@@ -213,9 +213,14 @@ class Rig {
     c.translate(FEET[0] + s.bx.v, FEET[1] + s.by.v); c.rotate((s.lean.v * Math.PI) / 180); c.scale(sx, sy); c.translate(-FEET[0], -FEET[1]);
     // braços (atrás do corpo), giram no ombro
     [['l', s.aL.v], ['r', s.aR.v]].forEach(([side, ang]) => {
-      const n = `braco-${this.pose[side]}-${side}`; if (!L[n]) return;
-      const [, , w, h] = L[n], [ax, ay] = ARM[`${this.pose[side]}-${side}`], [px, py] = SH[side];
-      c.save(); c.translate(px, py); c.rotate((ang * Math.PI) / 180); img(n, -ax * w, -ay * h, w, h); c.restore();
+      const one = (pose, a, alpha) => {
+        const n = `braco-${pose}-${side}`; if (!L[n] || alpha <= 0) return;
+        const [, , w, h] = L[n], [ax, ay] = ARM[`${pose}-${side}`], [px, py] = SH[side];
+        c.save(); c.globalAlpha = alpha; c.translate(px, py); c.rotate((a * Math.PI) / 180); img(n, -ax * w, -ay * h, w, h); c.restore();
+      };
+      const old = this.pp && this.pp[side], k = old ? Math.min(1, (this.t - old[1]) / 0.12) : 1;
+      if (old && k < 1) one(old[0], old[2] + (ang - old[2]) * 0.4, 1 - k);
+      one(this.pose[side], ang, k < 1 ? 0.35 + 0.65 * k : 1);
     });
     at('corpo');
     // rosto: chega atrasado em relação ao corpo (movimento secundário)
@@ -260,8 +265,11 @@ class Rig {
       c.save(); c.translate(cx, cy + dy); c.rotate((rot * Math.PI) / 180); img('sob-' + side, -w / 2, -h / 2, w, h); c.restore();
     });
     // boca (troca de forma com um pequeno "pop")
-    { const n = 'boca-' + this.mouth, [x, y, w, h] = L[n], z = s.mz.v, cx = x + w / 2, cy = y + h / 2;
-      c.save(); c.translate(cx, cy); c.scale(z * (1 + (z - 1) * -0.6), z); img(n, -w / 2, -h / 2, w, h); c.restore(); }
+    { const z = s.mz.v, k = this.pm ? Math.min(1, (this.t - this.pmT) / 0.09) : 1;
+      const one = (m, a) => { const n = 'boca-' + m; if (!L[n] || a <= 0) return; const [x, y, w, h] = L[n], cx = x + w / 2, cy = y + h / 2;
+        c.save(); c.globalAlpha = a; c.translate(cx, cy); c.scale(z * (1 + (z - 1) * -0.6), z); img(n, -w / 2, -h / 2, w, h); c.restore(); };
+      if (this.pm && k < 1) one(this.pm, 1 - k);
+      one(this.mouth, k); }
     // lágrimas
     if (this.mood === 'triste') {
       const ph = (this.t % 1.6) / 1.6; c.fillStyle = 'rgba(120,200,255,' + (0.9 * Math.sin(ph * Math.PI)) + ')';

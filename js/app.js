@@ -169,6 +169,7 @@ function render() {
   if (tb) (view.querySelector('.page') || view).insertAdjacentHTML('afterbegin', tb);
   bindSwipes();
   bindStrip(view);
+  if (store.user && !window.__snhTried) { window.__snhTried = 1; import('./mascote.js').then((m) => m.start()).catch(() => {}); }
   if (personalMode) {
     const pq = view.querySelector('[data-form="pquick"] input');
     bindPersonal(view);

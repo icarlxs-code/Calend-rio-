@@ -282,8 +282,12 @@ function completed({ key, due, createdAt = 0, kind = 'work', hasTime = false }) 
   settle();
   // Sininho reage: 1ª conclusão do dia → tela da ofensiva; depois → ele espia comemorando
   const late = now > due + 15 * 60e3;
-  if (firstToday) import('./streak.js').then((m) => m.showStreak(offensive().days)).catch(() => {});
-  else import('./sininho.js').then((m) => m.cheerDone({ late, perfect: !!perfect })).catch(() => {});
+  // Sininho (por enquanto só para o dono): 1ª conclusão do dia → tela da ofensiva; depois ele comemora no canto
+  import('./mascote.js').then((M) => {
+    if (!M.mascotOn()) return;
+    if (firstToday) import('./streak.js').then((m) => m.showStreak(offensive().days));
+    else M.react('done', { late, perfect: !!perfect });
+  }).catch(() => {});
 }
 /* compromisso criado / concluído (gancho do store) */
 export function onEvent(prev, item) {
@@ -294,6 +298,7 @@ export function onEvent(prev, item) {
     if (S.d.created <= CAPS.createCount) S.c.created = (S.c.created || 0) + 1;
     if (S.d.created <= CAPS.createXp) gain(XP.create, 'compromisso marcado', { fly: false });
     settle();
+    import('./mascote.js').then((M) => M.react('created')).catch(() => {});
   }
   if (item.status === 'feito' && prev?.status !== 'feito' && mineEv(item)) completed({ key: `e:${item.id}`, due: dueOf(item.date, item.time), createdAt: item.createdAt || 0, hasTime: /^\d{2}:\d{2}$/.test(item.time || '') });
 }
