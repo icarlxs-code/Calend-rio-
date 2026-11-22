@@ -2914,3 +2914,58 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .pw-buy.is-hot { background: #fff !important; color: #000 !important; }
 .pw-buy > i { display: none !important; }
 .pw-buy__s { opacity: .7; }
+
+/* ===================== Sininho (mascote) ===================== */
+.msc { display: inline-block; width: var(--s); line-height: 0; }
+.msc svg { overflow: visible; display: block; }
+.msc-body { transform-box: fill-box; transform-origin: 50% 100%; animation: mscBreath 3.2s ease-in-out infinite; }
+.msc-shadow { transform-box: fill-box; transform-origin: center; animation: mscShadow 3.2s ease-in-out infinite; }
+@keyframes mscBreath { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.025, .975); } }
+@keyframes mscShadow { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(1.05); } }
+.msc-blink { transform-box: fill-box; transform-origin: top; transform: scaleY(0); animation: mscBlink 4.5s infinite; }
+@keyframes mscBlink { 0%, 92%, 100% { transform: scaleY(0); } 95% { transform: scaleY(1); } }
+.msc-arm { transform-box: fill-box; transform-origin: 50% 15%; transform: rotate(var(--r)); }
+.msc-arm--l { transform-origin: 70% 20%; } .msc-arm--r { transform-origin: 30% 20%; }
+.msc-pupil { transition: transform .3s; }
+/* feliz: acena */
+.msc--feliz .msc-arm--r { animation: mscWave 1.6s ease-in-out infinite; }
+@keyframes mscWave { 0%, 100% { transform: rotate(-140deg); } 50% { transform: rotate(-110deg); } }
+/* comemora: pula com squash & stretch */
+.msc--comemora .msc-body { animation: mscJump 1s cubic-bezier(.3,.6,.4,1) infinite; }
+.msc--comemora .msc-shadow { animation: mscJumpSh 1s cubic-bezier(.3,.6,.4,1) infinite; }
+.msc--comemora .msc-arm--l { animation: mscCheerL 1s ease-in-out infinite; } .msc--comemora .msc-arm--r { animation: mscCheerR 1s ease-in-out infinite; }
+@keyframes mscJump { 0%, 100% { transform: translateY(0) scale(1.08, .9); } 15% { transform: translateY(0) scale(.94, 1.08); } 45% { transform: translateY(-24px) scale(1, 1); } 80% { transform: translateY(0) scale(1.06, .92); } }
+@keyframes mscJumpSh { 0%, 100% { transform: scaleX(1); opacity: .12; } 45% { transform: scaleX(.6); opacity: .06; } }
+@keyframes mscCheerL { 0%, 100% { transform: rotate(-150deg); } 45% { transform: rotate(-170deg); } }
+@keyframes mscCheerR { 0%, 100% { transform: rotate(150deg); } 45% { transform: rotate(170deg); } }
+.msc-conf rect { animation: mscPop 1s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes mscPop { 0% { opacity: 0; transform: translateY(8px) scale(.5); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(-10px) scale(1); } }
+/* sono: respira devagar, Zzz sobe */
+.msc--sono .msc-body { animation-duration: 4.5s; } .msc--sono .msc-blink { animation: none; }
+.msc-zzz text { animation: mscZ 2.6s ease-in-out infinite; } .msc-zzz text:nth-child(2) { animation-delay: .8s; }
+@keyframes mscZ { 0% { opacity: 0; transform: translate(0, 6px); } 40% { opacity: 1; } 100% { opacity: 0; transform: translate(6px, -10px); } }
+/* desconfiado: olhar de lado, balança o pé */
+.msc--desconfiado .msc-foot--r { transform-box: fill-box; transform-origin: center; animation: mscTap .6s ease-in-out infinite; }
+@keyframes mscTap { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+/* amor: balança de um lado para o outro, corações sobem */
+.msc--amor .msc-body { animation: mscShy 2.4s ease-in-out infinite; }
+@keyframes mscShy { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+.msc-hearts path { transform-box: fill-box; transform-origin: center; animation: mscHeart 1.8s ease-in-out infinite; } .msc-hearts path:nth-child(2) { animation-delay: .6s; }
+@keyframes mscHeart { 0% { transform: translateY(6px) scale(.6); opacity: 0; } 40% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-12px) scale(1.1); } }
+/* dança */
+.msc--danca .msc-body { animation: mscDance .9s ease-in-out infinite; }
+.msc--danca .msc-arm--l { animation: mscArmD 0.9s ease-in-out infinite; } .msc--danca .msc-arm--r { animation: mscArmD2 .9s ease-in-out infinite; }
+@keyframes mscDance { 0%, 100% { transform: rotate(-8deg) translateY(0); } 50% { transform: rotate(8deg) translateY(-6px); } }
+@keyframes mscArmD { 0%, 100% { transform: rotate(-120deg); } 50% { transform: rotate(-60deg); } }
+@keyframes mscArmD2 { 0%, 100% { transform: rotate(30deg); } 50% { transform: rotate(120deg); } }
+.msc-notes { animation: mscZ 1.8s ease-in-out infinite; }
+/* bravo: tremidinha e vapor */
+.msc--bravo .msc-body { animation: mscShake .35s ease-in-out infinite; }
+@keyframes mscShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-1.5px); } 75% { transform: translateX(1.5px); } }
+.msc-steam circle { animation: mscPop 1.4s ease-out infinite; transform-box: fill-box; transform-origin: center; } .msc-steam circle:nth-child(odd) { animation-delay: .5s; }
+/* triste: lágrimas escorrem, corpo murcha */
+.msc--triste .msc-body { animation: mscSad 3s ease-in-out infinite; }
+@keyframes mscSad { 0%, 100% { transform: scale(1.03, .96); } 50% { transform: scale(1.05, .93); } }
+.msc-tears path { transform-box: fill-box; transform-origin: top; animation: mscTear 1.6s ease-in infinite; } .msc-tears path:nth-child(2) { animation-delay: .7s; }
+@keyframes mscTear { 0% { transform: translateY(0) scale(.6); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(16px) scale(1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .msc * { animation: none !important; } }
