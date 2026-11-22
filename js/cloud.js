@@ -162,6 +162,10 @@ const backend = {
     const snap = await fs.getDocs(fs.collection(db, 'stats'));
     return snap.docs.map((d) => ({ ...d.data(), uid: d.id }));
   },
+  /* painel do dono ao vivo: avisa a cada mudança em qualquer conta */
+  watchStats(cb, onErr) {
+    return fs.onSnapshot(fs.collection(db, 'stats'), (snap) => cb(snap.docs.map((d) => ({ ...d.data(), uid: d.id }))), onErr);
+  },
   async getProfile(uid) {
     const s = await fs.getDoc(fs.doc(db, 'users', uid));
     return s.exists() ? s.data() : null;

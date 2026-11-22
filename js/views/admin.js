@@ -123,7 +123,7 @@ function card(u, open) {
       <div class="acct__id"><strong>${esc(u.name || 'Sem nome')}${isVip(u.uid) ? ` <i class="acrown" title="Vitalício">${icon('crown', 12)}</i>` : ''}${online ? ' <span class="adot" title="Usando agora"></span>' : ''}</strong><small>${esc(u.email || '')}</small></div>
       <div class="acct__last"><b class="${online ? 'is-live' : ''}">${online ? 'no app agora' : esc(`saiu ${ago(last)}`)}</b><small>${u.workspace === 'compartilhada' ? 'Convidado' : planLabel(planOf(u.uid), u)}${planOf(u.uid)?.spent > 0 ? ` · ${brl(planOf(u.uid).spent)}` : ''}${planOf(u.uid)?.addon?.active ? ` + ${planOf(u.uid).addon.plan === 'equipe' ? 'Equipe' : 'Dupla'}` : ''}</small></div>
     </button>
-    ${u.profile?.done ? `<div class="acct__prof">${icon('idcard', 13)} <b>${esc(u.profile.profession || '—')}</b>${u.profile.age ? ` · ${esc(u.profile.age)} anos` : ''} · índice ${u.profile.index}/100</div>` : u.workspace !== 'dupla' ? `<div class="acct__prof is-off">${icon('idcard', 13)} Ficha não preenchida</div>` : ''}
+    ${isAppOwner(u) ? `<div class="acct__prof">${icon('crown', 13)} <b>Proprietário</b> · criador do Lembra, acesso total</div>` : u.profile?.done ? `<div class="acct__prof">${icon('idcard', 13)} <b>${esc(u.profile.profession || '—')}</b>${u.profile.age ? ` · ${esc(u.profile.age)} anos` : ''} · índice ${u.profile.index}/100</div>` : u.workspace !== 'dupla' ? `<div class="acct__prof is-off">${icon('idcard', 13)} Ficha não preenchida</div>` : ''}
     <div class="acct__chips">
       <span>${icon('building', 12)} ${c.companies || 0} grupos</span>
       <span>${icon('calendar', 12)} ${c.myEvents || 0} eventos</span>
@@ -328,9 +328,10 @@ function cleanStat(u) {
 }
 
 export async function openAdmin() {
+  let stop = null, tick = null, plansAt = Date.now();
   let users = null, err = null, openUid = null, q = '', plans = {}, errors = null, tab = 'resumo';
   const html = () => {
-    const head = sheetHead('Painel do dono', { right: '<button class="btn-text" data-reload>Atualizar</button>' });
+    const head = sheetHead('Painel do dono', { right: '<span class="alive"><i></i>Ao vivo</span>' });
     if (err) return `${head}<div class="page page--sheet"><div class="empty"><h3>Não consegui carregar</h3><p>${esc(err)}</p></div></div>`;
     if (!users) return `${head}<div class="page page--sheet"><p class="fhelp">Carregando…</p></div>`;
     const now = Date.now();
@@ -433,6 +434,7 @@ export async function openAdmin() {
     if (tab === 'ranking') api.set(html());
   };
   const api = openSheet({
+    onClose: () => { try { stop && stop(); } catch { /* ok */ } clearInterval(tick); },
     className: 'sheet--tall',
     html: html(),
     onMount: (a) => {
@@ -495,6 +497,26 @@ export async function openAdmin() {
     }
     catch (e) { err = /permission/i.test(String(e.code || e.message)) ? 'Falta atualizar as regras do Firebase (bloco “stats”).' : 'Verifique a internet e toque em Atualizar.'; }
     api.set(html());
+    live();
+  };
+  /* ao vivo: o que muda no celular das pessoas aparece aqui na hora, sem tocar em Atualizar */
+  const redraw = () => {
+    if (api.closed || !users) return;
+    const s = api.el.querySelector('[data-q]'), focused = s && document.activeElement === s, pos = focused ? s.selectionStart : 0;
+    const scroller = api.el.querySelector('.page--sheet'), top = scroller ? scroller.scrollTop : 0;
+    api.set(html());
+    const sc2 = api.el.querySelector('.page--sheet'); if (sc2) sc2.scrollTop = top;
+    if (focused) { const n = api.el.querySelector('[data-q]'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }
+  };
+  const live = () => {
+    if (stop || !store.backendApi.watchStats) return;
+    stop = store.backendApi.watchStats(async (list) => {
+      users = list.map(cleanStat);
+      // planos e pagamentos: atualiza junto, no máximo a cada 20 s
+      if (Date.now() - plansAt > 20e3) { plansAt = Date.now(); try { const { api: call } = await import('../avisos.js'); plans = (await call('/billing/all', {})).byWs || plans; } catch { /* mantém */ } }
+      redraw();
+    }, (e) => console.warn('painel ao vivo', e));
+    tick = setInterval(redraw, 30e3); // "no app agora" → "saiu há 1 min" mesmo sem novidade
   };
   load();
   return api;

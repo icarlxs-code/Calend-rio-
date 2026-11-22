@@ -388,6 +388,11 @@ export async function initCloud(cloud, user) {
     store.profile = { ...store.profile, onboardedAt: at, consentAt: store.profile.consentAt || at, termsVersion: store.profile.termsVersion || CONFIG.termsVersion || '1.0' };
     try { await cloud.saveProfile(user.uid, { onboardedAt: store.profile.onboardedAt, consentAt: store.profile.consentAt, termsVersion: store.profile.termsVersion }); } catch (e) { console.warn('ficha do fundador', e); }
   }
+  // fundador sem nome salvo (a dupla nunca preencheu): usa o nome dele, nunca o começo do e-mail
+  if (founder && profOk && !store.profile.name && !store.profile.nickname && founder.name) {
+    store.profile = { ...store.profile, name: founder.name };
+    cloud.saveProfile(user.uid, { name: founder.name }).catch((e) => console.warn('nome do fundador', e));
+  }
   {
     // conta própria: espaço só dela, começa vazio
     store.workspace = user.uid;

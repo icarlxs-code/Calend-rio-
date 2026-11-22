@@ -643,7 +643,7 @@ async function handle(req, env) {
       const lastAuto = [...th.msgs].reverse().find((m) => m.from === 'auto');
       if (!lastAuto || now - lastAuto.at > 864e5) th.msgs.push({ from: 'auto', text: AUTO, at: now + 1 });
       th.msgs = th.msgs.slice(-200);
-      th.updatedAt = now; th.unread = (th.unread || 0) + 1; th.userUnread = 0;
+      th.updatedAt = now; th.unread = (th.unread || 0) + 1; th.userUnread = 0; delete th.closedAt; // mensagem nova reabre o atendimento
       await env.CAL.put(key(me.id), JSON.stringify(th));
       const idx = (await env.CAL.get('support-index', 'json')) || {};
       idx[me.id] = { name: me.name, email: me.email, at: now, unread: th.unread, last: text.slice(0, 80) };
@@ -664,7 +664,7 @@ async function handle(req, env) {
       if (id) {
         const th = await env.CAL.get(key(id), 'json');
         if (th && th.unread) { th.unread = 0; await env.CAL.put(key(id), JSON.stringify(th)); if (idx[id]) { idx[id].unread = 0; await env.CAL.put('support-index', JSON.stringify(idx)); } }
-        return reply(env, req, { ok: true, thread: th ? th.msgs : [], name: th?.name, email: th?.email });
+        return reply(env, req, { ok: true, thread: th ? th.msgs : [], name: th?.name, email: th?.email, closedAt: th?.closedAt || null });
       }
       return reply(env, req, { ok: true, inbox: Object.entries(idx).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.at - a.at) });
     }
@@ -680,6 +680,25 @@ async function handle(req, env) {
       if (idx[id]) { idx[id].unread = 0; idx[id].answered = now; await env.CAL.put('support-index', JSON.stringify(idx)); }
       await sendToMember(env, th.member || id, { title: '💬 Resposta do suporte Lembra', body: text.slice(0, 160), tag: 'suporte', url: './#/suporte' }).catch(() => 0);
       return reply(env, req, { ok: true, thread: th.msgs });
+    }
+    // encerrar o atendimento como resolvido (ou reabrir)
+    if (url.pathname === '/support/close') {
+      const id = clean(body.id, 80);
+      const th = await env.CAL.get(key(id), 'json');
+      if (!th) return reply(env, req, { error: 'conversa não encontrada' }, 404);
+      const now = Date.now(), reopen = body.reopen === true;
+      if (reopen) delete th.closedAt;
+      else if (!th.closedAt) {
+        th.closedAt = now;
+        th.msgs.push({ from: 'closed', text: 'Atendimento encerrado como resolvido. Se precisar de mais alguma coisa, é só mandar uma nova mensagem aqui.', at: now });
+        th.msgs = th.msgs.slice(-200); th.unread = 0; th.userUnread = (th.userUnread || 0) + 1;
+        await sendToMember(env, th.member || id, { title: '✅ Atendimento resolvido', body: 'Seu atendimento no suporte Lembra foi encerrado como resolvido. Precisando, é só escrever de novo.', tag: 'suporte', url: './#/suporte' }).catch(() => 0);
+      }
+      th.updatedAt = now;
+      await env.CAL.put(key(id), JSON.stringify(th));
+      const idx = (await env.CAL.get('support-index', 'json')) || {};
+      if (idx[id]) { idx[id].unread = 0; if (reopen) delete idx[id].closed; else idx[id].closed = th.closedAt; await env.CAL.put('support-index', JSON.stringify(idx)); }
+      return reply(env, req, { ok: true, thread: th.msgs, closedAt: th.closedAt || null });
     }
     return reply(env, req, { error: 'não encontrado' }, 404);
   }

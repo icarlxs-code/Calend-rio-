@@ -2618,3 +2618,10 @@ html:has(.login), html:has(.login) body { height: 100%; overflow: hidden; oversc
 .mrow__id small { color: var(--muted, #8a8a8e); font-size: 13px; }
 .mrow__pic { border-radius: 50%; overflow: hidden; flex-shrink: 0; }
 .mrow__pic img { width: 100%; height: 100%; object-fit: cover; }
+.alive { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #1f9d55; }
+.alive i { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; animation: alivep 1.6s ease-in-out infinite; }
+@keyframes alivep { 0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,.5); } 50% { box-shadow: 0 0 0 5px rgba(34,197,94,0); } }
+.smsg-closed { align-self: center; margin: 10px auto; max-width: 88%; text-align: center; font-size: 13px; color: #15803d; background: rgba(34,197,94,.1); border-radius: 12px; padding: 8px 12px; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; align-items: center; }
+.smsg-closed time { width: 100%; font-size: 11px; opacity: .7; }
+.sresolve { color: #15803d !important; font-weight: 700; }
+.phero__author { margin: -4px 0 12px; font-size: 14px; font-weight: 600; color: var(--muted, #8a8a8e); letter-spacing: .01em; }

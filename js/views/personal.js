@@ -4,7 +4,7 @@ import { itemLook } from '../itemicons.js';
 import { okFx } from '../okfx.js';
 import {
   personal, CATS, REPEATS, LIST_PRESETS, occurrences, overdue, savePersonal, removePersonal, toggleDone, parseQuick,
-  doneOn, birthdays, phraseOfDay, addMemo, guessCat, newList, addEntry, toggleEntry, removeEntry, clearDone, savePrefs, LIST_ICONS, listIcon,
+  doneOn, birthdays, phraseOfDay, quoteOfDay, addMemo, guessCat, newList, addEntry, toggleEntry, removeEntry, clearDone, savePrefs, LIST_ICONS, listIcon,
 } from '../personal.js';
 import { openSheet, sheetHead, toast, confirmDialog, avatar, meRing } from '../components.js';
 import { isMarketing } from '../constants.js';
@@ -65,7 +65,7 @@ function renderHome() {
     ${personal.error === 'rules' ? `<div class="palert">${tile('alert', ['#FF8A7A', '#E5341F'], 36)}<div><strong>O Pessoal ainda não está liberado na nuvem</strong><small>O que você anota não fica salvo. No Firebase: Firestore → Regras → cole as regras novas → Publicar. Depois feche e abra o app.</small></div></div>` : personal.error === 'net' ? `<div class="palert">${tile('alert', ['#FFB547', '#FF7A1A'], 36)}<div><strong>Sem conexão com a nuvem</strong><small>Confira a internet. O que você anotar aparece quando a conexão voltar.</small></div></div>` : ''}
     <div class="phero">
       <p class="phero__date">${esc(fmtDayLong(t))}</p>
-      <p class="phero__phrase">“${esc(phraseOfDay(t))}”</p>
+      ${(() => { const q = quoteOfDay(t); return `<p class="phero__phrase">“${esc(q.t)}”</p><p class="phero__author">— ${esc(q.a)}</p>`; })()}
       <div class="phero__stats">
         <span>${icon('cal2', 14)}<b>${pending}</b> para hoje</span>
         ${streak().days >= 2 ? `<span>🔥<b>${streak().days}</b> dias seguidos</span>` : ''}
