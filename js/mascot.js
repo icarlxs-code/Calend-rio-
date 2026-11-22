@@ -41,7 +41,7 @@ function eye(cx, mood) {
   if (e.closed) return `<path d="M${cx - 15} 106 Q${cx} 92 ${cx + 15} 106" stroke="${C.ink}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
   const [px, py] = e.pupil || [0, 0];
   const lid = e.lid ? `<rect class="msc-lid" x="${cx - 23}" y="${83}" width="46" height="${Math.round(46 * e.lid)}" fill="${C.body}"/>` : '';
-  return `<g class="msc-eye"><circle cx="${cx}" cy="106" r="21" fill="#fff"/>
+  return `<g class="msc-eye"><circle cx="${cx}" cy="104" r="21" fill="#fff"/>
     <g class="msc-pupil"><circle cx="${cx + px}" cy="${108 + py}" r="10.5" fill="${C.ink}"/><circle cx="${cx + px - 4}" cy="${104 + py}" r="3.6" fill="#fff"/></g>
     ${lid}<rect class="msc-blink" x="${cx - 23}" y="83" width="46" height="46" fill="${C.body}"/></g>`;
 }
@@ -65,13 +65,14 @@ export function mascot(mood = 'feliz', size = 120, { label = 'Sininho, o mascote
     <ellipse class="msc-shadow" cx="100" cy="210" rx="56" ry="7" fill="#000" opacity=".12"/>
     ${extras}
     <g class="msc-body">
-      <g class="msc-feet"><ellipse class="msc-foot msc-foot--l" cx="80" cy="192" rx="15" ry="11" fill="${C.foot}"/><ellipse class="msc-foot msc-foot--r" cx="120" cy="192" rx="15" ry="11" fill="${C.foot}"/></g>
-      <g class="msc-arm msc-arm--l" style="--r:${a1}deg"><ellipse cx="38" cy="140" rx="11" ry="19" fill="${C.arm}"/></g>
-      <g class="msc-arm msc-arm--r" style="--r:${a2}deg"><ellipse cx="162" cy="140" rx="11" ry="19" fill="${C.arm}"/></g>
-      <path d="M86 44 a14 14 0 0 1 28 0 v6 h-28z" fill="${C.shade}"/><path d="M93 44 a7 7 0 0 1 14 0 v4 h-14z" fill="#fff" opacity=".85"/>
-      <path d="M44 170 C42 118 54 54 100 50 C146 54 158 118 156 170 Z" fill="${C.body}"/>
-      <path d="M58 72 C70 56 86 52 100 51" stroke="#fff" stroke-width="5" opacity=".25" fill="none" stroke-linecap="round"/>
-      <rect x="30" y="160" width="140" height="24" rx="12" fill="${C.rim}"/>
+      <g class="msc-feet"><ellipse class="msc-foot msc-foot--l" cx="78" cy="194" rx="16" ry="11" fill="${C.foot}"/><ellipse class="msc-foot msc-foot--r" cx="122" cy="194" rx="16" ry="11" fill="${C.foot}"/></g>
+      <g class="msc-arm msc-arm--l" style="--r:${a1}deg"><ellipse cx="38" cy="128" rx="12" ry="17" fill="${C.arm}"/></g>
+      <g class="msc-arm msc-arm--r" style="--r:${a2}deg"><ellipse cx="162" cy="128" rx="12" ry="17" fill="${C.arm}"/></g>
+      <circle cx="100" cy="42" r="15" fill="${C.body}"/>
+      <path d="M100 46 C62 46 52 82 50 120 C49 146 40 158 30 166 L170 166 C160 158 151 146 150 120 C148 82 138 46 100 46Z" fill="${C.body}"/>
+      <ellipse cx="100" cy="166" rx="70" ry="10" fill="${C.rim}"/><ellipse cx="100" cy="166" rx="62" ry="6" fill="#B8361A"/>
+      <g class="msc-clap"><rect x="97" y="160" width="6" height="16" rx="3" fill="#B8361A"/><circle cx="100" cy="180" r="10" fill="${C.shade}"/></g>
+      <path d="M64 78 C72 62 84 54 98 52" stroke="#fff" stroke-width="5" opacity=".25" fill="none" stroke-linecap="round"/>
       ${blush}
       <g class="msc-face">${eye(78, mood)}${eye(122, mood)}${brow}${MOUTH[mood]}${tears}</g>
     </g>
