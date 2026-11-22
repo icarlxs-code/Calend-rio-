@@ -424,6 +424,39 @@ export async function initCloud(cloud, user) {
     store.emit();
   }, (err) => store.onError && store.onError(err));
   store.ready = true;
+  if (founder && store.workspace === user.uid) setTimeout(() => repairFounder(cloud, user, founder).catch((e) => console.warn("fotos do fundador", e)), 5000);
+}
+
+const toDataUrl = async (url) => {
+  const blob = await (await fetch(url, { cache: 'no-cache' })).blob();
+  return new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(blob); });
+};
+/* Fundadores: a foto de perfil vinha do config da dupla e as logos estavam na agenda antiga.
+   Traz de volta o que estiver faltando (nunca troca o que a pessoa já colocou). */
+async function repairFounder(cloud, user, founder) {
+  if (!store.profile?.photo && founder.photo) {
+    try {
+      const photo = await toDataUrl(founder.photo);
+      store.profile = { ...(store.profile || {}), photo };
+      await cloud.saveProfile(user.uid, { photo });
+      refreshMe(); store.emit();
+    } catch (e) { console.warn('foto do fundador', e); }
+  }
+  const noLogo = store.state.companies.filter((c) => !c.logo);
+  if (!noLogo.length) return;
+  let root = [];
+  try { root = await cloud.readRoot('companies'); } catch { root = []; }
+  const norm = (x) => String(x || '').trim().toLowerCase();
+  const { SEED_COMPANIES } = await import('./seed-companies.js');
+  for (const c of noLogo) {
+    let logo = (root.find((r) => r.id === c.id && r.logo) || root.find((r) => r.logo && norm(r.name) === norm(c.name)) || {}).logo || null;
+    if (!logo) {
+      const sd = SEED_COMPANIES.find((x) => x.id === c.id || norm(x.name) === norm(c.name));
+      const file = sd ? sd.logoFile : /matheus/i.test(c.name) ? 'matheus.jpg' : /euvarej[aã]o/i.test((c.instagram || '') + c.name) ? 'henrique.jpg' : null;
+      if (file) { try { logo = await toDataUrl(`media/logos/${file}`); } catch { logo = null; } }
+    }
+    if (logo) store.writeRaw('companies', { ...c, logo, updatedAt: Date.now() });
+  }
 }
 
 /* Separação da antiga dupla: copia da raiz para ws/{uid} (nada é apagado da raiz).

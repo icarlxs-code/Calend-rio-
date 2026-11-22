@@ -145,9 +145,9 @@ const backend = {
     // só o que ainda não existe no espaço novo (rodar de novo nunca sobrescreve o que já foi editado lá)
     const have = new Set((await fs.getDocs(fs.collection(db, 'ws', uid, name))).docs.map((d) => d.id));
     items = items.filter((it) => !have.has(it.id));
-    for (let i = 0; i < items.length; i += 400) {
+    for (let i = 0; i < items.length; i += 20) {
       const batch = fs.writeBatch(db);
-      for (const it of items.slice(i, i + 400)) batch.set(fs.doc(db, 'ws', uid, name, it.id), clean(it));
+      for (const it of items.slice(i, i + 20)) batch.set(fs.doc(db, 'ws', uid, name, it.id), clean(it));
       await batch.commit();
     }
   },
@@ -226,7 +226,7 @@ const backend = {
   async deletePersonal() {
     const u = auth.currentUser;
     const snap = await fs.getDocs(fs.collection(db, 'pessoal', u.uid, 'itens'));
-    for (let i = 0; i < snap.docs.length; i += 400) {
+    for (let i = 0; i < snap.docs.length; i += 20) {
       const batch = fs.writeBatch(db);
       snap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
       await batch.commit();
@@ -285,7 +285,7 @@ const backend = {
     return fs.setDoc(ref(name, item.id), clean(item));
   },
   async writeMany(ops) {
-    for (let i = 0; i < ops.length; i += 400) {
+    for (let i = 0; i < ops.length; i += 20) {
       const batch = fs.writeBatch(db);
       ops.slice(i, i + 400).forEach(({ col: name, item }) => batch.set(ref(name, item.id), clean(item)));
       await batch.commit();
@@ -295,7 +295,7 @@ const backend = {
     return fs.deleteDoc(ref(name, id));
   },
   async delMany(name, ids) {
-    for (let i = 0; i < ids.length; i += 400) {
+    for (let i = 0; i < ids.length; i += 20) {
       const batch = fs.writeBatch(db);
       ids.slice(i, i + 400).forEach((id) => batch.delete(ref(name, id)));
       await batch.commit();
