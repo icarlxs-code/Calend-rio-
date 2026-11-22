@@ -2915,51 +2915,9 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .pw-buy > i { display: none !important; }
 .pw-buy__s { opacity: .7; }
 
-/* ===================== Sininho (desenhos originais, movimento a 60 fps) ===================== */
-.snh { display: inline-block; width: var(--s); position: relative; flex: none; -webkit-tap-highlight-color: transparent; user-select: none; }
-.snh__mot, .snh__idle, .snh__breath, .snh__pose { display: block; transform-origin: 50% 92%; will-change: transform; }
-.snh__pose { position: relative; width: 100%; padding-bottom: 80%; }
-.snh__pose img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; -webkit-user-drag: none; pointer-events: none; }
-.snh__pose img.is-on { opacity: 1; }
-/* respiração (todas as emoções) */
-.snh__breath { animation: snhBreath 2.8s cubic-bezier(.45, 0, .55, 1) infinite; }
-@keyframes snhBreath { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(.988, 1.022); } }
-.is-talk .snh__breath { animation: snhTalk .26s cubic-bezier(.45, 0, .55, 1) infinite alternate; }
-@keyframes snhTalk { from { transform: translateY(0) scale(1, 1); } to { transform: translateY(-1.6%) scale(.985, 1.025); } }
-/* jeito de cada emoção (camada .snh__idle) */
-.snh--feliz .snh__idle { animation: snhSway 5.6s cubic-bezier(.45, 0, .55, 1) infinite; }
-@keyframes snhSway { 0%, 100% { transform: rotate(-1.6deg); } 50% { transform: rotate(1.6deg); } }
-.snh--acena .snh__idle { animation: snhWaveBody .62s cubic-bezier(.45, 0, .55, 1) infinite alternate; }
-@keyframes snhWaveBody { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
-.snh--comemora .snh__idle { animation: snhHop .92s linear infinite; }
-@keyframes snhHop {
-  0% { transform: translateY(0) scale(1.08, .92); animation-timing-function: cubic-bezier(.2, .8, .4, 1); }
-  14% { transform: translateY(0) scale(.95, 1.07); animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
-  46% { transform: translateY(-14%) scale(1, 1); animation-timing-function: cubic-bezier(.6, 0, .9, .5); }
-  76% { transform: translateY(0) scale(1.08, .92); animation-timing-function: cubic-bezier(.3, 0, .5, 1); }
-  100% { transform: translateY(0) scale(1.08, .92); } }
-.snh--comemora .snh__breath, .snh--danca .snh__breath { animation: none; }
-.snh--sono .snh__idle { animation: snhNod 4.6s cubic-bezier(.45, 0, .55, 1) infinite; }
-.snh--sono .snh__breath { animation-duration: 4.6s; }
-@keyframes snhNod { 0%, 100% { transform: rotate(0deg) translateY(0); } 50% { transform: rotate(2.4deg) translateY(1%); } }
-.snh--desconfiado .snh__idle { animation: snhSus 3.2s cubic-bezier(.45, 0, .55, 1) infinite; }
-@keyframes snhSus { 0%, 100% { transform: rotate(-2deg) translateX(0); } 50% { transform: rotate(-4.5deg) translateX(-1.5%); } }
-.snh--amor .snh__idle { animation: snhLove 2.4s cubic-bezier(.45, 0, .55, 1) infinite; }
-@keyframes snhLove { 0%, 100% { transform: rotate(-3.5deg) scale(1); } 25% { transform: rotate(0) scale(1.035); } 50% { transform: rotate(3.5deg) scale(1); } 75% { transform: rotate(0) scale(1.035); } }
-.snh--danca .snh__idle { animation: snhDance .84s linear infinite; }
-@keyframes snhDance {
-  0% { transform: rotate(-7deg) translateY(0) scale(1.04, .96); animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
-  25% { transform: rotate(0) translateY(-6%) scale(.98, 1.03); animation-timing-function: cubic-bezier(.6, 0, .8, .6); }
-  50% { transform: rotate(7deg) translateY(0) scale(1.04, .96); animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
-  75% { transform: rotate(0) translateY(-6%) scale(.98, 1.03); animation-timing-function: cubic-bezier(.6, 0, .8, .6); }
-  100% { transform: rotate(-7deg) translateY(0) scale(1.04, .96); } }
-.snh--bravo .snh__idle { animation: snhShake .14s cubic-bezier(.45, 0, .55, 1) infinite alternate; }
-.snh--bravo .snh__breath { animation-duration: 1.1s; }
-@keyframes snhShake { from { transform: translateX(-1.1%) rotate(-.6deg); } to { transform: translateX(1.1%) rotate(.6deg); } }
-.snh--triste .snh__idle { animation: snhSad 3.8s cubic-bezier(.45, 0, .55, 1) infinite; }
-.snh--triste .snh__breath { animation: snhSigh 3.8s cubic-bezier(.45, 0, .55, 1) infinite; }
-@keyframes snhSad { 0%, 100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg) translateY(1.2%); } }
-@keyframes snhSigh { 0%, 100% { transform: scale(1, 1); } 40% { transform: scale(1.02, .965); } }
+/* ===================== Sininho (boneco montado com as peças, animado em canvas) ===================== */
+.snh { display: inline-block; position: relative; width: var(--s); aspect-ratio: 1160 / 1080; flex: none; -webkit-tap-highlight-color: transparent; user-select: none; }
+.snh canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 /* balão de fala */
 .snhb { position: relative; background: var(--card, #fff); color: var(--text, #1c1c1e); border-radius: 18px; padding: 10px 14px; font-size: 15px; line-height: 1.35; font-weight: 600; box-shadow: 0 6px 22px rgba(0, 0, 0, .12), 0 0 0 1px rgba(0, 0, 0, .05); min-height: 1.35em; }
 .snhb::after { content: ''; position: absolute; left: -7px; bottom: 22px; width: 14px; height: 14px; background: inherit; transform: rotate(45deg); border-radius: 0 0 0 4px; box-shadow: -1px 1px 0 rgba(0, 0, 0, .05); }
@@ -3002,9 +2960,3 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .stk__go:active { translate: 0 3px; box-shadow: 0 1px 0 #c94a1f; }
 .stk--marco .stk__title { font-size: 28px; }
 .ofs__snh { position: absolute; right: 6px; top: 4px; padding: 0; border: 0; background: none; cursor: pointer; z-index: 2; }
-/* Sininho vivo (animação quadro a quadro em vídeo com transparência) */
-.snhv { display: inline-block; position: relative; width: var(--s); aspect-ratio: 540 / 440; flex: none; -webkit-tap-highlight-color: transparent; }
-.snhv img, .snhv canvas { position: absolute; inset: 0; width: 100%; height: 100%; -webkit-user-drag: none; pointer-events: none; }
-.snhv canvas { opacity: 0; transition: opacity .2s; }
-.snhv.is-live canvas { opacity: 1; }
-.snhv.is-live img { opacity: 0; transition: opacity .2s .05s; }

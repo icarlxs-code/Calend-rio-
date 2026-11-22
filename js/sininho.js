@@ -1,163 +1,373 @@
-/* Sininho, o mascote do Lembra — usa os DESENHOS ORIGINAIS de cada pose (assets/mascot/*.webp),
-   todos alinhados pela alça e pelos pés, para a troca de pose não "pular".
-   Movimento só com transform/opacity (roda na placa de vídeo, a 60 fps), com curvas de mola:
-   - cada emoção tem o seu jeito contínuo de se mexer (respirar, balançar, dançar, tremer, murchar);
-   - gestos de momento (pulo com antecipação e pouso amortecido, tchauzinho, "não", pop);
-   - troca de pose no ponto mais achatado de um "pop" de mola (sem imagem dupla);
-   - fala: balão digitado com o corpo quicando no ritmo das letras;
-   - espia da borda da tela, acena, fala e volta; reage ao toque. */
+/* Sininho — boneco montado com as PEÇAS desenhadas (assets/mascot/rig): corpo, olhos, pupilas, sobrancelhas,
+   bocas, braços (pendurado / levantado / aberto) e pés. As posições e o jeito de se mexer foram medidos quadro a
+   quadro nos vídeos de referência:
+   - pose a pose: o corpo muda de inclinação (~1,8°) em ~0,5 s e SEGURA a pose 0,8–2 s (nada de balanço contínuo);
+   - respiração quase invisível (0,5%); piscada rápida (~80 ms fechando, ~120 ms abrindo), às vezes dupla;
+   - aceno: braço sobe rápido, a mão balança ±7° a ~4,5 Hz por ~1 s, corpo inclina para o lado oposto;
+   - movimento secundário: o rosto chega atrasado em relação ao corpo, braços e pés passam do ponto e voltam (molas).
+   Cada parte é um canal com mola (frequência + amortecimento), desenhado em canvas a cada quadro da tela (60/120 Hz). */
 import { esc } from './utils.js';
 
-/* emoções que já têm animação quadro a quadro (vídeo) */
-export const LIVE = ['feliz', 'acena', 'comemora', 'danca'];
-export const MOODS = ['feliz', 'acena', 'comemora', 'sono', 'desconfiado', 'amor', 'danca', 'bravo', 'triste'];
-const src = (m) => `assets/mascot/${MOODS.includes(m) ? m : 'feliz'}.webp`;
-const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-const pick = (a) => a[Math.floor(Math.random() * a.length)];
-const $ = (el, s) => el && el.querySelector(s);
+const R = 'assets/mascot/rig/';
+const VIEW = { x: 400, y: -40, w: 1160, h: 1080 };         // área do desenho (espaço das peças)
+const FEET = [965, 1009];                                  // ponto de apoio (inclinação e achatamento)
+const SKIN = 'rgb(247,97,40)', SKIN_EDGE = 'rgb(226,78,26)', INK = '#3B2620';
+const SH = { l: [668, 612], r: [1272, 620] };              // ombros: por dentro da borda do sino (medido no vídeo: o braço nasce atrás do corpo)
+const ARM = {                                              // peça, ponto de encaixe (fração da peça) e ângulo de descanso
+  'baixo-l': [0.66, 0.1], 'baixo-r': [0.34, 0.1], 'cima-l': [0.72, 0.9], 'cima-r': [0.28, 0.9], 'aberto-l': [0.85, 0.75], 'aberto-r': [0.15, 0.75],
+};
+const PARTS = ['corpo', 'olho-l', 'olho-r', 'pupila-l', 'pupila-r', 'sob-l', 'sob-r', 'pe-l', 'pe-r',
+  ...['fechada', 'aberta', 'riso', 'a', 'e', 'o', 'oo', 'beijo', 'tristinha', 'choro', 'grito', 'lingua', 'dentes', 'cerrado', 'canto'].map((m) => 'boca-' + m),
+  'braco-baixo-l', 'braco-baixo-r', 'braco-cima-l', 'braco-cima-r', 'braco-aberto-l', 'braco-aberto-r'];
 
-/* imagens já decodificadas: a troca acontece sem nenhum quadro em branco */
-const decoded = new Map();
-function ready(m) {
-  if (!decoded.has(m)) { const i = new Image(); i.src = src(m); decoded.set(m, (i.decode ? i.decode() : Promise.resolve()).catch(() => {})); }
-  return decoded.get(m);
+/* ---------- carregamento (uma vez para todos) ---------- */
+let LAY = null, IMG = null, loading = null;
+function load() {
+  if (loading) return loading;
+  loading = fetch(R + 'layout.json').then((r) => r.json()).then(async (lay) => {
+    LAY = lay;
+    const imgs = {};
+    await Promise.all(PARTS.map((p) => new Promise((res) => { const i = new Image(); i.onload = i.onerror = () => res(); i.src = `${R}${p}.webp`; imgs[p] = i; })));
+    await Promise.all(Object.values(imgs).map((i) => (i.decode ? i.decode().catch(() => {}) : 0)));
+    IMG = imgs;
+  }).catch(() => { loading = null; });
+  return loading;
 }
-let warmed = false;
-export function alive() {
-  if (warmed) return; warmed = true;
-  const go = () => MOODS.forEach(ready);
-  ('requestIdleCallback' in window) ? requestIdleCallback(go, { timeout: 2500 }) : setTimeout(go, 600);
+
+/* ---------- mola ---------- */
+class Spring {
+  constructor(v, f = 2, z = 0.7) { this.v = v; this.t = v; this.vel = 0; this.set(f, z); }
+  set(f, z) { const w = 2 * Math.PI * f; this.k = w * w; this.c = 2 * z * w; return this; }
+  step(dt) { const a = this.k * (this.t - this.v) - this.c * this.vel; this.vel += a * dt; this.v += this.vel * dt; }
 }
+
+/* ---------- emoções (alvos de cada canal) ---------- */
+const EMO = {
+  feliz: { lid: 0, happy: 0, brow: [0, 0, 0], mouth: 'aberta', arms: ['baixo', 12, 'baixo', -12], amp: 1, breath: 3.2 },
+  acena: { lid: 0, happy: 0, brow: [0, 0, -6], mouth: 'aberta', arms: ['baixo', 12, 'baixo', -12], amp: 1, breath: 3.2, loop: 'tchau' },
+  comemora: { lid: 0, happy: 1, brow: [0, 0, -10], mouth: 'riso', arms: ['aberto', 24, 'aberto', -24], amp: 0.6, breath: 2.4, loop: 'pulo' },
+  danca: { lid: 0, happy: 1, brow: [0, 0, -8], mouth: 'riso', arms: ['aberto', 10, 'aberto', -10], amp: 0, breath: 2.4, loop: 'danca' },
+  amor: { lid: 0, happy: 1, brow: [0, 0, -4], mouth: 'fechada', arms: ['baixo', 4, 'baixo', -4], amp: 1.6, breath: 2.8, blush: 1 },
+  sono: { lid: 0.62, happy: 0, brow: [0, 0, 10], mouth: 'o', arms: ['baixo', 6, 'baixo', -6], amp: 0.5, breath: 4.6, look: [0, 10], loop: 'cochilo' },
+  desconfiado: { lid: 0.42, happy: 0, brow: [-9, 7, 4, 1], mouth: 'canto', arms: ['baixo', 0, 'baixo', 0], amp: 0.6, breath: 3.4, look: [18, 4], lean: -2.5 },
+  triste: { lid: 0.12, happy: 0, brow: [17, -17, 6], mouth: 'tristinha', arms: ['baixo', -2, 'baixo', 2], amp: 0.5, breath: 4, look: [0, -8], sag: 0.03 },
+  bravo: { lid: 0.22, happy: 0, brow: [-20, 20, 14], mouth: 'cerrado', arms: ['baixo', 22, 'baixo', -22], amp: 0, breath: 1.4, loop: 'tremer' },
+  surpreso: { lid: 0, happy: 0, brow: [0, 0, -26], mouth: 'oo', arms: ['aberto', 8, 'aberto', -8], amp: 0.4, breath: 2.6, pupil: 0.82 },
+};
+export const MOODS = Object.keys(EMO);
+export const LIVE = []; // (compatibilidade)
+
+/* ---------- um Sininho ---------- */
+class Rig {
+  constructor(el) {
+    this.el = el; this.cv = el.querySelector('canvas'); this.ctx = this.cv.getContext('2d');
+    const S = (v, f, z) => new Spring(v, f, z);
+    this.s = {
+      lean: S(0, 1.5, 0.78), bx: S(0, 1.3, 0.85), by: S(0, 3.2, 0.55), sq: S(0, 2.6, 0.42),
+      aL: S(12, 3.6, 0.5), aR: S(-12, 3.6, 0.5), px: S(0, 5, 0.85), py: S(0, 5, 0.85), pz: S(1, 6, 0.7),
+      lid: S(0, 16, 1), happy: S(0, 7, 0.9), bL: S(0, 5, 0.6), bR: S(0, 5, 0.6), bY: S(0, 5, 0.55), bYr: S(0, 5, 0.55),
+      fL: S(0, 5, 0.55), fR: S(0, 5, 0.55), mz: S(1, 9, 0.45), blush: S(0, 2.5, 1), sag: S(0, 2, 0.9),
+    };
+    this.pose = { l: 'baixo', r: 'baixo' }; this.mouth = 'aberta'; this.mood = '';
+    this.q = []; this.t = 0; this.next = { idle: 0.6, blink: 1.5 + Math.random() * 2 }; this.loopAt = 0;
+    this.visible = true; this.dead = false; this.talk = 0;
+    this.io = 'IntersectionObserver' in window ? new IntersectionObserver(([e]) => { this.visible = e.isIntersecting; }) : null;
+    this.io && this.io.observe(el);
+    this.resize(); this.setMood(el.dataset.snh || 'feliz', true);
+    this.last = performance.now();
+    const tick = () => { if (this.dead) return; if (!el.isConnected) return this.stop(); this.raf = requestAnimationFrame(tick); this.frame(performance.now()); };
+    if (typeof window !== 'undefined' && window.__snhManual) { this.fake = 0; (window.__snhRigs = window.__snhRigs || []).push(this); this.last = 0; } // modo de teste: avançado à mão, quadro a quadro
+    else this.raf = requestAnimationFrame(tick);
+  }
+  stop() { this.dead = true; cancelAnimationFrame(this.raf); this.io && this.io.disconnect(); }
+  resize() {
+    const dpr = Math.min(3, window.devicePixelRatio || 1), w = this.el.clientWidth || parseFloat(this.el.style.getPropertyValue('--s')) || 120;
+    this.cv.width = Math.round(w * dpr); this.cv.height = Math.round(w * VIEW.h / VIEW.w * dpr); this.scale = this.cv.width / VIEW.w;
+  }
+  /* agenda no relógio do boneco */
+  at(sec, fn) { this.q.push([this.t + sec, fn]); }
+  clear() { this.q = []; }
+
+  setMood(m, now = false) {
+    if (!EMO[m]) m = 'feliz';
+    if (m === this.mood) return;
+    this.mood = m; this.el.dataset.snh = m;
+    const e = EMO[m], s = this.s;
+    this.clear(); this.loopAt = this.t + 0.5;
+    s.lid.t = e.lid; s.happy.t = e.happy; s.bL.t = e.brow[0]; s.bR.t = e.brow[1]; s.bY.t = e.brow[2]; s.bYr.t = e.brow[3] ?? e.brow[2];
+    s.blush.t = e.blush || 0; s.sag.t = e.sag || 0; s.pz.t = e.pupil || 1;
+    s.px.t = e.look ? e.look[0] : 0; s.py.t = e.look ? e.look[1] : 0;
+    s.lean.t = e.lean || 0; s.bx.t = 0; s.by.t = 0; s.fL.t = 0; s.fR.t = 0;
+    this.arms(e.arms);
+    this.setMouth(e.mouth);
+    if (!now) { s.sq.vel += 1.4; s.by.vel -= 120; } // "pulinho" de reação ao mudar
+    if (now) Object.values(s).forEach((x) => { x.v = x.t; x.vel = 0; });
+  }
+  arms([pl, al, pr, ar]) {
+    const s = this.s;
+    const go = (side, pose, ang) => {
+      const sp = side === 'l' ? s.aL : s.aR;
+      if (this.pose[side] !== pose) {               // troca de peça no meio de um movimento rápido (o olho não percebe)
+        const up = pose === 'aberto';
+        sp.vel += (side === 'l' ? 1 : -1) * (up ? 500 : -500);
+        this.at(0.06, () => { this.pose[side] = pose; sp.v = ang + (side === 'l' ? -1 : 1) * (up ? 16 : -16); });
+      }
+      sp.t = ang;
+    };
+    go('l', pl, al); go('r', pr, ar);
+  }
+  setMouth(m) { if (m && m !== this.mouth && this.imgOk('boca-' + m)) { this.mouth = m; this.s.mz.v = 0.86; } }
+  imgOk(n) { return IMG && IMG[n] && IMG[n].naturalWidth; }
+  blink(dbl) {
+    if (this.s.lid.t >= 0.6) return;
+    const base = this.s.lid.t; this.s.lid.t = 1;
+    this.at(0.085, () => { this.s.lid.t = base; });
+    if (dbl) this.at(0.26, () => this.blink(false));
+  }
+
+  /* gestos */
+  act(name) {
+    const s = this.s, e = EMO[this.mood];
+    if (name === 'tchau') {
+      const back = e.arms;
+      s.lean.t = 2.2; s.bx.t = 6;                                  // inclina para o lado oposto ao aceno
+      this.arms(['aberto', 20, back[2], back[3]]);
+      this.at(0.06, () => { s.bY.t = (e.brow[2] || 0) - 10; s.happy.t = Math.max(e.happy, 0.0); });
+      for (let i = 0; i < 9; i++) this.at(0.16 + i * 0.111, () => { s.aL.t = i % 2 ? 27 : 13; });   // ±7° a ~4,5 Hz
+      this.at(1.2, () => { this.arms(back); s.lean.t = e.lean || 0; s.bx.t = 0; s.bY.t = e.brow[2]; });
+    } else if (name === 'pulo') {
+      s.sq.t = 0.12; s.by.t = 18;                                  // antecipação (agacha)
+      this.at(0.12, () => { s.sq.t = -0.08; s.by.t = -150; s.fL.t = 26; s.fR.t = 26; s.sq.vel -= 2; });
+      this.at(0.34, () => { s.by.t = 0; s.sq.t = 0; });
+      this.at(0.5, () => { s.sq.vel += 2.4; s.fL.t = 0; s.fR.t = 0; }); // pouso amortecido
+    } else if (name === 'riso') {
+      const keep = [s.happy.t, this.mouth];
+      s.happy.t = 1; this.setMouth('riso'); s.bY.t = -12;
+      for (let i = 0; i < 4; i++) this.at(i * 0.16, () => { s.sq.vel += 1.6; s.by.vel -= 90; });
+      this.at(1.1, () => { s.happy.t = keep[0]; this.setMouth(keep[1]); s.bY.t = e.brow[2]; });
+    } else if (name === 'nao') {
+      [[-4, 0], [4, 0.16], [-3, 0.32], [2, 0.46], [e.lean || 0, 0.6]].forEach(([v, t]) => this.at(t, () => { s.lean.t = v; s.px.t = v * 4; }));
+    } else if (name === 'sim') {
+      [[0.06, 0], [-0.03, 0.14], [0.04, 0.28], [0, 0.42]].forEach(([v, t]) => this.at(t, () => { s.sq.t = v; }));
+    } else if (name === 'pop') { s.sq.vel += 1.8; }
+  }
+
+  /* vida própria */
+  idle() {
+    const s = this.s, e = EMO[this.mood];
+    if (this.t >= this.next.idle) {
+      const amp = e.amp ?? 1;
+      if (amp) {
+        s.lean.t = (e.lean || 0) + [-1.8, -1, 0, 1, 1.8][Math.floor(Math.random() * 5)] * amp;
+        s.bx.t = (Math.random() - 0.5) * 10 * amp;
+        s.sq.vel += 0.25;                                          // assentar o peso
+      }
+      if (!e.look) { const r = Math.random(); s.px.t = r < 0.35 ? 0 : (Math.random() - 0.5) * 36; s.py.t = r < 0.35 ? 0 : (Math.random() - 0.5) * 20; }
+      if (Math.random() < 0.12 && !this.talk) { s.bY.t = e.brow[2] - 12; s.bYr.t = (e.brow[3] ?? e.brow[2]) - 12; this.at(0.6, () => { s.bY.t = e.brow[2]; s.bYr.t = e.brow[3] ?? e.brow[2]; }); }
+      this.next.idle = this.t + 0.9 + Math.random() * 1.6;          // segura a pose (como no vídeo)
+    }
+    if (this.t >= this.next.blink) { this.blink(Math.random() < 0.2); this.next.blink = this.t + 2.2 + Math.random() * 3.6; }
+    if (e.loop && this.t >= this.loopAt) {
+      const L = e.loop;
+      if (L === 'tchau') { this.act('tchau'); this.loopAt = this.t + 3.2 + Math.random() * 2; }
+      else if (L === 'pulo') { this.act('pulo'); this.loopAt = this.t + 0.95; }
+      else if (L === 'danca') {
+        const k = Math.round(this.t / 0.42) % 2;
+        s.lean.t = k ? 6 : -6; s.by.t = 0; s.by.vel -= 160; s.aL.t = k ? 24 : -14; s.aR.t = k ? 14 : -24; s.fL.t = k ? 22 : 0; s.fR.t = k ? 0 : 22;
+        this.loopAt = this.t + 0.42;
+      } else if (L === 'cochilo') { s.lean.t = s.lean.t > 1 ? -0.5 : 2.6; s.by.t = s.lean.t > 1 ? 6 : 0; this.loopAt = this.t + 2.3; }
+      else if (L === 'tremer') { s.lean.t = (s.lean.t > 0 ? -1 : 1) * 1.1; this.loopAt = this.t + 0.07; }
+    }
+  }
+
+  frame(now) {
+    let dt = Math.min(0.05, (now - this.last) / 1000); this.last = now;
+    if ((!this.visible && !this.fake && this.fake !== 0) || document.hidden || !IMG) return;
+    const n = Math.max(1, Math.ceil(dt / (1 / 240)));               // passos pequenos: molas estáveis em qualquer taxa de tela
+    for (let i = 0; i < n; i++) {
+      this.t += dt / n;
+      while (this.q.length) { const j = this.q.findIndex((x) => x[0] <= this.t); if (j < 0) break; const [, fn] = this.q.splice(j, 1)[0]; fn(); }
+      if (i === 0) this.idle();
+      for (const k in this.s) this.s[k].step(dt / n);
+    }
+    this.draw();
+  }
+
+  draw() {
+    const c = this.ctx, s = this.s, L = LAY, e = EMO[this.mood];
+    c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.cv.width, this.cv.height);
+    c.setTransform(this.scale, 0, 0, this.scale, -VIEW.x * this.scale, -VIEW.y * this.scale);
+    const img = (n, x, y, w, h) => { const i = IMG[n]; if (i && i.naturalWidth) c.drawImage(i, x, y, w, h); };
+    const at = (n, dx = 0, dy = 0) => { const [x, y, w, h] = L[n]; img(n, x + dx, y + dy, w, h); };
+    const breath = Math.sin((this.t / (e.breath || 3.2)) * Math.PI * 2) * 0.005;
+    const sq = s.sq.v + breath + s.sag.v;
+    const sy = 1 - sq, sx = 1 + sq * 0.7;
+    // pés (no chão; só sobem nos pulos/passos)
+    c.save(); c.translate(s.bx.v * 0.3, Math.min(0, s.by.v) * 0.85);
+    [['pe-l', s.fL.v, -1], ['pe-r', s.fR.v, 1]].forEach(([n, lift, side]) => {
+      const [x, y, w, h] = L[n]; c.save(); c.translate(x + w / 2, y + h); c.rotate(side * lift * 0.004); c.translate(-(x + w / 2), -(y + h) - lift); img(n, x, y, w, h); c.restore();
+    });
+    c.restore();
+    // corpo: inclina e achata a partir do apoio
+    c.save();
+    c.translate(FEET[0] + s.bx.v, FEET[1] + s.by.v); c.rotate((s.lean.v * Math.PI) / 180); c.scale(sx, sy); c.translate(-FEET[0], -FEET[1]);
+    // braços (atrás do corpo), giram no ombro
+    [['l', s.aL.v], ['r', s.aR.v]].forEach(([side, ang]) => {
+      const n = `braco-${this.pose[side]}-${side}`; if (!L[n]) return;
+      const [, , w, h] = L[n], [ax, ay] = ARM[`${this.pose[side]}-${side}`], [px, py] = SH[side];
+      c.save(); c.translate(px, py); c.rotate((ang * Math.PI) / 180); img(n, -ax * w, -ay * h, w, h); c.restore();
+    });
+    at('corpo');
+    // rosto: chega atrasado em relação ao corpo (movimento secundário)
+    const fx = -s.lean.vel * 1.1 + s.px.v * 0.12, fy = -s.by.vel * 0.012;
+    c.save(); c.translate(fx, fy);
+    // bochechas
+    if (s.blush.v > 0.02) { c.globalAlpha = 0.5 * s.blush.v; c.fillStyle = '#FF8E7A'; [[790, 640], [1150, 648]].forEach(([x, y]) => { c.beginPath(); c.ellipse(x, y, 46, 26, 0, 0, Math.PI * 2); c.fill(); }); c.globalAlpha = 1; }
+    // olhos
+    ['l', 'r'].forEach((side) => {
+      const [x, y, w, h] = L['olho-' + side], cx = x + w / 2, cy = y + h / 2;
+      const hp = Math.min(1, Math.max(0, s.happy.v)), open = 1 - hp;
+      if (open > 0.02) {
+        c.save(); c.globalAlpha = open;
+        c.translate(cx, cy); c.scale(1, 1 - hp * 0.5); c.translate(-cx, -cy);
+        img('olho-' + side, x, y, w, h);
+        c.save(); c.beginPath(); c.ellipse(cx, cy, w / 2 - 3, h / 2 - 3, 0, 0, Math.PI * 2); c.clip();
+        const [qx, qy, qw, qh] = L['pupila-' + side], z = s.pz.v;
+        const pcx = qx + qw / 2 + s.px.v, pcy = qy + qh / 2 + s.py.v;
+        img('pupila-' + side, pcx - (qw * z) / 2, pcy - (qh * z) / 2, qw * z, qh * z);
+        // pálpebra (piscar, sono, desconfiança)
+        c.restore();
+        // pálpebra (piscar, sono, desconfiança): cobre o olho inteiro, inclusive a borda
+        const lid = Math.min(1, Math.max(0, s.lid.v));
+        if (lid > 0.01) {
+          c.save(); c.beginPath(); c.ellipse(cx, cy, w / 2 + 3, h / 2 + 3, 0, 0, Math.PI * 2); c.clip();
+          const ly = y - 6 + (h + 12) * lid;
+          c.fillStyle = SKIN; c.beginPath(); c.moveTo(x - 8, y - 12); c.lineTo(x + w + 8, y - 12); c.lineTo(x + w + 8, ly); c.quadraticCurveTo(cx, ly + 14 * (1 - lid), x - 8, ly); c.closePath(); c.fill();
+          c.strokeStyle = SKIN_EDGE; c.lineWidth = 7; c.beginPath(); c.moveTo(x - 8, ly); c.quadraticCurveTo(cx, ly + 14 * (1 - lid), x + w + 8, ly); c.stroke();
+          c.restore();
+        }
+        c.restore();
+        if (lid > 0.9) { c.strokeStyle = INK; c.lineWidth = 13; c.lineCap = 'round'; c.beginPath(); c.moveTo(cx - w * 0.32, cy + 4); c.quadraticCurveTo(cx, cy + 26, cx + w * 0.32, cy + 4); c.stroke(); }
+      }
+      if (hp > 0.02) { // olhos fechados de alegria (arco, como no vídeo)
+        c.save(); c.globalAlpha = hp; c.strokeStyle = INK; c.lineWidth = 15; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(cx - w * 0.3, cy + 14); c.quadraticCurveTo(cx, cy - 40, cx + w * 0.3, cy + 14); c.stroke(); c.restore();
+      }
+    });
+    // sobrancelhas (giram no centro, sobem/descem)
+    [['l', s.bL.v, s.bY.v], ['r', s.bR.v, s.bYr.v]].forEach(([side, rot, dy]) => {
+      const [x, y, w, h] = L['sob-' + side], cx = x + w / 2, cy = y + h / 2;
+      c.save(); c.translate(cx, cy + dy); c.rotate((rot * Math.PI) / 180); img('sob-' + side, -w / 2, -h / 2, w, h); c.restore();
+    });
+    // boca (troca de forma com um pequeno "pop")
+    { const n = 'boca-' + this.mouth, [x, y, w, h] = L[n], z = s.mz.v, cx = x + w / 2, cy = y + h / 2;
+      c.save(); c.translate(cx, cy); c.scale(z * (1 + (z - 1) * -0.6), z); img(n, -w / 2, -h / 2, w, h); c.restore(); }
+    // lágrimas
+    if (this.mood === 'triste') {
+      const ph = (this.t % 1.6) / 1.6; c.fillStyle = 'rgba(120,200,255,' + (0.9 * Math.sin(ph * Math.PI)) + ')';
+      [[792, 600], [1140, 606]].forEach(([x, y], i) => { const yy = y + ((ph + i * 0.35) % 1) * 90; c.beginPath(); c.ellipse(x, yy, 13, 18, 0, 0, Math.PI * 2); c.fill(); });
+    }
+    c.restore(); c.restore();
+  }
+}
+
+/* ---------- montagem automática ---------- */
+const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function mount(el) {
+  if (!el || el._rig) return el && el._rig;
+  if (!el.querySelector('canvas')) el.innerHTML = '<canvas></canvas>';
+  el._rig = { pending: true };
+  load().then(() => { if (!el.isConnected && !el._rig.pending) return; const r = new Rig(el); if (calm()) { r.draw(); r.stop(); } el._rig = r; (el._todo || []).forEach((f) => f(r)); el._todo = null; });
+  return el._rig;
+}
+const withRig = (el, fn) => { if (!el) return; const r = mount(el); if (r && !r.pending) fn(r); else (el._todo = el._todo || []).push(fn); };
+let mo = null;
+function watch() {
+  if (mo || typeof MutationObserver === 'undefined') return;
+  mo = new MutationObserver(() => document.querySelectorAll('[data-snh]').forEach((el) => !el._rig && mount(el)));
+  mo.observe(document.body, { childList: true, subtree: true });
+}
+if (typeof document !== 'undefined' && document.body) watch(); else if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', watch);
 
 export function sininho(mood = 'feliz', { size = 120, cls = '', label = 'Sininho, o mascote do Lembra' } = {}) {
-  const m = MOODS.includes(mood) ? mood : 'feliz';
-  return `<span class="snh snh--${m} ${cls}" style="--s:${size}px" data-snh="${m}" role="img" aria-label="${esc(label)}"><span class="snh__mot"><span class="snh__idle"><span class="snh__breath"><span class="snh__pose"><img class="is-on" src="${src(m)}" alt="" draggable="false" decoding="async"><img src="${src(m)}" alt="" draggable="false" decoding="async"></span></span></span></span></span>`;
+  const m = EMO[mood] ? mood : 'feliz';
+  return `<span class="snh ${cls}" style="--s:${size}px" data-snh="${m}" role="img" aria-label="${esc(label)}"><canvas></canvas></span>`;
 }
+export function alive() { watch(); load(); document.querySelectorAll('[data-snh]').forEach(mount); }
+export function setMood(el, mood) { withRig(el, (r) => r.setMood(mood)); return Promise.resolve(); }
+export function act(el, name) { withRig(el, (r) => r.act(name === 'pop' ? 'pop' : name)); }
 
-/* ---------- gestos (Web Animations: keyframes com easing por trecho, só transform) ---------- */
-const O = { transformOrigin: '50% 92%' };
-const G = {
-  pulo: [[
-    { transform: 'translateY(0) scale(1,1)', easing: 'cubic-bezier(.3,0,.5,1)' },
-    { transform: 'translateY(0) scale(1.13,.86)', offset: .16, easing: 'cubic-bezier(.2,.8,.4,1)' },
-    { transform: 'translateY(-24%) scale(.92,1.1)', offset: .44, easing: 'cubic-bezier(.6,0,.9,.6)' },
-    { transform: 'translateY(0) scale(1.12,.88)', offset: .68, easing: 'cubic-bezier(.2,.8,.4,1)' },
-    { transform: 'translateY(0) scale(.97,1.03)', offset: .84, easing: 'ease-in-out' },
-    { transform: 'translateY(0) scale(1,1)' }], 900],
-  pop: [[
-    { transform: 'scale(1,1)', easing: 'cubic-bezier(.4,0,.6,1)' },
-    { transform: 'scale(1.1,.88)', offset: .17, easing: 'cubic-bezier(.2,.9,.3,1.25)' },
-    { transform: 'scale(.95,1.06)', offset: .55, easing: 'ease-in-out' },
-    { transform: 'scale(1,1)' }], 420],
-  nao: [[
-    { transform: 'rotate(0)' }, { transform: 'rotate(-7deg)', offset: .18 }, { transform: 'rotate(6deg)', offset: .4 },
-    { transform: 'rotate(-4deg)', offset: .6 }, { transform: 'rotate(2deg)', offset: .8 }, { transform: 'rotate(0)' }], 760],
-  sim: [[
-    { transform: 'translateY(0)' }, { transform: 'translateY(4%) scale(1.03,.97)', offset: .3 }, { transform: 'translateY(-2%)', offset: .6 }, { transform: 'translateY(0)' }], 620],
-  tchau: [[
-    { transform: 'rotate(0)', easing: 'ease-in-out' }, { transform: 'rotate(-5deg)', offset: .15, easing: 'ease-in-out' }, { transform: 'rotate(3deg)', offset: .32, easing: 'ease-in-out' },
-    { transform: 'rotate(-4deg)', offset: .5, easing: 'ease-in-out' }, { transform: 'rotate(2deg)', offset: .68, easing: 'ease-in-out' }, { transform: 'rotate(0)' }], 1300],
-};
-export function act(el, name) {
-  const m = $(el, '.snh__mot');
-  if (!m || calm() || !G[name] || !m.animate) return;
-  if (name === 'tchau' && el.dataset.snh !== 'acena') { const was = el.dataset.snh; setMood(el, 'acena', { pop: false }); setTimeout(() => el.dataset.snh === 'acena' && setMood(el, was, { pop: false }), 1500); }
-  m.getAnimations().forEach((a) => a.cancel());
-  m.animate(G[name][0], { duration: G[name][1], ...O });
-}
-
-/* troca de pose: a nova imagem entra por cima em fusão, junto com um pop de mola */
-export async function setMood(el, mood, { pop = true } = {}) {
-  if (!el || !MOODS.includes(mood) || el.dataset.snh === mood) return;
-  el.dataset.snh = mood;
-  await ready(mood);
-  if (el.dataset.snh !== mood) return; // trocou de novo enquanto carregava
-  const [a, b] = el.querySelectorAll('.snh__pose img');
-  const on = a.classList.contains('is-on') ? a : b, off = on === a ? b : a;
-  off.src = src(mood);
-  // troca o desenho de uma vez no ponto mais "achatado" do pop (o olho não percebe o corte, sem fantasma)
-  const swap = () => { el.className = el.className.replace(/snh--\w+/, `snh--${mood}`); off.classList.add('is-on'); on.classList.remove('is-on'); };
-  if (!pop || calm()) return swap();
-  act(el, 'pop');
-  setTimeout(swap, 70);
-}
-
-/* fala: balão digitado; o corpo quica no ritmo (sílabas abertas = quique maior) */
-export function say(el, text, { bubble, speed = 32 } = {}) {
+/* balão do app: o texto aparece digitado; o Sininho NÃO fala (sem boca mexendo, sem som),
+   só reage com o corpo quando a mensagem chega, como o Duo faz no Duolingo */
+export function say(el, text, { bubble, speed = 28 } = {}) {
   const b = bubble || el?.closest('.snhwrap')?.querySelector('.snhb__txt');
   if (!b) return Promise.resolve();
   clearInterval(b._t);
   const box = b.closest('.snhb');
   if (box) { box.classList.remove('is-in'); void box.offsetWidth; box.classList.add('is-in'); }
   if (calm()) { b.textContent = text; return Promise.resolve(); }
-  el?.classList.add('is-talk');
   return new Promise((res) => {
     let i = 0;
     b.textContent = '';
-    b._t = setInterval(() => {
-      i += 1;
-      b.textContent = text.slice(0, i);
-      if (i >= text.length) { clearInterval(b._t); el?.classList.remove('is-talk'); res(); }
-    }, speed);
+    b._t = setInterval(() => { i += 1; b.textContent = text.slice(0, i); if (i >= text.length) { clearInterval(b._t); res(); } }, speed);
   });
 }
 
-/* ---------- toque ---------- */
+/* toque: ele reage */
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const TAP = [
-  ['comemora', 'pulo', ['Opa! Tô aqui com você!', 'Bora fazer o dia render!', 'Hehe, cócegas!']],
-  ['danca', 'pop', ['Dia organizado, dia feliz!', 'Tô animado hoje!']],
+  ['comemora', 'pulo', ['Opa! Tô aqui com você!', 'Bora fazer o dia render!']],
+  ['feliz', 'riso', ['Hehe, cócegas!', 'Ai, para! Hahaha']],
   ['amor', 'sim', ['Gosto de te ver por aqui.', 'Você tá mandando bem!']],
   ['acena', 'tchau', ['Oi oi! Precisando de algo?', 'Tô de olho na sua agenda!']],
+  ['surpreso', 'pop', ['Opa, me assustou!', 'Ei! Já viu os lembretes de hoje?']],
 ];
 export function interactive(el, { base, bubble } = {}) {
-  if (!el || el._snh) return;
-  el._snh = true; alive();
+  if (!el || el._tap) return;
+  el._tap = true; mount(el);
   base = base || el.dataset.snh;
   el.style.cursor = 'pointer';
   let back, last = -1;
   el.addEventListener('click', () => {
-    let i; do { i = Math.floor(Math.random() * TAP.length); } while (i === last && TAP.length > 1); last = i;
+    let i; do { i = Math.floor(Math.random() * TAP.length); } while (i === last); last = i;
     const [mood, g, lines] = TAP[i];
-    setMood(el, mood, { pop: false }).then(() => act(el, g));
+    withRig(el, (r) => { r.setMood(mood); r.at(0.12, () => r.act(g)); });
     try { navigator.vibrate && navigator.vibrate(10); } catch { /* ok */ }
     if (bubble) say(el, pick(lines), { bubble });
     clearTimeout(back);
-    back = setTimeout(() => setMood(el, base), 3600);
+    back = setTimeout(() => setMood(el, base), 3800);
   });
 }
 
-/* ---------- espiada na borda da tela ---------- */
+/* espiada na borda da tela */
 let peekOn = null;
-export async function peek(mood, text, { ms = 3400, gesture } = {}) {
+export async function peek(mood, text, { ms = 3600, gesture } = {}) {
   if (document.hidden) return;
   if (document.querySelector('.gx, .paywall, .ficha, .photogate, .okfx, .stk')) { setTimeout(() => peek(mood, text, { ms, gesture }), 1500); return; }
-  await ready(mood);
+  await load();
   peekOn?.remove();
   const w = document.createElement('div');
   w.className = 'snhpeek snhwrap';
-  const vivo = LIVE.includes(mood) && !calm();
-  const V = vivo ? await import('./sininho-vivo.js') : null;
-  w.innerHTML = `<div class="snhb snhb--peek"><span class="snhb__txt"></span></div>${vivo ? V.sininhoVivo(128) : sininho(mood, { size: 110 })}`;
+  w.innerHTML = `<div class="snhb snhb--peek"><span class="snhb__txt"></span></div>${sininho(mood, { size: 120 })}`;
   document.body.appendChild(w);
   peekOn = w;
-  const el = $(w, '[data-snh]');
-  if (vivo) { V.live($(w, '[data-snhv]'), { start: 'festa' }); ms = Math.max(ms, 5200); }
+  const el = w.querySelector('[data-snh]'); mount(el);
   let gone = false;
   const close = () => {
     if (gone) return; gone = true;
     act(el, 'tchau');
-    setTimeout(() => w.classList.add('is-out'), 900);
-    setTimeout(() => { w.remove(); if (peekOn === w) peekOn = null; }, 1500);
+    setTimeout(() => w.classList.add('is-out'), 1000);
+    setTimeout(() => { w.remove(); if (peekOn === w) peekOn = null; }, 1600);
   };
   requestAnimationFrame(() => requestAnimationFrame(() => {
     w.classList.add('is-in');
-    setTimeout(() => { act(el, gesture || (['comemora', 'danca'].includes(mood) ? 'pulo' : 'sim')); say(el, text, { bubble: $(w, '.snhb__txt') }); }, 480);
+    setTimeout(() => { act(el, gesture || (['comemora', 'danca'].includes(mood) ? 'pulo' : 'tchau')); say(el, text, { bubble: w.querySelector('.snhb__txt') }); }, 450);
   }));
   w.addEventListener('click', close);
-  setTimeout(close, ms + text.length * 32);
+  setTimeout(close, ms + text.length * 34);
 }
 
-/* ---------- o que ele fala ---------- */
+/* o que ele fala */
 export function greetLine({ first = '', pending = 0, late = 0, off = 0, offToday = true, hour = new Date().getHours() } = {}) {
   const n = first ? `, ${first}` : '';
   if (hour >= 23 || hour < 5) return { mood: 'sono', text: pick([`Já é tarde${n}… amanhã eu te lembro de tudo.`, `Hora de descansar${n}. Eu cuido da agenda.`]) };
@@ -165,7 +375,7 @@ export function greetLine({ first = '', pending = 0, late = 0, off = 0, offToday
   if (off >= 2 && !offToday) return { mood: 'desconfiado', text: `Sua ofensiva de ${off} dias tá em risco! Conclua algo hoje.` };
   if (!pending) return { mood: 'danca', text: pick([`Tudo em dia${n}! Que orgulho!`, `Nada pendente hoje${n}. Aproveita!`]) };
   const tod = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
-  return { mood: 'feliz', text: pick([`${tod}${n}! Hoje tem ${pending} ${pending === 1 ? 'coisa' : 'coisas'} pra fazer.`, `${tod}${n}! Bora riscar ${pending === 1 ? 'aquele lembrete' : `esses ${pending} lembretes`}?`, `Oi${n}! Já separei ${pending === 1 ? 'o lembrete' : `os ${pending} lembretes`} de hoje.`]) };
+  return { mood: 'acena', text: pick([`${tod}${n}! Hoje tem ${pending} ${pending === 1 ? 'coisa' : 'coisas'} pra fazer.`, `${tod}${n}! Bora riscar ${pending === 1 ? 'aquele lembrete' : `esses ${pending} lembretes`}?`, `Oi${n}! Já separei ${pending === 1 ? 'o lembrete' : `os ${pending} lembretes`} de hoje.`]) };
 }
 const DONE = ['Mandou bem!', 'Isso aí! Mais um riscado!', 'Arrasou! Continua assim!', 'Boa! Tô orgulhoso de você!', 'Uhuul! Mais um feito!'];
 const DONE_LATE = ['Antes tarde do que nunca!', 'Feito! O importante é não desistir.'];
@@ -176,5 +386,5 @@ export function cheerDone({ late = false, perfect = false } = {}) {
   if (perfect) { lastPeek = now; return peek('danca', 'Dia 100%! Você zerou tudo hoje!', { gesture: 'pulo', ms: 4200 }); }
   if (doneCount > 1 && now - lastPeek < 90e3 && doneCount % 3) return;
   lastPeek = now;
-  peek(late ? 'acena' : 'comemora', pick(late ? DONE_LATE : DONE));
+  peek(late ? 'feliz' : 'comemora', pick(late ? DONE_LATE : DONE));
 }
