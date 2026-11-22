@@ -2994,7 +2994,7 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .ab__mark { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
 .ab__blob { position: absolute; left: 0; top: 0; width: 34px; height: 34px; border-radius: 50%; transform: translate(-50%, -300px);
   background: radial-gradient(120% 120% at 30% 20%, #FF9A1F 0%, #FF7410 45%, #F0560A 100%); box-shadow: 0 14px 34px rgba(240, 86, 10, .22); will-change: transform, width, height, border-radius; }
-.ab__drop { position: absolute; left: 0; top: 0; border-radius: 50%; background: #FF7410; opacity: 0; will-change: transform, opacity; }
+.ab__drop { position: absolute; left: 0; top: 0; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #FFC27A 0 18%, #FF7A12 45%, #E2500A 100%); opacity: 0; will-change: transform, opacity; }
 .ab__ld { position: absolute; bottom: -3px; width: 14px; height: 6px; border-radius: 50%; background: #FF7410; opacity: 0; transform-origin: 50% 50%; }
 .ab__rig { position: absolute; left: 0; top: 0; width: 132px; transform: translate(-50%, -50%); will-change: transform, clip-path; }
 .ab__rig .snh { width: 132px; display: block; }
@@ -3003,3 +3003,10 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .ab__l { position: absolute; top: 0; height: 100%; background-image: url('../media/marca/palavra-preto.png'); background-repeat: no-repeat; opacity: 0; transform-origin: 50% 100%; will-change: transform, opacity; }
 .ab__tag { position: absolute; left: 0; top: 54px; margin: 0; white-space: nowrap; transform: translate(-50%, 10px); opacity: 0;
   font: 500 13.5px/1.3 system-ui, -apple-system, sans-serif; color: #7A6A62; letter-spacing: .01em; }
+
+/* splash com volume: brilho na poça, borda mais escura, sombra de contato e ondas */
+.ab__blob { overflow: hidden; background: radial-gradient(130% 120% at 40% 25%, #FFA43A 0%, #FF7A12 40%, #EE5409 78%, #D9480A 100%); box-shadow: inset 0 -3px 6px rgba(150, 40, 0, .35), 0 10px 26px rgba(240, 86, 10, .25); }
+.ab__blob b { position: absolute; left: 18%; top: 14%; width: 46%; height: 26%; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 240, 220, .85), rgba(255, 220, 180, 0)); }
+.ab__blob.is-tile { box-shadow: inset 0 -6px 14px rgba(170, 40, 0, .28), inset 0 6px 12px rgba(255, 200, 120, .35), 0 14px 34px rgba(240, 86, 10, .28); background: radial-gradient(120% 120% at 35% 22%, #FF9124 0%, #FF6E12 45%, #F24C06 100%); }
+.ab__sh { position: absolute; left: 0; top: 0; width: 96px; height: 18px; margin-top: -9px; border-radius: 50%; background: radial-gradient(closest-side, rgba(120, 30, 0, .42), rgba(120, 30, 0, 0)); opacity: 0; }
+.ab__rip { position: absolute; left: 0; top: 0; width: 90px; height: 90px; border-radius: 50%; border: 3px solid rgba(255, 122, 18, .7); opacity: 0; }

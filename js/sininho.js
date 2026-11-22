@@ -34,6 +34,7 @@ function load() {
   return loading;
 }
 
+const lerpN = (a, b, k) => a + (b - a) * k;
 /* ---------- mola ---------- */
 class Spring {
   constructor(v, f = 2, z = 0.7) { this.v = v; this.t = v; this.vel = 0; this.set(f, z); }
@@ -199,13 +200,15 @@ class Rig {
     c.setTransform(this.scale, 0, 0, this.scale, -VIEW.x * this.scale, -VIEW.y * this.scale);
     const img = (n, x, y, w, h) => { const i = IMG[n]; if (i && i.naturalWidth) c.drawImage(i, x, y, w, h); };
     const at = (n, dx = 0, dy = 0) => { const [x, y, w, h] = L[n]; img(n, x + dx, y + dy, w, h); };
+    const X = Object.assign({ eye: 1, eyeDx: 0, eyeDy: 0, pupil: 1, pupilDx: 0, pupilDy: 0, brow: 1, browDy: 0, mouth: 1, mouthDy: 0, body: 1, limbs: 1 }, this.xf || {}); // deformação peça a peça (abertura)
     const breath = Math.sin((this.t / (e.breath || 3.2)) * Math.PI * 2) * 0.005;
     const sq = s.sq.v + breath + s.sag.v;
-    const sy = 1 - sq, sx = 1 + sq * 0.7;
+    const sy = 1 - sq, sx = (1 + sq * 0.7) * X.body;
     // pés (no chão; só sobem nos pulos/passos)
     c.save(); c.translate(s.bx.v * 0.3, Math.min(0, s.by.v) * 0.85);
     [['pe-l', s.fL.v, -1], ['pe-r', s.fR.v, 1]].forEach(([n, lift, side]) => {
-      const [x, y, w, h] = L[n]; c.save(); c.translate(x + w / 2, y + h); c.rotate(side * lift * 0.004); c.translate(-(x + w / 2), -(y + h) - lift); img(n, x, y, w, h); c.restore();
+      if (X.limbs <= 0.01) return;
+      const [x, y, w, h] = L[n]; c.save(); c.globalAlpha = X.limbs; c.translate(x + w / 2, y + h - (1 - X.limbs) * 120); c.scale(lerpN(0.4, 1, X.limbs), lerpN(0.2, 1, X.limbs)); c.rotate(side * lift * 0.004); c.translate(-(x + w / 2), -(y + h) - lift); img(n, x, y, w, h); c.restore();
     });
     c.restore();
     // corpo: inclina e achata a partir do apoio
@@ -214,9 +217,9 @@ class Rig {
     // braços (atrás do corpo), giram no ombro
     [['l', s.aL.v], ['r', s.aR.v]].forEach(([side, ang]) => {
       const one = (pose, a, alpha) => {
-        const n = `braco-${pose}-${side}`; if (!L[n] || alpha <= 0) return;
+        const n = `braco-${pose}-${side}`; alpha *= X.limbs; if (!L[n] || alpha <= 0.01) return;
         const [, , w, h] = L[n], [ax, ay] = ARM[`${pose}-${side}`], [px, py] = SH[side];
-        c.save(); c.globalAlpha = alpha; c.translate(px, py); c.rotate((a * Math.PI) / 180); img(n, -ax * w, -ay * h, w, h); c.restore();
+        c.save(); c.globalAlpha = alpha; c.translate(px + (side === 'l' ? 1 : -1) * (1 - X.limbs) * 60, py); c.rotate((a * Math.PI) / 180); c.scale(lerpN(0.5, 1, X.limbs), lerpN(0.5, 1, X.limbs)); img(n, -ax * w, -ay * h, w, h); c.restore();
       };
       const old = this.pp && this.pp[side], k = old ? Math.min(1, (this.t - old[1]) / 0.12) : 1;
       if (old && k < 1) one(old[0], old[2] + (ang - old[2]) * 0.4, 1 - k);
@@ -231,14 +234,15 @@ class Rig {
     // olhos
     ['l', 'r'].forEach((side) => {
       const [x, y, w, h] = L['olho-' + side], cx = x + w / 2, cy = y + h / 2;
+      c.save(); c.translate(cx + (side === 'l' ? -1 : 1) * X.eyeDx, cy + X.eyeDy); c.scale(X.eye, X.eye); c.translate(-cx, -cy);
       const hp = Math.min(1, Math.max(0, s.happy.v)), open = 1 - hp;
       if (open > 0.02) {
         c.save(); c.globalAlpha = open;
         c.translate(cx, cy); c.scale(1, 1 - hp * 0.5); c.translate(-cx, -cy);
         img('olho-' + side, x, y, w, h);
         c.save(); c.beginPath(); c.ellipse(cx, cy, w / 2 - 3, h / 2 - 3, 0, 0, Math.PI * 2); c.clip();
-        const [qx, qy, qw, qh] = L['pupila-' + side], z = s.pz.v;
-        const pcx = qx + qw / 2 + s.px.v, pcy = qy + qh / 2 + s.py.v;
+        const [qx, qy, qw, qh] = L['pupila-' + side], z = s.pz.v * X.pupil;
+        const pcx = qx + qw / 2 + s.px.v + (side === 'l' ? 1 : -1) * X.pupilDx, pcy = qy + qh / 2 + s.py.v + X.pupilDy;
         img('pupila-' + side, pcx - (qw * z) / 2, pcy - (qh * z) / 2, qw * z, qh * z);
         // pálpebra (piscar, sono, desconfiança)
         c.restore();
@@ -258,16 +262,17 @@ class Rig {
         c.save(); c.globalAlpha = hp; c.strokeStyle = INK; c.lineWidth = 15; c.lineCap = 'round';
         c.beginPath(); c.moveTo(cx - w * 0.3, cy + 14); c.quadraticCurveTo(cx, cy - 40, cx + w * 0.3, cy + 14); c.stroke(); c.restore();
       }
+      c.restore();
     });
     // sobrancelhas (giram no centro, sobem/descem)
     [['l', s.bL.v, s.bY.v], ['r', s.bR.v, s.bYr.v]].forEach(([side, rot, dy]) => {
       const [x, y, w, h] = L['sob-' + side], cx = x + w / 2, cy = y + h / 2;
-      c.save(); c.translate(cx, cy + dy); c.rotate((rot * Math.PI) / 180); img('sob-' + side, -w / 2, -h / 2, w, h); c.restore();
+      c.save(); c.translate(cx + (side === 'l' ? -1 : 1) * X.eyeDx * 0.8, cy + dy + X.browDy); c.rotate((rot * Math.PI) / 180); c.scale(X.brow, X.brow); img('sob-' + side, -w / 2, -h / 2, w, h); c.restore();
     });
     // boca (troca de forma com um pequeno "pop")
     { const z = s.mz.v, k = this.pm ? Math.min(1, (this.t - this.pmT) / 0.09) : 1;
       const one = (m, a) => { const n = 'boca-' + m; if (!L[n] || a <= 0) return; const [x, y, w, h] = L[n], cx = x + w / 2, cy = y + h / 2;
-        c.save(); c.globalAlpha = a; c.translate(cx, cy); c.scale(z * (1 + (z - 1) * -0.6), z); img(n, -w / 2, -h / 2, w, h); c.restore(); };
+        c.save(); c.globalAlpha = a; c.translate(cx, cy + X.mouthDy); c.scale(z * (1 + (z - 1) * -0.6) * X.mouth, z * X.mouth); img(n, -w / 2, -h / 2, w, h); c.restore(); };
       if (this.pm && k < 1) one(this.pm, 1 - k);
       one(this.mouth, k); }
     // lágrimas

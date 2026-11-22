@@ -40,10 +40,11 @@ export function mountIntro(host) {
   host.innerHTML = `<div class="ab">
     <div class="ab__stage">
       <div class="ab__mark">
-        <i class="ab__blob"></i>
+        <i class="ab__rip"></i><i class="ab__rip ab__rip--2"></i>
+        <i class="ab__blob"><b></b></i>
+        <i class="ab__sh"></i>
         ${DROPS.map(() => '<i class="ab__drop"></i>').join('')}
         <div class="ab__rig">${sininho('feliz', { size: 132 })}</div>
-        <img class="ab__icon" src="media/marca/icone.webp" alt="" draggable="false">
       </div>
       <div class="ab__word">${LET.map(([a, b]) => `<span class="ab__l" style="--a:${a};--w:${b - a}"></span>`).join('')}${LET.map(() => '<i class="ab__ld"></i>').join('')}</div>
       <p class="ab__tag">Seus compromissos, sempre lembrados</p>
@@ -54,7 +55,7 @@ export function mountIntro(host) {
 
 export function runIntro(ab, { onEnd } = {}) {
   const $ = (s) => ab.querySelector(s);
-  const mark = $('.ab__mark'), blob = $('.ab__blob'), rigEl = $('.ab__rig'), icon = $('.ab__icon'), word = $('.ab__word'), tag = $('.ab__tag');
+  const mark = $('.ab__mark'), blob = $('.ab__blob'), rigEl = $('.ab__rig'), sh = $('.ab__sh'), rips = [...ab.querySelectorAll('.ab__rip')], word = $('.ab__word'), tag = $('.ab__tag');
   const drops = [...ab.querySelectorAll('.ab__drop')], ls = [...ab.querySelectorAll('.ab__l')], lds = [...ab.querySelectorAll('.ab__ld')];
   const snh = rigEl.querySelector('[data-snh]'), R = snh && snh._rig && !snh._rig.pending ? snh._rig : null;
   const T = 122, ICON_F = 70, GAP = 14, WORD_H = 44, WORD_W = (WW / WH) * WORD_H;
@@ -66,7 +67,7 @@ export function runIntro(ab, { onEnd } = {}) {
   lds.forEach((d, i) => { const [a, b] = LET[i]; d.style.left = `${((a + b) / 2) * k}px`; });
   ab.style.setProperty('--fit', Math.min(1, (innerWidth - 40) / Math.max(LOCK_W, 300)));
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const END = calm ? 1.2 : 3.85;
+  const END = calm ? 1.2 : 3.9;
   if (R) { R.next.idle = 1e9; R.next.blink = 1e9; R.setMood('feliz', true); }
   const cue = {};
   const once = (n, t, at, fn) => { if (!cue[n] && t >= at) { cue[n] = 1; fn(); } };
@@ -113,9 +114,24 @@ export function runIntro(ab, { onEnd } = {}) {
     rigEl.style.opacity = clamp(pop * 3);
     const cm = eIO(seg(t, 2.0, 2.7)), half = lerp(150, T / 2 / zoom, cm), rad = lerp(80, 30 / zoom, cm);
     rigEl.style.clipPath = t >= 2.0 ? `inset(calc(50% - ${half}px) calc(50% - ${half}px) round ${rad}px)` : 'none';
-    const ik = eIO(seg(t, 2.5, 2.9));
-    icon.style.opacity = ik; icon.style.transform = `translate(-50%, -50%) scale(${lerp(0.96, 1, ik)})`;
-    rigEl.style.visibility = ik >= 1 ? 'hidden' : 'visible';
+    /* deformação peça a peça (cada uma com a sua curva e o seu tempo) — o ícone É o boneco, sem troca de imagem */
+    if (R) R.xf = {
+      limbs: 1 - eIO(seg(t, 1.98, 2.4)),                                   // pés e braços recolhem para dentro
+      body: lerp(1, 1.1, eIO(seg(t, 2.05, 2.6))),                          // corpo alarga e ocupa o quadrado
+      eye: lerp(1, 1.08, C.elastica(seg(t, 2.18, 2.7))),                   // olhos crescem (passam do ponto)
+      eyeDx: lerp(0, 12, eIO(seg(t, 2.18, 2.6))), eyeDy: lerp(0, 14, eIO(seg(t, 2.18, 2.6))),
+      pupil: lerp(1, 1.06, C.mola(seg(t, 2.32, 2.78))),                    // pupilas atrasadas (movimento secundário)
+      pupilDx: lerp(0, 2, C.mola(seg(t, 2.32, 2.78))), pupilDy: lerp(0, -4, C.mola(seg(t, 2.32, 2.78))),
+      brow: lerp(1, 1.12, eIO(seg(t, 2.26, 2.66))), browDy: lerp(0, -14, C.elastica(seg(t, 2.26, 2.7))), // sobrancelhas sobem
+      mouth: lerp(1, 1.32, C.elastica(seg(t, 2.36, 2.85))),                // boca abre por último
+    };
+    /* splash realista: sombra do boneco no chão e ondas */
+    const hgt = Math.max(0, jump * pop) * (1 - mo);
+    sh.style.opacity = t < 0.3 ? 0 : clamp(1 - mo * 1.4) * 0.9;
+    sh.style.transform = `translate(-50%, ${46}px) scale(${lerp(0.5, 1, pop) * (1 - hgt / 120)}, ${lerp(0.5, 1, pop) * (1 - hgt / 160)})`;
+    rips.forEach((rp, i) => { const r0 = i ? 0.68 : 0.27, rk = seg(t, r0, r0 + 0.65); rp.style.opacity = rk > 0 && rk < 1 ? (1 - rk) * 0.55 : 0; rp.style.transform = `translate(-50%, calc(-50% + 50px)) scale(${lerp(0.5, 2.3, eOut(rk))}, ${lerp(0.5, 2.3, eOut(rk)) * 0.28})`; });
+    blob.classList.toggle('is-tile', t >= 2.0);
+    blob.firstChild.style.opacity = clamp(1 - mo * 1.2);
     /* 5) a marca se forma */
     const lk = C.mola(seg(t, 2.85, 3.55));
     mark.style.transform = `translate(${lerp(0, markX, lk)}px, 0) scale(${lerp(1, ICON_F / T, lk)})`;
