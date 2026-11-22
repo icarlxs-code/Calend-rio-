@@ -800,7 +800,8 @@ function showLogin(errMsg = '') {
   const msg = errMsg || loginNotice;
   root.innerHTML = `
   <div class="login">
-    <div class="brandwrap login__brand">${brand('completa', { h: 150, alt: esc(CONFIG.appName) })}</div>
+    ${isStandalone() ? '' : `<button class="login__installtop" type="button" data-installguide>${icon('phone', 15)} Instalar o app no celular</button>`}
+    <div class="brandwrap login__brand">${brand('completa', { h: 112, alt: esc(CONFIG.appName) })}</div>
     <h1 class="login__hook">${signupMode ? 'Crie sua conta grátis' : 'Que bom ter você aqui'}</h1>
     <p class="login__lead">${signupMode ? 'Em 2 minutos o Lembra aprende a sua rotina e passa a lembrar de tudo por você.' : 'Entre para ver o que tem para hoje.'}</p>
     ${invitedBy() ? `<div class="login__invite">${icon('users', 18)}<span><b>${esc(invitedBy())}</b> convidou você para a agenda de trabalho compartilhada. ${signupMode ? 'Crie sua conta' : 'Entre ou crie sua conta'} para participar — você não paga nada.</span></div>` : ''}
@@ -819,8 +820,7 @@ function showLogin(errMsg = '') {
       <button class="btn btn--primary btn--block" type="submit" data-go>${signupMode ? 'Criar minha conta' : 'Entrar'}</button>
       <label class="consent consent--remember"><input type="checkbox" name="remember" ${rememberMe ? 'checked' : ''}><span class="consent__dot" aria-hidden="true">${icon('check', 14)}</span>
         <span>Lembrar de mim neste celular</span></label>
-      ${signupMode ? '' : '<button class="btn-text btn-text--sm" type="button" data-reset>Esqueci minha senha</button>'}
-      ${isStandalone() ? '' : `<button class="btn btn--soft btn--block login__install" type="button" data-installguide>${icon('phone', 16)} Instalar na tela inicial do celular</button>`}
+      <div class="login__links">${signupMode ? '' : '<button class="btn-text btn-text--sm" type="button" data-reset>Esqueci minha senha</button>'}</div>
       <div class="login__switch">${signupMode ? 'Já tem conta?' : 'Ainda não tem conta?'} <button class="btn-text btn-text--sm" type="button" data-mode>${signupMode ? 'Entrar' : 'Criar conta'}</button></div>
     </form>
   </div>`;
