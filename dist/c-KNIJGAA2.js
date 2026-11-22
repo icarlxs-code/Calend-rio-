@@ -1,0 +1,1 @@
+var o=Object.defineProperty;var m=(e,r)=>{for(var a in r)o(e,a,{get:r[a],enumerable:!0})};var d=["Atualizamos o Lembra regularmente para corrigir erros, deixar tudo mais r\xE1pido e melhorar a sua experi\xEAncia. Obrigado por usar o Lembra!"];export{m as a,d as b};

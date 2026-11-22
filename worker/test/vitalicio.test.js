@@ -143,3 +143,16 @@ test('o painel guarda se o aviso chegou no celular', async () => {
   const all = (await call('/billing/all', DONO)).data;
   assert.equal(all.byWs.semAvisoUid00001.vip.sent, 0, 'o painel sabe que o aviso não chegou');
 });
+
+test('Vitalício presenteado já vem com a agenda compartilhada Equipe, sem pagar à parte', async () => {
+  const { addonOf, createCheckout } = await import('../src/billing.js');
+  const b = JSON.parse(kv.get(`bill:${CARLA.uid}`));
+  const a = addonOf(b);
+  assert.equal(a.active, true);
+  assert.equal(a.plan, 'equipe');
+  assert.equal(a.seats, 4);
+  assert.equal(a.gift, true);
+  await assert.rejects(createCheckout(env, { ws: CARLA.uid, id: 'u' + CARLA.uid, email: CARLA.email }, { plan: 'equipe' }), /já está incluída/);
+  // quem pagou o vitalício (não é presente) continua com o complemento à parte
+  assert.equal(addonOf({ lifetime: true }), null);
+});

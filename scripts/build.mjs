@@ -33,6 +33,7 @@ const result = await build({
     __APP_TITLE__: JSON.stringify(release.title || ''),
     __APP_NOTES__: JSON.stringify(Array.isArray(release.notes) ? release.notes.slice(0, 12) : []),
     __APP_MIN__: JSON.stringify(release.min || ''),
+    __APP_DATE__: JSON.stringify(release.date || ''),
   },
 });
 

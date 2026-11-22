@@ -60,9 +60,10 @@ export const putBill = (env, uid, b) => env.CAL.put(`bill:${uid}`, JSON.stringif
 /* Complemento "Agenda compartilhada" (Dupla/Equipe): ativo enquanto a assinatura dele estiver em dia */
 export function addonOf(b, now = Date.now()) {
   const a = b && b.addon;
-  if (!a || !PLANS[a.plan]) return null;
-  const active = !!a.subActive && (!a.paidUntil || a.paidUntil > now - 3 * 864e5);
-  return { plan: a.plan, seats: PLANS[a.plan].seats, active, paidUntil: a.paidUntil || null, cancelAt: a.cancelAt || null };
+  const real = a && PLANS[a.plan] ? { plan: a.plan, seats: PLANS[a.plan].seats, active: !!a.subActive && (!a.paidUntil || a.paidUntil > now - 3 * 864e5), paidUntil: a.paidUntil || null, cancelAt: a.cancelAt || null } : null;
+  // presente Vitalício: a agenda compartilhada Equipe vem junto, sem pagar à parte (quem é convidado também não paga)
+  if (b && b.lifetime && b.comp && b.vip && !(real && real.active)) return { plan: 'equipe', seats: PLANS.equipe.seats, active: true, paidUntil: null, cancelAt: null, gift: true };
+  return real;
 }
 /* Plano base pago (mensal em dia ou vitalício): exigido para o complemento funcionar */
 export const basePaid = (b, now = Date.now()) => !!b && (!!b.lifetime || (!!b.prepaidUntil && b.prepaidUntil > now) || (!!b.subActive && (!b.paidUntil || b.paidUntil > now - 3 * 864e5)));
@@ -244,6 +245,7 @@ export async function createCheckout(env, me, { plan, returnUrl }, fetchImpl = f
   if (p.addon) {
     if (!basePaid(b)) throw Object.assign(new Error('A agenda compartilhada é um complemento: primeiro assine o plano Mensal ou o Vitalício.'), { status: 409 });
     const cur = addonOf(b);
+    if (cur && cur.gift) throw Object.assign(new Error('A agenda compartilhada já está incluída no seu acesso: não precisa pagar nada.'), { status: 409 });
     if (cur && cur.active) throw Object.assign(new Error(cur.plan === plan ? 'Você já tem esse plano ativo.' : 'Você já tem a agenda compartilhada. Para trocar de plano, cancele em “Gerenciar assinatura” e assine o outro.'), { status: 409 });
   }
   const price = { currency: 'brl', unit_amount: p.addon ? addonPrice(plan, b) : p.amount, product_data: { name: p.addon && b.lifetime ? `${p.name} · preço de vitalício` : p.name } };

@@ -207,6 +207,8 @@ const actions = {
   'team-board': async () => (await import('./views/teamboard.js')).openTeamBoard(),
   'confirm-phone': async () => (await import('./phone.js')).confirmPhone(() => render()),
   support: async () => {
+    // o dono do app abre a caixa com as mensagens dos clientes (para responder); os outros, o próprio chat
+    if (store.mode === 'cloud' && store.user && (store.user.email || '').toLowerCase() === (CONFIG.adminEmail || '').toLowerCase()) return (await import('./views/support.js')).openSupportInbox();
     if (store.mode === 'cloud' && store.user) return (await import('./views/support.js')).openSupport();
     const wa = String(CONFIG.supportWhatsapp || '').replace(/\D/g, '');
     const who = store.member(store.me)?.name || '';

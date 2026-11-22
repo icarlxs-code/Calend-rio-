@@ -34,7 +34,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     name: '', nickname: '', birth: '', cpf: '', phone: '', profession: '', role: '', workplace: '',
     pronoun: '', gender: '', volume: '', method: '',
     journey: 'comercial', workStart: '08:00', workEnd: '18:00', workDays: [1, 2, 3, 4, 5], wake: '06:30', sleep: '22:30', lunch: '12:00',
-    difficulties: [], forget: 3, lead: '', tone: 'firme', freq: '', faith: true, water: true, meals: true, goal: 'lembrar', consent: false,
+    difficulties: [], forget: 3, lead: '', tone: 'firme', freq: '', faith: false, water: true, meals: true, goal: 'lembrar', consent: false,
     motivationLevel: '', selfesteem: '', anxiety: '', traits: [], focus: [], wantsMotivation: true, religion: '', perDay: 7, waterEvery: 180,
     ...initial,
   };

@@ -48,7 +48,10 @@ export async function openSupport() {
 }
 
 /* Para o dono: caixa de entrada e conversa */
+let inboxOpen = null;
 export async function openSupportInbox() {
+  // já aberta (ex.: veio do aviso e do link ao mesmo tempo): não abre outra por cima
+  if (inboxOpen && !inboxOpen.closed) return inboxOpen;
   let inbox = [], cur = null, thread = [], who = {};
   const html = () => cur ? `${sheetHead(esc(who.name || 'Conversa'), { left: '<button class="btn-text" data-back>Voltar</button>' })}
     <div class="schat"><p class="fhelp" style="margin:8px 16px 0">${esc(who.email || '')}${who.guest ? ` · <b>sem login</b>: responda por e-mail · <a href="mailto:${esc(who.email || '')}?subject=${encodeURIComponent('Suporte Lembra')}">Escrever e-mail</a>` : ''}</p>
@@ -65,14 +68,19 @@ export async function openSupportInbox() {
     className: 'sheet--tall', html: html(),
     onMount: (x) => {
       x.el.querySelectorAll('[data-open]').forEach((b) => (b.onclick = async () => {
-        const r = await api('/support/inbox', { id: b.dataset.open });
-        cur = b.dataset.open; thread = r.thread || []; who = { name: r.name, email: r.email, guest: /^g[0-9a-f]{16}$/.test(b.dataset.open) }; x.set(html());
+        b.disabled = true; b.classList.add('is-loading');
+        try {
+          const r = await api('/support/inbox', { id: b.dataset.open });
+          cur = b.dataset.open; thread = r.thread || []; who = { name: r.name, email: r.email, guest: /^g[0-9a-f]{16}$/.test(b.dataset.open) }; x.set(html());
+          const l = x.el.querySelector('[data-list]'); if (l) l.scrollTop = l.scrollHeight;
+        } catch (e) { b.disabled = false; b.classList.remove('is-loading'); toast('Não consegui abrir a conversa: ' + (e.message || 'sem internet'), { ms: 4000 }); }
       }));
       const back = x.el.querySelector('[data-back]');
       if (back) back.onclick = async () => { cur = null; const r = await api('/support/inbox').catch(() => ({})); inbox = r.inbox || inbox; x.set(html()); };
       if (cur) wire(x, async (text) => { const r = await api('/support/reply', { id: cur, text }); thread = r.thread || thread; x.set(html()); toast('Resposta enviada ✓'); });
     },
   });
+  inboxOpen = a;
   try { const r = await api('/support/inbox'); inbox = r.inbox || []; a.set(html()); } catch (e) { toast('Não consegui abrir o suporte: ' + e.message); }
   return a;
 }

@@ -187,7 +187,7 @@ export function openShare() {
     const seats = active ? ADDONS[addon.plan].seats : 0;
     const pending = (invites || []).filter((i) => inviteState(i) === 'ok');
     const free = Math.max(0, seats - people.length);
-    const ownerPart = active ? `<div class="share__plan">${icon('crown', 18)}<div><b>Plano ${esc(ADDONS[addon.plan].name)} ativo</b><small>${people.length} de ${seats} ${seats > 1 ? 'vagas usadas' : 'vaga usada'} · R$ ${addonPrice(addon.plan)}/mês${addon.cancelAt ? ` · cancelado, vale até ${new Date(addon.cancelAt).toLocaleDateString('pt-BR')}` : ''}</small></div></div>
+    const ownerPart = active ? `<div class="share__plan">${icon('crown', 18)}<div><b>Plano ${esc(ADDONS[addon.plan].name)} ativo</b><small>${people.length} de ${seats} ${seats > 1 ? 'vagas usadas' : 'vaga usada'} · ${addon.gift ? 'incluído no seu acesso, sem custo' : `R$ ${addonPrice(addon.plan)}/mês`}${addon.cancelAt ? ` · cancelado, vale até ${new Date(addon.cancelAt).toLocaleDateString('pt-BR')}` : ''}</small></div></div>
       <section class="block">
         <h2 class="block__title">${icon('link', 16)} Convidar</h2>
         <div class="card">
@@ -210,7 +210,7 @@ export function openShare() {
         </div>
         <p class="fhelp">Cada pessoa vê a agenda de trabalho, marca compromissos e recebe os avisos do que é dela. O modo Pessoal de cada um continua privado.</p>
       </section>
-      <button class="btn btn--soft btn--block" data-portal>Gerenciar assinatura</button>`
+      ${addon.gift ? '' : '<button class="btn btn--soft btn--block" data-portal>Gerenciar assinatura</button>'}`
       : `<div class="share__hero">${icon('share2', 30)}<h2>Divida sua agenda de trabalho</h2><p>Sócio, equipe, secretária, colega de plantão: cada pessoa com o próprio login, vendo a mesma agenda e recebendo os avisos do que é dela.</p></div>
       <div class="plans plans--light">
         ${Object.entries(ADDONS).map(([k, a]) => `<button class="plan${k === 'equipe' ? ' plan--best' : ''}" data-addon="${k}">${k === 'equipe' ? '<span class="plan__tag">Mais vantajoso</span>' : ''}<span class="plan__name">${a.name}</span><span class="plan__price"><b>R$ ${addonPrice(k)}</b>/mês</span><span class="plan__note">${a.line}<br>${perPerson(k)}${b().plan === 'lifetime' ? `<br><s>R$ ${a.price}</s> · preço de vitalício` : ''}</span></button>`).join('')}

@@ -1,1 +1,0 @@
-var n=Object.defineProperty;var c=(e,o)=>{for(var a in o)n(e,a,{get:o[a],enumerable:!0})};var d=["Cada coisa do Pessoal com o seu \xEDcone: cabelo, unha, maquiagem, conta de luz, conta de \xE1gua, internet, dentista\u2026","Os avisos no celular com o emoji do assunto","O Lembra est\xE1 se preparando para o endere\xE7o novo: meulembra.com.br"];export{c as a,d as b};

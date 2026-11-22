@@ -14,6 +14,7 @@ export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSIO
 export const APP_TITLE = typeof __APP_TITLE__ !== 'undefined' ? __APP_TITLE__ : '';
 export const APP_NOTES = typeof __APP_NOTES__ !== 'undefined' ? __APP_NOTES__ : [];
 const APP_MIN = typeof __APP_MIN__ !== 'undefined' ? __APP_MIN__ : '';
+const APP_DATE = typeof __APP_DATE__ !== 'undefined' ? __APP_DATE__ : '';
 /* eslint-enable no-undef */
 export const APP_BUILD = (() => {
   const m = /a-([A-Za-z0-9]+)\.js/.exec(String(window.__appEntry || ''));
@@ -96,12 +97,22 @@ export function maybeShowWhatsNew() {
   openNews();
   return true;
 }
+/* "Novidades" no jeito da App Store: versão, há quantos dias e um texto curto e geral
+   (nunca conta recursos internos ou exclusivos — isso fica só no release.json "title"/notas internas) */
+const sinceTxt = (d) => {
+  const t = Date.parse(`${d}T12:00:00-03:00`);
+  if (!t) return '';
+  const n = Math.max(0, Math.floor((Date.now() - t) / 864e5));
+  return n === 0 ? 'Hoje' : n === 1 ? 'Há 1 dia' : n < 30 ? `Há ${n} dias` : new Date(t).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+};
+export const NEWS_TEXT = 'Atualizamos o Lembra regularmente para corrigir erros, deixar tudo mais rápido e melhorar a sua experiência. Obrigado por usar o Lembra!';
 export function openNews() {
   return openSheet({
-    html: `${sheetHead(`Novidades · versão ${esc(APP_VERSION)}`, { right: '<button class="btn btn--primary btn--sm" data-close>Legal!</button>' })}
+    html: `${sheetHead('', { right: '<button class="btn btn--primary btn--sm" data-close>OK</button>' })}
       <div class="page page--sheet news">
-        ${APP_TITLE ? `<p class="news__title">${esc(APP_TITLE)}</p>` : ''}
-        <ul class="news__list">${APP_NOTES.map((n) => `<li>${icon('sparkles', 16)}<span>${esc(n)}</span></li>`).join('')}</ul>
+        <h2 class="news__h">Novidades</h2>
+        <div class="news__meta"><span>Versão ${esc(APP_VERSION)}</span><span>${esc(sinceTxt(APP_DATE))}</span></div>
+        <p class="news__txt">${esc(APP_NOTES[0] || NEWS_TEXT)}</p>
         <p class="fhelp">O Lembra se atualiza sozinho sempre que você abre. Não precisa reinstalar nada.</p>
       </div>`,
   });

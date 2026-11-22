@@ -110,7 +110,7 @@ function forYou() {
     <h2 class="block__title"><span class="ptitle">${tile('sparkles', ['#C78BFF', '#7C5CFF'], 26)}Feito para você</span></h2>
     <p class="foryou__lead">${esc(forYouLead())}</p>
     <div class="foryou__list">${list.map((x) => `<div class="foryou__item">
-      <button class="foryou__add" data-action="p-sug" data-id="${x.id}">${itemLook(x.title || '') ? itemTile({ title: x.title, cat: x.cat }, 36) : x.ic ? tile(x.ic, x.g, 36) : catTile(x.cat, 36)}<span><b>${esc(x.title)}</b><small>${esc(x.why)}</small></span><i>${icon('plus', 16)}</i></button>
+      <div class="foryou__add">${itemLook(x.title || '') ? itemTile({ title: x.title, cat: x.cat }, 36) : x.ic ? tile(x.ic, x.g, 36) : catTile(x.cat, 36)}<span><b>${esc(x.title)}</b><small>${esc(x.why)}</small></span><button class="foryou__plus" data-action="p-sug" data-id="${x.id}" aria-label="Adicionar ${esc(x.title)}">${icon('plus', 16)}</button></div>
       <button class="foryou__x" data-action="p-sug-x" data-id="${x.id}" aria-label="Não quero esta sugestão">${icon('x', 14)}</button>
     </div>`).join('')}</div>
   </section>`;
@@ -347,7 +347,8 @@ export const personalActions = {
   'p-sug': (b) => {
     const it = addSuggestion(b.dataset.id);
     if (!it) return;
-    toast(`Anotado: ${it.title} · ${REPEATS[it.repeat] ? REPEATS[it.repeat].toLowerCase() : ''} ✓`, { action: 'Ajustar', onAction: () => openPersonalEditor(it.id), ms: 4500 });
+    // só entra quando a pessoa toca no + (e dá para desfazer na hora)
+    toast(`Adicionado: ${it.title} · ${REPEATS[it.repeat] ? REPEATS[it.repeat].toLowerCase() : ''}`, { action: 'Desfazer', onAction: () => removePersonal(it.id), ms: 5000 });
   },
   'p-sug-x': (b) => { hideSuggestion(b.dataset.id); toast('Ok, não sugiro mais essa'); },
   'p-nudge-test': async () => {

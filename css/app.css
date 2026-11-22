@@ -1668,7 +1668,7 @@ body.has-sheet .tabbar { visibility: hidden; }
 .foryou__add { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 44px 10px 10px; border-radius: 18px; border: 1.5px dashed color-mix(in srgb, var(--p-accent, #A06BFF) 45%, transparent); background: var(--surface); color: var(--text); font: inherit; text-align: left; }
 .foryou__add b { font-size: 15px; }
 .foryou__add small { font-size: 12.5px; color: var(--text-3); }
-.foryou__add > i { position: absolute; right: 40px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--p-accent, #A06BFF); color: #fff; }
+.foryou__plus { position: absolute; right: 40px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%; border: 0; display: grid; place-items: center; background: var(--p-accent, #A06BFF); color: #fff; }
 .foryou__add { padding-right: 76px; }
 .foryou__x { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; border: 0; background: transparent; color: var(--text-3); display: grid; place-items: center; }
 .foryou__add > span:not(.ptile) { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -2521,3 +2521,18 @@ html.has-vip, html.has-vip body { overflow: hidden; }
 .ptitlerow .input { flex: 1; min-width: 0; }
 .login__moved { display: flex; gap: 10px; align-items: flex-start; text-align: left; padding: 12px 14px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); color: var(--accent); font-size: 14px; line-height: 1.4; max-width: 420px; margin: 0 auto 8px; }
 .login__moved span { color: var(--text); }
+.news__h { font-size: 28px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 6px; }
+.news__meta { display: flex; justify-content: space-between; font-size: 15px; color: var(--text-3); font-weight: 600; margin-bottom: 8px; }
+.news__txt { font-size: 16px; line-height: 1.5; margin: 0 0 18px; }
+/* caixa de entrada do suporte (dono): cada conversa é uma linha inteira, fácil de tocar */
+.sinbox { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 14px; border: 0; background: transparent; font: inherit; color: var(--text); text-align: left; position: relative; }
+.sinbox + .sinbox { border-top: .5px solid var(--line); }
+.sinbox:active { background: var(--press); }
+.sinbox > div:first-child { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sinbox strong { font-size: 16px; font-weight: 600; }
+.sinbox small { font-size: 13.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sinbox__r { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.sinbox__r time { font-size: 12px; color: var(--text-3); }
+.sinbox__n { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--danger); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+.sinbox.is-loading { opacity: .5; }
+.tcard__champ { color: #C98B12 !important; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }

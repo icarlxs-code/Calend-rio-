@@ -98,10 +98,21 @@ export function teamBoardCard() {
   const list = teamScores(s, addDays(s, 6));
   const i = list.findIndex((x) => x.m.id === store.me);
   const leader = list[0];
-  const txt = !leader || !leader.due ? 'Ninguém concluiu nada vencido ainda esta semana' : i === 0 ? `Você lidera com ${leader.pct}% cumprido` : i > 0 && list[i].due ? `Você está em ${i + 1}º (${list[i].pct}%) · ${esc(leader.m.name)} lidera com ${leader.pct}%` : `${esc(leader.m.name)} lidera com ${leader.pct}% cumprido`;
+  // quantos compromissos no horário faltam para passar quem está na frente (ou para alguém te passar)
+  const toPass = (me, other) => { if (!other || other.pct == null) return 0; for (let x = 1; x <= 30; x++) { const p = Math.round(((me.ok + x + me.late * 0.5) / (me.due + x)) * 100); if (p > other.pct || (p === other.pct && me.ok + x > other.ok)) return x; } return 0; };
+  const nm = (x) => esc((x.m.name || '').split(' ')[0]);
+  let txt;
+  if (!leader || !leader.due) txt = 'A semana começou: quem cumprir primeiro sai na frente';
+  else if (i === 0) { const sec = list[1]; const n = sec && sec.due ? toPass(sec, leader) : 0; txt = `Você lidera com ${leader.pct}%${n ? ` · ${nm(sec)} está a ${n} de te passar` : ' · continue assim'}`; }
+  else if (i > 0 && list[i].due) { const n = toPass(list[i], list[i - 1]); txt = `Você está em ${i + 1}º (${list[i].pct}%)${n ? ` · faltam ${n} no horário para passar ${nm(list[i - 1])}` : ''}`; }
+  else if (i > 0) txt = `${nm(leader)} lidera com ${leader.pct}% · conclua no horário para entrar na disputa`;
+  else txt = `${nm(leader)} lidera com ${leader.pct}% cumprido`;
+  // campeão da semana passada (fica 7 dias em destaque)
+  const ps = addDays(s, -7), last = teamScores(ps, addDays(ps, 6)).filter((x) => x.due)[0];
+  const champ = last ? `<small class="tcard__champ">${icon('crown', 11)} Campeão da semana passada: ${last.m.id === store.me ? 'você' : nm(last)} (${last.pct}%)</small>` : '';
   return `<button class="tcard" data-action="team-board">
     <span class="tcard__ic">${icon('trophy', 18)}</span>
-    <span class="tcard__txt"><b>Placar da semana</b><small>${txt}</small></span>
+    <span class="tcard__txt"><b>Placar da semana</b><small>${txt}</small>${champ}</span>
     <span class="tcard__avs">${list.slice(0, 3).map((x) => avatar(x.m.id, 24)).join('')}</span>${icon('right', 16, 'muted')}
   </button>`;
 }
