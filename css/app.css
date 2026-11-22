@@ -2591,3 +2591,12 @@ html.has-vip, html.has-vip body { overflow: hidden; }
 /* meu perfil: se eu for Vitalício, a foto ganha a mesma moldura */
 .prof__pic--vip .prof__ring { background: conic-gradient(from var(--a, 0deg), #ffffff, #b9b9c3, #f5f0ff, #9B7BFF, #ffffff, #c9c9d1, #ffffff) !important; animation: fpicspin 6s linear infinite; box-shadow: 0 0 34px rgba(190,170,255,.55); }
 .prof__vipline { display: inline-flex; align-items: center; gap: 6px; margin: 2px auto 0; padding: 5px 12px; border-radius: 999px; background: #000; color: #fff; font-size: 12.5px; font-weight: 700; box-shadow: 0 0 0 1px rgba(255,255,255,.3), 0 0 20px rgba(170,150,255,.4); }
+/* abertura: cobre a tela inteira e trava a rolagem do que está embaixo (sem "camada" aparecendo) */
+html:not(.intro-done), html:not(.intro-done) body { overflow: hidden !important; height: 100%; overscroll-behavior: none; touch-action: none; }
+html:not(.intro-done) .intro { z-index: 99999; top: -50px; bottom: -50px; height: auto; min-height: calc(100lvh + 100px); background: #000; }
+html:not(.intro-done) #app, html:not(.intro-done) .login { visibility: hidden; }
+/* fonte de detalhe (só em selos curtos do Vitalício: discreta, larga, elegante) */
+@font-face { font-family: 'Azonix'; src: url('../media/fonts/azonix.otf') format('opentype'); font-display: swap; }
+.vcard__tier, .vip__kick, .fprof__vip span, .prof__vipline, .freq__vip, .frow__vip, .vcard__no, .vcard__ed { font-family: 'Azonix', -apple-system, sans-serif; letter-spacing: .14em; }
+.vcard__tier, .vip__kick, .fprof__vip span { font-size: 10px; }
+.prof__vipline, .freq__vip, .frow__vip { font-size: 10px; }
