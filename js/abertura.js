@@ -10,14 +10,29 @@ import { sininho, alive } from './sininho.js';
 
 const LET = [[1, 103], [105, 215], [228, 398], [414, 530], [541, 612], [612, 719]];
 const WW = 720, WH = 159;
+/* ===== CURVAS DE MOVIMENTO (ajuste aqui) =====
+   SPEED: velocidade geral (1 = normal, 0.8 = mais lenta, 1.2 = mais rápida).
+   Cada curva é uma cubic-bezier (as mesmas do After Effects / Figma): [x1, y1, x2, y2]. */
+export const SPEED = 0.92;
+export const CURVE = {
+  suave: [0.45, 0, 0.2, 1],       // entrada e saída suaves (padrão de motion design)
+  saida: [0.16, 1, 0.3, 1],       // começa rápido e desacelera longamente ("expo out")
+  entrada: [0.55, 0, 0.9, 0.4],   // acelera como algo caindo (gravidade)
+  elastica: [0.34, 1.45, 0.5, 1], // passa do ponto e volta, sem tremer
+  mola: [0.3, 1.25, 0.45, 1],     // passa um pouquinho do ponto
+};
+function bezier([x1, y1, x2, y2]) {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx, cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const X = (t) => ((ax * t + bx) * t + cx) * t, Y = (t) => ((ay * t + by) * t + cy) * t, dX = (t) => (3 * ax * t + 2 * bx) * t + cx;
+  return (x) => { if (x <= 0) return 0; if (x >= 1) return 1; let t = x; for (let i = 0; i < 8; i++) { const d = dX(t); if (Math.abs(d) < 1e-6) break; t -= (X(t) - x) / d; } return Y(Math.max(0, Math.min(1, t))); };
+}
+const C = Object.fromEntries(Object.entries(CURVE).map(([k, v]) => [k, bezier(v)]));
 const clamp = (x) => Math.max(0, Math.min(1, x));
 const seg = (t, a, b) => clamp((t - a) / (b - a));
-const eOut = (x) => 1 - Math.pow(1 - x, 3);
-const eOut5 = (x) => 1 - Math.pow(1 - x, 5);
-const eIn = (x) => x * x * x;
-const eIO = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
-const back = (x, s = 1.7) => 1 + (s + 1) * Math.pow(x - 1, 3) + s * Math.pow(x - 1, 2);
-const spring = (x, k = 7, f = 2.2) => (x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.exp(-k * x) * Math.cos(f * Math.PI * x));
+const eOut = C.saida, eOut5 = C.saida, eIn = C.entrada, eIO = C.suave;
+const back = (x) => C.elastica(x);
+/* mola amortecida bem suave (sem tremedeira) */
+const spring = (x, k = 7, f = 1.2) => (x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.exp(-k * x) * Math.cos(f * Math.PI * x * 0.9));
 const lerp = (a, b, k) => a + (b - a) * k;
 const DROPS = [[-1, -1.4, 7], [1, -1.6, 6], [-1.6, -0.8, 5], [1.7, -0.9, 6], [-0.6, -2, 4], [0.7, -2.1, 5], [-2.1, -0.4, 4], [2.2, -0.5, 4]];
 
@@ -51,7 +66,7 @@ export function runIntro(ab, { onEnd } = {}) {
   lds.forEach((d, i) => { const [a, b] = LET[i]; d.style.left = `${((a + b) / 2) * k}px`; });
   ab.style.setProperty('--fit', Math.min(1, (innerWidth - 40) / Math.max(LOCK_W, 300)));
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const END = calm ? 1.2 : 3.75;
+  const END = calm ? 1.2 : 3.85;
   if (R) { R.next.idle = 1e9; R.next.blink = 1e9; R.setMood('feliz', true); }
   const cue = {};
   const once = (n, t, at, fn) => { if (!cue[n] && t >= at) { cue[n] = 1; fn(); } };
@@ -61,11 +76,11 @@ export function runIntro(ab, { onEnd } = {}) {
     if (done) return;
     const now = performance.now();
     if (!t0) t0 = now;
-    const t = calm ? 3.7 : (now - t0) / 1000;
+    const t = calm ? 3.7 : ((now - t0) / 1000) * SPEED;
 
     /* 1) gota cai e espirra */
     const fall = eIn(seg(t, 0, 0.26)), land = seg(t, 0.26, 0.75);
-    const wob = t < 0.26 ? 0 : Math.exp(-6 * land) * Math.cos(land * Math.PI * 2.4);
+    const wob = t < 0.26 ? 0 : Math.exp(-5 * land) * Math.cos(land * Math.PI * 1.6);
     let bw = 30, bh = 36, by = lerp(-260, 40, fall), radius = '50%';
     if (t >= 0.26) { bw = lerp(70, 150, eOut(land)) * (1 + 0.25 * wob); bh = lerp(22, 30, eOut(land)) * (1 - 0.3 * wob); by = 50; }
     drops.forEach((d, i) => {
@@ -75,7 +90,7 @@ export function runIntro(ab, { onEnd } = {}) {
       d.style.transform = `translate(${x - s}px, ${y - s}px) scale(${o ? 1 - dt * 0.6 : 0})`;
     });
     /* 2) salta do splash */
-    const pop = spring(seg(t, 0.3, 1.0), 6.5, 2.1), jump = Math.sin(Math.PI * seg(t, 0.3, 0.72)) * 46;
+    const pop = C.elastica(seg(t, 0.3, 0.95)), jump = Math.sin(Math.PI * seg(t, 0.3, 0.72)) * 46;
     /* 3) atuação */
     if (R) {
       once('b1', t, 0.98, () => R.blink());
@@ -83,24 +98,26 @@ export function runIntro(ab, { onEnd } = {}) {
       once('b2', t, 1.42, () => R.blink());
       once('l2', t, 1.5, () => { R.s.px.t = 26; R.s.py.t = 2; R.s.lean.t = 2.2; R.s.bY.t = -12; R.s.bYr.t = -14; });
       once('l3', t, 1.86, () => { R.s.px.t = 0; R.s.py.t = 0; R.s.lean.t = 0; R.s.bY.t = 0; R.s.bYr.t = 0; });
+      once('b3', t, 1.78, () => R.blink());
+      once('b4', t, 2.22, () => R.blink());
       once('sq', t, 1.95, () => { R.s.sq.t = 0.1; R.s.by.t = 10; });
       once('up', t, 2.14, () => { R.s.sq.t = 0; R.s.by.t = 0; R.s.sq.vel -= 1.6; });
     }
     /* 4) metamorfose: poça → squircle; o boneco veste o quadrado */
-    const mo = eIO(seg(t, 2.05, 2.75)), grow = spring(seg(t, 2.05, 2.95), 6, 1.6);
+    const mo = eIO(seg(t, 2.0, 2.85)), grow = C.mola(seg(t, 2.0, 2.85));
     if (t >= 2.0) { bw = lerp(150, T, grow); bh = lerp(30, T, grow); by = lerp(50, 0, eOut5(seg(t, 2.05, 2.6))); radius = `${lerp(50, 24.6, mo)}%`; }
     blob.style.width = `${bw}px`; blob.style.height = `${bh}px`; blob.style.borderRadius = radius;
     blob.style.transform = `translate(-50%, calc(-50% + ${by}px))`;
-    const zoom = lerp(1, 1.6, mo);
-    rigEl.style.transform = `translate(-50%, calc(-50% + ${lerp(lerp(30, -jump, pop), -3, mo)}px)) scale(${lerp(0.25, 1, pop) * zoom})`;
+    const zoom = lerp(1, 1.61, mo);
+    rigEl.style.transform = `translate(-50%, calc(-50% + ${lerp(lerp(30, -jump, pop), 1.2, mo)}px)) scale(${lerp(0.25, 1, pop) * zoom})`;
     rigEl.style.opacity = clamp(pop * 3);
-    const cm = eOut(seg(t, 2.1, 2.6)), half = lerp(150, T / 2 / zoom, cm), rad = lerp(80, 30 / zoom, cm);
-    rigEl.style.clipPath = t >= 2.1 ? `inset(calc(50% - ${half}px) calc(50% - ${half}px) round ${rad}px)` : 'none';
-    const ik = eIO(seg(t, 2.45, 2.85));
+    const cm = eIO(seg(t, 2.0, 2.7)), half = lerp(150, T / 2 / zoom, cm), rad = lerp(80, 30 / zoom, cm);
+    rigEl.style.clipPath = t >= 2.0 ? `inset(calc(50% - ${half}px) calc(50% - ${half}px) round ${rad}px)` : 'none';
+    const ik = eIO(seg(t, 2.5, 2.9));
     icon.style.opacity = ik; icon.style.transform = `translate(-50%, -50%) scale(${lerp(0.96, 1, ik)})`;
     rigEl.style.visibility = ik >= 1 ? 'hidden' : 'visible';
     /* 5) a marca se forma */
-    const lk = spring(seg(t, 2.78, 3.5), 6.5, 1.3);
+    const lk = C.mola(seg(t, 2.85, 3.55));
     mark.style.transform = `translate(${lerp(0, markX, lk)}px, 0) scale(${lerp(1, ICON_F / T, lk)})`;
     ls.forEach((l, i) => {
       const a = 2.9 + i * 0.05, kk = seg(t, a, a + 0.45);

@@ -1,12 +1,12 @@
 {
-  "version": "2.5.1",
-  "build": "cvsfeaa2",
+  "version": "2.5.2",
+  "build": "n5e6xyo6",
   "date": "2026-11-22",
   "min": "2.2.0",
-  "title": "Nova abertura",
+  "title": "Novo ícone e abertura",
   "notes": [
-    "Abertura nova: o Sininho nasce de um splash, olha em volta e vira o ícone do Lembra.",
-    "Pequenas melhorias e correções."
+    "Ícone novo do Lembra.",
+    "Abertura mais suave: o Sininho nasce de um splash, olha em volta e vira o ícone."
   ],
-  "builtAt": "2026-11-22T20:01:21.154Z"
+  "builtAt": "2026-11-22T20:05:55.988Z"
 }
