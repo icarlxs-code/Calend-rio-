@@ -2915,59 +2915,134 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .pw-buy > i { display: none !important; }
 .pw-buy__s { opacity: .7; }
 
-/* ===================== Sininho (mascote) ===================== */
-.msc { display: inline-block; width: var(--s); line-height: 0; }
-.msc svg { overflow: visible; display: block; }
-.msc-body { transform-box: fill-box; transform-origin: 50% 100%; animation: mscBreath 3.2s ease-in-out infinite; }
-.msc-shadow { transform-box: fill-box; transform-origin: center; animation: mscShadow 3.2s ease-in-out infinite; }
-@keyframes mscBreath { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.025, .975); } }
-@keyframes mscShadow { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(1.05); } }
-.msc-blink { transform-box: fill-box; transform-origin: top; transform: scaleY(0); animation: mscBlink 4.5s infinite; }
-@keyframes mscBlink { 0%, 92%, 100% { transform: scaleY(0); } 95% { transform: scaleY(1); } }
-.msc-arm { transform-box: fill-box; transform-origin: 50% 15%; transform: rotate(var(--r)); }
-.msc-arm--l { transform-origin: 70% 20%; } .msc-arm--r { transform-origin: 30% 20%; }
-.msc-pupil { transition: transform .3s; }
-/* feliz: acena */
-.msc--feliz .msc-arm--r { animation: mscWave 1.6s ease-in-out infinite; }
-@keyframes mscWave { 0%, 100% { transform: rotate(-140deg); } 50% { transform: rotate(-110deg); } }
-/* comemora: pula com squash & stretch */
-.msc--comemora .msc-body { animation: mscJump 1s cubic-bezier(.3,.6,.4,1) infinite; }
-.msc--comemora .msc-shadow { animation: mscJumpSh 1s cubic-bezier(.3,.6,.4,1) infinite; }
-.msc--comemora .msc-arm--l { animation: mscCheerL 1s ease-in-out infinite; } .msc--comemora .msc-arm--r { animation: mscCheerR 1s ease-in-out infinite; }
-@keyframes mscJump { 0%, 100% { transform: translateY(0) scale(1.08, .9); } 15% { transform: translateY(0) scale(.94, 1.08); } 45% { transform: translateY(-24px) scale(1, 1); } 80% { transform: translateY(0) scale(1.06, .92); } }
-@keyframes mscJumpSh { 0%, 100% { transform: scaleX(1); opacity: .12; } 45% { transform: scaleX(.6); opacity: .06; } }
-@keyframes mscCheerL { 0%, 100% { transform: rotate(-150deg); } 45% { transform: rotate(-170deg); } }
-@keyframes mscCheerR { 0%, 100% { transform: rotate(150deg); } 45% { transform: rotate(170deg); } }
-.msc-conf rect { animation: mscPop 1s ease-out infinite; transform-box: fill-box; transform-origin: center; }
-@keyframes mscPop { 0% { opacity: 0; transform: translateY(8px) scale(.5); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(-10px) scale(1); } }
-/* sono: respira devagar, Zzz sobe */
-.msc--sono .msc-body { animation-duration: 4.5s; } .msc--sono .msc-blink { animation: none; }
-.msc-zzz text { animation: mscZ 2.6s ease-in-out infinite; } .msc-zzz text:nth-child(2) { animation-delay: .8s; }
-@keyframes mscZ { 0% { opacity: 0; transform: translate(0, 6px); } 40% { opacity: 1; } 100% { opacity: 0; transform: translate(6px, -10px); } }
-/* desconfiado: olhar de lado, balança o pé */
-.msc--desconfiado .msc-foot--r { transform-box: fill-box; transform-origin: center; animation: mscTap .6s ease-in-out infinite; }
-@keyframes mscTap { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-/* amor: balança de um lado para o outro, corações sobem */
-.msc--amor .msc-body { animation: mscShy 2.4s ease-in-out infinite; }
-@keyframes mscShy { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
-.msc-hearts path { transform-box: fill-box; transform-origin: center; animation: mscHeart 1.8s ease-in-out infinite; } .msc-hearts path:nth-child(2) { animation-delay: .6s; }
-@keyframes mscHeart { 0% { transform: translateY(6px) scale(.6); opacity: 0; } 40% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-12px) scale(1.1); } }
-/* dança */
-.msc--danca .msc-body { animation: mscDance .9s ease-in-out infinite; }
-.msc--danca .msc-arm--l { animation: mscArmD 0.9s ease-in-out infinite; } .msc--danca .msc-arm--r { animation: mscArmD2 .9s ease-in-out infinite; }
-@keyframes mscDance { 0%, 100% { transform: rotate(-8deg) translateY(0); } 50% { transform: rotate(8deg) translateY(-6px); } }
-@keyframes mscArmD { 0%, 100% { transform: rotate(-120deg); } 50% { transform: rotate(-60deg); } }
-@keyframes mscArmD2 { 0%, 100% { transform: rotate(30deg); } 50% { transform: rotate(120deg); } }
-.msc-notes { animation: mscZ 1.8s ease-in-out infinite; }
-/* bravo: tremidinha e vapor */
-.msc--bravo .msc-body { animation: mscShake .35s ease-in-out infinite; }
-@keyframes mscShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-1.5px); } 75% { transform: translateX(1.5px); } }
-.msc-steam circle { animation: mscPop 1.4s ease-out infinite; transform-box: fill-box; transform-origin: center; } .msc-steam circle:nth-child(odd) { animation-delay: .5s; }
-/* triste: lágrimas escorrem, corpo murcha */
-.msc--triste .msc-body { animation: mscSad 3s ease-in-out infinite; }
-@keyframes mscSad { 0%, 100% { transform: scale(1.03, .96); } 50% { transform: scale(1.05, .93); } }
-.msc-tears path { transform-box: fill-box; transform-origin: top; animation: mscTear 1.6s ease-in infinite; } .msc-tears path:nth-child(2) { animation-delay: .7s; }
-@keyframes mscTear { 0% { transform: translateY(0) scale(.6); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(16px) scale(1); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .msc * { animation: none !important; } }
-.msc-clap { transform-box: fill-box; transform-origin: 50% 0; animation: mscClap 1.6s ease-in-out infinite; }
-@keyframes mscClap { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
+/* ===================== Sininho (rig com as peças desenhadas) ===================== */
+.snh { display: inline-block; width: var(--s); position: relative; flex: none; -webkit-tap-highlight-color: transparent; }
+.snh__stage { position: relative; display: block; width: 100%; padding-bottom: 91.4%; }
+.snh__all, .snh__body, .snh__face, .snh__props { position: absolute; inset: 0; display: block; }
+.snh__all { transform-origin: 50% 92%; }
+.snh__p { position: absolute; height: auto; max-width: none; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+.snh__foot { z-index: 1; transform-origin: 50% 20%; }
+.snh__body { z-index: 2; transform-origin: 50% 86%; animation: snhBreath 3.4s ease-in-out infinite; }
+.snh__arm { z-index: 0; transition: transform .5s cubic-bezier(.34, 1.56, .64, 1); }
+.snh__arm--l { transform-origin: 88% 82%; transform: rotate(var(--al, 0deg)); }
+.snh__arm--r { transform-origin: 12% 82%; transform: rotate(var(--ar, 0deg)); }
+.snh__corpo { z-index: 1; }
+.snh__face { z-index: 2; transform: translate(var(--lx, 0), var(--ly, 0)); transition: transform .45s cubic-bezier(.3, 1.4, .5, 1); }
+.snh__eye { transform-origin: 50% 55%; transition: transform .07s ease-in; }
+.is-blink .snh__eye { transform: scaleY(.08); }
+.snh__brow { transition: translate .18s cubic-bezier(.3, 1.6, .5, 1); }
+.is-emph .snh__brow, .snh--surpreso .snh__brow { translate: 0 -9%; }
+.snh__blush i { position: absolute; width: 11%; height: 6%; border-radius: 50%; background: #ff8f7a; opacity: .55; filter: blur(1px); }
+.snh__blush i:first-child { left: 22%; top: 57%; } .snh__blush i:last-child { left: 68%; top: 56%; }
+.snh__tear { transform-origin: 50% 0; animation: snhTear 1.6s ease-in infinite; }
+.snh__tear--r { animation-delay: .55s; }
+@keyframes snhBreath { 0%, 100% { scale: 1 1; } 50% { scale: 1.014 .984; } }
+@keyframes snhTear { 0% { translate: 0 -10%; scale: .7; opacity: 0; } 25% { opacity: 1; } 100% { translate: 0 60%; scale: 1; opacity: 0; } }
+.is-talk .snh__body { animation: snhTalk .2s ease-in-out infinite alternate; }
+@keyframes snhTalk { from { scale: 1 1; } to { scale: 1.02 .975; } }
+/* jeito de cada emoção */
+.snh--feliz .snh__all { animation: snhSway 3.6s ease-in-out infinite; }
+.snh--feliz .snh__arm--r { animation: snhArmIdle 2.8s ease-in-out infinite; }
+@keyframes snhSway { 0%, 100% { rotate: -2deg; } 50% { rotate: 2deg; } }
+@keyframes snhArmIdle { 0%, 100% { rotate: 0deg; } 50% { rotate: -9deg; } }
+.snh--comemora .snh__all { animation: snhHop 1s cubic-bezier(.3, .7, .4, 1) infinite; }
+.snh--comemora .snh__foot { animation: snhTuck 1s cubic-bezier(.3, .7, .4, 1) infinite; }
+.snh--comemora .snh__arm--l { animation: snhFlapL .5s ease-in-out infinite alternate; }
+.snh--comemora .snh__arm--r { animation: snhFlapR .5s ease-in-out infinite alternate; }
+@keyframes snhHop { 0%, 100% { translate: 0 0; scale: 1.07 .93; } 16% { translate: 0 0; scale: .94 1.08; } 46% { translate: 0 -15%; scale: 1 1; } 78% { translate: 0 0; scale: 1.08 .92; } }
+@keyframes snhTuck { 0%, 30%, 70%, 100% { translate: 0 0; } 46% { translate: 0 -5%; } }
+@keyframes snhFlapL { from { rotate: -6deg; } to { rotate: 14deg; } }
+@keyframes snhFlapR { from { rotate: 6deg; } to { rotate: -14deg; } }
+.snh--sono .snh__body { animation: snhSleep 4.8s ease-in-out infinite; }
+.snh--sono .snh__all { animation: snhNod 4.8s ease-in-out infinite; }
+@keyframes snhSleep { 0%, 100% { scale: 1 1; } 50% { scale: 1.03 .97; } }
+@keyframes snhNod { 0%, 100% { rotate: 0deg; } 50% { rotate: 3deg; } }
+.snh--desconfiado .snh__all { rotate: -4deg; }
+.snh--desconfiado .snh__foot--r { animation: snhTap .55s ease-in-out infinite; }
+.snh--desconfiado .snh__face { --lx: 1.6%; }
+@keyframes snhTap { 0%, 100% { rotate: 0deg; } 50% { rotate: -14deg; } }
+.snh--amor .snh__all { animation: snhShy 2.6s ease-in-out infinite; }
+@keyframes snhShy { 0%, 100% { rotate: -4deg; scale: 1; } 50% { rotate: 4deg; scale: 1.02; } }
+.snh--danca .snh__all { animation: snhDance .9s ease-in-out infinite; }
+.snh--danca .snh__arm--l { animation: snhFlapL .45s ease-in-out infinite alternate; }
+.snh--danca .snh__arm--r { animation: snhFlapR .45s ease-in-out infinite alternate-reverse; }
+.snh--danca .snh__foot--l { animation: snhTap .45s ease-in-out infinite; }
+.snh--danca .snh__foot--r { animation: snhTap .45s ease-in-out infinite .225s; }
+@keyframes snhDance { 0%, 100% { rotate: -7deg; translate: 0 0; } 25% { translate: 0 -5%; } 50% { rotate: 7deg; translate: 0 0; } 75% { translate: 0 -5%; } }
+.snh--bravo .snh__all { animation: snhShake .32s linear infinite; }
+@keyframes snhShake { 0%, 100% { translate: 0 0; } 25% { translate: -1.4% 0; } 75% { translate: 1.4% 0; } }
+.snh--triste .snh__body { animation: snhDroop 3.4s ease-in-out infinite; }
+@keyframes snhDroop { 0%, 100% { scale: 1.02 .97; } 50% { scale: 1.04 .94; } }
+/* gestos de momento */
+.snh__all.do-pulo { animation: snhJump .95s cubic-bezier(.3, .7, .4, 1) !important; }
+@keyframes snhJump { 0% { translate: 0 0; scale: 1 1; } 18% { translate: 0 0; scale: 1.14 .84; } 46% { translate: 0 -24%; scale: .9 1.12; } 70% { translate: 0 0; scale: 1.12 .88; } 85% { scale: .97 1.03; } 100% { translate: 0 0; scale: 1 1; } }
+.snh__all.do-tchau { animation: snhLean 1.7s ease-in-out !important; }
+.do-tchau .snh__arm--r { animation: snhWave .34s ease-in-out 5 alternate !important; }
+@keyframes snhWave { from { rotate: -10deg; } to { rotate: -42deg; } }
+@keyframes snhLean { 0%, 100% { rotate: 0deg; } 20%, 80% { rotate: -5deg; } }
+.snh__all.do-nao { animation: snhNo .8s ease-in-out !important; }
+@keyframes snhNo { 0%, 100% { rotate: 0deg; } 20% { rotate: -7deg; } 40% { rotate: 6deg; } 60% { rotate: -4deg; } 80% { rotate: 2deg; } }
+.snh__all.do-pop { animation: snhPop .45s cubic-bezier(.3, 1.6, .5, 1) !important; }
+@keyframes snhPop { 0% { scale: .9 1.08; } 55% { scale: 1.07 .94; } 100% { scale: 1 1; } }
+.snh__all.do-sim { animation: snhYes .7s ease-in-out !important; }
+@keyframes snhYes { 0%, 100% { translate: 0 0; } 30% { translate: 0 3%; } 60% { translate: 0 -2%; } }
+/* adereços */
+.snh__props { z-index: 3; pointer-events: none; }
+.snh__props b { position: absolute; font: 900 calc(var(--s) * .16)/1 system-ui, sans-serif; color: #ff6b3d; animation: snhZ 2.4s ease-in-out infinite; }
+.snh__props .p1 { right: 6%; top: 8%; } .snh__props b.p2 { right: -6%; top: -6%; font-size: calc(var(--s) * .22); animation-delay: .6s; } .snh__props b.p3 { right: 14%; top: -14%; animation-delay: 1.2s; }
+.snh--danca .snh__props b { animation-duration: 1.6s; } .snh--danca .snh__props b.p1 { left: -4%; right: auto; top: 10%; } .snh--danca .snh__props b.p2 { right: -4%; top: 2%; }
+.snh--desconfiado .snh__props b.p1 { right: 2%; top: -6%; font-size: calc(var(--s) * .2); }
+@keyframes snhZ { 0% { opacity: 0; translate: 0 20%; } 35% { opacity: 1; } 100% { opacity: 0; translate: 30% -60%; } }
+.snh-heart { position: absolute; width: 14%; aspect-ratio: 1; animation: snhZ 2s ease-in-out infinite; }
+.snh-heart::before, .snh-heart::after { content: ''; position: absolute; top: 0; width: 52%; height: 80%; background: #ff4d5e; border-radius: 50px 50px 0 0; }
+.snh-heart::before { left: 50%; transform: rotate(-45deg); transform-origin: 0 100%; } .snh-heart::after { left: 0; transform: rotate(45deg); transform-origin: 100% 100%; }
+.snh__props .snh-heart.p1 { right: 4%; top: 4%; } .snh__props .snh-heart.p2 { right: 18%; top: -10%; width: 10%; animation-delay: .7s; }
+.snh-puff { position: absolute; width: 16%; height: 14%; border-radius: 50%; background: #ffab8f; animation: snhPuff 1.3s ease-out infinite; }
+.snh__props .snh-puff.p1 { left: 8%; top: 2%; } .snh__props .snh-puff.p2 { right: 8%; left: auto; top: 2%; animation-delay: .5s; }
+@keyframes snhPuff { 0% { scale: .4; opacity: 0; } 30% { opacity: 1; } 100% { scale: 1.2; opacity: 0; translate: 0 -40%; } }
+.snh--comemora .snh__props i { position: absolute; width: 6%; height: 6%; border-radius: 2px; animation: snhConf 1s ease-out infinite; }
+.snh--comemora .snh__props .p1 { left: 6%; top: 10%; background: #ff6b3d; } .snh--comemora .snh__props .p2 { right: 6%; top: 6%; background: #ffc233; animation-delay: .2s; }
+.snh--comemora .snh__props .p3 { left: 24%; top: -6%; background: #ff4d8d; animation-delay: .4s; } .snh--comemora .snh__props .p4 { right: 22%; top: -10%; background: #4dc3ff; animation-delay: .6s; } .snh--comemora .snh__props .p5 { left: 48%; top: -14%; background: #7ad65a; animation-delay: .3s; }
+@keyframes snhConf { 0% { opacity: 0; translate: 0 40%; rotate: 0deg; } 30% { opacity: 1; } 100% { opacity: 0; translate: 0 -60%; rotate: 220deg; } }
+/* balão de fala */
+.snhb { position: relative; background: var(--card, #fff); color: var(--text, #1c1c1e); border-radius: 18px; padding: 10px 14px; font-size: 15px; line-height: 1.35; font-weight: 600; box-shadow: 0 6px 22px rgba(0, 0, 0, .12), 0 0 0 1px rgba(0, 0, 0, .05); min-height: 1.35em; }
+.snhb::after { content: ''; position: absolute; left: -7px; bottom: 18px; width: 14px; height: 14px; background: inherit; transform: rotate(45deg); border-radius: 0 0 0 4px; box-shadow: -1px 1px 0 rgba(0, 0, 0, .05); }
+.snhb.is-in { animation: snhBub .42s cubic-bezier(.3, 1.6, .5, 1); transform-origin: 0 100%; }
+@keyframes snhBub { from { opacity: 0; scale: .6; } to { opacity: 1; scale: 1; } }
+.snhwrap { display: flex; align-items: flex-end; gap: 6px; }
+.snhwrap--hero { margin: 4px 0 14px; }
+.snhwrap--hero .snhb { flex: 1; margin-bottom: 22px; }
+.snhpeek { position: fixed; right: 10px; bottom: calc(env(safe-area-inset-bottom, 0px) + 84px); z-index: 9000; flex-direction: row; max-width: min(94vw, 380px); translate: 0 160%; transition: translate .55s cubic-bezier(.3, 1.4, .5, 1); cursor: pointer; }
+.snhpeek.is-in { translate: 0 0; }
+.snhpeek.is-out { translate: 130% 0; transition: translate .5s cubic-bezier(.6, -.3, .7, .4); }
+.snhb--peek { margin-bottom: 30px; }
+.snhb--peek::after { left: auto; right: -7px; border-radius: 0 4px 0 0; box-shadow: 1px -1px 0 rgba(0, 0, 0, .05); }
+@media (prefers-reduced-motion: reduce) { .snh *, .snh__all { animation: none !important; transition: none !important; } }
+/* tela da ofensiva (animação desenhada do Sininho, 60 quadros) */
+.stk { position: fixed; inset: 0; z-index: 9500; display: grid; place-items: center; padding: 24px 18px calc(env(safe-area-inset-bottom, 0px) + 24px); background: radial-gradient(120% 80% at 50% 30%, #3a1608 0%, #160805 60%, #0b0403 100%); color: #fff; opacity: 0; transition: opacity .3s; }
+.stk.is-in { opacity: 1; } .stk.is-out { opacity: 0; }
+.stk__glow { position: absolute; left: 50%; top: 32%; width: 420px; height: 420px; translate: -50% -50%; background: radial-gradient(circle, rgba(255, 120, 40, .45), transparent 65%); filter: blur(10px); animation: stkGlow 2.4s ease-in-out infinite; pointer-events: none; }
+@keyframes stkGlow { 0%, 100% { scale: .92; opacity: .7; } 50% { scale: 1.06; opacity: 1; } }
+.stk__card { position: relative; width: min(100%, 380px); text-align: center; }
+.stk.is-in .stk__card { animation: stkIn .5s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes stkIn { from { translate: 0 30px; opacity: 0; } to { translate: 0 0; opacity: 1; } }
+.stk__anim { display: block; margin: 0 auto -6px; width: 250px; height: 250px; padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.stk__spr { display: block; width: 100%; height: 100%; background: url('../assets/mascot/ofensiva.webp') 0 0 / 1000% 600% no-repeat; }
+.stk__anim.is-idle .stk__spr { animation: snhBreath 3s ease-in-out infinite; transform-origin: 50% 90%; }
+.stk__num { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.stk__num b { font-size: 76px; line-height: 1; font-weight: 900; letter-spacing: -2px; background: linear-gradient(180deg, #ffd34d, #ff7a1a 70%, #ff4d1a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.stk__num span { font-size: 15px; font-weight: 700; color: #ffb27a; text-transform: uppercase; letter-spacing: .08em; }
+.stk__num.is-pop b { animation: stkPop .6s cubic-bezier(.3, 1.8, .5, 1); }
+@keyframes stkPop { 0% { scale: .6; } 60% { scale: 1.18; } 100% { scale: 1; } }
+.stk__title { margin: 14px 0 6px; font-size: 24px; font-weight: 800; }
+.stk__sub { margin: 0 auto 18px; max-width: 300px; font-size: 15px; line-height: 1.4; color: rgba(255, 255, 255, .72); }
+.stk__week { display: flex; justify-content: center; gap: 8px; margin-bottom: 22px; }
+.stk__week span { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.stk__week i { width: 30px; height: 30px; border-radius: 50%; background: rgba(255, 255, 255, .1); border: 2px solid rgba(255, 255, 255, .12); transition: background .3s, border-color .3s, scale .4s cubic-bezier(.3, 1.8, .5, 1); }
+.stk__week .is-on i { background: radial-gradient(circle at 50% 70%, #ffd34d, #ff7a1a 60%, #ff4d1a); border-color: #ffb27a; }
+.stk__week .is-today.is-on i { scale: 1.18; box-shadow: 0 0 16px rgba(255, 140, 40, .8); }
+.stk__week small { font-size: 11px; font-weight: 700; color: rgba(255, 255, 255, .55); }
+.stk__go { width: 100%; height: 52px; border-radius: 16px; background: #ff6b3d; color: #fff; font-size: 17px; font-weight: 800; border: 0; box-shadow: 0 4px 0 #c94a1f; }
+.stk__go:active { translate: 0 3px; box-shadow: 0 1px 0 #c94a1f; }
+.stk--marco .stk__title { font-size: 28px; }
+.ofs__snh { position: absolute; right: 10px; top: 8px; padding: 0; border: 0; background: none; cursor: pointer; z-index: 2; }

@@ -15,6 +15,8 @@ import * as push from '../avisos.js';
 import { usagePlaceholder, fillUsage } from '../usage.js';
 import { onDone, streak } from '../reward.js';
 import { suggestions, addSuggestion, hideSuggestion, forYouLead } from '../foryou.js';
+import { sininho, greetLine, interactive, say } from '../sininho.js';
+import { offensive } from '../game.js';
 import { esc, todayKey, addDays, dayLabel, fmtTime, fromKey, toKey, diffDays, greeting, fmtDayLong, monthKey, addMonths, fmtMonth, WD_LETTER, MONTHS } from '../utils.js';
 
 const firstName = () => store.member(store.me)?.name || '';
@@ -63,6 +65,7 @@ function renderHome() {
   ${header(`${icon('lock', 11)} Só você vê`, `${esc(greeting())}${firstName() ? ', ' + esc(firstName()) : ''}`, `${workBtn}<button class="iconbtn iconbtn--ai" data-action="assistant" aria-label="Assistente">${icon('sparkle', 19)}</button><button class="iconbtn iconbtn--me" data-action="profile" aria-label="Seu perfil e conquistas">${store.me ? meRing(store.me, 32) : icon('user', 20)}</button>`)}
   <div class="page ppage">
     ${personal.error === 'rules' ? `<div class="palert">${tile('alert', ['#FF8A7A', '#E5341F'], 36)}<div><strong>O Pessoal ainda não está liberado na nuvem</strong><small>O que você anota não fica salvo. No Firebase: Firestore → Regras → cole as regras novas → Publicar. Depois feche e abra o app.</small></div></div>` : personal.error === 'net' ? `<div class="palert">${tile('alert', ['#FFB547', '#FF7A1A'], 36)}<div><strong>Sem conexão com a nuvem</strong><small>Confira a internet. O que você anotar aparece quando a conexão voltar.</small></div></div>` : ''}
+    ${heroMascotHtml(pending, late.length)}
     <div class="phero">
       <p class="phero__date">${esc(fmtDayLong(t))}</p>
       ${(() => { const q = quoteOfDay(t); return `<p class="phero__phrase">“${esc(q.t)}”</p><p class="phero__author">— ${esc(q.a)}</p>`; })()}
@@ -249,6 +252,16 @@ function renderPSettings() {
   </div>`;
 }
 
+/* Sininho cumprimentando (a frase fica a mesma enquanto a situação do dia não muda) */
+let greet = { key: '', g: null, typed: false };
+function heroMascotHtml(pending, late) {
+  let off = 0, offToday = true;
+  try { const o = offensive(); off = o.days; offToday = o.today; } catch { /* ok */ }
+  const h = new Date().getHours();
+  const key = `${todayKey()}|${pending}|${late}|${off}|${offToday}|${h >= 23 || h < 5}`;
+  if (greet.key !== key) greet = { key, g: greetLine({ first: (firstName() || '').split(' ')[0], pending, late, off, offToday }), typed: false };
+  return `<div class="snhwrap snhwrap--hero" data-snh-hero>${sininho(greet.g.mood, { size: 92 })}<div class="snhb"><span class="snhb__txt">${greet.typed ? esc(greet.g.text) : ''}</span></div></div>`;
+}
 export function renderPersonalSpace() {
   const tab = ui.ptab || 'p-hoje';
   if (tab === 'p-agenda') return renderAgenda();
@@ -267,6 +280,12 @@ export const personalTabbar = () => `
   ${ptabBtn('p-ajustes', 'settings', 'Ajustes')}`;
 
 export function bindPersonal(view) {
+  const hero = view.querySelector('[data-snh-hero]');
+  if (hero && greet.g) {
+    const el = hero.querySelector('[data-snh]'), bubble = hero.querySelector('.snhb__txt');
+    interactive(el, { bubble });
+    if (!greet.typed) { greet.typed = true; setTimeout(() => say(el, greet.g.text, { bubble }), 350); }
+  }
   const f = view.querySelector('[data-form="pquick"]');
   if (f) f.onsubmit = (ev) => {
     if (ev) ev.preventDefault(); // nunca deixa o navegador "enviar" o formulário (isso recarregava o app)

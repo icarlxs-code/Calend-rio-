@@ -256,7 +256,8 @@ function completed({ key, due, createdAt = 0, kind = 'work', hasTime = false }) 
   // voltou depois de 3+ dias sem concluir nada: comemora a volta (sem culpa)
   if (c.lastDone && c.lastDone < addDays(t, -3)) { c.comebacks = (c.comebacks || 0) + 1; xp += XP.comeback; why = 'volta por cima'; }
   c.lastDone = t;
-  if (!S.days.includes(t)) S.days = [...S.days, t].slice(-400);
+  const firstToday = !S.days.includes(t);
+  if (firstToday) S.days = [...S.days, t].slice(-400);
   S.d.done++; c.maxDay = Math.max(c.maxDay || 0, S.d.done);
   S.d.times = [...S.d.times, now].slice(-5);
   if (S.d.times.length === 5 && now - S.d.times[0] <= 60 * 60e3) c.blitz = 1;
@@ -266,7 +267,7 @@ function completed({ key, due, createdAt = 0, kind = 'work', hasTime = false }) 
   // dia 100%: tudo de hoje concluído (pelo menos 2 coisas)
   if (kind === 'work') {
     const today = store.eventsOn(t, { person: store.me || 'all' }).filter(mineEv);
-    if (today.length >= 2 && today.every((e) => e.status === 'feito') && c.perfectDay !== t) { c.perfectDays = (c.perfectDays || 0) + 1; c.perfectDay = t; gain(XP.perfect, 'dia 100%'); }
+    if (today.length >= 2 && today.every((e) => e.status === 'feito') && c.perfectDay !== t) { c.perfectDays = (c.perfectDays || 0) + 1; c.perfectDay = t; gain(XP.perfect, 'dia 100%'); var perfect = true; }
   }
   // caixa zerada: nada atrasado no trabalho nem no Pessoal (depois de pegar o ritmo)
   if ((c.doneAll || 0) >= 5) {
@@ -279,6 +280,10 @@ function completed({ key, due, createdAt = 0, kind = 'work', hasTime = false }) 
     if (week.length >= 3 && week.every((e) => e.status === 'feito')) c.fridayClear = 1;
   }
   settle();
+  // Sininho reage: 1ª conclusão do dia → tela da ofensiva; depois → ele espia comemorando
+  const late = now > due + 15 * 60e3;
+  if (firstToday) import('./streak.js').then((m) => m.showStreak(offensive().days)).catch(() => {});
+  else import('./sininho.js').then((m) => m.cheerDone({ late, perfect: !!perfect })).catch(() => {});
 }
 /* compromisso criado / concluído (gancho do store) */
 export function onEvent(prev, item) {
