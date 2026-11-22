@@ -374,20 +374,15 @@ export async function initLocal() {
 export async function initCloud(cloud, user) {
   store.mode = 'cloud';
   store.user = user;
-  const m = CONFIG.team.find((t) => t.email && t.email.toLowerCase() === (user.email || '').toLowerCase());
+  // fundadores (a antiga dupla Henrique + Matheus): agora são contas próprias, como todo mundo
+  const founder = CONFIG.team.find((t) => t.email && t.email.toLowerCase() === (user.email || '').toLowerCase());
   backend = cloud;
   store.backendApi = cloud;
   // ficha da pessoa (profissão, rotina, dificuldades…): todas as contas têm
   let prof = null;
   try { prof = await Promise.race([cloud.getProfile(user.uid), new Promise((r) => setTimeout(() => r(null), 6000))]); } catch { prof = null; }
   store.profile = prof || {};
-  if (m) {
-    // a dupla de sempre: dados na raiz, equipe do config
-    store.workspace = 'main';
-    store.team = CONFIG.team;
-    store.me = m.id;
-    cloud.setWorkspace && cloud.setWorkspace(null);
-  } else {
+  {
     // conta própria: espaço só dela, começa vazio
     store.workspace = user.uid;
     cloud.setWorkspace(user.uid);
@@ -412,12 +407,41 @@ export async function initCloud(cloud, user) {
       }
     }
   }
+  // 1ª vez depois da separação: a agenda que era da dupla vem para o espaço próprio (uma vez só)
+  const splitLocal = (() => { try { return localStorage.getItem(`lembra.split.${user.uid}`); } catch { return null; } })();
+  if (founder && prof && !store.profile.splitDone && !splitLocal && store.workspace === user.uid) {
+    try { await splitDupla(cloud, user, founder); } catch (e) { console.warn('separação da dupla: tenta de novo na próxima abertura', e); }
+  }
   store.ready = false;
   await cloud.subscribe(COLS, (col, items) => {
     store.state[col] = items.map((x) => sanitizeItem(col, x)).filter(Boolean);
     store.emit();
   }, (err) => store.onError && store.onError(err));
   store.ready = true;
+}
+
+/* Separação da antiga dupla: copia da raiz para ws/{uid} (nada é apagado da raiz).
+   Quem é o dono do app leva a agenda inteira; o sócio leva o que era dele (responsável ou criado por ele).
+   Os ids "henrique"/"matheus" viram o id da conta própria. */
+async function splitDupla(cloud, user, founder) {
+  const fid = founder.id, nid = 'u' + user.uid.replace(/[^A-Za-z0-9]/g, '').slice(0, 24);
+  const owner = (user.email || '').toLowerCase() === (CONFIG.adminEmail || '').toLowerCase();
+  const others = CONFIG.team.map((t) => t.id).filter((x) => x !== fid);
+  const [events, companies, notes, settings] = await Promise.all(['events', 'companies', 'notes', 'settings'].map((c) => cloud.readRoot(c)));
+  const mine = (e) => owner || (e.assignees || []).includes(fid) || e.createdBy === fid;
+  const evs = events.filter(mine).map((e) => {
+    const as = (e.assignees || []).map((a) => (a === fid ? nid : a)).filter((a) => !others.includes(a));
+    return { ...e, assignees: as.length ? as : [nid], createdBy: nid, ...(e.updatedBy ? { updatedBy: e.updatedBy === fid ? nid : nid } : {}), ...(e.doneBy ? { doneBy: e.doneBy === fid ? nid : e.doneBy } : {}) };
+  });
+  const usedCo = new Set(evs.map((e) => e.companyId).filter(Boolean));
+  const cos = companies.filter((c) => owner || usedCo.has(c.id));
+  const nts = notes.filter((n) => owner || n.author === fid).map((n) => ({ ...n, author: n.author === fid ? nid : n.author }));
+  const sts = settings.map((x) => (x.id === `persona-${fid}` ? { ...x, id: `persona-${nid}` } : x)).filter((x) => !String(x.id).startsWith('persona-') || x.id === `persona-${nid}`);
+  if (!sts.some((x) => x.id === 'workprofile')) sts.push({ id: 'workprofile', arch: 'marketing', profession: '' });
+  for (const [name, items] of [['companies', cos], ['events', evs], ['notes', nts], ['settings', sts]]) if (items.length) await cloud.copyToWs(user.uid, name, items);
+  try { localStorage.setItem(`lembra.split.${user.uid}`, String(Date.now())); } catch { /* ok */ }
+  store.profile = { ...(store.profile || {}), splitDone: Date.now(), splitCounts: { events: evs.length, companies: cos.length, notes: nts.length } };
+  await cloud.saveProfile(user.uid, store.profile);
 }
 
 /* Pessoa de uma conta própria (nome e foto do perfil) */

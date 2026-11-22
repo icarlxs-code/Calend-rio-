@@ -1096,7 +1096,9 @@ function startApp() {
   // pessoa escolhida no filtro precisa existir neste espaço (ex.: celular usado por outra conta antes)
   if (ui.person !== 'all' && !store.member(ui.person)) ui.person = 'all';
   // conta própria: até o servidor confirmar o plano, nada fica liberado (a não ser o último plano válido deste aparelho)
-  if (store.solo && store.mode === 'cloud' && !store.billing) store.billing = lastKnown() || { plan: 'checking', active: false };
+  // fundadores (a antiga dupla): acesso para sempre desde o primeiro segundo (o servidor confirma depois)
+  const founder = CONFIG.team.some((t) => t.email && t.email.toLowerCase() === (store.user?.email || '').toLowerCase());
+  if (store.solo && store.mode === 'cloud' && !store.billing) store.billing = lastKnown() || (founder ? { plan: 'lifetime', active: true, tier: 'pro', comp: true } : { plan: 'checking', active: false });
   // portão do plano: sem plano ativo nada é criado, alterado ou apagado (a ficha e os ajustes de rotina podem)
   store.gate = (col) => col === 'settings' || requireAccess();
   personal.gate = () => requireAccess();

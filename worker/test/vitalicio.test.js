@@ -22,7 +22,7 @@ const env = {
   ALLOWED_ORIGINS: 'https://icarlxs-code.github.io',
 };
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
-const token = (email, uid, name) => `${b64({ alg: 'none' })}.${b64({ email, exp: Math.floor(Date.now() / 1000) + 3600, ...(uid ? { user_id: uid, sub: uid } : {}), ...(name ? { name } : {}) })}.`;
+const token = (email, uid, name) => `${b64({ alg: 'none' })}.${b64({ email, exp: Math.floor(Date.now() / 1000) + 3600, ...{ user_id: uid || ('x' + Buffer.from(email).toString('hex')).slice(0, 24), sub: uid || ('x' + Buffer.from(email).toString('hex')).slice(0, 24) }, ...(name ? { name } : {}) })}.`;
 
 const phones = {};
 function phone(name) {

@@ -151,8 +151,8 @@ async function announceNewUser(env, me) {
   const reg = (await env.CAL.get('users', 'json')) || {};
   if (reg[me.id] || (await env.CAL.get(`bill:${me.ws}`))) return; // conta antiga
   const em = (env.ADMIN_EMAIL || JSON.parse(env.TEAM || '[]')[0]?.email || '').toLowerCase();
-  if ((me.email || '').toLowerCase() === em) return;
-  const owner = JSON.parse(env.TEAM || '[]').find((m) => (m.email || '').toLowerCase() === em)?.id;
+  if ((me.email || '').toLowerCase() === em || me.founder) return;
+  const owner = await adminMember(env);
   if (!owner) return;
   const total = Number(await env.CAL.get('signups-count') || 0) + 1;
   await env.CAL.put('signups-count', String(total));
@@ -188,9 +188,22 @@ async function registry(env, now = Date.now()) {
 const activeRegs = (reg, now = Date.now()) => Object.entries(reg).filter(([, u]) => (u.until || 0) > now);
 /* Todas as pessoas para o relógio: a dupla + contas próprias COM PLANO ATIVO */
 export async function everyone(env) {
-  const team = JSON.parse(env.TEAM || '[]').map((m) => ({ ...m, ws: 'main', ctxKey: 'coach-ctx' }));
+  // a antiga dupla agora são duas contas próprias (entram pelo registro, como todo mundo)
   const reg = await registry(env);
-  return [...team, ...activeRegs(reg).map(([id, u]) => ({ id, name: u.name, ws: u.ws, ctxKey: `coach-ctx:${u.ws}` }))];
+  return [...activeRegs(reg).map(([id, u]) => ({ id, name: u.name, ws: u.ws, ctxKey: `coach-ctx:${u.ws}` }))];
+}
+/* id do dono do app nos avisos (gravado quando ele usa o app; antes, o da lista TEAM) */
+let adminSeen = '';
+async function adminMember(env) {
+  const saved = await env.CAL.get('admin-member');
+  if (saved) return saved;
+  const em = (env.ADMIN_EMAIL || JSON.parse(env.TEAM || '[]')[0]?.email || '').toLowerCase();
+  return JSON.parse(env.TEAM || '[]').find((m) => (m.email || '').toLowerCase() === em)?.id || null;
+}
+async function rememberAdmin(env, me) {
+  if (!isAdmin(env, me) || adminSeen === me.id) return;
+  adminSeen = me.id;
+  if ((await env.CAL.get('admin-member')) !== me.id) await env.CAL.put('admin-member', me.id);
 }
 /* Dono do app (painel): e-mail configurado no servidor (ADMIN_EMAIL) */
 const isAdmin = (env, me) => {
@@ -328,8 +341,7 @@ async function handle(req, env) {
     const idx = (await env.CAL.get('support-index', 'json')) || {};
     idx[id] = { name: 'Sem login', email, at: now, unread: th.unread, last: text.slice(0, 80), guest: true };
     await env.CAL.put('support-index', JSON.stringify(idx));
-    const em = (env.ADMIN_EMAIL || JSON.parse(env.TEAM || '[]')[0]?.email || '').toLowerCase();
-    const owner = JSON.parse(env.TEAM || '[]').find((m) => (m.email || '').toLowerCase() === em)?.id;
+    const owner = await adminMember(env);
     if (owner) await sendToMember(env, owner, { title: '🔑 Ajuda sem login', body: `${email}: ${text.slice(0, 140)}`, tag: `sup-${id}`, url: './#/suporte-dono' }).catch(() => 0);
     return reply(env, req, { ok: true });
   }
@@ -341,6 +353,7 @@ async function handle(req, env) {
     return reply(env, req, { error: 'Sem permissão: ' + e.message }, 401);
   }
   if (tooMany(`${me.id}:${url.pathname}`, LIMITS[url.pathname] || 120)) return reply(env, req, { error: 'Muitos pedidos seguidos. Espere um minuto.' }, 429);
+  await rememberAdmin(env, me).catch(() => {});
   const raw = await req.text().catch(() => '');
   if (raw.length > MAX_BODY) return reply(env, req, { error: 'pedido grande demais' }, 413);
   let body = {};
@@ -375,7 +388,7 @@ async function handle(req, env) {
     const st = { ...(await billingStatus(env, me)), foundersLeft: Math.max(0, 200 - Number(await env.CAL.get('founders-count') || 0)) };
     if (st.vip) st.vip.total = Math.max(st.vip.no, Number(await env.CAL.get('vip-count') || 0));
     // mantém o prazo do relógio em dia (ex.: o teste acabou, o mensal renovou)
-    if (me.ws !== 'main') { const reg = (await env.CAL.get('users', 'json')) || {}; if (reg[me.id] && reg[me.id].until !== untilOf(st)) await registerUser(env, me, st); }
+    if (me.ws !== 'main') { const reg = (await env.CAL.get('users', 'json')) || {}; if ((reg[me.id] || me.founder) && reg[me.id]?.until !== untilOf(st)) await registerUser(env, me, st); }
     return reply(env, req, st);
   }
   if (url.pathname === '/billing/trial') {
@@ -458,6 +471,8 @@ async function handle(req, env) {
     // a inscrição do endereço antigo (mesma pessoa, mesmo aparelho) sai, para não chegar cada aviso duas vezes
     const from = clean(req.headers.get('Origin') || '', 80), ua = clean(req.headers.get('User-Agent') || '', 200);
     if (from && ua) for (const [k, d] of Object.entries(subs)) if (k !== id && d.member === me.id && d.ua === ua && d.origin && d.origin !== from) delete subs[k];
+    // a antiga dupla virou conta própria: os aparelhos guardados com o id antigo (henrique/matheus) saem
+    if (me.founder) for (const [k, d] of Object.entries(subs)) if (d.member === me.founder) delete subs[k];
     subs[id] = {
       member: me.id,
       ...(from ? { origin: from } : {}), ...(ua ? { ua } : {}),
@@ -552,7 +567,7 @@ async function handle(req, env) {
 
   // ---------- suporte: chat da pessoa com o dono do app ----------
   if (url.pathname.startsWith('/support/')) {
-    const ownerMember = () => { const em = (env.ADMIN_EMAIL || JSON.parse(env.TEAM || '[]')[0]?.email || '').toLowerCase(); return JSON.parse(env.TEAM || '[]').find((m) => (m.email || '').toLowerCase() === em)?.id || null; };
+    const ownerMember = () => adminMember(env);
     const key = (id) => `support:${id}`;
     const AUTO = 'Recebemos sua mensagem! 💜 Nós responderemos em até 24h, aqui mesmo neste chat. Você vai receber uma notificação quando chegar a resposta.';
     if (url.pathname === '/support/send') {
@@ -571,7 +586,7 @@ async function handle(req, env) {
       const idx = (await env.CAL.get('support-index', 'json')) || {};
       idx[me.id] = { name: me.name, email: me.email, at: now, unread: th.unread, last: text.slice(0, 80) };
       await env.CAL.put('support-index', JSON.stringify(idx));
-      const owner = ownerMember();
+      const owner = await ownerMember();
       if (owner) await sendToMember(env, owner, { title: `💬 Suporte · ${me.name || me.email}`, body: text.slice(0, 160), tag: `sup-${me.id}`, url: './#/suporte-dono' }).catch(() => 0);
       return reply(env, req, { ok: true, thread: th.msgs });
     }

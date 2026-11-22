@@ -62,7 +62,7 @@ export function addonOf(b, now = Date.now()) {
   const a = b && b.addon;
   const real = a && PLANS[a.plan] ? { plan: a.plan, seats: PLANS[a.plan].seats, active: !!a.subActive && (!a.paidUntil || a.paidUntil > now - 3 * 864e5), paidUntil: a.paidUntil || null, cancelAt: a.cancelAt || null } : null;
   // presente Vitalício: a agenda compartilhada Equipe vem junto, sem pagar à parte (quem é convidado também não paga)
-  if (b && b.lifetime && b.comp && b.vip && !(real && real.active)) return { plan: 'equipe', seats: PLANS.equipe.seats, active: true, paidUntil: null, cancelAt: null, gift: true };
+  if (b && b.lifetime && b.comp && (b.vip || b.founderTeam) && !(real && real.active)) return { plan: 'equipe', seats: PLANS.equipe.seats, active: true, paidUntil: null, cancelAt: null, gift: true };
   return real;
 }
 /* Plano base pago (mensal em dia ou vitalício): exigido para o complemento funcionar */
@@ -173,6 +173,11 @@ export async function startTrial(env, me, { deviceId, ip, cpf, now = Date.now() 
 }
 
 export async function billingStatus(env, me) {
+  // fundadores (a antiga dupla): para sempre, com a agenda compartilhada inclusa
+  if (me.founder && me.ws !== 'main') {
+    const b0 = await getBill(env, me.ws);
+    if (!b0 || !b0.lifetime || !b0.founderTeam) { const now = Date.now(); await putBill(env, me.ws, { ...(b0 || { uid: me.ws, createdAt: now }), lifetime: true, comp: true, founderTeam: true, lifetimeAt: b0?.lifetimeAt || now, updatedAt: now }); }
+  }
   const st = statusOf(me.ws === 'main' ? null : await getBill(env, me.ws), me);
   if (me.ws === 'main' || st.plan === 'lifetime' || st.plan === 'monthly') return st;
   // convidado de uma agenda compartilhada ativa: o plano do dono cobre

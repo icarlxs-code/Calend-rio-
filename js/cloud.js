@@ -136,6 +136,21 @@ async function setPassword(p) {
 const backend = {
   phoneStart, phoneFinish, setPassword,
   setWorkspace(uid) { base = uid ? ['ws', uid] : []; },
+  /* separação da antiga dupla: lê a agenda que ficava na raiz e copia para o espaço da pessoa (a raiz fica intacta) */
+  async readRoot(name) {
+    const snap = await fs.getDocs(fs.collection(db, name));
+    return snap.docs.map((d) => ({ ...d.data(), id: d.id }));
+  },
+  async copyToWs(uid, name, items) {
+    // só o que ainda não existe no espaço novo (rodar de novo nunca sobrescreve o que já foi editado lá)
+    const have = new Set((await fs.getDocs(fs.collection(db, 'ws', uid, name))).docs.map((d) => d.id));
+    items = items.filter((it) => !have.has(it.id));
+    for (let i = 0; i < items.length; i += 400) {
+      const batch = fs.writeBatch(db);
+      for (const it of items.slice(i, i + 400)) batch.set(fs.doc(db, 'ws', uid, name, it.id), clean(it));
+      await batch.commit();
+    }
+  },
   /* Resumo de uso de cada conta (o dono vê no painel) */
   writeStats(uid, data) {
     return fs.setDoc(fs.doc(db, 'stats', uid), { ...clean(data), opens: fs.increment(1) }, { merge: true });

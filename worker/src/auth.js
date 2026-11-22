@@ -34,12 +34,12 @@ export async function verifyIdToken(token, env) {
   }
   if (!claims.exp || claims.exp < now - 60) throw new Error('login expirado');
   const email = String(claims.email || '').toLowerCase();
+  // todo mundo tem a própria conta (a antiga "dupla" Henrique + Matheus virou duas contas normais).
+  // Os fundadores (TEAM) só ganham o acesso para sempre e a agenda compartilhada inclusa.
   const team = JSON.parse(env.TEAM || '[]');
   const member = team.find((m) => m.email === email);
-  if (member) return { ...member, ws: 'main' };
-  // conta própria (qualquer pessoa com login no app): espaço só dela
   const uid = String(claims.user_id || claims.sub || '');
   if (!uid) throw new Error('login sem usuário');
-  const raw = String(claims.name || email.split('@')[0] || 'Você').trim().slice(0, 40);
-  return { id: 'u' + uid.replace(/[^A-Za-z0-9]/g, '').slice(0, 24), name: raw.charAt(0).toUpperCase() + raw.slice(1), email, ws: uid, solo: true };
+  const raw = String(member?.name || claims.name || email.split('@')[0] || 'Você').trim().slice(0, 40);
+  return { id: 'u' + uid.replace(/[^A-Za-z0-9]/g, '').slice(0, 24), name: raw.charAt(0).toUpperCase() + raw.slice(1), email, ws: uid, solo: true, ...(member ? { founder: member.id } : {}) };
 }

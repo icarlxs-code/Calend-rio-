@@ -16,7 +16,8 @@ test('lembrete de trabalho: manda uma vez só, mesmo se o app regravar a lista',
 
 test('lembrete pessoal: lê o formato novo e o antigo, e não repete', async () => {
   const now = Date.now();
-  const kv = { 'pitems:henrique': JSON.stringify([{ id: 'p1', at: now - 1000, title: 't', body: 'b' }]), personal: JSON.stringify({ byMember: { matheus: [{ id: 'p2', at: now - 1000, title: 't', body: 'b' }] }, sent: {} }), subs: '{}', vapid: JSON.stringify({ publicKey: 'x', privateKey: 'y' }) };
+  // (a antiga dupla agora são contas próprias com plano: entram pelo registro)
+  const kv = { users: JSON.stringify({ uH: { name: 'Henrique', ws: 'H', until: now + 864e5 }, uM: { name: 'Matheus', ws: 'M', until: now + 864e5 } }), 'pitems:uH': JSON.stringify([{ id: 'p1', at: now - 1000, title: 't', body: 'b' }]), personal: JSON.stringify({ byMember: { uM: [{ id: 'p2', at: now - 1000, title: 't', body: 'b' }] }, sent: {} }), subs: '{}', vapid: JSON.stringify({ publicKey: 'x', privateKey: 'y' }) };
   const env = mkEnv(kv);
   assert.equal(await runPersonal(env), 2);
   assert.equal(await runPersonal(env), 0);
@@ -29,6 +30,6 @@ test('contas próprias: lembretes do espaço delas também são enviados (só co
   const env = mkEnv(kv);
   assert.equal(await runSchedule(env), 1);
   const all = await everyone(env);
-  assert.deepEqual(all.map((m) => m.id), ['henrique', 'matheus', 'uABC']);
-  assert.equal(all[2].ctxKey, 'coach-ctx:ABC');
+  assert.deepEqual(all.map((m) => m.id), ['uABC']);
+  assert.equal(all[0].ctxKey, 'coach-ctx:ABC');
 });
