@@ -803,7 +803,7 @@ function showLogin(errMsg = '') {
   const msg = errMsg || loginNotice;
   root.innerHTML = `
   <div class="login">
-    ${isStandalone() ? '' : `<button class="login__installtop" type="button" data-installguide>${icon('phone', 15)} Instalar o app no celular</button>`}
+    ${isStandalone() ? '' : `<button class="login__installtop" type="button" data-installguide>${icon("download", 16)} Instalar o app no celular · grátis</button>`}
     <div class="brandwrap login__brand">${brand('completa', { h: 112, alt: esc(CONFIG.appName) })}</div>
     <h1 class="login__hook">${signupMode ? 'Crie sua conta grátis' : 'Que bom ter você aqui'}</h1>
     <p class="login__lead">${signupMode ? 'Em 2 minutos o Lembra aprende a sua rotina e passa a lembrar de tudo por você.' : 'Entre para ver o que tem para hoje.'}</p>
