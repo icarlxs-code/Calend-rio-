@@ -1,10 +1,10 @@
 {
-  "version": "2.4.2",
+  "version": "2.4.3",
   "date": "2026-11-22",
   "min": "2.2.0",
   "title": "Nova abertura",
   "notes": [
-    "Abertura com o Sininho animado: ele chega, acena e comemora.",
+    "Abertura nova: o Sininho chega pulando, dá tchauzinho e comemora com você.",
     "Pequenas melhorias e correções."
   ]
 }
