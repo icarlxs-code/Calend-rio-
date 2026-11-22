@@ -4,7 +4,8 @@
 import { esc } from './utils.js';
 
 const SHEET = 'assets/mascot/ofensiva.webp';
-const COLS = 10, ROWS = 6, FRAMES = 60, FPS = 30, FLAME_AT = 12;
+/* folha com os 60 quadros desenhados (10 × 6, cada quadro 377 × 400); toca a 60 fps, 1 quadro por atualização de tela */
+const COLS = 10, FW = 377, FH = 400, FRAMES = 60, FPS = 60, FLAME_AT = 12;
 const MARCOS = {
   3: ['3 dias seguidos!', 'Começou a virar hábito. Não para agora!'],
   7: ['Uma semana inteira!', 'Sete dias sem esquecer nada importante. Que orgulho!'],
@@ -18,14 +19,24 @@ const NORMAL = ['Ofensiva mantida!', 'Mais um dia na conta!', 'A chama continua 
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-let img = null;
-const load = () => img || (img = new Promise((res) => { const i = new Image(); i.onload = () => res(true); i.onerror = () => res(false); i.src = SHEET; }));
+let img = null, sheet = null;
+/* baixa e DECODIFICA antes de mostrar: nenhum quadro engasga na primeira vez */
+const load = () => img || (img = new Promise((res) => {
+  const i = new Image(); i.src = SHEET;
+  (i.decode ? i.decode() : new Promise((ok, no) => { i.onload = ok; i.onerror = no; })).then(() => {
+    sheet = i;
+    // "aquece": desenha uma vez fora da tela para a imagem já estar pronta na placa de vídeo
+    try { const c = document.createElement('canvas'); c.width = c.height = 2; c.getContext('2d').drawImage(i, 0, 0, 2, 2); } catch { /* ok */ }
+    res(true);
+  }).catch(() => res(false));
+}));
 export const preloadStreak = () => load();
 
 export async function showStreak(days = 1) {
   if (!days || document.querySelector('.stk')) return;
   // espera outras telas cheias (conquista, planos…) saírem
   if (document.querySelector('.gx, .paywall, .ficha, .photogate, .okfx')) { setTimeout(() => showStreak(days), 1200); return; }
+  const snd = import('./sound.js').catch(() => null); // carrega o som ANTES (não engasga quando a chama acende)
   if (!(await load())) return;
   const marco = MARCOS[days];
   const [title, sub] = marco || [pick(NORMAL), days === 1 ? 'Primeiro dia da sua ofensiva. Volte amanhã para ela crescer!' : `Você concluiu algo ${days} dias seguidos. Volte amanhã para não perder!`];
@@ -36,7 +47,7 @@ export async function showStreak(days = 1) {
   el.setAttribute('aria-label', `${days} ${days === 1 ? 'dia' : 'dias'} de ofensiva`);
   el.innerHTML = `<div class="stk__glow"></div>
     <div class="stk__card">
-      <button class="stk__anim" aria-label="Ver de novo"><span class="stk__spr"></span></button>
+      <button class="stk__anim" aria-label="Ver de novo"><canvas class="stk__spr"></canvas></button>
       <div class="stk__num"><b data-n>${Math.max(0, days - 1)}</b><span>${days === 1 ? 'dia' : 'dias'} de ofensiva</span></div>
       <h2 class="stk__title">${esc(title)}</h2>
       <p class="stk__sub">${esc(sub)}</p>
@@ -45,27 +56,42 @@ export async function showStreak(days = 1) {
     </div>`;
   document.body.appendChild(el);
   const spr = el.querySelector('.stk__spr'), num = el.querySelector('[data-n]');
-  const frame = (f) => { spr.style.backgroundPosition = `${((f % COLS) / (COLS - 1)) * 100}% ${(Math.floor(f / COLS) / (ROWS - 1)) * 100}%`; };
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  spr.width = Math.round(236 * dpr); spr.height = Math.round(250 * dpr);
+  const ctx = spr.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  let shown = -1;
+  const frame = (f) => {
+    if (f === shown) return; shown = f;
+    ctx.clearRect(0, 0, spr.width, spr.height);
+    ctx.drawImage(sheet, (f % COLS) * FW, Math.floor(f / COLS) * FH, FW, FH, 0, 0, spr.width, spr.height);
+  };
   let raf = 0, lit = false;
   const light = () => {
     if (lit) return; lit = true;
     num.textContent = days; num.parentElement.classList.add('is-pop');
     el.querySelector('.stk__week .is-today')?.classList.add('is-on');
     try { navigator.vibrate && navigator.vibrate([16, 50, 24]); } catch { /* ok */ }
-    import('./sound.js').then((s) => (marco ? s.levelUp() : s.achievement())).catch(() => {});
+    snd.then((s) => s && (marco ? s.levelUp() : s.achievement())).catch(() => {});
   };
   const play = () => {
     cancelAnimationFrame(raf);
     if (calm()) { frame(FRAMES - 1); light(); return; }
-    const t0 = performance.now();
+    let t0 = 0, cur = -1;
     const step = (t) => {
-      const f = Math.min(FRAMES - 1, Math.floor(((t - t0) / 1000) * FPS));
+      if (!t0) t0 = t; // começa no 1º quadro de verdade
+      // 1 quadro por atualização de tela (arredondando o tempo, sem o "tremido" que repetia/pulava quadros);
+      // em telas de 120 Hz espera a hora certa; só pula se o aparelho atrasar de verdade (> 2 quadros)
+      const target = Math.round(((t - t0) / 1000) * FPS);
+      const next = target > cur + 2 ? target : Math.min(cur + 1, Math.max(cur, target));
+      const f = cur = Math.min(FRAMES - 1, next);
       frame(f);
       if (f >= FLAME_AT) light();
       if (f < FRAMES - 1) raf = requestAnimationFrame(step);
       else spr.parentElement.classList.add('is-idle');
     };
     spr.parentElement.classList.remove('is-idle');
+    shown = -1;
     raf = requestAnimationFrame(step);
   };
   frame(0);

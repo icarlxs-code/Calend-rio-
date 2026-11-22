@@ -1,195 +1,139 @@
-/* Sininho, o mascote do Lembra — rig montado com as peças desenhadas (assets/mascot/*.webp):
-   corpo, olhos, sobrancelhas, bocas, braços, pés e lágrimas, cada peça se mexendo sozinha e em sincronia.
-   Como no Duolingo, ele:
-   - vive na tela: respira, pisca em intervalos irregulares, olha em volta;
-   - FALA: balão digitado com a boca sincronizada às letras (lip-sync) e sobrancelha nas ênfases;
-   - REAGE: concluiu algo → comemora; atrasou/ofensiva em risco → triste; noite → sono; toque → reação;
-   - ESPIA da borda da tela, acena (tchauzinho), fala e volta.
-   Troca de emoção acontece no meio de uma piscada (truque de animação para não "saltar"). */
+/* Sininho, o mascote do Lembra — usa os DESENHOS ORIGINAIS de cada pose (assets/mascot/*.webp),
+   todos alinhados pela alça e pelos pés, para a troca de pose não "pular".
+   Movimento só com transform/opacity (roda na placa de vídeo, a 60 fps), com curvas de mola:
+   - cada emoção tem o seu jeito contínuo de se mexer (respirar, balançar, dançar, tremer, murchar);
+   - gestos de momento (pulo com antecipação e pouso amortecido, tchauzinho, "não", pop);
+   - troca de pose no ponto mais achatado de um "pop" de mola (sem imagem dupla);
+   - fala: balão digitado com o corpo quicando no ritmo das letras;
+   - espia da borda da tela, acena, fala e volta; reage ao toque. */
 import { esc } from './utils.js';
 
-const A = (n) => `assets/mascot/${n}.webp`;
-/* posições no desenho original (1312 × 1199) */
-const CW = 1312, CH = 1199;
-const box = (x, y, w) => `left:${(x / CW) * 100}%;top:${(y / CH) * 100}%;width:${(w / CW) * 100}%`;
-const MOUTH = { aberta: 200, o: 96, grito: 220, 'sorriso-aberto': 196, sorriso: 186, sorrisinho: 120, triste: 160, tristinha: 140 };
-const mouthBox = (m) => box(672 - MOUTH[m] / 2, m === 'o' ? 660 : 648, MOUTH[m]);
-
-/* expressão de cada emoção: olhos, sobrancelhas, boca, braços (graus: + levanta o esquerdo, − levanta o direito) */
-const EXP = {
-  feliz: { eye: 'olho', brow: ['neutra', 'neutra'], mouth: 'aberta', arms: [18, -18] },
-  comemora: { eye: 'olho-feliz', brow: ['neutra', 'neutra'], mouth: 'sorriso-aberto', arms: [70, -70], prop: 'conf' },
-  sono: { eye: 'olho-sono', brow: ['reta', 'reta'], mouth: 'o', arms: [-28, 28], prop: 'zzz' },
-  desconfiado: { eye: 'olho-sono', brow: ['reta', 'neutra'], mouth: 'tristinha', arms: [-38, 38], prop: 'hmm' },
-  amor: { eye: 'olho-feliz', brow: ['neutra', 'neutra'], mouth: 'sorrisinho', arms: [-10, 10], prop: 'love', blush: true },
-  danca: { eye: 'olho-feliz', brow: ['neutra', 'neutra'], mouth: 'sorriso-aberto', arms: [55, -10], prop: 'notes' },
-  bravo: { eye: 'olho', brow: ['brava', 'brava'], mouth: 'triste', arms: [-20, 20], prop: 'steam' },
-  triste: { eye: 'olho-peq', brow: ['triste', 'triste'], mouth: 'tristinha', arms: [-42, 42], tears: true },
-  surpreso: { eye: 'olho-peq', brow: ['neutra', 'neutra'], mouth: 'o', arms: [40, -40] },
-};
-export const MOODS = Object.keys(EXP);
-const PROPS = {
-  zzz: '<b class="p1">z</b><b class="p2">Z</b><b class="p3">z</b>',
-  love: '<i class="p1 snh-heart"></i><i class="p2 snh-heart"></i>',
-  notes: '<b class="p1">♪</b><b class="p2">♫</b>',
-  steam: '<i class="p1 snh-puff"></i><i class="p2 snh-puff"></i>',
-  conf: '<i class="p1"></i><i class="p2"></i><i class="p3"></i><i class="p4"></i><i class="p5"></i>',
-  hmm: '<b class="p1">?</b>',
-};
-
-export function sininho(mood = 'feliz', { size = 120, cls = '', label = 'Sininho, o mascote do Lembra' } = {}) {
-  const m = EXP[mood] ? mood : 'feliz', e = EXP[m];
-  return `<span class="snh snh--${m} ${cls}" style="--s:${size}px;--al:${e.arms[0]}deg;--ar:${e.arms[1]}deg" data-snh="${m}" role="img" aria-label="${esc(label)}">
-  <span class="snh__stage"><span class="snh__all">
-    <span class="snh__props">${PROPS[e.prop] || ''}</span>
-    <img class="snh__p snh__foot snh__foot--l" src="${A('pe-l')}" style="${box(350, 868, 212)}" alt="">
-    <img class="snh__p snh__foot snh__foot--r" src="${A('pe-r')}" style="${box(730, 868, 212)}" alt="">
-    <span class="snh__body">
-      <img class="snh__p snh__arm snh__arm--l" src="${A('braco-l')}" style="${box(30, 545, 300)}" alt="">
-      <img class="snh__p snh__arm snh__arm--r" src="${A('braco-r')}" style="${box(982, 525, 300)}" alt="">
-      <img class="snh__p snh__corpo" src="${A('corpo')}" style="${box(128, 32, 1032)}" alt="">
-      <span class="snh__face">
-        <span class="snh__blush" ${e.blush ? '' : 'hidden'}><i></i><i></i></span>
-        <img class="snh__p snh__eye snh__eye--l" src="${A(e.eye + '-l')}" style="${box(348, 388, 298)}" alt="">
-        <img class="snh__p snh__eye snh__eye--r" src="${A(e.eye + '-r')}" style="${box(670, 380, 284)}" alt="">
-        <img class="snh__p snh__brow snh__brow--l" src="${A('sob-' + e.brow[0] + '-l')}" style="${box(388, 282, 228)}" alt="">
-        <img class="snh__p snh__brow snh__brow--r" src="${A('sob-' + e.brow[1] + '-r')}" style="${box(690, 268, 206)}" alt="">
-        <img class="snh__p snh__mouth" src="${A('boca-' + e.mouth)}" style="${mouthBox(e.mouth)}" alt="">
-        <img class="snh__p snh__tear snh__tear--l" src="${A('lagrima-l')}" style="${box(318, 610, 150)}" ${e.tears ? '' : 'hidden'} alt="">
-        <img class="snh__p snh__tear snh__tear--r" src="${A('lagrima-r')}" style="${box(842, 606, 150)}" ${e.tears ? '' : 'hidden'} alt="">
-      </span>
-    </span>
-  </span></span></span>`;
-}
-
+export const MOODS = ['feliz', 'acena', 'comemora', 'sono', 'desconfiado', 'amor', 'danca', 'bravo', 'triste'];
+const src = (m) => `assets/mascot/${MOODS.includes(m) ? m : 'feliz'}.webp`;
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
-const $ = (el, s) => el.querySelector(s);
-let preloaded = false;
-function preload() {
-  if (preloaded) return; preloaded = true;
-  ['olho', 'olho-feliz', 'olho-sono', 'olho-peq'].forEach((e) => ['l', 'r'].forEach((s) => { new Image().src = A(`${e}-${s}`); }));
-  ['neutra', 'triste', 'brava', 'reta'].forEach((b) => ['l', 'r'].forEach((s) => { new Image().src = A(`sob-${b}-${s}`); }));
-  Object.keys(MOUTH).forEach((m) => { new Image().src = A('boca-' + m); });
+const $ = (el, s) => el && el.querySelector(s);
+
+/* imagens já decodificadas: a troca acontece sem nenhum quadro em branco */
+const decoded = new Map();
+function ready(m) {
+  if (!decoded.has(m)) { const i = new Image(); i.src = src(m); decoded.set(m, (i.decode ? i.decode() : Promise.resolve()).catch(() => {})); }
+  return decoded.get(m);
+}
+let warmed = false;
+export function alive() {
+  if (warmed) return; warmed = true;
+  const go = () => MOODS.forEach(ready);
+  ('requestIdleCallback' in window) ? requestIdleCallback(go, { timeout: 2500 }) : setTimeout(go, 600);
 }
 
-/* ---------- vida própria: piscar irregular e olhar em volta (um relógio só para todos na tela) ---------- */
-function blink(el, ms = 130) {
-  if (!el || el.classList.contains('is-blink')) return;
-  el.classList.add('is-blink');
-  setTimeout(() => el.classList.remove('is-blink'), ms);
-}
-let ticking = false;
-function life() {
-  if (ticking) return; ticking = true;
-  const loop = () => {
-    if (!document.hidden && !calm()) document.querySelectorAll('[data-snh]').forEach((el) => {
-      if (el.dataset.snh === 'sono' || el.dataset.snh === 'comemora' || el.dataset.snh === 'danca') return;
-      const r = Math.random();
-      if (r < 0.16) { blink(el); if (Math.random() < 0.25) setTimeout(() => blink(el), 260); } // às vezes pisca duas vezes
-      else if (r < 0.24) { const f = $(el, '.snh__face'); f.style.setProperty('--lx', `${pick([-1.6, 0, 1.6])}%`); f.style.setProperty('--ly', `${pick([-1, 0, 0.6])}%`); }
-    });
-    setTimeout(loop, 700 + Math.random() * 500);
-  };
-  loop();
+export function sininho(mood = 'feliz', { size = 120, cls = '', label = 'Sininho, o mascote do Lembra' } = {}) {
+  const m = MOODS.includes(mood) ? mood : 'feliz';
+  return `<span class="snh snh--${m} ${cls}" style="--s:${size}px" data-snh="${m}" role="img" aria-label="${esc(label)}"><span class="snh__mot"><span class="snh__idle"><span class="snh__breath"><span class="snh__pose"><img class="is-on" src="${src(m)}" alt="" draggable="false" decoding="async"><img src="${src(m)}" alt="" draggable="false" decoding="async"></span></span></span></span></span>`;
 }
 
-/* troca de emoção: acontece no meio de uma piscada; braços vão com mola até a nova pose */
-export function setMood(el, mood) {
-  if (!el || !EXP[mood] || el.dataset.snh === mood) return;
-  preload();
-  const e = EXP[mood];
-  const apply = () => {
-    el.dataset.snh = mood;
-    el.className = el.className.replace(/snh--\w+/, `snh--${mood}`);
-    el.style.setProperty('--al', `${e.arms[0]}deg`); el.style.setProperty('--ar', `${e.arms[1]}deg`);
-    $(el, '.snh__eye--l').src = A(e.eye + '-l'); $(el, '.snh__eye--r').src = A(e.eye + '-r');
-    $(el, '.snh__brow--l').src = A(`sob-${e.brow[0]}-l`); $(el, '.snh__brow--r').src = A(`sob-${e.brow[1]}-r`);
-    mouth(el, e.mouth);
-    el.querySelectorAll('.snh__tear').forEach((t) => { t.hidden = !e.tears; });
-    $(el, '.snh__blush').hidden = !e.blush;
-    $(el, '.snh__props').innerHTML = PROPS[e.prop] || '';
-  };
-  if (calm()) return apply();
-  blink(el, 170);
-  setTimeout(apply, 70);
-  act(el, 'pop');
-}
-function mouth(el, m) { const i = $(el, '.snh__mouth'); if (!i || !MOUTH[m]) return; i.src = A('boca-' + m); i.style.cssText = mouthBox(m); }
-
-/* gestos: 'pulo' | 'tchau' | 'nao' | 'pop' | 'sim' */
+/* ---------- gestos (Web Animations: keyframes com easing por trecho, só transform) ---------- */
+const O = { transformOrigin: '50% 92%' };
+const G = {
+  pulo: [[
+    { transform: 'translateY(0) scale(1,1)', easing: 'cubic-bezier(.3,0,.5,1)' },
+    { transform: 'translateY(0) scale(1.13,.86)', offset: .16, easing: 'cubic-bezier(.2,.8,.4,1)' },
+    { transform: 'translateY(-24%) scale(.92,1.1)', offset: .44, easing: 'cubic-bezier(.6,0,.9,.6)' },
+    { transform: 'translateY(0) scale(1.12,.88)', offset: .68, easing: 'cubic-bezier(.2,.8,.4,1)' },
+    { transform: 'translateY(0) scale(.97,1.03)', offset: .84, easing: 'ease-in-out' },
+    { transform: 'translateY(0) scale(1,1)' }], 900],
+  pop: [[
+    { transform: 'scale(1,1)', easing: 'cubic-bezier(.4,0,.6,1)' },
+    { transform: 'scale(1.1,.88)', offset: .17, easing: 'cubic-bezier(.2,.9,.3,1.25)' },
+    { transform: 'scale(.95,1.06)', offset: .55, easing: 'ease-in-out' },
+    { transform: 'scale(1,1)' }], 420],
+  nao: [[
+    { transform: 'rotate(0)' }, { transform: 'rotate(-7deg)', offset: .18 }, { transform: 'rotate(6deg)', offset: .4 },
+    { transform: 'rotate(-4deg)', offset: .6 }, { transform: 'rotate(2deg)', offset: .8 }, { transform: 'rotate(0)' }], 760],
+  sim: [[
+    { transform: 'translateY(0)' }, { transform: 'translateY(4%) scale(1.03,.97)', offset: .3 }, { transform: 'translateY(-2%)', offset: .6 }, { transform: 'translateY(0)' }], 620],
+  tchau: [[
+    { transform: 'rotate(0)', easing: 'ease-in-out' }, { transform: 'rotate(-5deg)', offset: .15, easing: 'ease-in-out' }, { transform: 'rotate(3deg)', offset: .32, easing: 'ease-in-out' },
+    { transform: 'rotate(-4deg)', offset: .5, easing: 'ease-in-out' }, { transform: 'rotate(2deg)', offset: .68, easing: 'ease-in-out' }, { transform: 'rotate(0)' }], 1300],
+};
 export function act(el, name) {
-  const a = el && $(el, '.snh__all');
-  if (!a || calm()) return;
-  a.classList.remove(...[...a.classList].filter((c) => c.startsWith('do-')));
-  void a.offsetWidth;
-  a.classList.add(`do-${name}`);
-  clearTimeout(a._t);
-  a._t = setTimeout(() => a.classList.remove(`do-${name}`), { pulo: 950, tchau: 1700, nao: 800, pop: 450, sim: 700 }[name] || 900);
+  const m = $(el, '.snh__mot');
+  if (!m || calm() || !G[name] || !m.animate) return;
+  if (name === 'tchau' && el.dataset.snh !== 'acena') { const was = el.dataset.snh; setMood(el, 'acena', { pop: false }); setTimeout(() => el.dataset.snh === 'acena' && setMood(el, was, { pop: false }), 1500); }
+  m.getAnimations().forEach((a) => a.cancel());
+  m.animate(G[name][0], { duration: G[name][1], ...O });
 }
 
-/* fala: digita no balão e mexe a boca junto com as letras (vogais abrem, consoantes fecham) */
-export function say(el, text, { bubble, speed = 34 } = {}) {
+/* troca de pose: a nova imagem entra por cima em fusão, junto com um pop de mola */
+export async function setMood(el, mood, { pop = true } = {}) {
+  if (!el || !MOODS.includes(mood) || el.dataset.snh === mood) return;
+  el.dataset.snh = mood;
+  await ready(mood);
+  if (el.dataset.snh !== mood) return; // trocou de novo enquanto carregava
+  const [a, b] = el.querySelectorAll('.snh__pose img');
+  const on = a.classList.contains('is-on') ? a : b, off = on === a ? b : a;
+  off.src = src(mood);
+  // troca o desenho de uma vez no ponto mais "achatado" do pop (o olho não percebe o corte, sem fantasma)
+  const swap = () => { el.className = el.className.replace(/snh--\w+/, `snh--${mood}`); off.classList.add('is-on'); on.classList.remove('is-on'); };
+  if (!pop || calm()) return swap();
+  act(el, 'pop');
+  setTimeout(swap, 70);
+}
+
+/* fala: balão digitado; o corpo quica no ritmo (sílabas abertas = quique maior) */
+export function say(el, text, { bubble, speed = 32 } = {}) {
   const b = bubble || el?.closest('.snhwrap')?.querySelector('.snhb__txt');
   if (!b) return Promise.resolve();
   clearInterval(b._t);
-  const wrap = b.closest('.snhb');
-  if (wrap) { wrap.classList.remove('is-in'); void wrap.offsetWidth; wrap.classList.add('is-in'); }
+  const box = b.closest('.snhb');
+  if (box) { box.classList.remove('is-in'); void box.offsetWidth; box.classList.add('is-in'); }
   if (calm() || !el) { b.textContent = text; return Promise.resolve(); }
-  const rest = EXP[el.dataset.snh]?.mouth || 'sorrisinho';
-  const sad = ['triste', 'bravo', 'desconfiado'].includes(el.dataset.snh);
   el.classList.add('is-talk');
-  if (/!/.test(text)) setTimeout(() => el.classList.add('is-emph'), 120);
   return new Promise((res) => {
     let i = 0;
     b.textContent = '';
     b._t = setInterval(() => {
-      const ch = text[i] || '';
       i += 1;
       b.textContent = text.slice(0, i);
-      if (/[aáãâeéêoóõô]/i.test(ch)) mouth(el, sad ? 'o' : pick(['aberta', 'sorriso-aberto']));
-      else if (/[iíuú]/i.test(ch)) mouth(el, 'o');
-      else if (/[\s,.!?]/.test(ch)) mouth(el, sad ? 'tristinha' : 'sorrisinho');
-      if (i >= text.length) { clearInterval(b._t); mouth(el, rest); el.classList.remove('is-talk', 'is-emph'); res(); }
+      if (i >= text.length) { clearInterval(b._t); el.classList.remove('is-talk'); res(); }
     }, speed);
   });
 }
 
-/* ---------- toque: ele reage (como tocar no Duo) ---------- */
+/* ---------- toque ---------- */
 const TAP = [
   ['comemora', 'pulo', ['Opa! Tô aqui com você!', 'Bora fazer o dia render!', 'Hehe, cócegas!']],
-  ['danca', 'pulo', ['Dia organizado, dia feliz!', 'Tô animado hoje!']],
+  ['danca', 'pop', ['Dia organizado, dia feliz!', 'Tô animado hoje!']],
   ['amor', 'sim', ['Gosto de te ver por aqui.', 'Você tá mandando bem!']],
-  ['surpreso', 'pop', ['Ei! Já viu os lembretes de hoje?', 'Opa, me assustou!']],
+  ['acena', 'tchau', ['Oi oi! Precisando de algo?', 'Tô de olho na sua agenda!']],
 ];
 export function interactive(el, { base, bubble } = {}) {
   if (!el || el._snh) return;
-  el._snh = true; preload(); life();
+  el._snh = true; alive();
   base = base || el.dataset.snh;
   el.style.cursor = 'pointer';
-  let back;
+  let back, last = -1;
   el.addEventListener('click', () => {
-    const [mood, g, lines] = pick(TAP);
-    setMood(el, mood); setTimeout(() => act(el, g), 90);
-    try { navigator.vibrate && navigator.vibrate(12); } catch { /* ok */ }
+    let i; do { i = Math.floor(Math.random() * TAP.length); } while (i === last && TAP.length > 1); last = i;
+    const [mood, g, lines] = TAP[i];
+    setMood(el, mood, { pop: false }).then(() => act(el, g));
+    try { navigator.vibrate && navigator.vibrate(10); } catch { /* ok */ }
     if (bubble) say(el, pick(lines), { bubble });
     clearTimeout(back);
-    back = setTimeout(() => setMood(el, base), 3200);
+    back = setTimeout(() => setMood(el, base), 3600);
   });
 }
-/* liga a vida (piscar etc.) para Sininhos que só aparecem, sem toque */
-export function alive() { preload(); life(); }
 
-/* ---------- espiada na borda da tela: sobe, acena, fala e desce ---------- */
+/* ---------- espiada na borda da tela ---------- */
 let peekOn = null;
-export function peek(mood, text, { ms = 3400, gesture } = {}) {
+export async function peek(mood, text, { ms = 3400, gesture } = {}) {
   if (document.hidden) return;
-  if (document.querySelector('.gx, .paywall, .ficha, .photogate, .okfx')) { setTimeout(() => peek(mood, text, { ms, gesture }), 1500); return; }
-  preload(); life();
+  if (document.querySelector('.gx, .paywall, .ficha, .photogate, .okfx, .stk')) { setTimeout(() => peek(mood, text, { ms, gesture }), 1500); return; }
+  await ready(mood);
   peekOn?.remove();
   const w = document.createElement('div');
   w.className = 'snhpeek snhwrap';
-  w.innerHTML = `<div class="snhb snhb--peek"><span class="snhb__txt"></span></div>${sininho(mood, { size: 104 })}`;
+  w.innerHTML = `<div class="snhb snhb--peek"><span class="snhb__txt"></span></div>${sininho(mood, { size: 110 })}`;
   document.body.appendChild(w);
   peekOn = w;
   const el = $(w, '[data-snh]');
@@ -197,18 +141,15 @@ export function peek(mood, text, { ms = 3400, gesture } = {}) {
   const close = () => {
     if (gone) return; gone = true;
     act(el, 'tchau');
-    setTimeout(() => w.classList.add('is-out'), 650);
-    setTimeout(() => { w.remove(); if (peekOn === w) peekOn = null; }, 1200);
+    setTimeout(() => w.classList.add('is-out'), 900);
+    setTimeout(() => { w.remove(); if (peekOn === w) peekOn = null; }, 1500);
   };
   requestAnimationFrame(() => requestAnimationFrame(() => {
     w.classList.add('is-in');
-    setTimeout(() => {
-      act(el, gesture || (['comemora', 'danca'].includes(mood) ? 'pulo' : 'tchau'));
-      say(el, text, { bubble: $(w, '.snhb__txt') });
-    }, 420);
+    setTimeout(() => { act(el, gesture || (['comemora', 'danca'].includes(mood) ? 'pulo' : 'sim')); say(el, text, { bubble: $(w, '.snhb__txt') }); }, 480);
   }));
   w.addEventListener('click', close);
-  setTimeout(close, ms + text.length * 34);
+  setTimeout(close, ms + text.length * 32);
 }
 
 /* ---------- o que ele fala ---------- */
@@ -224,12 +165,11 @@ export function greetLine({ first = '', pending = 0, late = 0, off = 0, offToday
 const DONE = ['Mandou bem!', 'Isso aí! Mais um riscado!', 'Arrasou! Continua assim!', 'Boa! Tô orgulhoso de você!', 'Uhuul! Mais um feito!'];
 const DONE_LATE = ['Antes tarde do que nunca!', 'Feito! O importante é não desistir.'];
 let doneCount = 0, lastPeek = 0;
-/* concluiu algo: ele aparece comemorando (sem exagero: não a cada clique) */
 export function cheerDone({ late = false, perfect = false } = {}) {
   doneCount++;
   const now = Date.now();
   if (perfect) { lastPeek = now; return peek('danca', 'Dia 100%! Você zerou tudo hoje!', { gesture: 'pulo', ms: 4200 }); }
   if (doneCount > 1 && now - lastPeek < 90e3 && doneCount % 3) return;
   lastPeek = now;
-  peek(late ? 'feliz' : 'comemora', pick(late ? DONE_LATE : DONE));
+  peek(late ? 'acena' : 'comemora', pick(late ? DONE_LATE : DONE));
 }

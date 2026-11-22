@@ -15,7 +15,7 @@ import * as push from '../avisos.js';
 import { usagePlaceholder, fillUsage } from '../usage.js';
 import { onDone, streak } from '../reward.js';
 import { suggestions, addSuggestion, hideSuggestion, forYouLead } from '../foryou.js';
-import { sininho, greetLine, interactive, say } from '../sininho.js';
+import { sininho, greetLine, interactive, say, alive } from '../sininho.js';
 import { offensive } from '../game.js';
 import { esc, todayKey, addDays, dayLabel, fmtTime, fromKey, toKey, diffDays, greeting, fmtDayLong, monthKey, addMonths, fmtMonth, WD_LETTER, MONTHS } from '../utils.js';
 
@@ -283,7 +283,8 @@ export function bindPersonal(view) {
   const hero = view.querySelector('[data-snh-hero]');
   if (hero && greet.g) {
     const el = hero.querySelector('[data-snh]'), bubble = hero.querySelector('.snhb__txt');
-    interactive(el, { bubble });
+    interactive(el, { bubble }); alive();
+    if (!window.__stkWarm) { window.__stkWarm = 1; const w = () => import('../streak.js').then((m) => m.preloadStreak()).catch(() => {}); ('requestIdleCallback' in window) ? requestIdleCallback(w, { timeout: 4000 }) : setTimeout(w, 2500); }
     if (!greet.typed) { greet.typed = true; setTimeout(() => say(el, greet.g.text, { bubble }), 350); }
   }
   const f = view.querySelector('[data-form="pquick"]');
