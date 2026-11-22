@@ -33,7 +33,9 @@ function last30(u) {
   return Array.from({ length: 30 }, (_, i) => addDays(t, i - 29)).map((d) => `<i class="${set.has(d) ? 'on' : ''}" title="${d.split('-').reverse().join('/')}"></i>`).join('');
 }
 let planOf = () => null;
-const planLabel = (p) => (!p ? 'Conta própria' : p.plan === 'comp' ? `Liberado até ${new Date(p.compUntil).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : p.vip ? `Vitalício Nº ${String(p.vip.no).padStart(3, '0')}` : p.comp ? 'Cortesia' : { trial: 'Teste grátis', monthly: 'Mensal', lifetime: 'Vitalício', expired: 'Teste acabou', blocked: 'Sem plano', none: 'Sem plano' }[p.plan] || 'Conta própria');
+const ownerMail = () => String(CONFIG.adminEmail || '').toLowerCase();
+const isAppOwner = (u) => !!u && !!u.email && String(u.email).toLowerCase() === ownerMail();
+const planLabel = (p, u) => (isAppOwner(u) ? 'Proprietário' : !p ? 'Conta própria' : p.founderTeam && !p.vip ? 'Fundador' : p.plan === 'comp' ? `Liberado até ${new Date(p.compUntil).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : p.vip ? `Vitalício Nº ${String(p.vip.no).padStart(3, '0')}` : p.comp ? 'Cortesia' : { trial: 'Teste grátis', monthly: 'Mensal', lifetime: 'Vitalício', expired: 'Teste acabou', blocked: 'Sem plano', none: 'Sem plano' }[p.plan] || 'Conta própria');
 /* versão do app da pessoa comparada com a última publicada */
 let latestVer = null;
 const cmpV = (a, b) => { const A = String(a || '0').split('.').map(Number), B = String(b || '0').split('.').map(Number); for (let i = 0; i < 3; i++) if ((A[i] || 0) !== (B[i] || 0)) return (A[i] || 0) > (B[i] || 0) ? 1 : -1; return 0; };
@@ -53,6 +55,7 @@ const in7 = () => { const d = new Date(Date.now() + 7 * 864e5); d.setMinutes(d.g
 function accessHtml(u) {
   const p = planOf(u.uid) || {};
   const uid = esc(u.uid);
+  if (isAppOwner(u)) return `<h4>Acesso</h4><div class="avip">${icon('crown', 18)}<div><b>Proprietário</b><small>Você criou o Lembra: acesso total a tudo, para sempre</small></div></div>`;
   const paid = (p.plan === 'lifetime' && !p.comp) || p.plan === 'monthly';
   if (paid) return `<h4>Acesso</h4><p class="fhelp">Conta paga (${esc(planLabel(p))}). O acesso é da pessoa: não dá para mexer por aqui.</p>`;
   const vip = p.vip ? `<div class="avip">${icon('crown', 18)}<div><b>Vitalício Nº ${pad(p.vip.no)}</b>
@@ -96,6 +99,18 @@ function vipHtml(users) {
     <div class="agroup">${dated.map(([ws, p]) => { const u = who(ws); return `<button class="avrow" data-goto="${esc(ws)}">${face(u, 40)}<span class="avrow__id"><b>${esc(u.name || 'Sem nome')}</b><small>${esc(u.email || '')}</small><small>Até ${esc(when(p.compUntil))}</small></span>${icon('right', 16)}</button>`; }).join('') || '<p class="fhelp" style="padding:12px 16px">Nenhum.</p>'}</div>`;
 }
 let plans_ = {};
+const brl = (c) => `R$ ${(Number(c || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+/* o que a pessoa assina hoje, em palavras */
+function subLine(u) {
+  const p = planOf(u.uid);
+  if (isAppOwner(u)) return 'Proprietário · acesso total (criador do app)';
+  if (!p) return 'Nenhuma';
+  const base = p.plan === 'monthly' ? `${p.tier === 'essencial' ? 'Essencial' : 'Profissional'} ${p.prepaid ? '12 meses no Pix' : p.interval === 'year' ? 'anual' : 'mensal'}${p.cancelAt ? ' (cancelada, vale até ' + new Date(p.cancelAt).toLocaleDateString('pt-BR') + ')' : p.paidUntil ? ' · renova ' + new Date(p.paidUntil).toLocaleDateString('pt-BR') : ''}`
+    : p.plan === 'lifetime' ? (p.vip ? `Vitalício de presente Nº ${pad(p.vip.no)}` : p.founderTeam ? 'Fundador · acesso para sempre' : p.comp ? 'Cortesia para sempre' : p.founder ? 'Fundadores (pago, para sempre)' : 'Vitalício (pago)')
+    : p.plan === 'comp' ? `Liberado até ${new Date(p.compUntil).toLocaleDateString('pt-BR')}` : p.plan === 'trial' ? 'Teste grátis' : 'Nenhuma';
+  const add = p.addon && p.addon.active ? ` + agenda compartilhada ${p.addon.plan === 'equipe' ? 'Equipe' : 'Dupla'}${p.addon.gift ? ' (de presente)' : ''}` : '';
+  return base + add;
+}
 
 function card(u, open) {
   const c = u.counts || {};
@@ -106,7 +121,7 @@ function card(u, open) {
     <button class="acct__top" data-toggle="${esc(u.uid)}">
       ${face(u)}
       <div class="acct__id"><strong>${esc(u.name || 'Sem nome')}${isVip(u.uid) ? ` <i class="acrown" title="Vitalício">${icon('crown', 12)}</i>` : ''}${online ? ' <span class="adot" title="Usando agora"></span>' : ''}</strong><small>${esc(u.email || '')}</small></div>
-      <div class="acct__last"><b class="${online ? 'is-live' : ''}">${online ? 'no app agora' : esc(`saiu ${ago(last)}`)}</b><small>${u.workspace === 'dupla' ? 'Dupla' : u.workspace === 'compartilhada' ? 'Convidado' : planLabel(planOf(u.uid))}${planOf(u.uid)?.addon?.active ? ` + ${planOf(u.uid).addon.plan === 'equipe' ? 'Equipe' : 'Dupla'}` : ''}</small></div>
+      <div class="acct__last"><b class="${online ? 'is-live' : ''}">${online ? 'no app agora' : esc(`saiu ${ago(last)}`)}</b><small>${u.workspace === 'compartilhada' ? 'Convidado' : planLabel(planOf(u.uid), u)}${planOf(u.uid)?.spent > 0 ? ` · ${brl(planOf(u.uid).spent)}` : ''}${planOf(u.uid)?.addon?.active ? ` + ${planOf(u.uid).addon.plan === 'equipe' ? 'Equipe' : 'Dupla'}` : ''}</small></div>
     </button>
     ${u.profile?.done ? `<div class="acct__prof">${icon('idcard', 13)} <b>${esc(u.profile.profession || '—')}</b>${u.profile.age ? ` · ${esc(u.profile.age)} anos` : ''} · índice ${u.profile.index}/100</div>` : u.workspace !== 'dupla' ? `<div class="acct__prof is-off">${icon('idcard', 13)} Ficha não preenchida</div>` : ''}
     <div class="acct__chips">
@@ -119,6 +134,9 @@ function card(u, open) {
     </div>
     ${open ? `<div class="acct__more">
       <div class="agrid">
+        <div class="agrid__wide"><small>Assinatura ativa</small><b>${esc(subLine(u))}</b></div>
+        <div><small>Já gastou no Lembra</small><b>${isAppOwner(u) ? '—' : brl(planOf(u.uid)?.spent || 0)}</b></div>
+        <div><small>Pagamentos</small><b>${planOf(u.uid)?.payments || 0}${planOf(u.uid)?.lastPaidAt ? ` · último ${esc(date(planOf(u.uid).lastPaidAt))}` : ''}</b></div>
         <div><small>Conta criada</small><b>${esc(date(u.createdAt))}</b></div>
         <div><small>Agora</small><b>${online ? '🟢 Com o app aberto' : '⚪ App fechado'}</b></div>
         <div><small>Última vez que entrou</small><b>${esc(when(u.lastOpen || u.lastSeen))}</b></div>
@@ -322,12 +340,13 @@ export async function openAdmin() {
     plans_ = plans;
     const P = Object.values(plans);
     const monthly = P.filter((p) => p.plan === 'monthly').length;
-    const lifetime = P.filter((p) => p.plan === 'lifetime' && !p.comp).length;
-    const founders = P.filter((p) => p.plan === 'lifetime' && p.founder && !p.comp).length;
+    const lifetime = P.filter((p) => p.plan === 'lifetime' && !p.comp && !p.founderTeam).length;
+    const founders = P.filter((p) => p.plan === 'lifetime' && p.founder && !p.comp && !p.founderTeam).length;
     // preço por mês de cada assinatura (anual dividido por 12)
     const perMonth = (p) => (p.tier === 'essencial' ? (p.interval === 'year' ? 119.9 / 12 : 12.9) : (p.interval === 'year' ? 179.9 / 12 : 19.9));
     const trial = P.filter((p) => p.plan === 'trial').length;
-    const addons = P.filter((p) => p.addon && p.addon.active);
+    const addons = P.filter((p) => p.addon && p.addon.active && !p.addon.gift); // presente (vitalício/fundador) não é receita
+    const received = P.reduce((a, p) => a + (p.spent || 0), 0);
     // receita por mês: mensais + complementos (vitalício paga o complemento mais barato); o vitalício em si entra uma vez só
     const mrr = P.filter((p) => p.plan === 'monthly').reduce((a, p) => a + perMonth(p), 0) + addons.reduce((a, p) => a + (p.addon.plan === 'equipe' ? (p.plan === 'lifetime' ? 19.9 : 29.9) : (p.plan === 'lifetime' ? 4.9 : 7.9)), 0);
     const tried = P.filter((p) => p.plan !== 'none' && p.plan !== 'team').length;
@@ -347,6 +366,7 @@ export async function openAdmin() {
       <div class="ahero">
         <small>Receita por mês</small>
         <b>${money(mrr)}</b>
+        <span>Total já recebido: <b>${brl(received)}</b></span>
         <span>${monthly} ${monthly === 1 ? 'assinante' : 'assinantes'} · ${addons.length} agenda${addons.length === 1 ? '' : 's'} compartilhada${addons.length === 1 ? '' : 's'}</span>
       </div>
       <div class="atiles">
@@ -356,6 +376,7 @@ export async function openAdmin() {
       </div>
       <h3 class="ah">Dinheiro</h3>
       <div class="agroup">
+        ${row('Total já recebido', brl(received), 'soma de tudo que as pessoas pagaram (menos reembolsos)')}
         ${row('Fundadores / vitalícios vendidos', `${lifetime}`, `${money(founders * 199 + (lifetime - founders) * 150)} no total`)}
         ${row('Assinantes (mensal e anual)', `${monthly}`, `${P.filter((p) => p.plan === 'monthly' && p.tier === 'essencial').length} Essencial · ${P.filter((p) => p.plan === 'monthly' && p.tier !== 'essencial').length} Profissional · ${P.filter((p) => p.plan === 'monthly' && p.interval === 'year').length} anuais`)}
         ${row('Agendas compartilhadas', `${addons.length}`, `${addons.filter((p) => p.addon.plan === 'equipe').length} Equipe · ${addons.filter((p) => p.addon.plan === 'dupla').length} Dupla`)}

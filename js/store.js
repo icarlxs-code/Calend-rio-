@@ -407,6 +407,10 @@ export async function initCloud(cloud, user) {
         cloud.setWorkspace(choice);
         store.shared = { owner: choice, ownerName: t.ownerName || 'Equipe' };
         store.team = teamPeople(t, choice, store.team[0]);
+        // nome e foto que a pessoa escolheu aparecem para o dono (atualiza se ela mudou)
+        const mine = store.team.find((x) => x.uid === user.uid) || {}, cur = t.names?.[user.uid] || {};
+        const nmNow = soloMember(user, store.profile).name;
+        if (cloud.setMyTeamCard && (cur.name !== nmNow || (store.profile.photo && !cur.photo))) import('./equipe.js').then(async (q) => cloud.setMyTeamCard(choice, user.uid, { name: nmNow, color: mine.color, ...(cur.photo ? {} : await q.smallPhoto(store.profile.photo)) })).catch((e) => console.warn('cartão na equipe', e));
       } else {
         try { localStorage.removeItem(`lembra.ws.${user.uid}`); } catch { /* ok */ }
         store.sharedLost = t && !t.active ? (t.ownerName || 'Equipe') : choice ? 'removido' : null;

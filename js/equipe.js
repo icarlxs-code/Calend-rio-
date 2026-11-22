@@ -44,7 +44,7 @@ export function teamPeople(t, owner, mine = null) {
   const lv = (v) => (Number.isFinite(v) && v >= 0 && v <= 100 ? Math.round(v) : null); // nível de conquistas (placar da equipe)
   const out = [{ id: idOf(owner), name: nm(t.ownerName, 'Dono'), color: hex(t.ownerColor, '#7C5CFF'), photo: null, uid: owner, owner: true, level: lv(t.ownerLevel), vip: t.ownerVip === true }];
   (t.members || []).filter((uid) => typeof uid === 'string' && /^[A-Za-z0-9]{6,64}$/.test(uid))
-    .forEach((uid, i) => out.push({ id: idOf(uid), name: nm(t.names?.[uid]?.name, 'Convidado'), color: hex(t.names?.[uid]?.color, COLORS[i % COLORS.length]), photo: null, uid, level: lv(t.names?.[uid]?.level), vip: t.names?.[uid]?.vip === true }));
+    .forEach((uid, i) => out.push({ id: idOf(uid), name: nm(t.names?.[uid]?.name, 'Convidado'), color: hex(t.names?.[uid]?.color, COLORS[i % COLORS.length]), photo: typeof t.names?.[uid]?.photo === 'string' && t.names[uid].photo.startsWith('data:image/') ? t.names[uid].photo : null, uid, level: lv(t.names?.[uid]?.level), vip: t.names?.[uid]?.vip === true }));
   // a própria pessoa aparece com a foto e a cor do perfil dela
   return mine ? out.map((p) => (p.id === mine.id ? { ...p, ...mine, uid: p.uid, owner: p.owner } : p)) : out;
 }
@@ -89,7 +89,7 @@ export async function maybeAcceptInvite() {
   if (!ok) return false;
   const me = store.member(store.me) || {};
   try {
-    await store.backendApi.joinTeam(inv.owner, p.token, { name: me.name || 'Convidado', color: me.color || '#2563EB' });
+    await store.backendApi.joinTeam(inv.owner, p.token, { name: me.name || 'Convidado', color: me.color || '#2563EB', at: Date.now(), ...(await smallPhoto(me.photo)) });
   } catch (e) {
     console.warn('convite', e);
     toast(/permission/i.test(String(e.code || e.message)) ? 'Não deu para entrar: o convite já foi usado ou cancelado, a agenda está cheia ou o plano de quem convidou não está ativo. Peça um novo convite.' : 'Não consegui entrar agora. Verifique a internet e abra o link de novo.', { ms: 8000 });
@@ -149,6 +149,18 @@ export async function startTeam() {
   });
 }
 
+/* foto pequena para a lista de quem participa (não pesa a agenda do dono) */
+export async function smallPhoto(src) {
+  if (!src || !String(src).startsWith('data:image/')) return {};
+  try {
+    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+    const c = document.createElement('canvas'); c.width = c.height = 96;
+    const k = Math.max(96 / img.width, 96 / img.height), w = img.width * k, h = img.height * k;
+    c.getContext('2d').drawImage(img, (96 - w) / 2, (96 - h) / 2, w, h);
+    return { photo: c.toDataURL('image/jpeg', 0.8) };
+  } catch { return {}; }
+}
+
 /* Cria um convite novo, de uma pessoa só */
 export async function createInvite(label = '') {
   const me = store.member(store.me) || {};
@@ -183,7 +195,7 @@ export function openShare() {
     const paidBase = ['monthly', 'lifetime'].includes(b().plan);
     const active = addon && addon.active && paidBase;
     const t = teamDoc;
-    const people = t ? (t.members || []).map((uid) => ({ uid, name: t.names?.[uid]?.name || 'Convidado' })) : [];
+    const people = t ? (t.members || []).map((uid) => { const n = t.names?.[uid] || {}; return { uid, name: n.name || 'Convidado', photo: typeof n.photo === 'string' && n.photo.startsWith('data:image/') ? n.photo : null, level: Number.isFinite(n.level) ? n.level : null, vip: n.vip === true, at: n.at || null }; }) : [];
     const seats = active ? ADDONS[addon.plan].seats : 0;
     const pending = (invites || []).filter((i) => inviteState(i) === 'ok');
     const free = Math.max(0, seats - people.length);
@@ -191,21 +203,21 @@ export function openShare() {
       <section class="block">
         <h2 class="block__title">${icon('link', 16)} Convidar</h2>
         <div class="card">
-          ${fresh ? `<p><b>Convite criado${fresh.label ? ` para ${esc(fresh.label)}` : ''}.</b> Este link é único, vale para <b>uma pessoa</b> e expira em ${INVITE_DAYS} dias.</p>
+          ${fresh ? `<p><b>Convite criado.</b> Este link é único, vale para <b>uma pessoa</b> e expira em ${INVITE_DAYS} dias.</p>
             <div class="share__link"><input readonly value="${esc(inviteLink(fresh.token))}" data-link></div>
             <div class="btnrow"><button class="btn btn--primary btn--sm" data-send>${icon('share', 16)} Enviar convite</button><button class="btn btn--soft btn--sm" data-copy>${icon('copy', 16)} Copiar</button></div>`
           : free ? `<p>Cada pessoa recebe um <b>link próprio</b>, que só funciona uma vez e expira em ${INVITE_DAYS} dias. Ninguém consegue entrar com o link de outra pessoa.</p>
-            <input class="input" data-label maxlength="40" placeholder="Para quem é? (ex.: Ana, sócia) — opcional">
-            <button class="btn btn--primary btn--block" data-new ${busy ? 'disabled' : ''}>${icon('plus', 16)} Criar convite</button>`
+            <button class="btn btn--primary btn--block" data-new ${busy ? 'disabled' : ''}>${icon('share', 16)} Enviar link de convite</button>
+            <p class="fhelp">A pessoa cria a conta dela com o nome e a foto que quiser e já aparece aqui.</p>`
           : `<p>Todas as vagas estão ocupadas. Para chamar outra pessoa, remova alguém${addon.plan === 'dupla' ? ' ou passe para o plano Equipe (até 4 pessoas)' : ''}.</p>`}
         </div>
-        ${pending.length ? `<div class="list share__pending">${pending.map((i) => `<div class="list__row">${icon('clock', 16)}<span class="share__pinfo"><span>Convite${i.label ? ` para <b>${esc(i.label)}</b>` : ''}</span><small>aguardando · expira ${fmtDate(i.expiresAt)}</small></span><button class="btn-text btn-text--sm" data-again="${esc(i.id)}">Enviar</button><button class="btn-text btn-text--danger btn-text--sm" data-cancel="${esc(i.id)}">Cancelar</button></div>`).join('')}</div>` : ''}
+        ${pending.length ? `<div class="list share__pending">${pending.map((i) => `<div class="list__row">${icon('clock', 16)}<span class="share__pinfo"><span>Convite${i.label ? ` para <b>${esc(i.label)}</b>` : ''} enviado</span><small>aguardando · expira ${fmtDate(i.expiresAt)}</small></span><button class="btn-text btn-text--sm" data-again="${esc(i.id)}">Enviar</button><button class="btn-text btn-text--danger btn-text--sm" data-cancel="${esc(i.id)}">Cancelar</button></div>`).join('')}</div>` : ''}
       </section>
       <section class="block">
         <h2 class="block__title">${icon('users', 16)} Quem participa</h2>
         <div class="list">
-          <div class="list__row">${avatar(store.me, 30)}<span><b>${esc(store.member(store.me)?.name || 'Você')}</b> <small>dono</small></span></div>
-          ${people.map((p) => `<div class="list__row">${avatar(idOf(p.uid), 30)}<span>${esc(p.name)}</span><button class="btn-text btn-text--danger btn-text--sm" data-remove="${esc(p.uid)}">Remover</button></div>`).join('')}
+          <div class="list__row mrow">${avatar(store.me, 52)}<span class="mrow__id"><b>${esc(store.member(store.me)?.name || 'Você')}</b><small>Dono da agenda</small></span></div>
+          ${people.map((p) => `<div class="list__row mrow">${p.photo ? `<span class="avatar mrow__pic" style="width:52px;height:52px"><img src="${esc(p.photo)}" alt=""></span>` : avatar(idOf(p.uid), 52)}<span class="mrow__id"><b>${esc(p.name)}${p.vip ? ` ${icon('crown', 12)}` : ''}</b><small>${p.level != null ? `Nível ${p.level}` : 'Participante'}${p.at ? ` · entrou em ${new Date(p.at).toLocaleDateString('pt-BR')}` : ''}</small></span><button class="btn-text btn-text--danger btn-text--sm" data-remove="${esc(p.uid)}">Remover</button></div>`).join('')}
           ${Array.from({ length: free }, () => `<div class="list__row muted">${icon('plus', 18)}<span>Vaga livre</span></div>`).join('')}
         </div>
         <p class="fhelp">Cada pessoa vê a agenda de trabalho, marca compromissos e recebe os avisos do que é dela. O modo Pessoal de cada um continua privado.</p>
@@ -265,8 +277,7 @@ export function openShare() {
       const nw = el.querySelector('[data-new]');
       if (nw) nw.onclick = async () => {
         busy = true; nw.disabled = true;
-        const label = el.querySelector('[data-label]')?.value || '';
-        try { const token = await createInvite(label); fresh = { token, label: label.trim() }; } catch (e) { console.warn(e); toast('Não consegui criar o convite agora. Verifique a internet.'); }
+        try { const token = await createInvite(); fresh = { token }; busy = false; await loadInvites(a); await shareLink(token); return; } catch (e) { console.warn(e); toast('Não consegui criar o convite agora. Verifique a internet.'); }
         busy = false;
         await loadInvites(a);
       };

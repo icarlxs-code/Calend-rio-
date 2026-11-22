@@ -2610,3 +2610,11 @@ html:not(.intro-done) #app, html:not(.intro-done) .login { visibility: hidden; }
 html:has(.login), html:has(.login) body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 .login { height: 100dvh; min-height: 0 !important; overflow-y: auto; overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
 .login > * { flex-shrink: 0; }
+.agrid__wide { grid-column: 1 / -1; }
+/* quem participa da agenda compartilhada: cartão de perfil (foto grande, nome em cima, detalhes embaixo) */
+.mrow { gap: 14px; padding-top: 12px; padding-bottom: 12px; }
+.mrow__id { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 2px; flex: 1; min-width: 0; }
+.mrow__id b { font-size: 16px; display: flex; align-items: center; gap: 4px; }
+.mrow__id small { color: var(--muted, #8a8a8e); font-size: 13px; }
+.mrow__pic { border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+.mrow__pic img { width: 100%; height: 100%; object-fit: cover; }

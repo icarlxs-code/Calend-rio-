@@ -18,6 +18,7 @@ import { WD_SHORT } from '../utils.js';
 import { brand } from '../brand.js';
 import { phoneAuthOn } from '../phone.js';
 import { professionFor } from '../../functions/catalog.js';
+const ownerApp = () => !!store.user && String(store.user.email || '').toLowerCase() === String(CONFIG.adminEmail || '').toLowerCase();
 import { APP_VERSION, APP_BUILD } from '../version.js';
 
 export function renderSettings() {
@@ -52,7 +53,7 @@ export function renderSettings() {
       <h2 class="block__title">${icon('user', 16)} ${cloud ? 'Sua conta' : 'Quem está usando este celular?'}</h2>
       ${cloud
         ? `<div class="card whocard">
-            <div class="whocard__top">${me ? avatar(me.id, 48) : icon('user', 24)}<div class="whocard__txt"><strong>${esc(me?.name || store.user?.email || '')}${store.billing?.plan === 'lifetime' ? `<span class="vbadge">${icon('crown', 12)} Vitalício</span>` : ''}</strong><small>${esc(store.user?.email || '')}</small></div></div>
+            <div class="whocard__top">${me ? avatar(me.id, 48) : icon('user', 24)}<div class="whocard__txt"><strong>${esc(me?.name || store.user?.email || '')}${ownerApp() ? `<span class="vbadge">${icon('crown', 12)} Proprietário</span>` : store.billing?.plan === 'lifetime' ? `<span class="vbadge">${icon('crown', 12)} ${store.billing?.founderTeam || (store.billing?.comp && !store.billing?.vip && CONFIG.team.some((t) => (t.email || '').toLowerCase() === (store.user?.email || '').toLowerCase())) ? 'Fundador' : 'Vitalício'}</span>` : ''}</strong><small>${esc(store.user?.email || '')}</small></div></div>
             <div class="whocard__btns">${store.solo ? `<button class="btn btn--soft btn--sm" data-action="edit-profile">${icon('edit', 16)} Editar perfil</button>` : ''}
             <button class="btn btn--danger-soft btn--sm" data-action="logout">${icon('logout', 16)} Sair da conta</button></div></div>`
         : `<div class="whogrid">${store.team.map((m) => `<button class="whobtn${store.me === m.id ? ' is-on' : ''}" style="--mc:${m.color}" data-action="set-me" data-p="${m.id}">${avatar(m.id, 34)}<span>${esc(m.name)}</span><i class="whobtn__check">${icon('check', 14)}</i></button>`).join('')}</div>
@@ -221,7 +222,7 @@ function fillDevices() {
 
 function planSection() {
   const b = store.billing || {};
-  const label = { trial: 'Teste grátis (tudo liberado)', comp: 'Acesso liberado', monthly: `${b.tier === 'essencial' ? 'Essencial' : 'Profissional'} · ${b.prepaid ? '12 meses no Pix' : b.interval === 'year' ? 'anual' : 'mensal'}`, lifetime: b.vip ? 'Lembra Vitalício' : b.founder ? 'Fundadores · Profissional para sempre' : 'Vitalício', expired: 'Teste encerrado', blocked: 'Sem plano', none: 'Sem plano', shared: 'Agenda compartilhada', checking: 'Conferindo…', offline: 'Sem conexão para conferir' }[b.plan] || '—';
+  const label = { trial: 'Teste grátis (tudo liberado)', comp: 'Acesso liberado', monthly: `${b.tier === 'essencial' ? 'Essencial' : 'Profissional'} · ${b.prepaid ? '12 meses no Pix' : b.interval === 'year' ? 'anual' : 'mensal'}`, lifetime: ownerApp() ? 'Proprietário · acesso total' : b.vip ? 'Lembra Vitalício' : b.founder ? 'Fundadores · Profissional para sempre' : 'Vitalício', expired: 'Teste encerrado', blocked: 'Sem plano', none: 'Sem plano', shared: 'Agenda compartilhada', checking: 'Conferindo…', offline: 'Sem conexão para conferir' }[b.plan] || '—';
   const detail = b.plan === 'trial' ? `Termina em ${fmtLeft(b.trialEndsAt - Date.now())}`
     : b.plan === 'monthly' ? (b.prepaid ? `Pago até ${new Date(b.paidUntil).toLocaleDateString('pt-BR')} · perto de vencer, é só renovar` : b.cancelAt ? `Cancelada: vale até ${new Date(b.cancelAt).toLocaleDateString('pt-BR')}` : b.paidUntil ? `Renova em ${new Date(b.paidUntil).toLocaleDateString('pt-BR')}` : 'Ativa')
       : b.plan === 'lifetime' ? (b.vip ? `Membro Nº ${String(b.vip.no).padStart(3, '0')} · desde ${new Date(b.vip.at).toLocaleDateString('pt-BR')}. Presente de cortesia do Lembra (veja os Termos de Uso).` : b.comp ? 'Acesso cortesia liberado pelo Lembra.' : 'Pago uma vez, para sempre. Obrigado!')

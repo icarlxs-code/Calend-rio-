@@ -317,6 +317,17 @@ export async function verifyStripe(env, payload, header, now = Date.now()) {
   return JSON.parse(payload);
 }
 
+/* quanto a pessoa já pagou de verdade (centavos), sem contar o mesmo pagamento duas vezes */
+function addSpent(b, id, cents, now) {
+  const v = Math.round(Number(cents) || 0);
+  if (!id || !v) return;
+  b.paidIds = b.paidIds || [];
+  if (b.paidIds.includes(id)) return;
+  b.paidIds = [...b.paidIds, id].slice(-60);
+  b.spent = Math.max(0, (b.spent || 0) + v);
+  if (v > 0) { b.lastPaidAt = now; b.payments = (b.payments || 0) + 1; }
+}
+
 /* Avisos da Stripe: pagamento confirmado, renovação, cancelamento */
 export async function handleStripeEvent(env, ev) {
   const o = ev?.data?.object || {};
@@ -343,6 +354,7 @@ export async function handleStripeEvent(env, ev) {
         try { await stripe(env, `subscriptions/${b.subscription}`, {}, fetch, 'DELETE'); b.subActive = false; b.upgradedAt = now; } catch (e) { console.log('cancelar mensal após vitalício', e.message); }
       }
     }
+    if (o.mode === 'payment' && o.payment_status === 'paid') addSpent(b, o.payment_intent || o.id, o.amount_total, now);
     else if (o.mode === 'payment' && ev.type === 'checkout.session.completed') b.pending = { plan: o.metadata?.plan || 'vitalicio', at: now };
     if (ev.type === 'checkout.session.async_payment_failed') b.pending = null;
     if (o.mode === 'subscription' && isAddon(o.metadata?.plan)) b.addon = { plan: o.metadata.plan, subscription: o.subscription, subActive: true, paidUntil: now + 32 * 864e5, since: now };
@@ -379,6 +391,7 @@ export async function handleStripeEvent(env, ev) {
     const uid = o.metadata?.uid || (o.customer && (await env.CAL.get(`cust:${o.customer}`)));
     if (!uid) return;
     const b = await getBill(env, uid);
+    if (b && o.amount_refunded) { addSpent(b, 'rf:' + (o.id || o.payment_intent), -o.amount_refunded, now); await putBill(env, uid, b); }
     if (b && b.lifetime && (!b.lifetimePI || b.lifetimePI === o.payment_intent)) { b.lifetime = false; b.refundedAt = now; b.updatedAt = now; await putBill(env, uid, b); }
     else if (b && b.prepaidUntil && b.prepaidPI && b.prepaidPI === o.payment_intent) { b.prepaidUntil = now; b.refundedAt = now; b.updatedAt = now; await putBill(env, uid, b); }
     return uid;
@@ -393,6 +406,7 @@ export async function handleStripeEvent(env, ev) {
     const plan = o.parent?.subscription_details?.metadata?.plan || o.subscription_details?.metadata?.plan || o.lines?.data?.[0]?.metadata?.plan;
     if ((subId && b.addon && b.addon.subscription === subId) || isAddon(plan)) b.addon = { ...(b.addon || {}), ...(isAddon(plan) ? { plan } : {}), ...(subId ? { subscription: subId } : {}), subActive: true, paidUntil: until };
     else { b.subActive = true; b.paidUntil = until; }
+    addSpent(b, o.id, o.amount_paid, now);
     await putBill(env, uid, b);
     return uid;
   }
@@ -451,12 +465,28 @@ export async function vipMigrate(env, notify, now = Date.now()) {
 }
 
 /* Para o Painel do dono: situação de cada conta */
-export async function billingAll(env) {
+/* quem já pagava antes do contador existir: soma uma vez os pagamentos que a Stripe tem dessa pessoa */
+async function syncSpent(env, ws, b, fetchImpl) {
+  try {
+    const r = await fetchImpl(`https://api.stripe.com/v1/charges?customer=${encodeURIComponent(b.customer)}&limit=100`, { headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}` } });
+    if (!r.ok) return b;
+    const j = await r.json();
+    const ok = (j.data || []).filter((c) => c.paid && c.status === 'succeeded');
+    b.spent = ok.reduce((a, c) => a + (c.amount_captured ?? c.amount ?? 0) - (c.amount_refunded || 0), 0);
+    b.payments = ok.length;
+    if (ok.length) b.lastPaidAt = Math.max(...ok.map((c) => (c.created || 0) * 1000));
+    b.spentSynced = Date.now();
+    await putBill(env, ws, b);
+  } catch (e) { console.log('somar pagamentos', e.message); }
+  return b;
+}
+export async function billingAll(env, fetchImpl = fetch) {
   const reg = (await env.CAL.get('users', 'json')) || {};
   const out = {};
   await Promise.all(Object.values(reg).map(async (u) => {
-    const b = await getBill(env, u.ws);
-    out[u.ws] = statusOf(b, { ws: u.ws });
+    let b = await getBill(env, u.ws);
+    if (b && b.customer && !b.spentSynced && env.STRIPE_SECRET_KEY) b = await syncSpent(env, u.ws, b, fetchImpl);
+    out[u.ws] = { ...statusOf(b, { ws: u.ws }), spent: (b && b.spent) || 0, payments: (b && b.payments) || 0, ...(b && b.lastPaidAt ? { lastPaidAt: b.lastPaidAt } : {}), ...(b && b.founderTeam ? { founderTeam: true } : {}) };
   }));
   return out;
 }

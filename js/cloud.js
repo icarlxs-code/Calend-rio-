@@ -217,6 +217,12 @@ const backend = {
     }
     await fs.updateDoc(fs.doc(db, 'teams', owner), { [`names.${uid}.level`]: lv, [`names.${uid}.vip`]: !!vip });
   },
+  /* convidado: mantém o próprio nome e foto atualizados na lista de quem participa */
+  async setMyTeamCard(owner, uid, card) {
+    const up = {};
+    for (const k of ['name', 'color', 'photo']) if (card[k]) up[`names.${uid}.${k}`] = card[k];
+    if (Object.keys(up).length) await fs.updateDoc(fs.doc(db, 'teams', owner), up);
+  },
   /* ---------- excluir conta (LGPD) ---------- */
   async deleteTeam(owner) {
     const joins = await fs.getDocs(fs.collection(db, 'teams', owner, 'joins')).catch(() => null);
