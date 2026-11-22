@@ -218,9 +218,13 @@ export function openPlans({ blocking = false } = {}) {
   const setBuy = () => {
     const k = finalPlan(), cta = PLAN_INFO[k].cta, [what, price] = cta.split(' · ');
     const day = PER_DAY[k.replace(/_pix$/, '')];
-    buy.innerHTML = `<i class="pw-buy__glow"></i><b>${esc(what)}</b>${price ? `<small>${esc(price)}${day ? ` · só ${day} por dia` : ''}</small>` : ''}`;
-    // só o Profissional (e o Fundadores) "acende" o botão; o Essencial fica num botão simples
-    buy.classList.toggle('is-hot', PLAN_INFO[k].tier === 'pro');
+    // o botão é montado uma vez só (recriar a cada toque reiniciava a animação e ela "engasgava")
+    if (!buy.querySelector('.pw-buy__t')) buy.innerHTML = '<i class="pw-buy__aura"></i><i class="pw-buy__glow"></i><i class="pw-buy__edge"></i><i class="pw-buy__sp"></i><i class="pw-buy__sp"></i><i class="pw-buy__sp"></i><i class="pw-buy__sp"></i><b class="pw-buy__t"></b><small class="pw-buy__s"></small>';
+    buy.querySelector('.pw-buy__t').textContent = what;
+    buy.querySelector('.pw-buy__s').textContent = price ? `${price}${day ? ` · só ${day} por dia` : ''}` : '';
+    // só o Profissional (e o Fundadores) "acende" o botão, com a luz varrendo da esquerda para a direita
+    const hot = PLAN_INFO[k].tier === 'pro';
+    if (hot !== buy.classList.contains('is-hot')) { buy.classList.remove('is-hot', 'is-cold'); void buy.offsetWidth; buy.classList.add(hot ? 'is-hot' : 'is-cold'); }
   };
   const paint = () => {
     box.innerHTML = [yearly ? 'essencial_ano' : 'essencial_mes', yearly ? 'pro_ano' : 'pro_mes'].map(card).join('');
@@ -249,8 +253,8 @@ export function openPlans({ blocking = false } = {}) {
   buy.onclick = async () => {
     err.hidden = true;
     buy.disabled = true; buy.classList.add('is-busy');
-    const label = buy.innerHTML;
-    buy.innerHTML = '<i class="pw-buy__glow"></i><b>Abrindo o pagamento seguro…</b>';
+    const t = buy.querySelector('.pw-buy__t'), label = t.textContent;
+    t.textContent = 'Abrindo o pagamento seguro…';
     try {
       const plan = finalPlan();
       const r = await api('/billing/checkout', { plan, returnUrl: location.href });
@@ -260,7 +264,7 @@ export function openPlans({ blocking = false } = {}) {
     } catch (e) {
       err.textContent = /[a-z]{3,} [a-z]{3,} [a-z]{3,}/.test(e.message || '') && !/[ãçéêóõíá]/.test(e.message || '') ? 'O pagamento está temporariamente indisponível. Tente de novo em alguns minutos.' : e.message || 'Não consegui abrir o pagamento agora. Tente de novo.';
       err.hidden = false;
-      buy.disabled = false; buy.classList.remove('is-busy'); buy.innerHTML = label;
+      buy.disabled = false; buy.classList.remove('is-busy'); t.textContent = label;
       err.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
   };
