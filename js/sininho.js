@@ -35,6 +35,9 @@ function load() {
 }
 
 const lerpN = (a, b, k) => a + (b - a) * k;
+const lerpR = (n, a, k) => (a && k > 0 ? n.map((v, i) => v + (a[i] - v) * k) : n);
+const kOf = (X, f) => (X.abs && X.abs.k && X.abs.k[f]) || 0;
+const aOf = (X, f) => (X.abs && X.abs.a && X.abs.a[f] != null ? X.abs.a[f] : 1);
 /* ---------- mola ---------- */
 class Spring {
   constructor(v, f = 2, z = 0.7) { this.v = v; this.t = v; this.vel = 0; this.set(f, z); }
@@ -202,7 +205,8 @@ class Rig {
     const at = (n, dx = 0, dy = 0) => { const [x, y, w, h] = L[n]; img(n, x + dx, y + dy, w, h); };
     const X = Object.assign({ eye: 1, eyeDx: 0, eyeDy: 0, pupil: 1, pupilDx: 0, pupilDy: 0, brow: 1, browDy: 0, mouth: 1, mouthDy: 0, body: 1, limbs: 1 }, this.xf || {}); // deformação peça a peça (abertura)
     const breath = Math.sin((this.t / (e.breath || 3.2)) * Math.PI * 2) * 0.005;
-    const sq = s.sq.v + breath + s.sag.v;
+    const kb = kOf(X, 'body');
+    const sq = (s.sq.v + breath + s.sag.v) * (1 - kb);
     const sy = 1 - sq, sx = (1 + sq * 0.7) * X.body;
     // pés (no chão; só sobem nos pulos/passos)
     c.save(); c.translate(s.bx.v * 0.3, Math.min(0, s.by.v) * 0.85);
@@ -213,7 +217,7 @@ class Rig {
     c.restore();
     // corpo: inclina e achata a partir do apoio
     c.save();
-    c.translate(FEET[0] + s.bx.v, FEET[1] + s.by.v); c.rotate((s.lean.v * Math.PI) / 180); c.scale(sx, sy); c.translate(-FEET[0], -FEET[1]);
+    c.translate(FEET[0] + s.bx.v * (1 - kb), FEET[1] + s.by.v * (1 - kb)); c.rotate((s.lean.v * (1 - kb) * Math.PI) / 180); c.scale(sx, sy); c.translate(-FEET[0], -FEET[1]);
     // braços (atrás do corpo), giram no ombro
     [['l', s.aL.v], ['r', s.aR.v]].forEach(([side, ang]) => {
       const one = (pose, a, alpha) => {
@@ -225,14 +229,26 @@ class Rig {
       if (old && k < 1) one(old[0], old[2] + (ang - old[2]) * 0.4, 1 - k);
       one(this.pose[side], ang, k < 1 ? 0.35 + 0.65 * k : 1);
     });
-    at('corpo');
+    { const r = lerpR(L.corpo, X.abs && X.abs.r && X.abs.r.body, kb); c.save(); c.globalAlpha = aOf(X, 'body'); img('corpo', r[0], r[1], r[2], r[3]); c.restore(); }
     // rosto: chega atrasado em relação ao corpo (movimento secundário)
-    const fx = -s.lean.vel * 1.1 + s.px.v * 0.12, fy = -s.by.vel * 0.012;
+    const fk = 1 - Math.max(kb, kOf(X, 'eyeL'));
+    const fx = (-s.lean.vel * 1.1 + s.px.v * 0.12) * fk, fy = -s.by.vel * 0.012 * fk;
     c.save(); c.translate(fx, fy);
     // bochechas
     if (s.blush.v > 0.02) { c.globalAlpha = 0.5 * s.blush.v; c.fillStyle = '#FF8E7A'; [[790, 640], [1150, 648]].forEach(([x, y]) => { c.beginPath(); c.ellipse(x, y, 46, 26, 0, 0, Math.PI * 2); c.fill(); }); c.globalAlpha = 1; }
     // olhos
     ['l', 'r'].forEach((side) => {
+      const fE = side === 'l' ? 'eyeL' : 'eyeR', fP = side === 'l' ? 'pupL' : 'pupR';
+      if (kOf(X, fE) > 0) {                                   // encaixe exato no olho do ícone
+        const er = lerpR(L['olho-' + side], X.abs.r[fE], kOf(X, fE));
+        const [qx, qy, qw, qh] = L['pupila-' + side], z = s.pz.v;
+        const pn = [qx + qw / 2 + s.px.v - (qw * z) / 2, qy + qh / 2 + s.py.v - (qh * z) / 2, qw * z, qh * z];
+        const pr = lerpR(pn, X.abs.r[fP], kOf(X, fP));
+        c.save(); c.globalAlpha = aOf(X, fE); img('olho-' + side, er[0], er[1], er[2], er[3]);
+        c.beginPath(); c.ellipse(er[0] + er[2] / 2, er[1] + er[3] / 2, er[2] / 2 - 2, er[3] / 2 - 2, 0, 0, Math.PI * 2); c.clip();
+        c.globalAlpha = aOf(X, fP); img('pupila-' + side, pr[0], pr[1], pr[2], pr[3]); c.restore();
+        return;
+      }
       const [x, y, w, h] = L['olho-' + side], cx = x + w / 2, cy = y + h / 2;
       c.save(); c.translate(cx + (side === 'l' ? -1 : 1) * X.eyeDx, cy + X.eyeDy); c.scale(X.eye, X.eye); c.translate(-cx, -cy);
       const hp = Math.min(1, Math.max(0, s.happy.v)), open = 1 - hp;
@@ -266,11 +282,17 @@ class Rig {
     });
     // sobrancelhas (giram no centro, sobem/descem)
     [['l', s.bL.v, s.bY.v], ['r', s.bR.v, s.bYr.v]].forEach(([side, rot, dy]) => {
+      const fB = side === 'l' ? 'browL' : 'browR';
+      if (kOf(X, fB) > 0) { const kk = kOf(X, fB), [x0, y0, w0, h0] = L['sob-' + side];
+        const r = lerpR([x0, y0 + dy, w0, h0], X.abs.r[fB], kk), cx = r[0] + r[2] / 2, cy = r[1] + r[3] / 2;
+        c.save(); c.globalAlpha = aOf(X, fB); c.translate(cx, cy); c.rotate((rot * (1 - kk) * Math.PI) / 180); img('sob-' + side, -r[2] / 2, -r[3] / 2, r[2], r[3]); c.restore(); return; }
       const [x, y, w, h] = L['sob-' + side], cx = x + w / 2, cy = y + h / 2;
       c.save(); c.translate(cx + (side === 'l' ? -1 : 1) * X.eyeDx * 0.8, cy + dy + X.browDy); c.rotate((rot * Math.PI) / 180); c.scale(X.brow, X.brow); img('sob-' + side, -w / 2, -h / 2, w, h); c.restore();
     });
     // boca (troca de forma com um pequeno "pop")
-    { const z = s.mz.v, k = this.pm ? Math.min(1, (this.t - this.pmT) / 0.09) : 1;
+    if (kOf(X, 'mouth') > 0) { const n = 'boca-' + this.mouth, r = lerpR(L[n], X.abs.r.mouth, kOf(X, 'mouth'));
+      c.save(); c.globalAlpha = aOf(X, 'mouth'); img(n, r[0], r[1], r[2], r[3]); c.restore(); }
+    else { const z = s.mz.v, k = this.pm ? Math.min(1, (this.t - this.pmT) / 0.09) : 1;
       const one = (m, a) => { const n = 'boca-' + m; if (!L[n] || a <= 0) return; const [x, y, w, h] = L[n], cx = x + w / 2, cy = y + h / 2;
         c.save(); c.globalAlpha = a; c.translate(cx, cy + X.mouthDy); c.scale(z * (1 + (z - 1) * -0.6) * X.mouth, z * X.mouth); img(n, -w / 2, -h / 2, w, h); c.restore(); };
       if (this.pm && k < 1) one(this.pm, 1 - k);

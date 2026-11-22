@@ -1,12 +1,12 @@
 {
-  "version": "2.6.0",
-  "build": "j66i4wc3",
+  "version": "2.7.0",
+  "build": "x3547qps",
   "date": "2026-11-22",
   "min": "2.2.0",
   "title": "Nova abertura",
   "notes": [
-    "Abertura nova: o Sininho nasce de um splash e se transforma no ícone, sem cortes.",
+    "Abertura nova: o Sininho se transforma no ícone do Lembra, peça por peça.",
     "Pequenas melhorias e correções."
   ],
-  "builtAt": "2026-11-22T20:10:56.573Z"
+  "builtAt": "2026-11-22T20:28:23.462Z"
 }

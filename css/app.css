@@ -3010,3 +3010,21 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .ab__blob.is-tile { box-shadow: inset 0 -6px 14px rgba(170, 40, 0, .28), inset 0 6px 12px rgba(255, 200, 120, .35), 0 14px 34px rgba(240, 86, 10, .28); background: radial-gradient(120% 120% at 35% 22%, #FF9124 0%, #FF6E12 45%, #F24C06 100%); }
 .ab__sh { position: absolute; left: 0; top: 0; width: 96px; height: 18px; margin-top: -9px; border-radius: 50%; background: radial-gradient(closest-side, rgba(120, 30, 0, .42), rgba(120, 30, 0, 0)); opacity: 0; }
 .ab__rip { position: absolute; left: 0; top: 0; width: 90px; height: 90px; border-radius: 50%; border: 3px solid rgba(255, 122, 18, .7); opacity: 0; }
+
+/* abertura v5: camadas do ícone, poeira, ondas sonoras, fundo preto opcional */
+.ab--preto { background: #000; }
+.ab--preto .ab__l { background-image: url('../media/marca/palavra-branco.png'); }
+.ab--preto .ab__tag { color: rgba(255, 240, 230, .7); }
+.ab__mark > * { z-index: 2; }
+.ab__blob { z-index: 2; }
+.ab__rig { position: absolute; left: 0; top: 0; width: 320px; z-index: 4; transform-origin: 50% 50%; }
+.ab__rig .snh { width: 320px; display: block; }
+.ab__ico { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 5; }
+.ab__ico img { position: absolute; display: block; opacity: 0; max-width: none; will-change: transform, opacity; }
+.ab__sh { z-index: 3; }
+.ab__dust { position: absolute; left: 0; top: 0; width: 26px; height: 26px; margin: -13px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #FFF3EA, #F3DCCB 70%); opacity: 0; z-index: 3; }
+.ab__arc { position: absolute; left: 0; top: 0; width: 120px; height: 120px; border-radius: 50%; border: 3px solid transparent; border-top-color: rgba(255, 122, 18, .75); opacity: 0; z-index: 3; }
+.ab__arc--2 { border-top-color: rgba(255, 150, 40, .6); }
+
+/* quadrado com as cores medidas no ícone (borda vermelho-alaranjada, centro laranja) */
+.ab__blob.is-tile { background: radial-gradient(70% 70% at 50% 46%, #FF6A0E 0%, #F65008 55%, #E43803 100%) !important; box-shadow: 0 14px 34px rgba(228, 56, 3, .26) !important; }

@@ -1,1 +1,0 @@
-var a=Object.defineProperty;var r=(o,e)=>{for(var s in e)a(o,s,{get:e[s],enumerable:!0})};var h=["Abertura nova: o Sininho nasce de um splash e se transforma no \xEDcone, sem cortes.","Pequenas melhorias e corre\xE7\xF5es."];export{r as a,h as b};
