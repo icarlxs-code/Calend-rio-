@@ -206,32 +206,24 @@ export function runIntro(ab, { onEnd, model } = {}) {
         };
         // alvo no espaço do PRÓPRIO boneco (com o transform final): as peças viajam junto com o corpo e encaixam exato no fim
         const rr = { body: toView(toMark(BODY512), 0, 0, zEnd) };
-        for (const [f, n] of Object.entries(FEAT)) rr[f] = toView(MR[n], 0, 0, zEnd);
+        // depois do encaixe o próprio Sininho continua vivo dentro do quadrado (sem trocar por imagem)
+        const lt = m - 1.01, blink = (at) => { const b = seg(lt, at, at + 0.2); return b > 0 && b < 1 ? 1 - 0.92 * Math.sin(Math.PI * b) : 1; };
+        const bl = lt > 0 ? Math.min(blink(0.6), blink(1.95)) : 1;
+        const look = lt > 0 ? C.suave(seg(lt, 0.3, 0.55)) * (1 - C.suave(seg(lt, 1.15, 1.45))) : 0;
+        const browUp = lt > 0 ? C.mola(seg(lt, 0.28, 0.5)) * (1 - C.suave(seg(lt, 0.95, 1.25))) : 0;
+        const land = ls.reduce((acc, _, i) => { const q = seg(t, MS + 1.12 + i * 0.055 + 0.3, MS + 1.12 + i * 0.055 + 0.46); return acc + (q > 0 && q < 1 ? Math.sin(Math.PI * q) : 0); }, 0);
+        const live = (n, [x, y, w, h]) => {
+          if (n.startsWith('olho')) { const cy = y + h * 0.55, nh = h * bl; return [x, cy - (cy - y) * bl, w, nh]; }
+          if (n.startsWith('pupila')) { const e = MR[n.replace('pupila', 'olho')], cy = e[1] + e[3] * 0.55, nh = h * bl; return [x + look * 4.2, cy - (cy - y) * bl - look * 0.6, w, nh]; }
+          if (n.startsWith('sob')) return [x, y - browUp * 4.5, w, h];
+          if (n === 'boca') { const nw = w * (1 + land * 0.03), nh = h * (1 + land * 0.08); return [x - (nw - w) / 2, y, nw, nh]; }
+          return [x, y, w, h];
+        };
+        for (const [f, n] of Object.entries(FEAT)) rr[f] = toView(live(n, MR[n]), 0, 0, zEnd);
         R.xf = { limbs: 1 - C.suave(seg(m, 0, 0.32)), abs: { k: kk, r: rr, a: {} } };
       }
     }
-    /* as camadas do ícone assumem quando cada peça já está encaixada */
-    img.base.style.opacity = C.suave(seg(m, 0.78, 1.0)); // o fundo só vem depois que o rosto do ícone está inteiro
-    const pL = seg(m, 0.66, 0.69), pR = seg(m, 0.68, 0.71), eL = seg(m, 0.69, 0.75), eR = seg(m, 0.71, 0.77); // pupila do ícone primeiro (fica acima), depois o branco // olho e pupila assumem juntos (senão o branco cobre a pupila)
-    const aF = { 'olho-l': eL, 'olho-r': eR, 'pupila-l': pL, 'pupila-r': pR, 'sob-l': seg(m, 0.65, 0.71), 'sob-r': seg(m, 0.67, 0.73), boca: seg(m, 0.71, 0.77) };
-    for (const [n, a] of Object.entries(aF)) img[n].style.opacity = a;
-    const rigGone = m >= 1.01;
-
-    /* o ícone continua vivo (cada camada com o seu movimento) */
-    if (m >= 1.01) {
-      const lt = m - 1.01;
-      const blink = (at) => { const b = seg(lt, at, at + 0.2); return b > 0 && b < 1 ? 1 - 0.92 * Math.sin(Math.PI * b) : 1; };
-      const bl = Math.min(blink(0.6), blink(1.95));
-      const look = C.suave(seg(lt, 0.3, 0.55)) * (1 - C.suave(seg(lt, 1.15, 1.45)));
-      const browUp = C.mola(seg(lt, 0.28, 0.5)) * (1 - C.suave(seg(lt, 0.95, 1.25)));
-      const land = ls.reduce((acc, _, i) => { const a = MS + 1.12 + i * 0.055 + 0.3, q = seg(t, a, a + 0.16); return acc + (q > 0 && q < 1 ? Math.sin(Math.PI * q) : 0); }, 0);
-      ['olho-l', 'olho-r'].forEach((n) => { img[n].style.transformOrigin = '50% 55%'; img[n].style.transform = `scale(1, ${bl})`; });
-      ['pupila-l', 'pupila-r'].forEach((n) => { const p = MR[n], e = MR[n.replace('pupila', 'olho')], oy = e[1] + e[3] * 0.55 - p[1];
-        img[n].style.transformOrigin = `50% ${oy}px`; img[n].style.transform = `translate(${look * 4.2}px, ${-look * 0.6}px) scale(1, ${bl})`; });
-      ['sob-l', 'sob-r'].forEach((n, i) => { img[n].style.transform = `translateY(${-browUp * 4.5}px) rotate(${(i ? 1 : -1) * browUp * 4}deg)`; });
-      img.boca.style.transformOrigin = '50% 0'; img.boca.style.transform = `scale(${1 + land * 0.03}, ${1 + land * 0.08})`;
-      ico.style.transform = `scale(${1 + Math.sin(lt * 2.4) * 0.006})`;
-    }
+    const rigGone = false; // o Sininho animado se sustenta até o fim (sem trocar pela imagem do ícone)
 
     /* aplica */
     rigEl.style.transform = `translate(${rx}px, ${ry}px) translate(-50%, -50%) scale(${rz})`;

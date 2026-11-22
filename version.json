@@ -1,6 +1,6 @@
 {
-  "version": "2.7.1",
-  "build": "plupb4u6",
+  "version": "2.7.2",
+  "build": "ufeyi7o7",
   "date": "2026-11-22",
   "min": "2.2.0",
   "title": "Nova abertura",
@@ -8,5 +8,5 @@
     "Abertura com sons sincronizados a cada movimento do Sininho.",
     "Cores do Sininho iguais às do ícone."
   ],
-  "builtAt": "2026-11-22T20:37:28.069Z"
+  "builtAt": "2026-11-22T20:41:17.044Z"
 }
