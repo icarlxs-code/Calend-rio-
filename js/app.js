@@ -829,6 +829,16 @@ function showLogin(errMsg = '') {
     </form>
   </div>`;
   const f = root.querySelector('[data-login]');
+  /* o Lembra recebe a pessoa (e explica os erros) — por enquanto no celular do dono */
+  import('./guia.js').then(({ guiaOn, criaGuia }) => {
+    if (!guiaOn() || !root.querySelector('[data-login]')) return;
+    const G = criaGuia({ tamanho: 66 }), lead = root.querySelector('.login__lead');
+    root.querySelector('.login').classList.add('login--guia');
+    lead.replaceWith(G.el); G.chega();
+    if (msg) setTimeout(() => G.erro(msg), 300);
+    else setTimeout(() => G.fala(signupMode ? 'Oi! Eu sou o Lembra 👋 Cria sua conta e eu cuido de lembrar de tudo pra você.' : 'Que bom te ver de novo! 😊 Entra aí que eu já separei o seu dia.', 'acena', 'tchau'), 350);
+    f.addEventListener('submit', () => import('./sfx.js').then((m) => m.ui('clique')));
+  }).catch(() => {});
   const fx = root.querySelector('[data-fixmail]');
   if (fx) fx.onclick = () => { loginEmail = loginTypo; loginTypo = ''; loginName = tidyName(f.name?.value || loginName); loginPass = f.pass.value; loginConsent = !!f.consent?.checked; showLogin(); };
   root.querySelector('[data-eye]').onclick = () => {

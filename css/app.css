@@ -2602,7 +2602,7 @@ html:not(.intro-done) #app, html:not(.intro-done) .login { visibility: hidden; }
 /* "Instalar o app": chamativo, mas elegante */
 .login__installtop { padding: 10px 18px; background: linear-gradient(135deg, #0A84FF, #5E5CE6); color: #fff; font-weight: 700; box-shadow: 0 8px 24px rgba(10,132,255,.4); animation: installpulse 2.4s ease-in-out infinite; }
 .login__installtop .ic { stroke-width: 2.2; }
-@keyframes installpulse { 0%, 100% { transform: scale(1); box-shadow: 0 8px 24px rgba(10,132,255,.35); } 50% { transform: scale(1.04); box-shadow: 0 10px 34px rgba(94,92,230,.6); } }
+@keyframes installpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
 @media (prefers-reduced-motion: reduce) { .login__installtop { animation: none; } }
 /* login: a página não "balança" — só rola por dentro se o conteúdo realmente não couber */
 html:has(.login), html:has(.login) body { height: 100%; overflow: hidden; overscroll-behavior: none; }
@@ -2685,7 +2685,7 @@ html:has(.login), html:has(.login) body { height: 100%; overflow: hidden; oversc
 .rkpriv { display: flex; gap: 10px; align-items: center; font-size: 14px; padding: 8px 4px; }
 .rkload { display: flex; justify-content: center; gap: 6px; padding: 40px; } .rkload i { width: 10px; height: 10px; border-radius: 50%; background: #8F3BFF; animation: float 1s ease-in-out infinite; } .rkload i:nth-child(2) { animation-delay: .15s; } .rkload i:nth-child(3) { animation-delay: .3s; }
 @media (prefers-reduced-motion: reduce) { .rkme::after, .rkfire svg, .rkcrown, .rkload i { animation: none; } }
-.foryou__likes { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; margin: 4px 0 12px; border-radius: 16px; color: #fff; background: linear-gradient(135deg, #FF4D8D, #8F3BFF); box-shadow: 0 8px 20px -10px rgba(143,59,255,.6); }
+.foryou__likes { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; margin: 4px 0 12px; border-radius: 16px; color: #fff; background: linear-gradient(135deg, #FFA43A, #FF6B1A); box-shadow: 0 8px 20px -10px rgba(255,107,26,.6); }
 .foryou__likes span { flex: 1; display: flex; flex-direction: column; } .foryou__likes small { opacity: .9; font-size: 12px; }
 
 /* ===================== Seu dia de trabalho (rotina) ===================== */
@@ -3037,4 +3037,34 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .snhbud__acoes:empty { display: none; }
 .snhbud__ac { font: 700 13px/1 system-ui, -apple-system, sans-serif; padding: 8px 12px; border-radius: 999px; border: 0; background: #FF6B1A; color: #fff; cursor: pointer; pointer-events: auto; -webkit-tap-highlight-color: transparent; }
 .snhbud__ac:last-child { background: var(--surface-2, #FFF0E6); color: var(--text, #1F1310); }
-.snhbud__bub { pointer-events: auto; }
+.snhbud__bub.is-in { pointer-events: auto; }
+/* escondido (ficha, janela aberta, teclado): invisível E sem pegar toque — nunca cobre um botão */
+.snhbud.is-hidden, .snhbud.is-hidden * { pointer-events: none !important; visibility: hidden; }
+.snhbud:not([data-st="up"]):not([data-st="spy"]) .snhbud__bub { pointer-events: none; }
+
+/* ===================== Lembra como guia (cadastro e ficha, estilo Duolingo) ===================== */
+.guia { display: flex; align-items: flex-end; gap: 10px; margin: 6px 0 18px; min-height: 76px; transition: transform .7s cubic-bezier(.22, 1.2, .36, 1), opacity .4s ease; }
+.guia.is-entrando { transform: translateX(-120%); opacity: 0; }
+.guia__fig { flex: none; width: 72px; animation: guiaPasso .5s ease-in-out 0s 0; }
+.guia.is-entrando .guia__fig { animation: guiaAnda .32s ease-in-out infinite; }
+@keyframes guiaAnda { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-5px) rotate(3deg); } }
+.guia.is-pulando .guia__fig { animation: guiaPulo .55s cubic-bezier(.3, 0, .4, 1); }
+@keyframes guiaPulo { 0% { transform: translateY(0) scale(1.08, .9); } 35% { transform: translateY(-18px) scale(.95, 1.06); } 70% { transform: translateY(0) scale(1.06, .94); } 100% { transform: none; } }
+.guia__bub { position: relative; flex: 1; min-width: 0; padding: 12px 14px; border-radius: 16px; background: var(--surface, #fff); color: var(--text, #1F1310);
+  border: 2px solid var(--line, rgba(120, 50, 10, .12)); font: 600 15px/1.38 system-ui, -apple-system, sans-serif; margin-bottom: 18px;
+  opacity: 0; transform: scale(.85); transform-origin: 0 100%; transition: opacity .2s, transform .4s cubic-bezier(.34, 1.56, .5, 1); }
+.guia__bub.is-in { opacity: 1; transform: none; }
+.guia__bub::before { content: ''; position: absolute; left: -9px; bottom: 16px; width: 14px; height: 14px; background: inherit; border-left: 2px solid var(--line, rgba(120, 50, 10, .12)); border-bottom: 2px solid var(--line, rgba(120, 50, 10, .12)); transform: rotate(45deg); }
+.guia__ghost { display: block; visibility: hidden; min-height: 1.38em; }
+.guia__txt { position: absolute; left: 14px; right: 14px; top: 12px; }
+/* com o guia, o erro em texto vira só apoio para leitor de tela (quem fala é o Lembra) */
+.ficha--guia .ficha__err:not([hidden]) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.login .guia { margin: 4px 0 14px; }
+.login--guia .login__err { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media (prefers-reduced-motion: reduce) { .guia, .guia__fig, .guia__bub { animation: none !important; transition: none !important; } .guia.is-entrando { transform: none; opacity: 1; } }
+
+/* cadastro no tom da marca: botão principal laranja com "base" (volume, como no Duolingo) */
+.login__installtop { background: linear-gradient(135deg, #FFA43A, #FF6B1A) !important; box-shadow: 0 8px 24px rgba(255, 107, 26, .35) !important; }
+.login .btn--primary, .ficha .btn--primary { background: #FF6B1A; color: #fff; border: 0; box-shadow: 0 4px 0 #C94A0C; transition: transform .08s, box-shadow .08s; }
+.login .btn--primary:active, .ficha .btn--primary:active { transform: translateY(3px); box-shadow: 0 1px 0 #C94A0C; }
+.ficha__prog i { background: #FF6B1A !important; }

@@ -92,3 +92,35 @@ export async function renderWav(cues, seconds) {
   for (let i = 0; i < L.length; i++) { dv.setInt16(44 + i * 4, Math.max(-1, Math.min(1, L[i])) * 32767, true); dv.setInt16(46 + i * 4, Math.max(-1, Math.min(1, R[i])) * 32767, true); }
   return new Uint8Array(dv.buffer);
 }
+
+/* ---------- sons de interface (cadastro, botões) ---------- */
+const UI = {
+  clique: (c, o, t) => osc(c, o, t, { f0: 880, f1: 660, dur: 0.05, peak: 0.08, type: 'triangle' }),
+  avanco: (c, o, t) => { [659.25, 830.61, 987.77].forEach((f, i) => osc(c, o, t + i * 0.07, { f0: f, dur: 0.18, peak: 0.1, a: 0.004 })); },  // três notas subindo (acerto)
+  erro: (c, o, t) => { osc(c, o, t, { f0: 330, f1: 280, dur: 0.12, peak: 0.12, type: 'triangle' }); osc(c, o, t + 0.11, { f0: 262, f1: 220, dur: 0.16, peak: 0.1, type: 'triangle' }); },  // duas notas descendo, suave
+  pop: (c, o, t) => osc(c, o, t, { f0: 500, f1: 1100, dur: 0.07, peak: 0.08 }),
+};
+export function ui(name) { const c = live(); if (!c || !UI[name] || c.state !== 'running') return; UI[name](c, master, c.currentTime + 0.005); }
+
+/* ---------- trilha de fundo do cadastro: bem baixa, calma, em laço ---------- */
+let trilha = null;
+export function trilhaInicia() {
+  const c = live(); if (!c || trilha) return;
+  const g = c.createGain(); g.gain.value = 0.0001; g.connect(master);
+  g.gain.exponentialRampToValueAtTime(0.06, c.currentTime + 2.5);      // entra devagar
+  const ACORDES = [[261.63, 329.63, 392], [220, 261.63, 329.63], [174.61, 220, 261.63], [196, 246.94, 293.66]]; // Dó · Lám · Fá · Sol
+  const MEL = [523.25, 587.33, 659.25, 783.99, 659.25, 587.33, 523.25, 440];
+  let i = 0, on = true;
+  const bar = 2.4;
+  const toca = () => {
+    if (!on) return;
+    const t = c.currentTime + 0.05, ac = ACORDES[i % 4];
+    ac.forEach((f) => { const o = c.createOscillator(), e = c.createGain(); o.type = 'sine'; o.frequency.value = f / 2; e.gain.setValueAtTime(0.0001, t); e.gain.exponentialRampToValueAtTime(0.18, t + 0.6); e.gain.exponentialRampToValueAtTime(0.0001, t + bar); o.connect(e).connect(g); o.start(t); o.stop(t + bar + 0.1); });
+    [0, 0.6, 1.2, 1.8].forEach((k, j) => { const f = MEL[(i * 2 + j) % MEL.length]; const o = c.createOscillator(), e = c.createGain(); o.type = 'triangle'; o.frequency.value = f; e.gain.setValueAtTime(0.0001, t + k); e.gain.exponentialRampToValueAtTime(0.07, t + k + 0.02); e.gain.exponentialRampToValueAtTime(0.0001, t + k + 0.5); o.connect(e).connect(g); o.start(t + k); o.stop(t + k + 0.6); });
+    i++;
+  };
+  toca();
+  const iv = setInterval(toca, bar * 1000);
+  trilha = { stop() { on = false; clearInterval(iv); try { g.gain.cancelScheduledValues(c.currentTime); g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), c.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 1.2); } catch { /* ok */ } setTimeout(() => g.disconnect(), 1500); } };
+}
+export function trilhaPara() { if (trilha) { trilha.stop(); trilha = null; } }

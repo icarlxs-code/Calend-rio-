@@ -10,6 +10,8 @@ import { savePrefs } from '../personal.js';
 import { routine } from '../planner.js';
 import { toast } from '../components.js';
 import { rise, tick } from '../sound.js';
+import { criaGuia, guiaOn } from '../guia.js';
+import { ui as uiSom, trilhaInicia, trilhaPara } from '../sfx.js';
 import { burst } from '../reward.js';
 import { CONFIG } from '../../config.js';
 import { pickField, openPicker } from '../picker.js';
@@ -49,6 +51,20 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
   wrap.className = 'ficha';
   document.body.appendChild(wrap);
   requestAnimationFrame(() => wrap.classList.add('is-open'));
+  /* o Lembra acompanha a ficha: mesmo elemento em todas as etapas (pula ao avançar, explica os erros) */
+  const G = guiaOn() ? criaGuia({ tamanho: 72 }) : null;
+  if (G) { wrap.classList.add('ficha--guia'); trilhaInicia(); }
+  let falouEtapa = -1;
+  const FALA = {
+    inicio: ['Oi! Eu sou o Lembra 👋 Vou montar a sua agenda com você. Leva só 2 minutinhos!', 'acena'],
+    voce: ['Primeiro, me conta um pouco sobre você 😊', 'feliz'],
+    trabalho: ['Agora o mais legal: com o que você trabalha? 💼', 'surpreso'],
+    rotina: ['Me fala da sua rotina, pra eu só te chamar na hora certa ⏰', 'feliz'],
+    dificuldades: ['O que mais te atrapalha? Pode marcar tudo, sem vergonha 😉', 'amor'],
+    estilo: ['Como você quer que eu fale com você quando atrasar alguma coisa? 🗣️', 'desconfiado'],
+    mente: ['Quero te conhecer de verdade, pra não falar igual com todo mundo 🧡', 'amor'],
+    resumo: ['Prontinho! Olha o que eu montei pra você 🎉', 'danca'],
+  };
 
   /* caixas de escolha: uma linha na tela; abrem a lista (única ou várias) */
   const PICK = {
@@ -263,6 +279,17 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     const key = `${step}.${STEPS[step] === 'resumo' ? sub : 0}`;
     if (STEPS[step] === 'trabalho' && shownStep !== key) q = f.profession || '';
     wrap.innerHTML = `<div class="ficha__inner${STEPS[step] === 'resumo' ? ' ficha__inner--rv' : ''}">${!required ? `<button class="ficha__x" data-quit aria-label="Fechar">${icon('x', 20)}</button>` : ''}${step > 0 ? prog() : ''}<div class="ficha__step${shownStep !== key ? ' is-new' : ''}">${views[STEPS[step]]()}</div></div>`;
+    if (G) {
+      const inner = wrap.querySelector('.ficha__inner'), ref = inner.querySelector('.ficha__step');
+      inner.insertBefore(G.el, ref);
+      if (falouEtapa !== step) {
+        const [t, m] = FALA[STEPS[step]] || ['', 'feliz'];
+        if (falouEtapa < 0) { G.chega(); setTimeout(() => G.fala(t, m, 'tchau'), 350); }
+        else if (step > falouEtapa) G.avanca(t, m);
+        else G.fala(t, m, 'sim');
+        falouEtapa = step;
+      }
+    }
     bind();
     saveDraft();
     if (shownStep !== key) wrap.scrollTop = 0;
@@ -274,9 +301,8 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     if (!e) return render();
     e.textContent = err; e.hidden = !err;
     if (err) {
-      e.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      // o Lembra fala o erro (o texto continua no campo para leitores de tela)
-      import('../mascote.js').then((M) => M.fala && M.fala(M.linhaDeErro(err))).catch(() => {});
+      if (G) { G.erro(err); if (G.el.getBoundingClientRect().top < 0) G.el.scrollIntoView({ block: 'start' }); } // só rola se o Lembra estiver fora da tela // o Lembra fala o erro (o texto continua para leitores de tela)
+      else e.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
   };
   const pickOne = (attr, value, set) => {
@@ -376,6 +402,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     if (back) back.onclick = () => { err = ''; if (STEPS[step] === 'resumo' && sub > 0) { sub--; render(); return; } step--; sub = 0; calcDone = false; render(); };
     $('[data-quit]').forEach((b) => (b.onclick = () => close()));
     wrap.querySelector('[data-next]').onclick = async () => {
+      if (G) uiSom('clique');
       err = validate();
       if (err) return showErr();
       if (step < STEPS.length - 1) { step++; sub = 0; calcDone = false; render(); return; }
@@ -389,7 +416,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       catch (e) { btn.disabled = false; btn.textContent = 'Começar a usar'; err = 'Não consegui salvar agora. Verifique a internet e tente de novo.'; showErr(); }
     };
   };
-  const close = (done = false) => { wrap.classList.remove('is-open'); setTimeout(() => wrap.remove(), 250); if (!done && onClose) onClose(); };
+  const close = (done = false) => { trilhaPara(); wrap.classList.remove('is-open'); setTimeout(() => wrap.remove(), 250); if (!done && onClose) onClose(); };
   render();
   return { close };
 }

@@ -1,12 +1,11 @@
 {
-  "version": "2.8.0",
+  "version": "2.9.0",
   "date": "2026-11-22",
   "min": "2.2.0",
-  "title": "Novo mascote",
+  "title": "O Lembra chegou",
   "notes": [
-    "Abertura com 4 modelos sorteados, barra branca e som mais baixo.",
-    "Cores no tom laranja da marca, com modo noturno preto.",
-    "Lembra agora faz perguntas com botões que levam às telas certas.",
-    "Mensagens do cadastro vêm do Lembra."
+    "O Lembra te acompanha no cadastro: ele pergunta, explica os erros e comemora cada etapa.",
+    "Ele avisa do que ficou para trás (inclusive no Pessoal) e leva direto para a tela certa.",
+    "Abertura sorteada entre 4 modelos e cores novas no laranja da marca."
   ]
 }

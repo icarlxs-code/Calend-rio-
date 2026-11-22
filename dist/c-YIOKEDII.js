@@ -1,0 +1,1 @@
+var r=Object.defineProperty;var t=(o,a)=>{for(var e in a)r(o,e,{get:a[e],enumerable:!0})};var n=["O Lembra te acompanha no cadastro: ele pergunta, explica os erros e comemora cada etapa.","Ele avisa do que ficou para tr\xE1s (inclusive no Pessoal) e leva direto para a tela certa.","Abertura sorteada entre 4 modelos e cores novas no laranja da marca."];export{t as a,n as b};

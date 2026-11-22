@@ -324,7 +324,7 @@ function watch() {
 }
 if (typeof document !== 'undefined' && document.body) watch(); else if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', watch);
 
-export function sininho(mood = 'feliz', { size = 120, cls = '', label = 'Sininho, o mascote do Lembra' } = {}) {
+export function sininho(mood = 'feliz', { size = 120, cls = '', label = 'Lembra' } = {}) {
   const m = EMO[mood] ? mood : 'feliz';
   return `<span class="snh ${cls}" style="--s:${size}px" data-snh="${m}" role="img" aria-label="${esc(label)}"><canvas></canvas></span>`;
 }
@@ -344,7 +344,8 @@ export function say(el, text, { bubble, speed = 28 } = {}) {
   return new Promise((res) => {
     let i = 0;
     b.textContent = '';
-    b._t = setInterval(() => { i += 1; b.textContent = text.slice(0, i); if (i >= text.length) { clearInterval(b._t); res(); } }, speed);
+    const ch = Array.from(text); // por caractere inteiro: emoji nunca aparece pela metade
+    b._t = setInterval(() => { i += 1; b.textContent = ch.slice(0, i).join(''); if (i >= ch.length) { clearInterval(b._t); res(); } }, speed);
   });
 }
 

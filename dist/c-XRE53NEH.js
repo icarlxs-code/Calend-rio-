@@ -1,1 +1,0 @@
-var e=Object.defineProperty;var m=(r,a)=>{for(var o in a)e(r,o,{get:a[o],enumerable:!0})};var b=["Abertura com 4 modelos sorteados, barra branca e som mais baixo.","Cores no tom laranja da marca, com modo noturno preto.","Lembra agora faz perguntas com bot\xF5es que levam \xE0s telas certas.","Mensagens do cadastro v\xEAm do Lembra."];export{m as a,b};
