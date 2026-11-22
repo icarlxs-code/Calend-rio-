@@ -2992,8 +2992,10 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .ab { position: absolute; inset: 0; }
 .ab__stage { position: absolute; left: 50%; top: 47%; width: 0; height: 0; transform: scale(var(--fit, 1)); }
 .ab__mark { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
-.ab__tile { position: absolute; left: 0; top: 0; width: 122px; height: 122px; border-radius: 30px; transform: translate(-50%, -50%) scale(0);
-  background: radial-gradient(120% 120% at 30% 20%, #FF9A1F 0%, #FF7410 45%, #F0560A 100%); box-shadow: 0 14px 34px rgba(240, 86, 10, .28); }
+.ab__blob { position: absolute; left: 0; top: 0; width: 34px; height: 34px; border-radius: 50%; transform: translate(-50%, -300px);
+  background: radial-gradient(120% 120% at 30% 20%, #FF9A1F 0%, #FF7410 45%, #F0560A 100%); box-shadow: 0 14px 34px rgba(240, 86, 10, .22); will-change: transform, width, height, border-radius; }
+.ab__drop { position: absolute; left: 0; top: 0; border-radius: 50%; background: #FF7410; opacity: 0; will-change: transform, opacity; }
+.ab__ld { position: absolute; bottom: -3px; width: 14px; height: 6px; border-radius: 50%; background: #FF7410; opacity: 0; transform-origin: 50% 50%; }
 .ab__rig { position: absolute; left: 0; top: 0; width: 132px; transform: translate(-50%, -50%); will-change: transform, clip-path; }
 .ab__rig .snh { width: 132px; display: block; }
 .intro .ab__icon { position: absolute; left: 0; top: 0; width: 122px; height: 122px; object-fit: cover; transform: translate(-50%, -50%); border-radius: 30px; opacity: 0; box-shadow: 0 14px 34px rgba(240, 86, 10, .28); }

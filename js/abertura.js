@@ -1,96 +1,117 @@
-/* Abertura do Lembra (motion design, fundo branco, ~3,3 s, calculada a cada quadro da tela = 60/120 fps).
-   Roteiro (cada elemento com a sua própria curva):
-   1) o Sininho (boneco montado com as peças) surge com mola e dá tchauzinho;
-   2) vira o ÍCONE: o quadrado laranja cresce atrás dele, o boneco aproxima até virar o rosto do ícone
-      (máscara arredondada fechando), e o desenho do ícone se completa por cima;
-   3) a marca se forma: o ícone encolhe e desliza para a esquerda, as letras de "Lembra" entram uma a uma
-      (sobem, giram e assentam com mola) e a frase aparece embaixo. Tudo compacto, com respiro. */
-import { sininho, alive, act, setMood } from './sininho.js';
+/* Abertura do Lembra — motion design (fundo branco, ~3,7 s, calculada a cada quadro da tela: 60/120 fps).
+   Roteiro, cada elemento com a sua própria curva:
+   1) SPLASH: uma gota laranja cai, achata no chão e espirra gotinhas (com gravidade);
+   2) o Sininho salta de dentro do splash (mola, passa do ponto e assenta);
+   3) ATUAÇÃO: pisca, olha para um lado, pisca, olha para o outro, sobrancelha de curiosidade;
+   4) METAMORFOSE contínua: ele agacha (antecipação); a poça laranja cresce e vira um quadrado arredondado
+      (círculo → squircle) enquanto ele aproxima e "veste" o quadrado; o desenho do ícone se completa devagar;
+   5) a marca se forma: o ícone desliza, as letras caem uma a uma com um respingo, a frase aparece. */
+import { sininho, alive } from './sininho.js';
 
-/* letras da palavra (colunas na imagem palavra-preto.png 720×159) */
 const LET = [[1, 103], [105, 215], [228, 398], [414, 530], [541, 612], [612, 719]];
 const WW = 720, WH = 159;
-
-/* curvas */
 const clamp = (x) => Math.max(0, Math.min(1, x));
 const seg = (t, a, b) => clamp((t - a) / (b - a));
-const easeOut = (x) => 1 - Math.pow(1 - x, 3);
-const easeInOut = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
-const back = (x, s = 1.6) => 1 + (s + 1) * Math.pow(x - 1, 3) + s * Math.pow(x - 1, 2);
-const spring = (x, z = 0.42, f = 2.4) => (x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.exp(-z * 10 * x) * Math.cos(f * Math.PI * 2 * x) * (1 - x * 0.0));
+const eOut = (x) => 1 - Math.pow(1 - x, 3);
+const eOut5 = (x) => 1 - Math.pow(1 - x, 5);
+const eIn = (x) => x * x * x;
+const eIO = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const back = (x, s = 1.7) => 1 + (s + 1) * Math.pow(x - 1, 3) + s * Math.pow(x - 1, 2);
+const spring = (x, k = 7, f = 2.2) => (x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.exp(-k * x) * Math.cos(f * Math.PI * x));
 const lerp = (a, b, k) => a + (b - a) * k;
+const DROPS = [[-1, -1.4, 7], [1, -1.6, 6], [-1.6, -0.8, 5], [1.7, -0.9, 6], [-0.6, -2, 4], [0.7, -2.1, 5], [-2.1, -0.4, 4], [2.2, -0.5, 4]];
 
 export function mountIntro(host) {
   host.innerHTML = `<div class="ab">
     <div class="ab__stage">
       <div class="ab__mark">
-        <i class="ab__tile"></i>
+        <i class="ab__blob"></i>
+        ${DROPS.map(() => '<i class="ab__drop"></i>').join('')}
         <div class="ab__rig">${sininho('feliz', { size: 132 })}</div>
         <img class="ab__icon" src="media/marca/icone.webp" alt="" draggable="false">
       </div>
-      <div class="ab__word">${LET.map(([a, b], i) => `<span class="ab__l" style="--a:${a};--w:${b - a}"></span>`).join('')}</div>
+      <div class="ab__word">${LET.map(([a, b]) => `<span class="ab__l" style="--a:${a};--w:${b - a}"></span>`).join('')}${LET.map(() => '<i class="ab__ld"></i>').join('')}</div>
       <p class="ab__tag">Seus compromissos, sempre lembrados</p>
     </div></div>`;
   alive();
   return host.querySelector('.ab');
 }
 
-/* roda a coreografia; devolve uma função para parar */
 export function runIntro(ab, { onEnd } = {}) {
   const $ = (s) => ab.querySelector(s);
-  const mark = $('.ab__mark'), tile = $('.ab__tile'), rig = $('.ab__rig'), icon = $('.ab__icon'), word = $('.ab__word'), tag = $('.ab__tag');
-  const ls = [...ab.querySelectorAll('.ab__l')];
-  const snh = rig.querySelector('[data-snh]');
-  // medidas (px) da marca final: ícone 72 + 14 + palavra 46 de altura
-  const T = 122, ICON_F = 72, GAP = 14, WORD_H = 46, WORD_W = (WW / WH) * WORD_H;
-  const LOCK_W = ICON_F + GAP + WORD_W;
-  const markX = -LOCK_W / 2 + ICON_F / 2, wordX = -LOCK_W / 2 + ICON_F + GAP;
-  word.style.width = `${WORD_W}px`; word.style.height = `${WORD_H}px`;
-  word.style.transform = `translate(${wordX}px, ${-WORD_H / 2}px)`;
-  ls.forEach((l) => { const a = +l.style.getPropertyValue('--a'), w = +l.style.getPropertyValue('--w'); const k = WORD_H / WH;
-    l.style.left = `${a * k}px`; l.style.width = `${w * k}px`; l.style.backgroundSize = `${WW * k}px ${WORD_H}px`; l.style.backgroundPosition = `${-a * k}px 0`; });
-  const fit = Math.min(1, (innerWidth - 40) / Math.max(LOCK_W, 300));
-  ab.style.setProperty('--fit', fit);
+  const mark = $('.ab__mark'), blob = $('.ab__blob'), rigEl = $('.ab__rig'), icon = $('.ab__icon'), word = $('.ab__word'), tag = $('.ab__tag');
+  const drops = [...ab.querySelectorAll('.ab__drop')], ls = [...ab.querySelectorAll('.ab__l')], lds = [...ab.querySelectorAll('.ab__ld')];
+  const snh = rigEl.querySelector('[data-snh]'), R = snh && snh._rig && !snh._rig.pending ? snh._rig : null;
+  const T = 122, ICON_F = 70, GAP = 14, WORD_H = 44, WORD_W = (WW / WH) * WORD_H;
+  const LOCK_W = ICON_F + GAP + WORD_W, markX = -LOCK_W / 2 + ICON_F / 2, wordX = -LOCK_W / 2 + ICON_F + GAP;
+  const k = WORD_H / WH;
+  word.style.cssText = `width:${WORD_W}px;height:${WORD_H}px;transform:translate(${wordX}px,${-WORD_H / 2}px)`;
+  ls.forEach((l) => { const a = +l.style.getPropertyValue('--a'), w = +l.style.getPropertyValue('--w');
+    Object.assign(l.style, { left: `${a * k}px`, width: `${w * k}px`, backgroundSize: `${WW * k}px ${WORD_H}px`, backgroundPosition: `${-a * k}px 0` }); });
+  lds.forEach((d, i) => { const [a, b] = LET[i]; d.style.left = `${((a + b) / 2) * k}px`; });
+  ab.style.setProperty('--fit', Math.min(1, (innerWidth - 40) / Math.max(LOCK_W, 300)));
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const END = calm ? 1.3 : 3.35;
-  let t0 = 0, raf = 0, done = false, cues = { pulo: 0, tchau: 0, mood: 0 };
+  const END = calm ? 1.2 : 3.75;
+  if (R) { R.next.idle = 1e9; R.next.blink = 1e9; R.setMood('feliz', true); }
+  const cue = {};
+  const once = (n, t, at, fn) => { if (!cue[n] && t >= at) { cue[n] = 1; fn(); } };
 
+  let t0 = 0, raf = 0, done = false;
   const frame = () => {
     if (done) return;
     const now = performance.now();
     if (!t0) t0 = now;
-    const t = calm ? 3 : (now - t0) / 1000;
-    // 1) boneco surge
-    const pIn = spring(seg(t, 0, 0.75), 0.5, 1.6);
-    if (!cues.pulo && t > 0.02 && !calm) { cues.pulo = 1; act(snh, 'pulo'); }
-    if (!cues.tchau && t > 0.55 && !calm) { cues.tchau = 1; act(snh, 'tchau'); }
-    // 2) vira ícone (1.55 → 2.2)
-    const m = easeInOut(seg(t, 1.55, 2.15));
-    const tileK = back(seg(t, 1.5, 2.0), 1.4);
-    const zoom = lerp(1, 1.62, m);
-    const ry = lerp(0, -4, m);
-    const rigS = lerp(0.6, 1, pIn) * zoom;
-    // máscara arredondada fechando no quadrado do ícone (em px do rig sem zoom)
-    const mc = easeOut(seg(t, 1.5, 1.95)); const half = lerp(110, T / 2 / zoom, mc), rad = lerp(70, 30 / zoom, mc);
-    rig.style.transform = `translate(-50%, calc(-50% + ${ry}px)) scale(${rigS})`;
-    rig.style.opacity = Math.min(1, pIn * 1.6);
-    rig.style.clipPath = mc > 0 ? `inset(calc(50% - ${half}px) calc(50% - ${half}px) round ${rad}px)` : 'none';
-    tile.style.transform = `translate(-50%, -50%) scale(${Math.max(0, tileK)})`;
-    const iconK = easeOut(seg(t, 2.02, 2.24));
-    icon.style.opacity = iconK;
-    if (iconK >= 1) rig.style.visibility = 'hidden';
-    // 3) a marca se forma (ícone encolhe e desliza; 2.2 → 2.75)
-    const lk = spring(seg(t, 2.2, 2.95), 0.55, 1.1);
-    const ms = lerp(1, ICON_F / T, lk), mx = lerp(0, markX, lk);
-    mark.style.transform = `translate(${mx}px, 0) scale(${ms})`;
-    ls.forEach((l, i) => {
-      const k = seg(t, 2.36 + i * 0.055, 2.36 + i * 0.055 + 0.5);
-      const y = (1 - back(k, 2.2)) * 34, r = (1 - easeOut(k)) * (i % 2 ? -14 : 12);
-      l.style.opacity = clamp(k * 3);
-      l.style.transform = `translateY(${y}px) rotate(${r}deg)`;
+    const t = calm ? 3.7 : (now - t0) / 1000;
+
+    /* 1) gota cai e espirra */
+    const fall = eIn(seg(t, 0, 0.26)), land = seg(t, 0.26, 0.75);
+    const wob = t < 0.26 ? 0 : Math.exp(-6 * land) * Math.cos(land * Math.PI * 2.4);
+    let bw = 30, bh = 36, by = lerp(-260, 40, fall), radius = '50%';
+    if (t >= 0.26) { bw = lerp(70, 150, eOut(land)) * (1 + 0.25 * wob); bh = lerp(22, 30, eOut(land)) * (1 - 0.3 * wob); by = 50; }
+    drops.forEach((d, i) => {
+      const [vx, vy, s] = DROPS[i], dt = Math.max(0, t - 0.27) * 1.25;
+      const x = vx * 95 * dt, y = 46 + vy * 210 * dt + 380 * dt * dt, o = t < 0.27 ? 0 : clamp(1 - dt * 1.6);
+      d.style.width = d.style.height = `${s * 2}px`; d.style.opacity = o;
+      d.style.transform = `translate(${x - s}px, ${y - s}px) scale(${o ? 1 - dt * 0.6 : 0})`;
     });
-    const tk = easeOut(seg(t, 2.78, 3.15));
-    tag.style.opacity = tk; tag.style.transform = `translate(-50%, ${lerp(10, 0, tk)}px)`;
+    /* 2) salta do splash */
+    const pop = spring(seg(t, 0.3, 1.0), 6.5, 2.1), jump = Math.sin(Math.PI * seg(t, 0.3, 0.72)) * 46;
+    /* 3) atuação */
+    if (R) {
+      once('b1', t, 0.98, () => R.blink());
+      once('l1', t, 1.12, () => { R.s.px.t = -26; R.s.py.t = 4; R.s.lean.t = -2.2; });
+      once('b2', t, 1.42, () => R.blink());
+      once('l2', t, 1.5, () => { R.s.px.t = 26; R.s.py.t = 2; R.s.lean.t = 2.2; R.s.bY.t = -12; R.s.bYr.t = -14; });
+      once('l3', t, 1.86, () => { R.s.px.t = 0; R.s.py.t = 0; R.s.lean.t = 0; R.s.bY.t = 0; R.s.bYr.t = 0; });
+      once('sq', t, 1.95, () => { R.s.sq.t = 0.1; R.s.by.t = 10; });
+      once('up', t, 2.14, () => { R.s.sq.t = 0; R.s.by.t = 0; R.s.sq.vel -= 1.6; });
+    }
+    /* 4) metamorfose: poça → squircle; o boneco veste o quadrado */
+    const mo = eIO(seg(t, 2.05, 2.75)), grow = spring(seg(t, 2.05, 2.95), 6, 1.6);
+    if (t >= 2.0) { bw = lerp(150, T, grow); bh = lerp(30, T, grow); by = lerp(50, 0, eOut5(seg(t, 2.05, 2.6))); radius = `${lerp(50, 24.6, mo)}%`; }
+    blob.style.width = `${bw}px`; blob.style.height = `${bh}px`; blob.style.borderRadius = radius;
+    blob.style.transform = `translate(-50%, calc(-50% + ${by}px))`;
+    const zoom = lerp(1, 1.6, mo);
+    rigEl.style.transform = `translate(-50%, calc(-50% + ${lerp(lerp(30, -jump, pop), -3, mo)}px)) scale(${lerp(0.25, 1, pop) * zoom})`;
+    rigEl.style.opacity = clamp(pop * 3);
+    const cm = eOut(seg(t, 2.1, 2.6)), half = lerp(150, T / 2 / zoom, cm), rad = lerp(80, 30 / zoom, cm);
+    rigEl.style.clipPath = t >= 2.1 ? `inset(calc(50% - ${half}px) calc(50% - ${half}px) round ${rad}px)` : 'none';
+    const ik = eIO(seg(t, 2.45, 2.85));
+    icon.style.opacity = ik; icon.style.transform = `translate(-50%, -50%) scale(${lerp(0.96, 1, ik)})`;
+    rigEl.style.visibility = ik >= 1 ? 'hidden' : 'visible';
+    /* 5) a marca se forma */
+    const lk = spring(seg(t, 2.78, 3.5), 6.5, 1.3);
+    mark.style.transform = `translate(${lerp(0, markX, lk)}px, 0) scale(${lerp(1, ICON_F / T, lk)})`;
+    ls.forEach((l, i) => {
+      const a = 2.9 + i * 0.05, kk = seg(t, a, a + 0.45);
+      l.style.opacity = clamp(kk * 4);
+      l.style.transform = `translateY(${(1 - back(kk, 2.3)) * -38}px) rotate(${(1 - eOut(kk)) * (i % 2 ? -18 : 16)}deg) scale(${lerp(0.7, 1, eOut(kk))})`;
+      const sp = seg(t, a + 0.12, a + 0.42);
+      lds[i].style.opacity = sp > 0 && sp < 1 ? 1 - sp : 0;
+      lds[i].style.transform = `translate(-50%, 0) scale(${lerp(0.3, 1.8, eOut(sp))}, ${lerp(0.3, 0.6, eOut(sp))})`;
+    });
+    const tk = eOut(seg(t, 3.25, 3.6));
+    tag.style.opacity = tk; tag.style.transform = `translate(-50%, ${lerp(8, 0, tk)}px)`;
     if (t >= END) { done = true; onEnd && onEnd(); return; }
     raf = requestAnimationFrame(frame);
   };
