@@ -789,9 +789,6 @@ async function loadInviteInfo() {
   const box = document.querySelector('.login__invite b');
   if (box && inviteInfo?.ownerName) box.textContent = inviteInfo.ownerName;
 }
-/* o app mudou para meulembra.com.br: quem já usava precisa entrar uma vez no endereço novo (até o fim de jan/2027) */
-const movedNotice = () => (/(^|\.)meulembra\.com\.br$/.test(location.hostname) && Date.now() < Date.parse('2027-02-01') && !remembered()
-  ? `<div class="login__moved">${icon('sparkles', 18)}<span><b>O Lembra agora mora em meulembra.com.br.</b> Já tinha conta? Entre com o mesmo e-mail e senha: está tudo salvo. Depois, adicione o ícone novo na tela de início (o antigo pode apagar) e ative os avisos de novo.</span></div>` : '');
 function showLogin(errMsg = '') {
   // já entrou antes neste celular: abre direto em "Entrar", com o e-mail lembrado
   if (remembered()?.email && !showLogin.rem && !invitedBy()) { showLogin.rem = true; signupMode = false; }
@@ -806,7 +803,6 @@ function showLogin(errMsg = '') {
     <div class="brandwrap login__brand">${brand('completa', { h: 150, alt: esc(CONFIG.appName) })}</div>
     <h1 class="login__hook">${signupMode ? 'Crie sua conta grátis' : 'Que bom ter você aqui'}</h1>
     <p class="login__lead">${signupMode ? 'Em 2 minutos o Lembra aprende a sua rotina e passa a lembrar de tudo por você.' : 'Entre para ver o que tem para hoje.'}</p>
-    ${movedNotice()}
     ${invitedBy() ? `<div class="login__invite">${icon('users', 18)}<span><b>${esc(invitedBy())}</b> convidou você para a agenda de trabalho compartilhada. ${signupMode ? 'Crie sua conta' : 'Entre ou crie sua conta'} para participar — você não paga nada.</span></div>` : ''}
     <form class="form" data-login novalidate>
       ${signupMode ? `<div class="fgroup"><label class="flabel" for="l-name">Seu nome</label><input id="l-name" class="input" name="name" autocomplete="name" maxlength="40" placeholder="Seu primeiro nome" value="${esc(loginName)}"></div>` : ''}
