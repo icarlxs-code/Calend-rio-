@@ -218,7 +218,9 @@ export function openPlans({ blocking = false } = {}) {
   const setBuy = () => {
     const k = finalPlan(), cta = PLAN_INFO[k].cta, [what, price] = cta.split(' · ');
     const day = PER_DAY[k.replace(/_pix$/, '')];
-    buy.innerHTML = `<b>${esc(what)}</b>${price ? `<small>${esc(price)}${day ? ` · só ${day} por dia` : ''}</small>` : ''}`;
+    buy.innerHTML = `<i class="pw-buy__glow"></i><b>${esc(what)}</b>${price ? `<small>${esc(price)}${day ? ` · só ${day} por dia` : ''}</small>` : ''}`;
+    // só o Profissional (e o Fundadores) "acende" o botão; o Essencial fica num botão simples
+    buy.classList.toggle('is-hot', PLAN_INFO[k].tier === 'pro');
   };
   const paint = () => {
     box.innerHTML = [yearly ? 'essencial_ano' : 'essencial_mes', yearly ? 'pro_ano' : 'pro_mes'].map(card).join('');
@@ -248,7 +250,7 @@ export function openPlans({ blocking = false } = {}) {
     err.hidden = true;
     buy.disabled = true; buy.classList.add('is-busy');
     const label = buy.innerHTML;
-    buy.innerHTML = '<b>Abrindo o pagamento seguro…</b>';
+    buy.innerHTML = '<i class="pw-buy__glow"></i><b>Abrindo o pagamento seguro…</b>';
     try {
       const plan = finalPlan();
       const r = await api('/billing/checkout', { plan, returnUrl: location.href });
