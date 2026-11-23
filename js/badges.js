@@ -141,10 +141,11 @@ export const TIERS = [
 ];
 export const tierOf = (level) => [...TIERS].reverse().find((t) => level >= t.from) || TIERS[0];
 /* brasão do nível (o número fica no centro) */
-export const crest = (level, size = 96, opts = {}) => {
-  const t = tierOf(level);
-  return medal({ shape: 'crest', hue: t.hue, metal: t.metal, text: String(level), laurel: t.laurel, rays: t.rays, crown: t.crown, sparkles: t.sparkles, rainbow: t.rainbow }, size, opts);
-};
+/* arte nova (pacote "conquista"): cada brasão é uma imagem; não conquistado = preto e branco com cadeado */
+const pad3 = (n) => String(n).padStart(3, '0');
+const artImg = (src, size, opts, alt) => `<span class="bart${opts.locked ? ' is-locked' : ''}" style="--s:${size}px"><img src="${src}" alt="${alt || ''}" width="${size}" height="${size}" loading="lazy" decoding="async" draggable="false">${opts.locked ? '<i class="bart__lock" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></i>' : ''}</span>`;
+export const crestSrc = (level) => `media/emblemas/brasoes/nivel-${pad3(tierOf(level).from)}.webp`;
+export const crest = (level, size = 96, opts = {}) => artImg(crestSrc(level), size, opts, tierOf(level).name());
 
 /* ---------- os 105 emblemas ---------- */
 export const CATS = {
@@ -256,8 +257,5 @@ add({ id: 'vitalicio', cat: 'especial', metric: 'vip', goal: 1, name: () => 'Vit
 export { BADGES };
 export const badgeById = (id) => BADGES.find((b) => b.id === id);
 /* desenha um emblema da lista (metal pela raridade) */
-export function badgeArt(b, size = 96, opts = {}) {
-  if (b.crestTier) { const t = tierOf(b.goal); return medal({ shape: 'crest', hue: t.hue, metal: t.metal, text: b.text, laurel: t.laurel, rays: t.rays, crown: t.crown, sparkles: t.sparkles, rainbow: t.rainbow }, size, opts); }
-  const r = RARITY[b.rarity] || RARITY.comum;
-  return medal({ shape: b.shape, hue: b.hue, metal: r.metal, icon: b.icon, rays: b.rarity === 'epico' || b.rarity === 'lendario', sparkles: b.rarity === 'lendario', laurel: b.rarity === 'lendario' && b.shape !== 'heart' && b.shape !== 'diamond' }, size, opts);
-}
+export const badgeSrc = (b) => `media/emblemas/${b.id}.webp`;
+export function badgeArt(b, size = 96, opts = {}) { return artImg(badgeSrc(b), size, opts, b.name()); }
