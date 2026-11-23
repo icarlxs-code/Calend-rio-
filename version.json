@@ -1,15 +1,15 @@
 {
-  "version": "2.18.1",
-  "build": "srdlrg7a",
+  "version": "2.19.0",
+  "build": "yesztu43",
   "date": "2026-11-23",
   "min": "2.2.0",
-  "title": "Sair da conta volta direto pro Entrar",
+  "title": "Tudo grátis até 31/12/2026",
   "notes": [
-    "Ao sair da conta, a tela de Entrar aparece na hora (sem precisar fechar e abrir o app).",
-    "Nova aba Descobrir: sugestões de amigos de amigos, busca pelo e-mail, contatos e “Perto de você” (opcional).",
-    "Convide e ganhe: +300 XP por amigo que entrar pelo seu link e +40 XP por amizade nova.",
-    "Convite direto pelo WhatsApp ou copiando o link.",
-    "Veja quem está online agora e marque seus amigos próximos ⭐."
+    "Tudo grátis até 31 de dezembro de 2026, inclusive o assistente com IA.",
+    "Tocou na notificação da frase? Ela abre no app e fica até você fechar, com 6 modelos de imagem pra compartilhar.",
+    "Perto de você ligado: quem usa o Lembra a até 100 km, do mais perto ao mais longe.",
+    "Ache amigos pelo número de celular ou importando seus contatos (.vcf), também no iPhone.",
+    "Sair da conta funciona em qualquer tela."
   ],
-  "builtAt": "2026-11-23T18:42:06.189Z"
+  "builtAt": "2026-11-23T20:13:38.308Z"
 }

@@ -42,7 +42,7 @@ function last30(u) {
 let planOf = () => null;
 const ownerMail = () => String(CONFIG.adminEmail || '').toLowerCase();
 const isAppOwner = (u) => !!u && !!u.email && String(u.email).toLowerCase() === ownerMail();
-const planLabel = (p, u) => (isAppOwner(u) ? 'Proprietário' : !p ? 'Conta própria' : p.founderTeam && !p.vip ? 'Fundador' : p.plan === 'comp' ? `Liberado até ${new Date(p.compUntil).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : p.vip ? `Vitalício Nº ${String(p.vip.no).padStart(3, '0')}` : p.comp ? 'Cortesia' : { trial: 'Teste grátis', monthly: 'Mensal', lifetime: 'Vitalício', expired: 'Teste acabou', blocked: 'Sem plano', none: 'Sem plano' }[p.plan] || 'Conta própria');
+const planLabel = (p, u) => (isAppOwner(u) ? 'Proprietário' : !p ? 'Conta própria' : p.founderTeam && !p.vip ? 'Fundador' : p.plan === 'comp' ? `Liberado até ${new Date(p.compUntil).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : p.vip ? `Vitalício Nº ${String(p.vip.no).padStart(3, '0')}` : p.comp ? 'Cortesia' : { gratis: 'Grátis (lançamento)', trial: 'Teste grátis', monthly: 'Mensal', lifetime: 'Vitalício', expired: 'Teste acabou', blocked: 'Sem plano', none: 'Sem plano' }[p.plan] || 'Conta própria');
 /* versão do app da pessoa comparada com a última publicada */
 let latestVer = null;
 const cmpV = (a, b) => { const A = String(a || '0').split('.').map(Number), B = String(b || '0').split('.').map(Number); for (let i = 0; i < 3; i++) if ((A[i] || 0) !== (B[i] || 0)) return (A[i] || 0) > (B[i] || 0) ? 1 : -1; return 0; };

@@ -24,7 +24,7 @@ import { maybeOnboard } from './views/onboarding.js';
 import { showInstallGuide } from './install.js';
 import { onDone } from './reward.js';
 import { chime, setSound } from './sound.js';
-import { checkBilling, trialBanner, openPlans, confirmPayment, openPortal, buying, clearBuying, hasAccess, requireAccess, lastKnown } from './billing.js';
+import { checkBilling, trialBanner, openPlans, confirmPayment, openPortal, buying, clearBuying, hasAccess, requireAccess, lastKnown, emLancamento } from './billing.js';
 import { captureInvite, maybeAcceptInvite, startTeam, openShare, pendingInvite } from './equipe.js';
 import { personaOf } from './notifier.js';
 import { applyProfTheme, applyThemePref, setThemePref } from './theme.js';
@@ -256,6 +256,14 @@ const actions = {
   ranking: async () => (await import('./views/ranking.js')).openRanking(),
   'install-guide': () => showInstallGuide({ force: true }),
   plans: () => openPlans(),
+  'gratis-info': () => openSheet({ className: 'sheet--dialog', html: `<div class="dialog gratisdlg">
+      <span class="gratisdlg__ic">${icon('gift', 30)}</span>
+      <h3>O Lembra é grátis até 31 de dezembro de 2026</h3>
+      <p>Tudo liberado pra todo mundo durante o lançamento: agenda, modo Pessoal, lembretes, mascote, stories, amigos, ranking e o assistente com IA. Sem cartão e sem pegadinha.</p>
+      <p class="fhelp">A partir de 2027 vai ter planos pagos. A gente avisa com antecedência, e ninguém é cobrado sem escolher assinar.</p>
+      <button class="btn btn--primary btn--block" data-ok>Entendi</button>
+      <button class="btn btn--ghost btn--block" data-esconde>Não mostrar mais a faixa</button></div>`,
+    onMount: (x) => { x.el.querySelector('[data-ok]').onclick = () => x.close(); x.el.querySelector('[data-esconde]').onclick = () => { try { localStorage.setItem('lembra.gratisbar', '1'); } catch { /* ok */ } x.close(); render(); }; } }),
   'billing-portal': () => openPortal().catch((e) => toast(e.message || 'Não consegui abrir agora')),
   guide: async () => (await import('./views/guide.js')).openGuide(),
   ficha: async () => (await import('./views/ficha.js')).editFicha(),
@@ -1133,7 +1141,7 @@ async function startBilling() {
   render();
   // agenda compartilhada do dono: liga/desliga conforme o complemento pago
   startTeam().catch((e) => console.warn('equipe', e));
-  if (!st.active) {
+  if (!st.active && !emLancamento()) {
     // sem plano: tudo bloqueado até começar o teste grátis ou assinar; ao começar o teste, mostra o guia
     window.addEventListener('lembra:trial', () => { toast('Seu teste grátis de 7 dias começou ✓', { ms: 3500 }); showGuideSoon(); }, { once: true });
     return openPlans({ blocking: true });
@@ -1181,7 +1189,8 @@ function startApp() {
   store.hooks.note = (n) => import('./game.js').then((gm) => gm.onNote(n)).catch(() => {});
   setTimeout(() => import('./game.js').then((gm) => { gm.startGame(); gm.onGame(() => refreshLevelRings()); refreshLevelRings(); }).catch((e) => console.warn('conquistas', e)), 1800);
   // amizades: publica o cartão (nível, emblemas) e, se veio por um link de amizade, mostra o pedido
-  setTimeout(() => import('./friends.js').then((f) => { f.publishCard(); f.processFriendLink(); f.pingOnline(); setInterval(f.pingOnline, 60e3); document.addEventListener('visibilitychange', f.pingOnline); import('./game.js').then((gm) => gm.onGame(() => { clearTimeout(window.__cardT); window.__cardT = setTimeout(f.publishCard, 8000); })); }).catch(() => {}), 5000);
+  setTimeout(() => import('./frase.js').then((F) => F.confereAvisoTocado()).catch(() => {}), 1500);
+  setTimeout(() => import('./friends.js').then((f) => { f.publishCard(); f.processFriendLink(); f.pingOnline(); setTimeout(f.pertoAuto, 15e3); setInterval(f.pingOnline, 60e3); document.addEventListener('visibilitychange', f.pingOnline); import('./game.js').then((gm) => gm.onGame(() => { clearTimeout(window.__cardT); window.__cardT = setTimeout(f.publishCard, 8000); })); }).catch(() => {}), 5000);
   setTimeout(askReinstall, 2500); // aviso de instalar a versão nova (só para quem precisa)
   // versão: confere se há nova ao voltar para o app (atualiza sozinho) e mostra as novidades uma vez
   import('./version.js').then((v) => {
@@ -1519,6 +1528,8 @@ async function boot() {
 navigator.serviceWorker?.addEventListener('message', (ev) => {
   if (ev.data?.type === 'open' && ev.data.url) {
     window.__openSrc = 'notif';
+    // frase do aviso: abre no app (e fica até a pessoa fechar)
+    if (ev.data.notif) import('./frase.js').then((F) => { if (F.abreFrase(ev.data.notif)) caches.open('lembra-notif').then((c) => c.delete('/__notif')).catch(() => {}); }).catch(() => {});
     import('./stats.js').then((m) => m.seenServer(true));
     const h = ev.data.url.split('#')[1];
     if (h) openDeepLink('#' + h);

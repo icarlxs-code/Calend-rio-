@@ -73,20 +73,29 @@ test('achar pelo e-mail embaralhado; menor e quem desligou não são achados', a
   assert.equal((await call('/friends/email', ANA, { hash: ht })).data.row, null);
 });
 
-test('perto de você: só a região, só quem ligou, sem menores; desligar tira da lista', async () => {
-  await call('/friends/perto', DUD, { lat: -22.9, lon: -43.2 });
-  const r = (await call('/friends/perto', ANA, { lat: -22.91, lon: -43.21 })).data.rows;
-  assert.ok(r.some((x) => x.uid === DUD && x.motivo === 'Perto de você'));
-  assert.ok(!JSON.stringify(r).includes('-22.9'), 'nunca devolve coordenadas');
+test('perto de você: até 100 km, do mais perto ao mais longe, amigos também; sem coordenadas; sem menores; desligar tira', async () => {
+  await call('/friends/perto', DUD, { lat: -22.9035, lon: -43.2096 });   // ~0 km
+  await call('/friends/perto', CIC, { lat: -22.95, lon: -43.6 });       // ~40 km (e amigo da Bia)
+  await call('/friends/perto', BIA, { lat: -23.5, lon: -46.6 });        // São Paulo: ~350 km → fora
+  const r = (await call('/friends/perto', ANA, { lat: -22.9068, lon: -43.1729 })).data.rows;
+  const ids = r.map((x) => x.uid);
+  assert.deepEqual(ids.filter((u) => [DUD, CIC, BIA].includes(u)), [DUD, CIC], 'ordem por distância; SP fica de fora');
+  assert.match(r.find((x) => x.uid === DUD).motivo, /a menos de 2 km|a \d km/);
+  assert.match(r.find((x) => x.uid === CIC).motivo, /~40 km|~35 km|~45 km/);
+  assert.ok(!/-22\.9|-43\./.test(JSON.stringify(r)), 'nunca devolve coordenadas');
+  // amigo também aparece (marcado como amigo)
+  await amigos(ANA, DUD);
+  const r2 = (await call('/friends/perto', ANA, { lat: -22.9068, lon: -43.1729 })).data.rows;
+  assert.equal(r2[0].uid, DUD); assert.equal(r2[0].rel, 'amigo'); assert.match(r2[0].motivo, /^Amigo · /);
   assert.equal((await call('/friends/perto', TEO, { lat: -22.9, lon: -43.2 })).status, 403);
   await call('/friends/perto', DUD, { on: false });
-  assert.ok(!(await call('/friends/perto', ANA, { lat: -22.91, lon: -43.21 })).data.rows.some((x) => x.uid === DUD));
+  assert.ok(!(await call('/friends/perto', ANA, { lat: -22.9068, lon: -43.1729 })).data.rows.some((x) => x.uid === DUD));
 });
 
 test('amigos próximos: marcar e desmarcar; só amigos', async () => {
   await call('/friends/close', ANA, { uid: BIA, on: true });
   assert.equal((await call('/friends/list', ANA)).data.friends.find((f) => f.uid === BIA).close, true);
-  assert.equal((await call('/friends/close', ANA, { uid: DUD, on: true })).status, 400);
+  assert.equal((await call('/friends/close', ANA, { uid: TEO, on: true })).status, 400);
   await call('/friends/close', ANA, { uid: BIA, on: false });
   assert.equal((await call('/friends/list', ANA)).data.friends.find((f) => f.uid === BIA).close, false);
 });

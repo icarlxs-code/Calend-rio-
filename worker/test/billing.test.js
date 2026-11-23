@@ -1,3 +1,4 @@
+globalThis.__LEMBRA_FREE_UNTIL = 0; // estes testes conferem a cobrança depois do lançamento grátis (2027 em diante)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { startTrial, billingStatus, createCheckout, verifyStripe, handleStripeEvent, statusOf, untilOf, TRIAL_MS } from '../src/billing.js';

@@ -70,9 +70,14 @@ export function addonOf(b, now = Date.now()) {
 export const basePaid = (b, now = Date.now()) => !!b && (!!b.lifetime || (!!b.prepaidUntil && b.prepaidUntil > now) || (!!b.subActive && (!b.paidUntil || b.paidUntil > now - 3 * 864e5)));
 
 /* Situação da conta: team | lifetime | monthly | trial | expired | blocked | none */
+/* Lançamento: tudo grátis para todo mundo até 31/12/2026 23:59 (horário de Brasília).
+   Quem já pagou continua com o plano dele; quem não tem plano fica com "gratis" (tudo liberado, IA inclusa). */
+export const FREE_UNTIL_DEFAULT = Date.UTC(2027, 0, 1, 3, 0, 0);
+export const freeUntil = () => (globalThis.__LEMBRA_FREE_UNTIL ?? FREE_UNTIL_DEFAULT);
+const gratis = (now, extra = {}) => (now < freeUntil() ? { plan: 'gratis', active: true, tier: 'pro', freeUntil: freeUntil(), ...extra } : null);
 export function statusOf(b, me, now = Date.now()) {
   if (me.ws === 'main') return { plan: 'team', active: true };
-  if (!b) return { plan: 'none', active: false };
+  if (!b) return gratis(now) || { plan: 'none', active: false };
   const addon = addonOf(b, now);
   const extra = addon ? { addon } : {};
   if (b.lifetime) return { plan: 'lifetime', active: true, tier: 'pro', ...(b.founder ? { founder: true } : {}), ...(b.comp ? { comp: true } : {}), ...(b.comp && b.vip ? { vip: { no: b.vip.no, at: b.vip.at, ...(Number.isFinite(b.vip.sent) ? { sent: b.vip.sent } : {}) } } : {}), ...extra };
@@ -83,6 +88,7 @@ export function statusOf(b, me, now = Date.now()) {
   if (b.compUntil && b.compUntil > now) return { plan: 'comp', active: true, tier: 'pro', comp: true, compUntil: b.compUntil, ...extra };
   if (b.pending && now - b.pending.at < 4 * 864e5) extra.pending = b.pending.plan;
   if (b.trialEndsAt && b.trialEndsAt > now) return { plan: 'trial', active: true, tier: 'pro', trialEndsAt: b.trialEndsAt, ...extra };
+  { const g = gratis(now, extra); if (g) return g; }
   if (b.trialDenied) return { plan: 'blocked', active: false, reason: b.trialDenied, ...extra };
   return { plan: 'expired', active: false, trialEndsAt: b.trialEndsAt || null, ...extra };
 }
@@ -96,6 +102,7 @@ export function untilOf(st, now = Date.now()) {
   if (st.plan === 'trial') return st.trialEndsAt || 0;
   if (st.plan === 'comp') return st.compUntil || 0;
   if (st.plan === 'shared') return now + 864e5;
+  if (st.plan === 'gratis') return st.freeUntil || 0;
   return 0;
 }
 

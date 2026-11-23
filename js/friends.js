@@ -115,12 +115,20 @@ async function friendProfile(c, onRemoved) { return openPublicProfile(c.uid, c, 
 /* ---------- lista de amigos + pedidos + convidar ---------- */
 const foto = (c) => `<span class="fxava__in">${c.photo ? `<img src="${esc(c.photo)}" alt="">` : `<span style="background:${esc(c.color || '#7C5CFF')}">${esc((c.name || '?').charAt(0).toUpperCase())}</span>`}</span>`;
 const sugCard = (c) => `<div class="fsug" data-sug="${esc(c.uid)}">
-    <button class="fsug__x" data-dis="${esc(c.uid)}" aria-label="Dispensar">${icon('x', 14)}</button>
-    <button class="fsug__pp" data-pp="${esc(c.uid)}"><span class="fsug__ava">${foto(c)}</span><b>${esc((c.name || '').split(' ').slice(0, 2).join(' '))}</b><small>${esc(c.motivo || (c.job || `Nível ${c.level || 0}`))}</small></button>
-    ${c.rel === 'enviado' ? `<span class="fsug__ok">${icon('clock', 14)} Enviado</span>` : c.rel === 'recebido' ? `<button class="fsug__add" data-add="${esc(c.uid)}">Aceitar</button>` : `<button class="fsug__add" data-add="${esc(c.uid)}">${icon('plus', 14)} Adicionar</button>`}
+    ${c.rel === 'amigo' ? '' : `<button class="fsug__x" data-dis="${esc(c.uid)}" aria-label="Dispensar">${icon('x', 14)}</button>`}
+    <button class="fsug__pp" data-pp="${esc(c.uid)}"><span class="fsug__ava">${foto(c)}${c.online && isOnline(c.online) ? '<i class="fxava__on"></i>' : ''}</span><b>${esc((c.name || '').split(' ').slice(0, 2).join(' '))}</b><small>${esc(c.motivo || (c.job || `Nível ${c.level || 0}`))}</small></button>
+    ${c.rel === 'amigo' ? `<span class="fsug__ok is-amigo">${icon('check', 14)} Amigo</span>` : c.rel === 'enviado' ? `<span class="fsug__ok">${icon('clock', 14)} Enviado</span>` : c.rel === 'recebido' ? `<button class="fsug__add" data-add="${esc(c.uid)}">Aceitar</button>` : `<button class="fsug__add" data-add="${esc(c.uid)}">${icon('plus', 14)} Adicionar</button>`}
   </div>`;
 const PERTO = 'lembra.perto';
-const pertoLigado = () => { try { return localStorage.getItem(PERTO) === '1'; } catch { return false; } };
+// ligado por padrão (a pessoa desliga se quiser); o celular pede a permissão de localização na 1ª vez
+const pertoLigado = () => { try { return localStorage.getItem(PERTO) !== '0'; } catch { return true; } };
+/* atualiza a região em segundo plano (no máximo a cada 3 h), só se a permissão já foi dada */
+export async function pertoAuto() {
+  if (store.mode !== 'cloud' || !server() || !store.solo || store.shared || !store.user || !pertoLigado()) return;
+  try { if (Date.now() - Number(localStorage.getItem('lembra.perto.at') || 0) < 3 * 3600e3) return; } catch { /* ok */ }
+  try { const st = await navigator.permissions?.query({ name: 'geolocation' }); if (st && st.state !== 'granted') return; } catch { return; }
+  try { const pos = await localizacao(); await call('/friends/perto', pos); localStorage.setItem('lembra.perto.at', String(Date.now())); } catch { /* ok */ }
+}
 function localizacao() {
   return new Promise((res, rej) => {
     if (!navigator.geolocation) return rej(new Error('Seu aparelho não informa a localização.'));
@@ -128,7 +136,7 @@ function localizacao() {
   });
 }
 export function openFriends() {
-  let data = leCache('friends'), err = '', busca = '', sug = leCache('fsug') || [], perto = null, aba = 'amigos';
+  let data = leCache('friends'), err = '', busca = '', sug = leCache('fsug') || [], perto = null, pertoErr = '', aba = 'amigos';
   const S = import('./stories.js');
   let St = null, snhOn = false, G = null;
   import('./game.js').then((m) => { G = m; }).catch(() => {});
@@ -155,9 +163,9 @@ export function openFriends() {
     </div>`;
   };
   const achar = () => `<div class="fxfind">
-      ${contatosDisponivel() ? `<button class="fxfind__b" data-contatos><span class="fxfind__ic is-a">${icon('phone', 20)}</span><b>Contatos</b><small>quem já usa</small></button>` : ''}
+      <button class="fxfind__b" data-contatos><span class="fxfind__ic is-a">${icon('phone', 20)}</span><b>Contatos</b><small>quem já usa</small></button>
       <button class="fxfind__b" data-email><span class="fxfind__ic is-b">${icon('mail', 20)}</span><b>E-mail</b><small>buscar alguém</small></button>
-      <button class="fxfind__b" data-perto><span class="fxfind__ic is-c">${icon('pin', 20)}</span><b>Perto de você</b><small>${pertoLigado() ? 'ligado' : 'opcional'}</small></button>
+      <button class="fxfind__b" data-perto><span class="fxfind__ic is-c">${icon('pin', 20)}</span><b>Perto de você</b><small>${pertoLigado() ? 'ligado · 100 km' : 'desligado'}</small></button>
     </div>`;
   const html = () => {
     const vis = St ? St.visitasCache().list : [];
@@ -165,7 +173,9 @@ export function openFriends() {
     const on = todos.filter((c) => isOnline(c.online));
     const prox = todos.filter((c) => c.close);
     const resto = todos.filter((c) => !c.close);
-    const lista = [...(perto || []), ...sug.filter((x) => !(perto || []).some((p) => p.uid === x.uid))];
+    const lista = sug.filter((x) => !(perto || []).some((p) => p.uid === x.uid && p.rel !== 'amigo'));
+    const pertoHtml = (n = 30) => !pertoLigado() ? '' : perto === null ? `<h3 class="fx__h">${icon('pin', 18)} Perto de você</h3><p class="fhelp">Procurando quem usa o Lembra perto de você… (o celular pode pedir permissão de localização)</p>`
+      : `<h3 class="fx__h">${icon('pin', 18)} Perto de você · até 100 km</h3>${pertoErr ? `<p class="fhelp">${esc(pertoErr)} <button class="fx__vertodas" data-perto-tenta>Tentar de novo</button></p>` : perto.length ? `<div class="fsugs">${perto.slice(0, n).map(sugCard).join('')}</div>` : '<p class="fhelp">Ninguém do Lembra num raio de 100 km ainda. Convide quem tá por perto! 😉</p>'}`;
     return `<div class="fx">
       <header class="fx__head">
         <button class="fx__pill" data-close>Fechar</button>
@@ -177,7 +187,7 @@ export function openFriends() {
       ${aba === 'descobrir' ? `
         ${achar()}
         ${premiosHtml()}
-        ${perto && !perto.length ? '<p class="fhelp">Ninguém do Lembra perto de você ainda (só aparece quem também ligou). Convide quem tá do lado! 😉</p>' : ''}
+        ${pertoHtml()}
         <h3 class="fx__h">${icon('users', 18)} Pessoas que você talvez conheça</h3>
         ${lista.length ? `<div class="fsugs">${lista.map(sugCard).join('')}</div>` : '<p class="fhelp">Assim que seus amigos tiverem amigos no Lembra, as sugestões aparecem aqui. Procure pelos contatos ou pelo e-mail ☝️</p>'}
         <label class="fxachavel"><input type="checkbox" data-achavel ${achavel() ? 'checked' : ''}><span><b>Deixar quem tem meu e-mail ou celular me encontrar</b><small>Ninguém vê seu e-mail nem seu número: eles são embaralhados no aparelho.</small></span></label>`
@@ -188,6 +198,7 @@ export function openFriends() {
       ${vis.length ? `<button class="fvisit" data-visitas><span class="fvisit__faces">${vis.slice(0, 3).map((c) => framedPhoto(c, 30)).join('')}</span><span><b>${vis.length} ${vis.length === 1 ? 'pessoa visitou' : 'pessoas visitaram'} seu perfil</b><small>Toque pra ver quem foi 👀</small></span>${icon('right', 16)}</button>` : ''}
       ${err ? `<p class="fhelp">${esc(err)}</p>` : !data ? '<div class="fx__load"><i></i><i></i><i></i></div>' : `
       ${data.requests.length ? `<h3 class="fx__h">${icon('bell', 18)} Pedidos de amizade · ${data.requests.length}</h3>${data.requests.map((c) => `<button class="fxrow" data-req="${esc(c.uid)}"><span class="fxava">${foto(c)}</span><span class="fxrow__id"><b>${esc(c.name)}</b><small>quer ser seu amigo</small></span><span class="fx__ver">Ver</span></button>`).join('')}` : ''}
+      ${perto && perto.length ? pertoHtml(10) : ''}
       ${lista.length ? `<div class="fxsugmini"><h3 class="fx__h">${icon('users', 18)} Sugestões pra você <button class="fx__vertodas" data-aba="descobrir">Ver todas</button></h3><div class="fsugs">${lista.slice(0, 6).map(sugCard).join('')}</div></div>` : ''}
       ${prox.length ? `<h3 class="fx__h">${icon('star', 18)} Amigos próximos · ${prox.length}</h3>${prox.map(card).join('')}` : ''}
       ${resto.length || !todos.length ? `<h3 class="fx__h">${icon('users', 18)} ${prox.length ? 'Outros amigos' : 'Seus amigos'}${resto.length ? ` · ${resto.length}` : ''}</h3>` : ''}
@@ -216,14 +227,15 @@ export function openFriends() {
     if (data) x.el.querySelectorAll('[data-st-owner]').forEach((b) => { const c = data.friends.find((f) => f.uid === b.dataset.stOwner); if (c && isOnline(c.online)) b.classList.add('is-on'); });
     x.el.querySelectorAll('[data-req]').forEach((b) => (b.onclick = () => openPublicProfile(b.dataset.req).then((pp) => { const t = setInterval(() => { if (pp.closed) { clearInterval(t); load(x); } }, 500); })));
     const ct = x.el.querySelector('[data-contatos]');
-    if (ct) ct.onclick = async () => {
-      const rows = await buscarPelosContatos(); if (!rows) return;
-      if (!rows.length) return toast('Nenhum dos contatos escolhidos usa o Lembra ainda. Convide! 😉');
+    const achou = (rows) => {
+      if (!rows.length) return toast('Ninguém desses contatos usa o Lembra ainda. Convide! Você ganha +300 XP por quem entrar 😉', { ms: 4500 });
       sug = [...rows.map((r) => ({ ...r, motivo: 'Nos seus contatos' })), ...sug.filter((s2) => !rows.some((r) => r.uid === s2.uid))]; aba = 'descobrir'; x.set(html());
-      toast(`${rows.length} ${rows.length === 1 ? 'pessoa' : 'pessoas'} dos seus contatos já ${rows.length === 1 ? 'usa' : 'usam'} o Lembra 🎉`);
+      toast(`${rows.length} ${rows.length === 1 ? 'pessoa' : 'pessoas'} dos seus contatos já ${rows.length === 1 ? 'usa' : 'usam'} o Lembra 🎉 Toque em Adicionar`);
     };
+    if (ct) ct.onclick = () => contatosMenu(achou);
     const em = x.el.querySelector('[data-email]'); if (em) em.onclick = () => porEmail(() => load(x));
     const pt = x.el.querySelector('[data-perto]'); if (pt) pt.onclick = () => pertoDeVoce(x, true);
+    const pte = x.el.querySelector('[data-perto-tenta]'); if (pte) pte.onclick = () => { pertoErr = ''; perto = null; x.set(html()); pertoDeVoce(x, false); };
     const ach = x.el.querySelector('[data-achavel]'); if (ach) ach.onchange = () => { try { localStorage.setItem('lembra.achavel', ach.checked ? '1' : '0'); } catch { /* ok */ } lastCard = ''; publishCard(); toast(ach.checked ? 'Quem tem seu e-mail ou celular pode te achar' : 'Ninguém te acha pelo e-mail ou celular'); };
     x.el.querySelectorAll('[data-pp]').forEach((b) => (b.onclick = () => openPublicProfile(b.dataset.pp).then((pp) => { const t = setInterval(() => { if (pp.closed) { clearInterval(t); load(x); carregaSug(x); } }, 500); })));
     x.el.querySelectorAll('[data-add]').forEach((b) => (b.onclick = async () => {
@@ -239,16 +251,18 @@ export function openFriends() {
   const carregaSug = async (x) => { try { const r = await call('/friends/suggest'); const contatos = sug.filter((y) => y.motivo === 'Nos seus contatos' && !r.rows.some((z) => z.uid === y.uid)); sug = [...contatos, ...r.rows]; gravaCache('fsug', sug); if (!x.closed) x.set(html()); } catch { /* ok */ } };
   const pertoDeVoce = async (x, pediu) => {
     if (pediu && pertoLigado()) {
-      const des = await confirmDialog({ title: 'Perto de você está ligado', text: 'Você aparece para quem também ligou e está na sua região (uns 5 km). Ninguém vê onde você está. Quer desligar?', ok: 'Desligar', cancel: 'Manter' });
-      if (des) { try { localStorage.removeItem(PERTO); } catch { /* ok */ } perto = null; call('/friends/perto', { on: false }).catch(() => {}); x.set(html()); toast('Perto de você desligado'); return; }
-    } else if (pediu && !(await confirmDialog({ title: 'Ver quem usa o Lembra perto de você?', text: 'Você passa a aparecer para quem também ligou e está na mesma região (uns 5 km). Ninguém vê a sua localização nem a distância, só “Perto de você”. Dá pra desligar quando quiser.', ok: 'Ligar' }))) return;
+      const des = await confirmDialog({ title: 'Desligar “Perto de você”?', text: 'Com ele ligado, quem usa o Lembra num raio de 100 km te encontra (só aparece a distância aproximada, nunca onde você está). Desligado, você some da lista e também não vê quem está perto.', ok: 'Desligar', danger: true });
+      if (des) { try { localStorage.setItem(PERTO, '0'); } catch { /* ok */ } perto = null; call('/friends/perto', { on: false }).catch(() => {}); x.set(html()); toast('Perto de você desligado'); }
+      return;
+    }
+    if (pediu) { try { localStorage.setItem(PERTO, '1'); } catch { /* ok */ } }
     try {
       const pos = await localizacao();
       const r = await call('/friends/perto', pos);
-      try { localStorage.setItem(PERTO, '1'); } catch { /* ok */ }
-      perto = r.rows || []; if (pediu) aba = 'descobrir'; if (!x.closed) x.set(html());
-      if (pediu) toast(perto.length ? `${perto.length} ${perto.length === 1 ? 'pessoa' : 'pessoas'} perto de você 📍` : 'Pronto! Quem ligar perto de você aparece aqui 📍');
-    } catch (e) { if (pediu) toast(e.message || 'Não consegui agora.'); }
+      try { localStorage.setItem('lembra.perto.at', String(Date.now())); } catch { /* ok */ }
+      perto = r.rows || []; pertoErr = ''; if (pediu) aba = 'descobrir'; if (!x.closed) x.set(html());
+      if (pediu) toast(perto.length ? `${perto.length} ${perto.length === 1 ? 'pessoa' : 'pessoas'} perto de você 📍` : 'Pronto! Quem estiver perto aparece aqui 📍');
+    } catch (e) { perto = []; pertoErr = e.message || 'Não consegui ver quem está perto agora.'; if (!x.closed) x.set(html()); if (pediu) toast(pertoErr); }
   };
   const load = async (a) => {
     try { data = await call('/friends/list'); gravaCache('friends', data); err = ''; } catch (e) { err = e.message || 'Não consegui carregar agora.'; }
@@ -263,6 +277,44 @@ export function openFriends() {
   return a;
 }
 
+/* contatos: agenda do celular (Android), número de celular ou arquivo de contatos (.vcf, funciona no iPhone) */
+function contatosMenu(achou) {
+  return openSheet({ className: 'sheet--actions sheet--phm', html: `<div class="phm">
+    <div class="phm__head"><b>Achar amigos pelos contatos</b><small>Os números são embaralhados no seu celular: o Lembra nunca vê a sua agenda</small></div>
+    <div class="phm__grp">
+      ${contatosDisponivel() ? `<button class="phm__row" data-agenda><span class="phm__ic is-cam">${icon('users', 21)}</span><span class="phm__t"><b>Escolher na agenda do celular</b><small>Marque vários de uma vez</small></span>${icon('right', 16)}</button>` : ''}
+      <button class="phm__row" data-numero><span class="phm__ic is-story">${icon('phone', 21)}</span><span class="phm__t"><b>Digitar um número</b><small>O celular de alguém que você conhece</small></span>${icon('right', 16)}</button>
+      <label class="phm__row"><span class="phm__ic is-n">${icon('download', 21)}</span><span class="phm__t"><b>Importar arquivo de contatos (.vcf)</b><small>iPhone: Contatos → Listas → segure “Todos” → Exportar</small></span>${icon('right', 16)}<input type="file" accept=".vcf,text/vcard,text/x-vcard" data-vcf hidden></label>
+    </div>
+    <button class="phm__cancel" data-close>Cancelar</button></div>`,
+  onMount: (x) => {
+    const ag = x.el.querySelector('[data-agenda]'); if (ag) ag.onclick = async () => { x.close(); const rows = await buscarPelosContatos(); if (rows) achou(rows); };
+    x.el.querySelector('[data-numero]').onclick = () => { x.close(); porNumero(achou); };
+    x.el.querySelector('[data-vcf]').onchange = async (e) => {
+      const f = e.target.files && e.target.files[0]; if (!f) return; x.close();
+      try { const tels = telsDoVcf(await f.text()); if (!tels.length) return toast('Não achei números nesse arquivo.'); toast(`Procurando entre ${tels.length} números…`); achou(await buscarTels(tels)); }
+      catch (er) { toast(er.message || 'Não consegui ler o arquivo.'); }
+    };
+  } });
+}
+function porNumero(achou) {
+  return openSheet({ className: 'sheet--dialog', html: `<div class="dialog fmail"><h3>Buscar pelo celular</h3><p>Digite o número com DDD.</p>
+    <input class="field" type="tel" inputmode="tel" autocomplete="off" placeholder="(21) 99999-9999" data-n>
+    <div data-res></div>
+    <button class="btn btn--primary btn--block" data-go>Buscar</button><button class="btn btn--ghost btn--block" data-close>Fechar</button></div>`,
+  onMount: (x) => {
+    const inp = x.el.querySelector('[data-n]'), res = x.el.querySelector('[data-res]');
+    setTimeout(() => inp.focus(), 250);
+    const go = async () => {
+      if (inp.value.replace(/\D/g, '').length < 10) { res.innerHTML = '<p class="fhelp">Digite o número com DDD.</p>'; return; }
+      res.innerHTML = '<div class="fx__load"><i></i><i></i><i></i></div>';
+      try { const rows = await buscarTels([inp.value]); if (!rows.length) { res.innerHTML = '<p class="fhelp">Não achei ninguém com esse número (ou a pessoa ainda não colocou o celular no perfil). Mande o convite: você ganha +300 XP se ela entrar.</p>'; return; } x.close(); achou(rows); }
+      catch (e) { res.innerHTML = `<p class="fhelp">${esc(e.message || 'Não consegui agora.')}</p>`; }
+    };
+    x.el.querySelector('[data-go]').onclick = go;
+    inp.onkeydown = (e) => { if (e.key === 'Enter') go(); };
+  } });
+}
 /* achar alguém pelo e-mail: o e-mail é embaralhado no aparelho antes de sair */
 function porEmail(onDone) {
   return openSheet({ className: 'sheet--dialog', html: `<div class="dialog fmail"><h3>Buscar pelo e-mail</h3><p>Digite o e-mail que a pessoa usa no Lembra.</p>
@@ -419,6 +471,27 @@ export async function openPublicProfile(uid, prev = {}, onRemoved) {
    Só funciona onde o sistema oferece o seletor de contatos (Android/Chrome e o app das lojas).
    Os números viram códigos embaralhados (SHA-256) NO APARELHO: o servidor nunca recebe os números. */
 export const contatosDisponivel = () => !!(navigator.contacts && navigator.contacts.select) || !!window.Capacitor?.Plugins?.Contacts;
+/* todos os jeitos que um número pode estar salvo: com/sem +55, com/sem o 9 da frente */
+async function hashesDe(tels) {
+  const out = new Set();
+  for (const t of tels.slice(0, 3000)) {
+    let d = String(t || '').replace(/\D/g, '');
+    if (d.startsWith('55') && d.length >= 12) d = d.slice(2);
+    if (d.startsWith('0')) d = d.replace(/^0+/, '');
+    const vs = [d];
+    if (d.length === 10 && /[6-9]/.test(d[2])) vs.push(d.slice(0, 2) + '9' + d.slice(2));
+    for (const v of vs) { const h = await hashTel(v); if (h) out.add(h); }
+  }
+  return [...out].slice(0, 1500);
+}
+/* lê um arquivo de contatos (.vcf), como o que o iPhone/Google exportam */
+export function telsDoVcf(txt) { return [...String(txt || '').matchAll(/^TEL[^:]*:(.+)$/gim)].map((m) => m[1].trim()); }
+export async function buscarTels(tels) {
+  const hashes = await hashesDe(tels);
+  if (!hashes.length) return [];
+  const r = await call('/friends/contacts', { hashes });
+  return r.rows || [];
+}
 export async function buscarPelosContatos() {
   if (!(await confirmDialog({ title: 'Procurar amigos nos seus contatos?', text: 'Você escolhe quais contatos compartilhar. Os números são embaralhados no seu celular antes de sair dele: o Lembra só descobre quem dos escolhidos já usa o app. Nada fica guardado.', ok: 'Escolher contatos' }))) return null;
   let tels = [];
@@ -426,8 +499,6 @@ export async function buscarPelosContatos() {
     if (navigator.contacts?.select) { const cs = await navigator.contacts.select(['tel'], { multiple: true }); tels = cs.flatMap((c) => c.tel || []); }
     else if (window.Capacitor?.Plugins?.Contacts) { const r = await window.Capacitor.Plugins.Contacts.getContacts({ projection: { phones: true } }); tels = (r.contacts || []).flatMap((c) => (c.phones || []).map((p) => p.number)); }
   } catch { return null; }
-  const hashes = [...new Set((await Promise.all(tels.slice(0, 1500).map(hashTel))).filter(Boolean))];
-  if (!hashes.length) { toast('Nenhum número escolhido.'); return []; }
-  const r = await call('/friends/contacts', { hashes });
-  return r.rows || [];
+  if (!tels.length) { toast('Nenhum número escolhido.'); return []; }
+  return buscarTels(tels);
 }

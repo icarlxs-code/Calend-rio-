@@ -26,8 +26,12 @@ const stillValid = (b, now = Date.now()) => !!b && !!b.active && (
 export const lastKnown = () => { try { const j = JSON.parse(localStorage.getItem(LS_LAST) || 'null'); return j && j.ws === store.workspace && stillValid(j) ? j : null; } catch { return null; } };
 
 /* A conta pode usar o app agora? (conta própria sem plano ativo: tudo travado) */
+/* Lançamento: tudo grátis para todo mundo até 31/12/2026 às 23:59 (horário de Brasília) */
+export const FREE_UNTIL = Date.UTC(2027, 0, 1, 3, 0, 0);
+export const emLancamento = (now = Date.now()) => now < FREE_UNTIL;
 export function hasAccess() {
   if (!store.solo || store.mode !== 'cloud') return true;
+  if (emLancamento()) return true;
   const b = store.billing;
   if (!b || !b.active) return false;
   if (b.plan === 'trial' && !(b.trialEndsAt > Date.now())) return false;
@@ -83,6 +87,14 @@ export function trialBanner() {
       <span class="trialbar__go">Renovar</span>
     </button>`;
   }
+  if (emLancamento() && (!b || !['lifetime', 'monthly', 'comp'].includes(b.plan))) {
+    try { if (localStorage.getItem('lembra.gratisbar') === '1') return ''; } catch { /* ok */ }
+    return `<button class="trialbar trialbar--free" data-action="gratis-info">
+      <span class="trialbar__ic">${icon('gift', 16)}</span>
+      <span><b>Tudo grátis até 31/12/2026</b><small>Todos os recursos liberados, inclusive o assistente com IA</small></span>
+      <span class="trialbar__go">Saiba mais</span>
+    </button>`;
+  }
   if (!b || b.plan !== 'trial') return '';
   const left = b.trialEndsAt - Date.now();
   return `<button class="trialbar${left < 3 * 3600e3 ? ' is-ending' : ''}" data-action="plans">
@@ -125,7 +137,7 @@ const COMPARE = [
   ['Ranking semanal com prêmios (meses grátis)', false, true],
 ];
 /* plano com tudo (Profissional): teste, vitalício, cortesia, equipe e quem assina o Profissional */
-export const hasPro = () => { const b = store.billing || {}; return !store.solo || ['team', 'trial', 'lifetime', 'comp', 'shared'].includes(b.plan) || (b.plan === 'monthly' && b.tier !== 'essencial'); };
+export const hasPro = () => { const b = store.billing || {}; return !store.solo || emLancamento() || ['team', 'trial', 'lifetime', 'comp', 'shared'].includes(b.plan) || (b.plan === 'monthly' && b.tier !== 'essencial'); };
 export function openPlans({ blocking = false } = {}) {
   document.querySelector('.paywall')?.remove();
   const b = store.billing || {};

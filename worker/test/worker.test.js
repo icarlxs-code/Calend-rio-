@@ -1,3 +1,4 @@
+globalThis.__LEMBRA_FREE_UNTIL = 0; // estes testes conferem a cobrança depois do lançamento grátis (2027 em diante)
 /* Testes do servidor grátis: roda o código do Worker em Node com um KV de mentira
    e intercepta os envios de notificação (decifrando cada um). */
 import { test, before } from 'node:test';

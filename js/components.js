@@ -135,6 +135,8 @@ export function openSheet({ html, onMount, className = '', onClose }) {
       <div class="sheet__inner"></div>
     </section>`;
   root.appendChild(wrap);
+  // janelas sempre na frente da tela de planos (sem depender de :has, que iPhones antigos não têm)
+  root.style.zIndex = document.querySelector('.paywall') ? '600' : '';
   const inner = wrap.querySelector('.sheet__inner');
   const panel = wrap.querySelector('.sheet');
   const api = {

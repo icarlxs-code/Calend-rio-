@@ -1,11 +1,11 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-srdlrg7a'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-yesztu43'/*CACHE*/;
 const MEDIA = 'lembra-media-v1';
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster5.jpg',
   ...Array.from({ length: 67 }, (_, i) => `media/intro5/f${String(i + 1).padStart(3, '0')}.webp`),
   'media/logos/pura-vida.jpg', 'media/lembra-logo.jpg', 'media/marca/completa-preto.png', 'assets/fundos/raios.webp', 'assets/fundos/leque.webp', 'media/marca/completa-branco.png', 'media/marca/simbolo-preto.png', 'media/marca/simbolo-branco.png', 'media/marca/palavra-preto.png', 'media/marca/palavra-branco.png', 'media/marca/letra-preto.png', 'media/marca/letra-branco.png', 'version.json', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/c-WRYRB2MQ.js', 'dist/c-DUMWLWHN.js', 'dist/c-X6MBT7CJ.js', 'dist/c-3FMPJK3N.js', 'dist/c-3C3LSXZZ.js', 'dist/c-RWS76EUP.js', 'dist/c-TFFP4INZ.js', 'dist/c-THBHZCWQ.js', 'dist/c-G752TWB3.js', 'dist/c-BQLRHYS3.js', 'dist/c-VPHY2OW6.js', 'dist/c-UJUY5D4O.js', 'dist/c-TR5KDDSD.js', 'dist/c-C6OYU5KC.js', 'dist/c-BDSB4XQ6.js', 'dist/c-FVCSU66C.js', 'dist/c-M7JQ7PTK.js', 'dist/c-WBQCZUPQ.js', 'dist/c-BB2EZI3A.js', 'dist/c-Q5DXAEYN.js', 'dist/c-YMZV34HR.js', 'dist/c-FJTUGP65.js', 'dist/c-DTJ66F55.js', 'dist/c-YFJYQIK6.js', 'dist/c-JW7WXDGR.js', 'dist/c-YI6IDJPI.js', 'dist/c-I75AAJN7.js', 'dist/c-UBKO7SJ4.js', 'dist/c-UHA7FX65.js', 'dist/c-AORAVPBE.js', 'dist/c-3WD57WBN.js', 'dist/c-EK2KE5PS.js', 'dist/c-YJWIDQPT.js', 'dist/c-UL57WTNK.js', 'dist/c-E5WVLINM.js', 'dist/c-57G6BMVS.js', 'dist/c-F75CPEKN.js', 'dist/c-GQRHSRKD.js', 'dist/c-DLUCCDLI.js', 'dist/a-SRDLRG7A.js', 'dist/c-BDIAIFN7.js', 'dist/c-WHF5EEDP.js', 'dist/c-H6UVIS6F.js', 'dist/c-V5L5S3TJ.js', 'dist/c-ZDIBOIEJ.js', 'dist/c-RE2PKLST.js', 'dist/c-SPXUTIEO.js', 'dist/c-5JWQ6ZAE.js', 'dist/c-TQP6IZTI.js', 'dist/c-EBIUKIRO.js', 'dist/c-ETGHQ7QW.js', 'dist/c-A4LAMRJM.js', 'dist/c-5PW2AXJI.js', 'dist/c-EARKWQVU.js', 'dist/c-XWYHGWZL.js', 'dist/c-JDOLXQ7V.js', 'dist/c-YEQ5XREB.js', 'dist/c-6PVVLET6.js', 'dist/c-6SQNP2X5.js', 'dist/c-S4G6ANPC.js', 'dist/c-ILWWL4JY.js', 'dist/c-OM2L62BF.js', 'dist/c-2XFQERXZ.js', 'dist/c-O54I4QAW.js', 'dist/c-7FL2JLHL.js', 'dist/c-UN5BQ6JN.js', 'dist/c-AQS2OIYN.js', 'dist/c-MSQGGUZE.js', 'dist/c-XRTKZDKA.js', 'dist/c-BDAF2TUO.js', 'dist/c-MHZGZLXA.js', 'dist/c-L4FZAR7E.js', 'dist/c-73TCWLZL.js', 'dist/c-DWBEWQEH.js', 'dist/c-G3G3UGJI.js', 'dist/c-ZFYSH7RE.js', 'dist/c-Q6BWNKKZ.js', 'dist/c-3X53J4ZN.js', 'dist/c-XQMLTXRG.js', 'dist/c-FQJ5CCBF.js', 'dist/c-W7VIVO4T.js', 'dist/c-3VF3KZPI.js', 'dist/c-ZUAJ4OTH.js', 'dist/c-5PVYAXQB.js', 'dist/c-JRZKGWYQ.js', 'dist/c-S22CTDX7.js', 'dist/c-C3ZIMZ22.js',
+  /*FILES*/ 'dist/c-TTUQ2IZ4.js', 'dist/c-WMHEVGJF.js', 'dist/c-DDZN2DBW.js', 'dist/c-XLGFIYN7.js', 'dist/c-QFELOREW.js', 'dist/c-V4J5VNXM.js', 'dist/c-CDJEZQ2D.js', 'dist/c-DDU6ZLYJ.js', 'dist/c-BAPGWJD7.js', 'dist/c-O2TMTJSR.js', 'dist/c-MG7ENGXT.js', 'dist/c-LGRXI3QS.js', 'dist/c-TMCSMNCU.js', 'dist/c-W3TN7JQR.js', 'dist/c-SEIHGK7M.js', 'dist/c-RHOGGEVP.js', 'dist/c-PY6NW6PW.js', 'dist/c-V2J4YPN6.js', 'dist/c-PGHFHSYP.js', 'dist/c-AYRKOEZP.js', 'dist/c-FHDYM5DB.js', 'dist/c-3VKITB4D.js', 'dist/c-KSCJCUHU.js', 'dist/c-ZKO6XSAW.js', 'dist/c-AW7SUO6I.js', 'dist/c-JW7WXDGR.js', 'dist/c-LFTI5ICO.js', 'dist/c-I75AAJN7.js', 'dist/c-TK3ZZRV3.js', 'dist/c-ULNLHYMP.js', 'dist/c-CHX2BSLF.js', 'dist/c-653HENWH.js', 'dist/c-UOFD7KMV.js', 'dist/c-ESEGIP5Z.js', 'dist/c-OAZMRU3P.js', 'dist/c-26PAAXDY.js', 'dist/c-RRB37KM7.js', 'dist/c-JQ3S2LUU.js', 'dist/c-25NP2CHL.js', 'dist/c-2J6LFMUO.js', 'dist/a-YESZTU43.js', 'dist/c-UXXGFI5Y.js', 'dist/c-YWUDYUID.js', 'dist/c-ANSZC74K.js', 'dist/c-GBLETAS3.js', 'dist/c-AJKGA4AV.js', 'dist/c-3SXRFBWX.js', 'dist/c-NSQ265KW.js', 'dist/c-V74FTF2Z.js', 'dist/c-COL56JB4.js', 'dist/c-4PL2GGH4.js', 'dist/c-ETGHQ7QW.js', 'dist/c-FS6CPRFN.js', 'dist/c-UCQ42QTM.js', 'dist/c-4ELIPJFZ.js', 'dist/c-5AFCWBQ2.js', 'dist/c-CR5OCSQF.js', 'dist/c-XRCEGBG4.js', 'dist/c-6PVVLET6.js', 'dist/c-A66F2VER.js', 'dist/c-57MI72ZS.js', 'dist/c-L2HMYMCD.js', 'dist/c-53GZ4NBB.js', 'dist/c-YVO6UGS7.js', 'dist/c-O54I4QAW.js', 'dist/c-GKFPWES6.js', 'dist/c-ELKMSDT2.js', 'dist/c-35VYA6VT.js', 'dist/c-DC4XCZF2.js', 'dist/c-3BQY6PQT.js', 'dist/c-AVMK2YWR.js', 'dist/c-HF7P3X4X.js', 'dist/c-FFTCWWZZ.js', 'dist/c-73TCWLZL.js', 'dist/c-DWBEWQEH.js', 'dist/c-OA7MAXMQ.js', 'dist/c-NJ4BG7OV.js', 'dist/c-WQKUQKKZ.js', 'dist/c-2Q2STOFM.js', 'dist/c-XQMLTXRG.js', 'dist/c-FQJ5CCBF.js', 'dist/c-3B25MYMI.js', 'dist/c-3VF3KZPI.js', 'dist/c-ZUAJ4OTH.js', 'dist/c-5PVYAXQB.js', 'dist/c-JRZKGWYQ.js', 'dist/c-S22CTDX7.js', 'dist/c-T72AT2TI.js',
 ];
 
 self.addEventListener('install', (e) => {
@@ -17,7 +17,7 @@ self.addEventListener('install', (e) => {
 });
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== MEDIA && k !== 'lembra-stories-v1').map((k) => caches.delete(k)))).then(() => self.clients.claim()),
+    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== MEDIA && k !== 'lembra-stories-v1' && k !== 'lembra-notif').map((k) => caches.delete(k)))).then(() => self.clients.claim()),
   );
 });
 self.addEventListener('fetch', (e) => {
@@ -90,7 +90,7 @@ self.addEventListener('push', (e) => {
       badge: 'icons/icon-192.png',
       tag: d.tag || undefined,
       renotify: !!d.tag,
-      data: { url: d.url || './' },
+      data: { url: d.url || './', title: d.title || '', body: d.body || '', kind: d.kind || '', tag: d.tag || '' },
     }),
   ];
   // número no ícone do app (tarefas pendentes de hoje)
@@ -108,16 +108,20 @@ self.addEventListener('notificationclick', (e) => {
     const u = new URL(e.notification.data?.url || './', self.registration.scope);
     if (u.origin === self.location.origin && u.href.startsWith(self.registration.scope) && /^(#\/[\w/-]{0,120})?$/.test(u.hash)) target = u.href;
   } catch { /* endereço inválido: abre o início */ }
-  e.waitUntil(
+  // a frase (motivacional, bíblica, dica…) abre dentro do app: guarda o aviso pro app mostrar quando carregar
+  const dd = e.notification.data || {};
+  const notif = { title: String(dd.title || e.notification.title || '').slice(0, 200), body: String(dd.body || e.notification.body || '').slice(0, 1000), kind: String(dd.kind || '').slice(0, 20), tag: String(dd.tag || '').slice(0, 40), at: Date.now() };
+  const guarda = caches.open('lembra-notif').then((c) => c.put('/__notif', new Response(JSON.stringify(notif), { headers: { 'Content-Type': 'application/json' } }))).catch(() => {});
+  e.waitUntil(guarda.then(() =>
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
       const c = cs.find((x) => x.url.startsWith(self.registration.scope));
       if (c) {
-        c.postMessage({ type: 'open', url: target });
+        c.postMessage({ type: 'open', url: target, notif });
         return c.focus();
       }
       // abriu pelo aviso: o app conta isso (ajuda a acertar o melhor horário dos próximos avisos)
       let t2 = target; try { const u = new URL(target); u.searchParams.set('src', 'notif'); t2 = u.href; } catch { /* ok */ }
       return self.clients.openWindow(t2);
-    }),
+    })),
   );
 });

@@ -811,25 +811,38 @@ async function handle(req, env) {
       const c = await cardOf(u);
       return reply(env, req, { ok: true, row: { ...c, rel: await relacao(u) } });
     }
-    // perto de você (opcional): só a "região" (quadrado de ~5 km), nunca a localização exata; menores não entram
-    const celula = (la, lo) => `${Math.floor(la * 20)}_${Math.floor(lo * 20)}`;
+    // perto de você (ligado por padrão; dá pra desligar): guarda só um ponto ARREDONDADO (~1 km), nunca o exato.
+    // Mostra quem está a até 100 km, do mais perto pro mais longe, com a distância aproximada. Menores não entram.
+    const R1 = (x) => Math.round(x * 100) / 100; // ~1,1 km
+    const cel1 = (la, lo) => `${Math.floor(la)}_${Math.floor(lo)}`; // quadrado de 1 grau (~100 km)
+    const kmEntre = (a1, o1, a2, o2) => { const r = Math.PI / 180, dA = (a2 - a1) * r, dO = (o2 - o1) * r; const h = Math.sin(dA / 2) ** 2 + Math.cos(a1 * r) * Math.cos(a2 * r) * Math.sin(dO / 2) ** 2; return 12742 * Math.asin(Math.sqrt(h)); };
+    const distTxt = (km) => (km < 1.5 ? 'a menos de 2 km' : km < 10 ? `a ${Math.round(km)} km` : km < 50 ? `a ~${Math.round(km / 5) * 5} km` : `a ~${Math.round(km / 10) * 10} km`);
     if (url.pathname === '/friends/perto') {
       const minha = await cardOf(meU);
-      const velha = await env.CAL.get(`geome:${meU}`);
-      const tira = async (cel) => { const l = (await getL(`geo:${cel}`)).filter((x) => x.u !== meU); await env.CAL.put(`geo:${cel}`, JSON.stringify(l)); };
-      if (body.on === false) { if (velha) await tira(velha); await env.CAL.delete(`geome:${meU}`); return reply(env, req, { ok: true, off: true }); }
+      const velha = await env.CAL.get(`geop:${meU}`, 'json');
+      const tira = async (cel) => { const l = (await getL(`geo1:${cel}`)).filter((x) => x !== meU); await env.CAL.put(`geo1:${cel}`, JSON.stringify(l)); };
+      if (body.on === false) { if (velha) await tira(cel1(velha.la, velha.lo)); await env.CAL.delete(`geop:${meU}`); return reply(env, req, { ok: true, off: true }); }
       if (minha.teen) return reply(env, req, { error: 'Para a sua segurança, “Perto de você” não fica disponível para menores de 18 anos.' }, 403);
       const la = Number(body.lat), lo = Number(body.lon);
       if (!Number.isFinite(la) || !Number.isFinite(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180) return reply(env, req, { error: 'Localização inválida.' }, 400);
-      const cel = celula(la, lo);
-      if (velha && velha !== cel) await tira(velha);
-      const l = (await getL(`geo:${cel}`)).filter((x) => x.u !== meU && now - x.at < 7 * DAY);
-      l.unshift({ u: meU, at: now }); await env.CAL.put(`geo:${cel}`, JSON.stringify(l.slice(0, 300))); await env.CAL.put(`geome:${meU}`, cel, { expirationTtl: 8 * 86400 });
-      const [ci, cj] = cel.split('_').map(Number), vizinhas = [];
-      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) vizinhas.push(`${ci + i}_${cj + j}`);
-      const fr = await getL(`friends:${meU}`), bl = await getL(`blocks:${meU}`);
-      const perto = [...new Set((await Promise.all(vizinhas.map((v) => getL(`geo:${v}`)))).flat().filter((x) => x.u !== meU && now - x.at < 7 * DAY && !fr.includes(x.u) && !bl.includes(x.u)).map((x) => x.u))].slice(0, 40);
-      const rows = (await Promise.all(perto.map(async (u) => { if ((await getL(`blocks:${u}`)).includes(meU)) return null; const c = await cardOf(u); return c.teen || c.hide ? null : { ...c, rel: await relacao(u), motivo: 'Perto de você' }; }))).filter(Boolean);
+      const eu = { la: R1(la), lo: R1(lo), at: now };
+      const cel = cel1(eu.la, eu.lo);
+      if (velha && cel1(velha.la, velha.lo) !== cel) await tira(cel1(velha.la, velha.lo));
+      const mine = (await getL(`geo1:${cel}`)).filter((x) => x !== meU); mine.unshift(meU);
+      await env.CAL.put(`geo1:${cel}`, JSON.stringify(mine.slice(0, 2000)));
+      await env.CAL.put(`geop:${meU}`, JSON.stringify(eu), { expirationTtl: 15 * 86400 });
+      // quadrados vizinhos que cobrem 100 km pra qualquer lado (na longitude, mais quadrados longe do equador)
+      const ci = Math.floor(eu.la), cj = Math.floor(eu.lo), nLo = Math.min(4, Math.ceil(1 / Math.max(0.25, Math.cos(eu.la * Math.PI / 180))));
+      const cels = []; for (let i = -1; i <= 1; i++) for (let j = -nLo; j <= nLo; j++) cels.push(`${ci + i}_${cj + j}`);
+      const bl = await getL(`blocks:${meU}`), fr = await getL(`friends:${meU}`);
+      const uids = [...new Set((await Promise.all(cels.map((c) => getL(`geo1:${c}`)))).flat())].filter((u) => u !== meU && !bl.includes(u)).slice(0, 600);
+      const pts = (await Promise.all(uids.map(async (u) => { const p = await env.CAL.get(`geop:${u}`, 'json'); if (!p || now - p.at > 14 * DAY) return null; const km = kmEntre(eu.la, eu.lo, p.la, p.lo); return km <= 100 ? { u, km } : null; }))).filter(Boolean).sort((x, y) => x.km - y.km).slice(0, 60);
+      const rows = (await Promise.all(pts.map(async ({ u, km }) => {
+        if ((await getL(`blocks:${u}`)).includes(meU)) return null;
+        const c = await cardOf(u); if (c.teen || (c.hide && !fr.includes(u))) return null;
+        const amigo = fr.includes(u);
+        return { ...c, rel: amigo ? 'amigo' : await relacao(u), km: Math.round(km * 10) / 10, motivo: `${amigo ? 'Amigo · ' : ''}${distTxt(km)}`, online: amigo ? await vistoEm(u) : 0 };
+      }))).filter(Boolean);
       return reply(env, req, { ok: true, rows });
     }
     if (url.pathname === '/friends/dismiss') {
