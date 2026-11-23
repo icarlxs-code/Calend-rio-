@@ -1,13 +1,14 @@
 {
-  "version": "2.16.0",
-  "build": "p6phjbpu",
+  "version": "2.17.0",
+  "build": "zhpc7v6s",
   "date": "2026-11-23",
   "min": "2.2.0",
-  "title": "Stories no jeito do Instagram e o Lembra pra todo mundo",
+  "title": "Story livre, do jeito que você quiser",
   "notes": [
-    "O Lembra agora aparece pra todo mundo: arraste ele e ele fica escondidinho na borda que você escolher.",
-    "Stories no topo, anel colorido em quem postou e “Quem viu” no seu story.",
-    "Perfil novo, foto com recorte e emblemas que abrem na hora."
+    "Poste um story quando quiser: tire uma foto ou escolha da galeria e escreva uma legenda.",
+    "O story de um compromisso concluído continua valendo XP em dobro.",
+    "Story que você já viu abre na hora da próxima vez.",
+    "Arraste o story pra baixo para fechar e, no seu, arraste pra cima para ver quem viu."
   ],
-  "builtAt": "2026-11-23T16:33:43.151Z"
+  "builtAt": "2026-11-23T17:26:37.425Z"
 }
