@@ -75,7 +75,7 @@ class Rig {
       lean: S(0, 1.5, 0.78), bx: S(0, 1.3, 0.85), by: S(0, 3.2, 0.55), sq: S(0, 2.6, 0.42),
       aL: S(12, 3.6, 0.5), aR: S(-12, 3.6, 0.5), px: S(0, 5, 0.85), py: S(0, 5, 0.85), pz: S(1, 6, 0.7),
       lid: S(0, 16, 1), happy: S(0, 7, 0.9), bL: S(0, 5, 0.6), bR: S(0, 5, 0.6), bY: S(0, 5, 0.55), bYr: S(0, 5, 0.55),
-      fL: S(0, 5, 0.55), fR: S(0, 5, 0.55), mz: S(1, 9, 0.45), blush: S(0, 2.5, 1), sag: S(0, 2, 0.9), hand: S(0, 9, 0.6),
+      fL: S(0, 5, 0.55), fR: S(0, 5, 0.55), mz: S(1, 9, 0.45), blush: S(0, 2.5, 1), sag: S(0, 2, 0.9), hand: S(0, 9, 0.6), wL: S(0, 18, 1), wR: S(0, 18, 1),
     };
     this.pose = { l: 'baixo', r: 'baixo' }; this.mouth = 'aberta'; this.mood = '';
     this.q = []; this.t = 0; this.next = { idle: 0.6, blink: 1.5 + Math.random() * 2 }; this.loopAt = 0;
@@ -173,8 +173,11 @@ class Rig {
       this.at(1.8, () => { s.blush.t = b0; s.px.t = 0; s.py.t = 0; s.lean.t = e.lean || 0; this.setMouth(m0); });
       this.next.idle = this.t + 2.1;
     } else if (name === 'pisca') {                                 // piscadinha marota com sorriso
-      const h0 = s.happy.t; s.happy.t = 1; s.bY.t = (e.brow[2] || 0) - 8; this.blink(true);
-      this.at(0.9, () => { s.happy.t = h0; s.bY.t = e.brow[2]; });
+      const lado = Math.random() < 0.5 ? 'wL' : 'wR', m0 = this.mouth;
+      s[lado].t = 1; if (lado === 'wL') { s.bY.t = (e.brow[2] || 0) + 8; s.bYr.t = (e.brow[3] ?? e.brow[2]) - 12; } else { s.bYr.t = (e.brow[3] ?? e.brow[2]) + 8; s.bY.t = (e.brow[2] || 0) - 12; }
+      this.setMouth('canto'); s.lean.t = lado === 'wL' ? -2 : 2;
+      this.at(0.45, () => { s[lado].t = 0; });
+      this.at(0.8, () => { s.bY.t = e.brow[2]; s.bYr.t = e.brow[3] ?? e.brow[2]; this.setMouth(m0); s.lean.t = e.lean || 0; });
     } else if (name === 'dor') {                                   // levou um tapinha: amassa, fecha os olhos com força, treme
       const m0 = this.mouth, l0 = s.lid.t, b0 = [s.bL.t, s.bR.t, s.bY.t];
       s.sq.vel += 3.2; s.by.vel += 80; s.lid.t = 0.95; this.setMouth('dentes'); s.bL.t = 14; s.bR.t = -14; s.bY.t = 8;
@@ -190,23 +193,28 @@ class Rig {
       this.next.idle = this.t + 2;
     } else if (name === 'maoBoca') {                              // mão na boca segurando a risada (fofoca, desconfiança)
       const m0 = this.mouth, back = e.arms;
-      this.arms(['aberto', 30, back[2], back[3]]); s.px.t = -14; s.lid.t = 0.3; this.setMouth('riso'); s.blush.t = 0.6; s.hand.t = 1; s.lean.t = 1.5;
+      s.px.t = -14; s.lid.t = 0.3; this.setMouth('riso'); s.blush.t = 0.6; s.hand.t = 1; s.lean.t = 1.5;
       for (let i = 0; i < 4; i++) this.at(0.3 + i * 0.15, () => { s.sq.vel += 0.8; });
-      this.at(1.5, () => { this.arms(back); s.px.t = 0; s.lid.t = e.lid; this.setMouth(m0); s.blush.t = e.blush || 0; s.hand.t = 0; s.lean.t = e.lean || 0; });
+      this.at(1.5, () => { s.px.t = 0; s.lid.t = e.lid; this.setMouth(m0); s.blush.t = e.blush || 0; s.hand.t = 0; s.lean.t = e.lean || 0; });
       this.next.idle = this.t + 1.9;
     } else if (name === 'susto') {                                // leva um susto: pula pra trás, olhos arregalados
       const m0 = this.mouth; s.pz.t = 0.75; this.setMouth('oo'); s.bY.t = -24; s.by.vel -= 220; s.sq.vel -= 2; s.lean.t = 3;
       this.at(0.8, () => { s.pz.t = e.pupil || 1; this.setMouth(m0); s.bY.t = e.brow[2]; s.lean.t = e.lean || 0; });
       this.next.idle = this.t + 1.1;
     } else if (name === 'coca') {                                 // coça a cabeça pensando
-      const back = e.arms; this.arms([back[0], back[1], 'cima', -48]); s.px.t = 12; s.py.t = -10; s.lean.t = 1.5;
-      for (let i = 0; i < 6; i++) this.at(0.15 + i * 0.12, () => { s.aR.t = i % 2 ? -44 : -54; });
-      this.at(1.1, () => { this.arms(back); s.px.t = 0; s.py.t = 0; s.lean.t = e.lean || 0; });
+      const back = e.arms; this.front = { l: false, r: true }; this.arms([back[0], back[1], 'cima', -4]); s.px.t = 12; s.py.t = -10; s.lean.t = 1.5; s.wR.t = 0.4; s.bYr.t = (e.brow[3] ?? e.brow[2]) - 10;
+      for (let i = 0; i < 6; i++) this.at(0.15 + i * 0.12, () => { s.aR.t = i % 2 ? 2 : -10; });
+      this.at(1.1, () => { this.arms(back); s.px.t = 0; s.py.t = 0; s.lean.t = e.lean || 0; s.wR.t = 0; s.bYr.t = e.brow[3] ?? e.brow[2]; });
+      this.at(1.25, () => { this.front = null; });
       this.next.idle = this.t + 1.4;
     } else if (name === 'balanca') {                              // balancinho alegre de um lado pro outro
       [[4, 0], [-4, 0.3], [4, 0.6], [-3, 0.9], [0, 1.2]].forEach(([v, t]) => this.at(t, () => { s.lean.t = v; s.fL.t = v > 0 ? 14 : 0; s.fR.t = v < 0 ? 14 : 0; }));
       this.at(1.3, () => { s.fL.t = 0; s.fR.t = 0; });
       this.next.idle = this.t + 1.5;
+    } else if (name === 'sobrancelha') {                          // levanta uma sobrancelha só, olhar de quem sabe das coisas
+      const m0 = this.mouth; s.bYr.t = (e.brow[3] ?? e.brow[2]) - 22; s.bR.t = -8; s.bY.t = (e.brow[2] || 0) + 6; s.px.t = -10; this.setMouth('canto');
+      this.at(1.3, () => { s.bYr.t = e.brow[3] ?? e.brow[2]; s.bR.t = e.brow[1]; s.bY.t = e.brow[2]; s.px.t = 0; this.setMouth(m0); });
+      this.next.idle = this.t + 1.6;
     } else if (name === 'olhaLados') {                             // olha pra um lado, pro outro, e volta
       [[-20, 0, 0], [20, 0, 0.55], [0, 0, 1.15]].forEach(([x, y, t]) => this.at(t, () => { s.px.t = x; s.py.t = y; }));
       this.next.idle = this.t + 1.6;
@@ -283,8 +291,11 @@ class Rig {
     // corpo: inclina e achata a partir do apoio
     c.save();
     c.translate(FEET[0] + s.bx.v * (1 - kb), FEET[1] + s.by.v * (1 - kb)); c.rotate((s.lean.v * (1 - kb) * Math.PI) / 180); c.scale(sx, sy); c.translate(-FEET[0], -FEET[1]);
-    // braços (atrás do corpo), giram no ombro
-    [['l', s.aL.v], ['r', s.aR.v]].forEach(([side, ang]) => {
+    // braços giram no ombro; normalmente atrás do corpo, mas um gesto pode trazer um braço para a FRENTE
+    // (mão na boca, coçar a cabeça): aí ele é desenhado depois do rosto, com sombra e contorno, para ler como "na frente"
+    const drawArms = (front) => [['l', s.aL.v], ['r', s.aR.v]].forEach(([side, ang]) => {
+      if (!!(this.front && this.front[side]) !== front) return;
+      if (front) { c.save(); c.shadowColor = 'rgba(110,35,0,.55)'; c.shadowBlur = 22; c.shadowOffsetY = 8; }
       const one = (pose, a, alpha) => {
         const n = `braco-${pose}-${side}`; alpha *= X.limbs; if (!L[n] || alpha <= 0.01) return;
         const [, , w, h] = L[n], [ax, ay] = ARM[`${pose}-${side}`], [px, py] = SH[side];
@@ -293,7 +304,9 @@ class Rig {
       const old = this.pp && this.pp[side], k = old ? Math.min(1, (this.t - old[1]) / 0.12) : 1;
       if (old && k < 1) one(old[0], old[2] + (ang - old[2]) * 0.4, 1 - k);
       one(this.pose[side], ang, k < 1 ? 0.35 + 0.65 * k : 1);
+      if (front) c.restore();
     });
+    drawArms(false);
     { const r = lerpR(L.corpo, X.abs && X.abs.r && X.abs.r.body, kb); c.save(); c.globalAlpha = aOf(X, 'body'); img('corpo', r[0], r[1], r[2], r[3]); c.restore(); }
     // rosto: chega atrasado em relação ao corpo (movimento secundário)
     const fk = 1 - Math.max(kb, kOf(X, 'eyeL'));
@@ -328,7 +341,7 @@ class Rig {
         // pálpebra (piscar, sono, desconfiança)
         c.restore();
         // pálpebra (piscar, sono, desconfiança): cobre o olho inteiro, inclusive a borda
-        const lid = Math.min(1, Math.max(0, s.lid.v));
+        const lid = Math.min(1, Math.max(0, s.lid.v + (side === 'l' ? s.wL.v : s.wR.v))); // cada olho tem a sua pálpebra (piscadinha de um olho só)
         if (lid > 0.01) {
           c.save(); c.beginPath(); c.ellipse(cx, cy, w / 2 + 3, h / 2 + 3, 0, 0, Math.PI * 2); c.clip();
           const ly = y - 6 + (h + 12) * lid;
@@ -365,11 +378,12 @@ class Rig {
     // mãozinha na frente da boca (segurando a risada)
     if (s.hand.v > 0.03) {
       const [x, y, w, h] = L['boca-aberta'], cx = x + w * 0.62, cy = y + h * 0.55 + X.mouthDy + (1 - s.hand.v) * 120;
-      c.save(); c.globalAlpha = Math.min(1, s.hand.v * 1.4);
-      const g = c.createRadialGradient(cx - 18, cy - 20, 10, cx, cy, 80); g.addColorStop(0, 'rgb(255,140,50)'); g.addColorStop(1, SKIN);
-      c.fillStyle = g; c.strokeStyle = SKIN_EDGE; c.lineWidth = 5;
+      c.save(); c.globalAlpha = Math.min(1, s.hand.v * 1.4); c.shadowColor = 'rgba(110,35,0,.5)'; c.shadowBlur = 20; c.shadowOffsetY = 6;
+      const g = c.createRadialGradient(cx - 18, cy - 20, 10, cx, cy, 80); g.addColorStop(0, 'rgb(255,150,60)'); g.addColorStop(1, 'rgb(226,78,8)');
+      c.fillStyle = g; c.strokeStyle = 'rgb(176,52,0)'; c.lineWidth = 8;
       c.beginPath(); c.ellipse(cx, cy, 96, 70, -0.35, 0, Math.PI * 2); c.fill(); c.stroke(); c.restore();
     }
+    drawArms(true);
     // lágrimas
     if (this.mood === 'triste') {
       const ph = (this.t % 1.6) / 1.6; c.fillStyle = 'rgba(120,200,255,' + (0.9 * Math.sin(ph * Math.PI)) + ')';
@@ -405,7 +419,7 @@ export function alive() { watch(); load(); document.querySelectorAll('[data-snh]
 export function setMood(el, mood) { withRig(el, (r) => r.setMood(mood)); return Promise.resolve(); }
 export function act(el, name) { withRig(el, (r) => r.act(name === 'pop' ? 'pop' : name)); }
 export function lookAt(el, x, y, hold) { withRig(el, (r) => r.lookAt(x, y, hold)); }
-export const GESTOS = ['tchau', 'pulo', 'riso', 'nao', 'sim', 'pop', 'pensa', 'boceja', 'timido', 'pisca', 'olhaLados', 'dor', 'cinico', 'maoBoca', 'susto', 'coca', 'balanca'];
+export const GESTOS = ['tchau', 'pulo', 'riso', 'nao', 'sim', 'pop', 'pensa', 'boceja', 'timido', 'pisca', 'olhaLados', 'dor', 'cinico', 'maoBoca', 'susto', 'coca', 'balanca', 'sobrancelha'];
 
 /* balão do app: o texto aparece digitado; o Sininho NÃO fala (sem boca mexendo, sem som),
    só reage com o corpo quando a mensagem chega, como o Duo faz no Duolingo */

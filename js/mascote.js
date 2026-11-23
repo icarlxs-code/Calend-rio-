@@ -319,7 +319,7 @@ const CENAS = [
   { g: 'olhaLados', w: 3 }, { g: 'pisca', w: 2 }, { g: 'pensa', w: 2 }, { g: 'riso', w: 1.5 }, { g: 'sim', w: 1 },
   { g: 'pop', w: 1 }, { g: 'timido', w: 1.2 }, { g: 'tchau', w: 1 }, { g: 'pulo', w: 0.8 },
   { m: 'surpreso', g: 'pop', w: 0.8, volta: 1300 }, { m: 'amor', w: 0.8, volta: 2200 }, { m: 'desconfiado', g: 'olhaLados', w: 1, volta: 2000 },
-  { g: 'cinico', w: 1.2 }, { g: 'coca', w: 1.2 }, { g: 'balanca', w: 1.4 }, { g: 'maoBoca', w: 0.9 }, { g: 'susto', w: 0.4 },
+  { g: 'cinico', w: 1.2 }, { g: 'coca', w: 1.2 }, { g: 'sobrancelha', w: 1.3 }, { g: 'balanca', w: 1.4 }, { g: 'maoBoca', w: 0.9 }, { g: 'susto', w: 0.4 },
   { m: 'desconfiado', g: 'cinico', w: 0.8, volta: 2200 }, { m: 'danca', w: 0.5, volta: 2600 },
 ];
 function cena() {
