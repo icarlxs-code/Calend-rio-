@@ -3270,3 +3270,39 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .ofs__head .ofs__snh::before { width: 128px; height: 128px; border-radius: 50%; background: radial-gradient(circle, #FFF5E0 0%, rgba(255,236,190,.95) 45%, rgba(255,214,120,.4) 62%, transparent 72%); }
 .ofs__head .ofs__snh .snh { filter: drop-shadow(0 8px 12px rgba(110,30,0,.45)); }
 .ofs__fire { filter: drop-shadow(0 0 18px rgba(255,240,170,.8)); }
+
+/* ---------- Ofensiva: o Lembra fica mais rico a cada nível (7, 30, 100, 365, 1000 dias) ---------- */
+.stk__anim { position: relative; isolation: isolate; }
+.stkx { position: absolute; inset: -40px; z-index: -1; pointer-events: none; }
+.stkx i { position: absolute; display: block; }
+.stkx__aura { inset: 18%; border-radius: 50%; opacity: 0; }
+.stkx__rays { inset: 0; border-radius: 50%; opacity: 0; -webkit-mask: radial-gradient(circle, #000 25%, transparent 70%); mask: radial-gradient(circle, #000 25%, transparent 70%); animation: stkgira 18s linear infinite; }
+@keyframes stkgira { to { transform: rotate(360deg); } }
+.stkx--t1 .stkx__aura { opacity: 1; background: radial-gradient(circle, rgba(255,170,60,.55), transparent 68%); animation: stkpulsa 2.4s ease-in-out infinite; }
+@keyframes stkpulsa { 50% { transform: scale(1.08); opacity: .8; } }
+.stkx--t2 .stkx__aura, .stkx--t3 .stkx__aura { opacity: 1; background: radial-gradient(circle, rgba(255,215,90,.75), rgba(255,160,40,.25) 50%, transparent 70%); animation: stkpulsa 2.4s ease-in-out infinite; }
+.stkx--t2 .stkx__rays, .stkx--t3 .stkx__rays { opacity: .8; background: repeating-conic-gradient(rgba(255,220,110,.55) 0 8deg, transparent 8deg 22deg); }
+.stkx--t4 .stkx__aura { opacity: 1; background: radial-gradient(circle, rgba(190,235,255,.85), rgba(120,140,255,.35) 50%, transparent 70%); animation: stkpulsa 2.4s ease-in-out infinite; }
+.stkx--t4 .stkx__rays { opacity: .85; background: repeating-conic-gradient(rgba(160,220,255,.6) 0 6deg, transparent 6deg 18deg, rgba(210,170,255,.5) 18deg 24deg, transparent 24deg 36deg); }
+.stkx--t5 .stkx__aura { opacity: 1; background: radial-gradient(circle, #FFF6D0, rgba(255,200,60,.6) 45%, transparent 70%); animation: stkpulsa 2s ease-in-out infinite; }
+.stkx--t5 .stkx__rays { opacity: 1; background: repeating-conic-gradient(#FFD34D 0 5deg, transparent 5deg 12deg, #FF8AC8 12deg 16deg, transparent 16deg 23deg, #8AD8FF 23deg 27deg, transparent 27deg 34deg); animation-duration: 10s; }
+.stkx__crown { left: 50%; top: 6%; width: 64px; height: 44px; translate: -50% 0; z-index: 2; filter: drop-shadow(0 4px 6px rgba(120,60,0,.5));
+  background: linear-gradient(180deg, #FFE980, #F5B400); clip-path: polygon(0 100%, 0 25%, 22% 55%, 50% 0, 78% 55%, 100% 25%, 100% 100%); animation: stkcoroa 2.6s ease-in-out infinite; }
+.stkx--t4 .stkx__crown { background: linear-gradient(180deg, #E6FBFF, #7FD3FF 50%, #B79CFF); }
+.stkx--t5 .stkx__crown { background: linear-gradient(180deg, #FFF8C8, #FFC21A 50%, #FF7A00); width: 78px; height: 54px; }
+@keyframes stkcoroa { 50% { translate: -50% -5px; rotate: 3deg; } }
+.stkx__sp { width: 14px; height: 14px; background: #FFE680; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation: stkbrilho 1.8s ease-in-out infinite; }
+.stkx__sp:nth-of-type(3) { left: 14%; top: 22%; } .stkx__sp:nth-of-type(4) { right: 12%; top: 30%; animation-delay: .5s; }
+.stkx__sp:nth-of-type(5) { left: 20%; bottom: 20%; animation-delay: .9s; width: 10px; height: 10px; } .stkx__sp:nth-of-type(6) { right: 18%; bottom: 16%; animation-delay: 1.3s; }
+.stkx--t4 .stkx__sp { background: #CFF3FF; } .stkx--t5 .stkx__sp { background: #fff; width: 18px; height: 18px; }
+@keyframes stkbrilho { 0%, 100% { transform: scale(.4); opacity: .3; } 50% { transform: scale(1.1) rotate(45deg); opacity: 1; } }
+.stk--t2 .stk__glow, .stk--t3 .stk__glow { background: radial-gradient(circle at 50% 35%, rgba(255,190,60,.45), transparent 60%); }
+.stk--t4 .stk__glow { background: radial-gradient(circle at 50% 35%, rgba(120,170,255,.45), transparent 60%); }
+.stk--t5 .stk__glow { background: radial-gradient(circle at 50% 35%, rgba(255,210,80,.6), rgba(255,120,200,.2) 45%, transparent 65%); }
+.stk--t2 .stk__num b, .stk--t3 .stk__num b { background: linear-gradient(180deg, #FFE98A, #F5A300); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.stk--t4 .stk__num b { background: linear-gradient(180deg, #E9FBFF, #7FD3FF, #B79CFF); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.stk--t5 .stk__num b { background: linear-gradient(180deg, #FFFBE0, #FFC21A 40%, #FF7AC0 75%, #8AD8FF); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@media (prefers-reduced-motion: reduce) { .stkx i { animation: none !important; } }
+/* ranking: sem caixa visível atrás do mascote (a sombra do canvas era cortada e aparecia o retângulo) */
+.rkhero__fig .snh, .ofs__head .ofs__snh .snh { filter: none; }
+.rkhero__fig::after { content: ''; position: absolute; left: 22%; right: 22%; bottom: 4px; height: 12px; border-radius: 50%; background: rgba(110,30,0,.28); filter: blur(4px); z-index: -1; }
