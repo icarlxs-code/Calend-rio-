@@ -3261,3 +3261,12 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .guia__fig { position: relative; }
 .guia__fig::before { content: ''; position: absolute; left: -10px; top: -8px; width: 26px; height: 26px; background:
   linear-gradient(#FFC21A,#FFC21A) 60% 0 / 4px 10px no-repeat, linear-gradient(#FFC21A,#FFC21A) 0 70% / 10px 4px no-repeat, linear-gradient(45deg, transparent 42%, #FFC21A 42%, #FFC21A 60%, transparent 60%) 100% 100% / 11px 11px no-repeat; animation: snhbrilho 1.8s ease-in-out infinite; }
+/* contraste: mascote laranja sobre fundo laranja ganha um halo creme por trás */
+.rkhero__fig { width: 150px; }
+.rkhero__fig::before { inset: -6px; border-radius: 50%; background: radial-gradient(circle, #FFF5E0 0%, rgba(255,236,190,.95) 42%, rgba(255,214,120,.45) 60%, rgba(255,200,80,0) 72%); }
+.rkhero__fig .snh { filter: drop-shadow(0 10px 14px rgba(110,30,0,.45)); }
+.rkhero__trofeu { right: 2px; top: 30px; }
+.rkhero__trofeu .ic { width: 44px; height: 44px; }
+.ofs__head .ofs__snh::before { width: 128px; height: 128px; border-radius: 50%; background: radial-gradient(circle, #FFF5E0 0%, rgba(255,236,190,.95) 45%, rgba(255,214,120,.4) 62%, transparent 72%); }
+.ofs__head .ofs__snh .snh { filter: drop-shadow(0 8px 12px rgba(110,30,0,.45)); }
+.ofs__fire { filter: drop-shadow(0 0 18px rgba(255,240,170,.8)); }

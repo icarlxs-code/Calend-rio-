@@ -53,7 +53,7 @@ export async function openRanking({ kind = 'month' } = {}) {
     <div class="page page--sheet rk">
       ${tabs}
       <div class="rkhero">
-        <div class="rkhero__fig">${mascotOn() ? sininho('comemora', { size: 112 }) + `<span class="rkhero__trofeu">${icon('trophy', 34)}</span>` : `<span class="rkhero__big">${icon('trophy', 64)}</span>`}</div>
+        <div class="rkhero__fig">${mascotOn() ? sininho('comemora', { size: 150 }) + `<span class="rkhero__trofeu">${icon('trophy', 34)}</span>` : `<span class="rkhero__big">${icon('trophy', 64)}</span>`}</div>
         <div class="rkhero__txt"><h3>${cur === 'month' ? `Quem mais ganhar XP em ${mes} fica no topo.` : 'Todo o XP que cada pessoa já ganhou, desde sempre.'}</h3>
           ${cur === 'month' ? `<span class="rkpill">${icon('refresh', 13)} Reinicia em ${dl} ${dl === 1 ? 'dia' : 'dias'}</span>` : `<span class="rkpill">${icon('infinity', 13)} Ranking geral</span>`}</div>
       </div>
