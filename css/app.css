@@ -3306,3 +3306,4 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 /* ranking: sem caixa visível atrás do mascote (a sombra do canvas era cortada e aparecia o retângulo) */
 .rkhero__fig .snh, .ofs__head .ofs__snh .snh { filter: none; }
 .rkhero__fig::after { content: ''; position: absolute; left: 22%; right: 22%; bottom: 4px; height: 12px; border-radius: 50%; background: rgba(110,30,0,.28); filter: blur(4px); z-index: -1; }
+.ab { opacity: 0; } .ab.is-run { opacity: 1; }

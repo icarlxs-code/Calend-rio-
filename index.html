@@ -140,7 +140,8 @@
       if (my !== run || leaving) return;
       if (!ok || !M) return finish();
       if (stopFn) stopFn();
-      ab = M.mountIntro(intro);
+      // 1ª vez: usa a abertura já montada (montar de novo fazia o boneco piscar duas vezes antes de começar)
+      if (!ab || stopFn) ab = M.mountIntro(intro);
       var w = function () { var el = intro.querySelector('[data-snh]'); if (el && el._rig && !el._rig.pending) { stopFn = M.runIntro(ab, { onEnd: function () { timers.push(setTimeout(finish, 250)); } }); } else setTimeout(w, 16); };
       w();
     });

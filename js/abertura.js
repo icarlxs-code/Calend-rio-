@@ -269,5 +269,7 @@ export function runIntro(ab, { onEnd, model } = {}) {
     raf = requestAnimationFrame(frame);
   };
   frame(); // já aplica a posição do 1º instante agora: nenhum quadro mostra o boneco parado antes de começar
+  if (R) R.draw();          // o boneco já desenhado no 1º quadro (canvas nunca aparece vazio)
+  ab.classList.add('is-run'); // só agora a abertura fica visível
   return () => { done = true; cancelAnimationFrame(raf); };
 }
