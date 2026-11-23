@@ -7,7 +7,7 @@ import { openSheet, sheetHead, toast } from '../components.js';
 import { icon } from '../icons.js';
 import { esc } from '../utils.js';
 import { mascotOn } from '../mascote.js';
-import { sininho, alive } from '../sininho.js';
+import { sininho, alive, vivo } from '../sininho.js';
 
 const fmt = (n) => Number(n || 0).toLocaleString('pt-BR');
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -75,6 +75,7 @@ export async function openRanking({ kind = 'month' } = {}) {
     html: html(),
     onMount: (x) => {
       alive();
+      { const f = x.el.querySelector('.rkhero__fig [data-snh]'); if (f) vivo(f, { gestos: ['pisca', 'riso', 'olhaLados', 'sim', 'sobrancelha'], aponta: x.el.querySelector('.rkme, .rk__me, [data-uid]') }); }
       x.el.querySelectorAll('[data-uid]').forEach((b) => (b.onclick = () => import('../friends.js').then((m) => m.openPublicProfile(b.dataset.uid))));
       x.el.querySelectorAll('[data-k]').forEach((b) => (b.onclick = () => { cur = b.dataset.k; x.set(html()); if (!data[cur]) load(cur, x); }));
       const lg = x.el.querySelector('[data-league]');

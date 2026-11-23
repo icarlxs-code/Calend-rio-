@@ -1,14 +1,13 @@
 {
-  "version": "2.12.0",
-  "build": "bs4eimzf",
+  "version": "2.13.0",
+  "build": "cftalp74",
   "date": "2026-11-23",
   "min": "2.2.0",
-  "title": "Stories, amigos e um Lembra mais esperto",
+  "title": "Amigos de cara nova",
   "notes": [
-    "Poste a foto do que você concluiu (some em 24 h) e ganhe XP em dobro.",
-    "Veja quem passou no seu perfil e os stories dos amigos.",
-    "Emblemas e brasões novos.",
-    "O Lembra percebe o seu ritmo e lembra do que você anotou."
+    "Tela de Amigos nova: quem está online agora, stories e convite em um toque.",
+    "Perfil do amigo com nível, barra de XP, emblemas e menu de opções.",
+    "O Lembra está mais vivo: olha pra onde você toca e aponta o que dá pra fazer."
   ],
-  "builtAt": "2026-11-23T11:05:15.705Z"
+  "builtAt": "2026-11-23T11:52:13.543Z"
 }

@@ -211,6 +211,15 @@ class Rig {
       [[4, 0], [-4, 0.3], [4, 0.6], [-3, 0.9], [0, 1.2]].forEach(([v, t]) => this.at(t, () => { s.lean.t = v; s.fL.t = v > 0 ? 14 : 0; s.fR.t = v < 0 ? 14 : 0; }));
       this.at(1.3, () => { s.fL.t = 0; s.fR.t = 0; });
       this.next.idle = this.t + 1.5;
+    } else if (name === 'aponta' || name === 'apontaEsq') {        // aponta para um botão (direita ou esquerda) e olha pra ele
+      const dir = name === 'aponta' ? 1 : -1, back = e.arms, m0 = this.mouth;
+      if (dir > 0) this.arms([back[0], back[1], 'aberto', -64]); else this.arms(['aberto', 64, back[2], back[3]]);
+      s.px.t = 20 * dir; s.py.t = 6; s.lean.t = 2.4 * dir; this.setMouth('aberta'); s.bY.t = (e.brow[2] || 0) - 8;
+      [0.35, 0.7, 1.05].forEach((t, i) => this.at(t, () => { if (dir > 0) s.aR.t = i % 2 ? -64 : -56; else s.aL.t = i % 2 ? 64 : 56; }));
+      this.at(0.5, () => { s.px.t = 0; s.py.t = 0; }); // olha pra você ("toca aí!")
+      this.at(0.9, () => { s.px.t = 20 * dir; });
+      this.at(1.6, () => { this.arms(back); s.px.t = 0; s.py.t = 0; s.lean.t = e.lean || 0; this.setMouth(m0); s.bY.t = e.brow[2]; });
+      this.next.idle = this.t + 1.9;
     } else if (name === 'sobrancelha') {                          // levanta uma sobrancelha só, olhar de quem sabe das coisas
       const m0 = this.mouth; s.bYr.t = (e.brow[3] ?? e.brow[2]) - 22; s.bR.t = -8; s.bY.t = (e.brow[2] || 0) + 6; s.px.t = -10; this.setMouth('canto');
       this.at(1.3, () => { s.bYr.t = e.brow[3] ?? e.brow[2]; s.bR.t = e.brow[1]; s.bY.t = e.brow[2]; s.px.t = 0; this.setMouth(m0); });
@@ -419,7 +428,7 @@ export function alive() { watch(); load(); document.querySelectorAll('[data-snh]
 export function setMood(el, mood) { withRig(el, (r) => r.setMood(mood)); return Promise.resolve(); }
 export function act(el, name) { withRig(el, (r) => r.act(name === 'pop' ? 'pop' : name)); }
 export function lookAt(el, x, y, hold) { withRig(el, (r) => r.lookAt(x, y, hold)); }
-export const GESTOS = ['tchau', 'pulo', 'riso', 'nao', 'sim', 'pop', 'pensa', 'boceja', 'timido', 'pisca', 'olhaLados', 'dor', 'cinico', 'maoBoca', 'susto', 'coca', 'balanca', 'sobrancelha'];
+export const GESTOS = ['tchau', 'pulo', 'riso', 'nao', 'sim', 'pop', 'pensa', 'boceja', 'timido', 'pisca', 'olhaLados', 'dor', 'cinico', 'maoBoca', 'susto', 'coca', 'balanca', 'sobrancelha', 'aponta', 'apontaEsq'];
 
 /* balão do app: o texto aparece digitado; o Sininho NÃO fala (sem boca mexendo, sem som),
    só reage com o corpo quando a mensagem chega, como o Duo faz no Duolingo */
@@ -512,4 +521,26 @@ export function cheerDone({ late = false, perfect = false } = {}) {
   if (doneCount > 1 && now - lastPeek < 90e3 && doneCount % 3) return;
   lastPeek = now;
   peek(late ? 'feliz' : 'comemora', pick(late ? DONE_LATE : DONE));
+}
+
+/* mascote "vivo" dentro de uma tela: de vez em quando faz um gesto calmo (piscar, olhar, sobrancelha…),
+   e pode apontar para um botão (aponta: seletor do alvo). Os olhos já seguem os toques na tela (RIGS).
+   Para sozinho quando o elemento sai da tela. */
+export function vivo(el, { gestos = ['pisca', 'olhaLados', 'sobrancelha', 'pensa', 'riso', 'sim'], aponta = null, cada = [3.5, 7] } = {}) {
+  if (!el || el._vivo) return;
+  el._vivo = true; mount(el);
+  let n = 0;
+  const tick = () => {
+    if (!el.isConnected) return;
+    if (!document.hidden && !calm()) {
+      n++;
+      const alvo = aponta && (typeof aponta === 'string' ? document.querySelector(aponta) : aponta);
+      if (alvo && n % 3 === 1) {
+        const r = el.getBoundingClientRect(), a = alvo.getBoundingClientRect();
+        withRig(el, (rg) => { rg.act(a.left + a.width / 2 > r.left + r.width / 2 ? 'aponta' : 'apontaEsq'); rg.at(0.5, () => rg.lookAt(a.left + a.width / 2, a.top + a.height / 2, 1)); });
+      } else act(el, gestos[Math.floor(Math.random() * gestos.length)]);
+    }
+    setTimeout(tick, (cada[0] + Math.random() * (cada[1] - cada[0])) * 1000);
+  };
+  setTimeout(tick, 1200 + Math.random() * 1500);
 }

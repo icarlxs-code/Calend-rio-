@@ -6,7 +6,7 @@ import { openSheet, sheetHead, toast } from '../components.js';
 import { icon } from '../icons.js';
 import { esc, todayKey, addDays, diffDays, fmtTime } from '../utils.js';
 import { personal, overdue, savePersonal } from '../personal.js';
-import { sininho, setMood, act, alive } from '../sininho.js';
+import { sininho, setMood, act, alive, vivo } from '../sininho.js';
 
 const mine = (e) => !store.me || (e.assignees || []).includes(store.me) || e.createdBy === store.me || !(e.assignees || []).length;
 
@@ -52,6 +52,7 @@ export function openAtrasados() {
     className: 'sheet--tall',
     html: html(),
     onMount: (a) => {
+      { const f = a.el.querySelector('.atr__fig [data-snh]'); if (f) vivo(f, { aponta: a.el.querySelector('[data-ok]'), gestos: ['pisca', 'olhaLados', 'pensa', 'sobrancelha'] }); }
       const el = a.el, fig = () => el.querySelector('[data-snh]');
       el.querySelectorAll('.atr__it').forEach((li) => {
         const it = itensAtrasados().find((x) => x.id === li.dataset.id && x.k === li.dataset.k);

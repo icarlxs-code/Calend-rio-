@@ -9,7 +9,7 @@ import { api } from './avisos.js';
 import { openSheet, sheetHead, toast, confirmDialog } from './components.js';
 import { icon } from './icons.js';
 import { esc } from './utils.js';
-import { sininho, setMood, act, say, alive } from './sininho.js';
+import { sininho, setMood, act, say, alive, vivo } from './sininho.js';
 import { mascotOn } from './mascote.js';
 
 const call = (path, body = {}) => api(path, { ws: '', ...body });
@@ -165,7 +165,7 @@ export async function openStoriesFeed() {
     ${storyStrip()}
     ${feed.rows.filter((r) => !r.me).length ? `<h3 class="ah">Atualizações recentes</h3><div class="agroup">${feed.rows.filter((r) => !r.me).map((r) => { const novo = r.stories.some((x) => !x.seen); const ult = Math.max(...r.stories.map((x) => x.at)); return `<button class="frow" data-st-owner="${esc(r.uid)}"><span class="frow__ring${novo ? '' : ' is-seen'}">${face(r, 46)}</span><span class="frow__id"><b>${esc(r.name)}</b><small>${desde(ult)} · ${r.stories.length} ${r.stories.length === 1 ? 'story' : 'stories'}</small></span>${novo ? '<i class="frow__new">novo</i>' : ''}</button>`; }).join('')}</div>` : '<p class="fhelp">Nenhum amigo postou nas últimas 24 h. Que tal ser o primeiro? Conclua um compromisso e poste a foto 📸</p>'}
   </div>`;
-  const a = openSheet({ className: 'sheet--tall', html: html(), onMount: (x) => bindStrip(x.el, () => { if (!a.closed) a.set(html()); }) });
+  const a = openSheet({ className: 'sheet--tall sheet--fx sheet--fxl', html: html(), onMount: (x) => bindStrip(x.el, () => { if (!a.closed) a.set(html()); }) });
   await refreshFeed(); if (!a.closed) a.set(html());
   return a;
 }
@@ -177,7 +177,7 @@ export async function openVisitors() {
     ${mascotOn() ? `<div class="atr__hero vis__hero"><div class="atr__fig">${sininho('desconfiado', { size: 84 })}</div><p class="atr__bub"><span data-vbub>Deixa eu ver quem andou xeretando… 🕵️</span></p></div>` : ''}
     <p class="fhelp">Amigos que passaram pelo seu perfil nos últimos 7 dias. Quando você visita o perfil de alguém, essa pessoa também vê 👀</p>
     ${!lista ? '<p class="fhelp">Carregando…</p>' : lista.length ? `<div class="agroup">${lista.map((c) => `<button class="frow" data-uid="${esc(c.uid)}">${face(c, 46)}<span class="frow__id"><b>${esc(c.name)}</b><small>passou ${desde(c.at).replace('há', 'há')}${c.n > 1 ? ` · ${c.n} vezes` : ''}</small></span>${icon('right', 16)}</button>`).join('')}</div>` : '<p class="fhelp">Ninguém passou por aqui ainda. Poste um story que o povo aparece 😉</p>'}</div>`;
-  const a = openSheet({ className: 'sheet--tall', html: html(), onMount: (x) => {
+  const a = openSheet({ className: 'sheet--tall sheet--fx sheet--fxl', html: html(), onMount: (x) => {
     x.el.querySelectorAll('[data-uid]').forEach((b) => (b.onclick = async () => { const c = lista.find((v) => v.uid === b.dataset.uid); if (c) (await import('./friends.js')).openFriendProfile(c); }));
   } });
   await refreshVisitors(); lista = visitas.list; if (!a.closed) a.set(html());
@@ -193,6 +193,7 @@ export async function openVisitors() {
     setTimeout(() => { act(fig, 'olhaLados'); }, 300);
     setTimeout(() => { setMood(fig, lista.length ? 'desconfiado' : 'feliz'); say(fig, t, { bubble: bub, speed: 24 }); }, 1100);
     if (lista.length) { setTimeout(() => act(fig, 'sobrancelha'), 2600); setTimeout(() => act(fig, 'maoBoca'), 4300); }
+    setTimeout(() => vivo(fig, { aponta: a.el.querySelector('[data-uid]'), gestos: ['pisca', 'cinico', 'olhaLados', 'sobrancelha'] }), 6500);
   }
   return a;
 }

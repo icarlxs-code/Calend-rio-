@@ -8,7 +8,7 @@ import { store, saveMyProfile } from '../store.js';
 import { openSheet, sheetHead, toast, avatar } from '../components.js';
 import { icon } from '../icons.js';
 import { esc } from '../utils.js';
-import { sininho, alive, act } from '../sininho.js';
+import { sininho, alive, act, vivo } from '../sininho.js';
 import { mascotOn } from '../mascote.js';
 import { CONFIG } from '../../config.js';
 import { professionFor } from '../../functions/catalog.js';
@@ -127,6 +127,8 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
     onMount: (a) => {
       const el = a.el;
       alive();
+      { const f = el.querySelector('.prof__snh [data-snh]'); if (f) vivo(f, { aponta: el.querySelector('[data-share]'), gestos: ['pisca', 'olhaLados', 'riso', 'sobrancelha'] }); }
+      { const f = el.querySelector('.ofs__snh [data-snh]'); if (f) vivo(f, { gestos: ['pisca', 'olhaLados', 'riso', 'sim'] }); }
       // os Lembras dos números: um gesto calmo de vez em quando (piscar, olhar, pensar), cada um no seu tempo
       clearInterval(a._peek);
       a._peek = setInterval(() => {
