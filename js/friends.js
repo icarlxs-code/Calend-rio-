@@ -116,7 +116,7 @@ export function openFriends() {
   const html = () => `${sheetHead('Amigos', { left: '<button class="btn-text" data-close>Fechar</button>' })}
     <div class="page page--sheet friends">
       <button class="btn btn--primary btn--block" data-invite>${icon('plus', 16)} Convidar amigo</button>
-      <p class="fhelp">Você manda um link; a pessoa recebe o pedido no Lembra dela e aceita. Amigos veem o nível e os emblemas uns dos outros.</p>
+      <p class="fhelp">Você manda um link (pode ser o mesmo pra várias pessoas); cada uma manda o pedido e entra na sua lista. Amigos veem o nível e os emblemas uns dos outros.</p>
       ${err ? `<p class="fhelp">${esc(err)}</p>` : !data ? '<p class="fhelp">Carregando…</p>' : `
       ${data.requests.length ? `<h3 class="ah">Pedidos de amizade</h3><div class="agroup">${data.requests.map((c) => `<div class="frow">${framedPhoto(c, 44)}<span class="frow__id"><b>${esc(c.name)}</b><small>quer ser seu amigo</small></span><button class="btn btn--primary btn--sm" data-req="${esc(c.uid)}">Ver</button></div>`).join('')}</div>` : ''}
       <h3 class="ah">Seus amigos${data.friends.length ? ` · ${data.friends.length}` : ''}</h3>
@@ -129,23 +129,39 @@ export function openFriends() {
     html: html(),
     onMount: (x) => {
       const inv = x.el.querySelector('[data-invite]');
-      if (inv) inv.onclick = async () => {
-        inv.disabled = true;
-        try {
-          const { token } = await call('/friends/link');
-          const link = `${site()}#/amigo/${token}`;
-          const me = store.member(store.me) || {};
-          const text = `${me.name || 'Eu'} quer ser seu amigo no Lembra 🤝 Toque para aceitar:`;
-          if (navigator.share) { try { await navigator.share({ title: 'Convite de amizade · Lembra', text, url: link }); } catch { /* cancelou */ } }
-          else { await navigator.clipboard?.writeText(`${text} ${link}`).catch(() => {}); toast('Link copiado! Cole no WhatsApp 📋'); }
-        } catch (e) { toast(e.message || 'Não consegui criar o convite.'); }
-        inv.disabled = false;
-      };
+      if (inv) inv.onclick = () => openShareChoice();
       x.el.querySelectorAll('[data-req]').forEach((b) => (b.onclick = () => { const c = data.requests.find((r) => r.uid === b.dataset.req); if (c) requestSheet(c, () => load(x)); }));
       x.el.querySelectorAll('[data-fr]').forEach((b) => (b.onclick = () => { const c = data.friends.find((r) => r.uid === b.dataset.fr); if (c) friendProfile(c, () => load(x)); }));
     },
   });
   publishCard();
   load(a);
+  return a;
+}
+
+/* Compartilhar: a pessoa escolhe se convida para a lista de amigos dela ou só indica o app.
+   O link de amizade vale 14 dias e pode ir para quantas pessoas quiser (cada uma manda o pedido e você aceita). */
+export function openShareChoice() {
+  const me = store.member(store.me) || {};
+  const send = async (title, text, url) => {
+    if (navigator.share) { try { await navigator.share({ title, text, url }); } catch { /* cancelou */ } }
+    else { await navigator.clipboard?.writeText(`${text} ${url}`).catch(() => {}); toast('Link copiado! Cole no WhatsApp 📋'); }
+  };
+  const a = openSheet({
+    className: 'sheet--actions',
+    html: `${sheetHead('Compartilhar', { left: '<button class="btn-text" data-close>Fechar</button>' })}
+    <div class="page page--sheet shch">
+      <button class="shch__op" data-amigo><span class="shch__ic shch__ic--a">${icon('users', 22)}</span><span><b>Convidar pra ser meu amigo</b><small>Quem abrir o link entra na sua lista de amigos. Pode mandar o mesmo link pra várias pessoas (vale 14 dias).</small></span></button>
+      <button class="shch__op" data-app><span class="shch__ic shch__ic--b">${icon('share', 22)}</span><span><b>Só indicar o Lembra</b><small>Manda o link do app, sem convite de amizade.</small></span></button>
+    </div>`,
+    onMount: (x) => {
+      x.el.querySelector('[data-amigo]').onclick = async (ev) => {
+        ev.currentTarget.disabled = true;
+        try { const { token } = await call('/friends/link'); a.close(); await send('Convite de amizade · Lembra', `${me.name || 'Eu'} quer ser seu amigo no Lembra 🤝 Toque para aceitar:`, `${site()}#/amigo/${token}`); }
+        catch (e) { toast(e.message || 'Não consegui criar o convite.'); ev.currentTarget.disabled = false; }
+      };
+      x.el.querySelector('[data-app]').onclick = async () => { a.close(); await send('Lembra', 'Conhece o Lembra? A agenda que lembra de tudo por você 🔔', `${site()}conheca/`); };
+    },
+  });
   return a;
 }

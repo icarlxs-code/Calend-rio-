@@ -92,14 +92,15 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
           <span class="prof__ring">${avatar(store.me, 96)}</span>
           <span class="prof__cam">${icon('camera', 15)}</span>
         </button>
-        <div class="prof__stats">
-          <div><b>${fmt(done)}</b><small>${done === 1 ? 'concluído' : 'concluídos'}</small></div>
-          <div><b>${pct}</b><small>no horário</small></div>
-          <div><b>${fmt(Object.keys(st.badges).length)}</b><small>${Object.keys(st.badges).length === 1 ? 'emblema' : 'emblemas'}</small></div>
-        </div>
+        ${mascotOn() ? `<span class="prof__snh" aria-hidden="true"><i class="prof__swoosh"></i><i class="prof__risco"></i>${sininho('acena', { size: 150 })}</span>` : ''}
       </div>
       ${store.billing?.plan === 'lifetime' && store.billing?.vip ? `<div class="prof__vipline">${icon('crown', 13)} Lembra Vitalício · Nº ${String(store.billing.vip.no).padStart(3, '0')}</div>` : ''}
       <div class="prof__name"><b>${esc(me.name || '')}</b>${prof.phoneVerified ? `<span class="prof__ok" title="Celular confirmado">${icon('check', 11)}</span>` : ''}</div>
+      <div class="prof__stats">
+        <div><i class="prof__sic prof__sic--ok">${icon('check', 18)}</i><span><b>${fmt(done)}</b><small>${done === 1 ? 'concluído' : 'concluídos'}</small></span></div>
+        <div><i class="prof__sic prof__sic--alvo">${icon('target', 18)}</i><span><b>${pct}</b><small>no horário</small></span></div>
+        <div><i class="prof__sic prof__sic--emb">${icon('star', 18)}</i><span><b>${fmt(Object.keys(st.badges).length)}</b><small>${Object.keys(st.badges).length === 1 ? 'emblema' : 'emblemas'}</small></span></div>
+      </div>
       ${prof.profession ? `<div class="prof__job">${esc(professionFor(prof.profession, prof.pronoun))}${prof.role ? ' · ' + esc(prof.role) : ''}</div>` : ''}
       ${prof.bio ? `<div class="prof__bio">${esc(prof.bio)}</div>` : ''}
       ${(() => { const o = G.offensive(); return o.days ? `<button class="prof__fire${o.days >= 30 ? ' is-blue' : o.days >= 7 ? ' is-hot' : ''}" data-tab="numeros"><span class="fire fire--sm"><i></i><i></i><i></i><i class="fire__core"></i></span><b>${o.days}</b><small>${o.days === 1 ? 'dia de ofensiva' : 'dias de ofensiva'}</small></button>` : ''; })()}
@@ -109,7 +110,7 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
           <span class="prof__bar"><i style="width:${Math.round(L.pct * 100)}%;background:${L.tier.hue}"></i></span>
           <small>${L.level >= 100 ? 'Nível máximo! Você é lenda.' : `${fmt(L.xp - L.cur)} / ${fmt(L.next - L.cur)} XP para o nível ${L.level + 1}`}</small></span>
       </button>
-      <div class="prof__btns"><button class="btn btn--soft btn--sm" data-edit>Editar perfil</button><button class="btn btn--soft btn--sm" data-action="ranking">${icon('trophy', 15)} Ranking</button><button class="btn btn--soft btn--sm" data-action="friends">${icon('users', 15)} Amigos</button><button class="btn btn--soft btn--sm" data-share>${icon('share', 15)} Compartilhar</button></div>
+      <div class="prof__btns"><button class="btn btn--soft btn--sm" data-edit><i class="pbic pbic--e">${icon('edit', 18)}</i> Editar perfil</button><button class="btn btn--soft btn--sm" data-action="ranking"><i class="pbic pbic--r">${icon('trophy', 18)}</i> Ranking</button><button class="btn btn--soft btn--sm" data-action="friends"><i class="pbic pbic--a">${icon('users', 18)}</i> Amigos</button><button class="btn btn--soft btn--sm" data-share><i class="pbic pbic--c">${icon('share', 18)}</i> Compartilhar</button></div>
       ${earned.length ? `<div class="prof__hl">${earned.slice(0, 8).map((b) => `<button class="prof__hlit" data-badge="${b.id}"><span>${badgeArt(b, 58)}</span><small>${esc(b.name())}</small></button>`).join('')}</div>` : ''}
       <div class="prof__tabs" role="tablist">
         <button role="tab" class="${cur === 'emblemas' ? 'is-on' : ''}" data-tab="emblemas" aria-label="Emblemas">${icon('grid', 20)}</button>
@@ -141,12 +142,7 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
       el.querySelectorAll('[data-edit]').forEach((b) => (b.onclick = () => openEditProfile(() => a.set(html()))));
       el.querySelector('[data-pic]').onclick = () => photoActions(() => a.set(html()));
       const sh = el.querySelector('[data-share]');
-      if (sh) sh.onclick = async () => {
-        const L = G.levelInfo();
-        const text = `Estou no nível ${L.level} (${L.tier.name()}) do ${CONFIG.appName}, com ${Object.keys(G.state().badges).length} emblemas! 🏆 A agenda que lembra de tudo por você:`;
-        const url = (CONFIG.siteUrl || location.href).replace(/#.*$/, '') + 'conheca/';
-        try { if (navigator.share) await navigator.share({ title: CONFIG.appName, text, url }); else { await navigator.clipboard.writeText(`${text} ${url}`); toast('Texto copiado! Cole no WhatsApp ou Instagram 📋'); } } catch { /* cancelou */ }
-      };
+      if (sh) sh.onclick = () => import('../friends.js').then((m) => m.openShareChoice());
     },
   });
   const off = G.onGame(() => { if (!api.closed) api.set(html()); else off(); });

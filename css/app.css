@@ -3307,3 +3307,43 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .rkhero__fig .snh, .ofs__head .ofs__snh .snh { filter: none; }
 .rkhero__fig::after { content: ''; position: absolute; left: 22%; right: 22%; bottom: 4px; height: 12px; border-radius: 50%; background: rgba(110,30,0,.28); filter: blur(4px); z-index: -1; }
 .ab { opacity: 0; } .ab.is-run { opacity: 1; }
+
+/* ---------- Perfil: direção nova (Lembra acenando no topo, números com ícone, detalhes laranja) ---------- */
+.sheet--prof .prof__top { position: relative; min-height: 150px; }
+.prof__snh { position: absolute; right: -16px; top: -14px; width: 190px; height: 170px; pointer-events: none; }
+.prof__snh .snh { position: absolute; right: 18px; top: 4px; width: 150px; z-index: 2; }
+.prof__swoosh { position: absolute; right: -40px; top: 40px; width: 230px; height: 110px; border-radius: 120px 0 0 120px; background: linear-gradient(90deg, #FF8A2A, #FF6B1A); transform: rotate(-14deg); z-index: 1; }
+.prof__risco { position: absolute; left: 22px; top: 6px; width: 36px; height: 36px; z-index: 3; background:
+  linear-gradient(#FFC21A,#FFC21A) 70% 0 / 6px 16px no-repeat, linear-gradient(#FFC21A,#FFC21A) 0 75% / 16px 6px no-repeat, linear-gradient(45deg, transparent 40%, #FFC21A 40%, #FFC21A 62%, transparent 62%) 100% 100% / 16px 16px no-repeat; animation: snhbrilho 1.8s ease-in-out infinite; }
+.sheet--prof .prof__ring { background: conic-gradient(#FF6B1A 0 360deg); }
+.sheet--prof .prof__cam { background: #FF6B1A; border-radius: 12px; }
+.sheet--prof .prof__name { font-size: 24px; font-weight: 900; }
+.sheet--prof .prof__stats { display: flex; justify-content: space-between; align-items: center; margin: 14px 0 6px; text-align: left; }
+.sheet--prof .prof__stats > div { display: flex; align-items: center; gap: 8px; flex: 1; justify-content: center; }
+.sheet--prof .prof__stats > div + div { border-left: 2px solid var(--line); }
+.prof__sic { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: #fff; font-style: normal; flex: none; }
+.prof__sic--ok { background: linear-gradient(180deg, #4ADE80, #16A34A); box-shadow: 0 3px 0 #15803D; }
+.prof__sic--alvo { background: linear-gradient(180deg, #FB7185, #E11D48); border-radius: 50%; box-shadow: 0 3px 0 #BE123C; }
+.prof__sic--emb { background: linear-gradient(180deg, #C084FC, #9333EA); box-shadow: 0 3px 0 #7E22CE; clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%); }
+.sheet--prof .prof__stats b { font-size: 22px; line-height: 1; }
+.sheet--prof .prof__stats small { font-size: 12.5px; }
+.sheet--prof .prof__bar i { background: linear-gradient(90deg, #FF8A2A, #FF6B1A) !important; }
+.pbic { display: inline-grid; place-items: center; font-style: normal; margin-right: 4px; }
+.pbic--e { color: #FF9A1A; } .pbic--r { color: #FFC21A; } .pbic--a { color: #A855F7; } .pbic--c { color: #0EA5E9; }
+.sheet--prof .prof__tabs button.is-on { color: #FF6B1A; border-bottom: 3px solid #FF6B1A; }
+@media (max-width: 380px) { .prof__snh { transform: scale(.85); transform-origin: top right; } }
+
+/* ---------- Ranking: correções de corte ---------- */
+.sheet--rk { background: #F26A1C url(../assets/fundos/raios.webp) center top / cover no-repeat; }
+.sheet--rk .sheet__grab { background: #F37020; }
+.sheet--rk .sheet__head { background: #F37020; box-shadow: 0 8px 12px -10px rgba(120,40,0,.45); }
+.sheet--rk .rkstage { margin: 24px 0 22px; }
+.sheet--rk .rkpod { margin: 0; align-items: end; }
+.sheet--rk .rkpod__it small { margin-bottom: 10px; display: inline-block; padding: 2px 10px; border-radius: 999px; background: rgba(0,0,0,.14); color: #fff; }
+.sheet--rk .rkpod__base { border-radius: 16px 16px 10px 10px; padding-top: 14px; font-size: 26px; box-shadow: inset 0 3px 0 #fff, inset 0 -8px 0 rgba(0,0,0,.05), 0 5px 0 #E3C6A8; }
+.sheet--rk .rkpod__base::before { display: none; }
+.sheet--rk .rkpod__it--1 .rkpod__base { height: 124px; background: linear-gradient(180deg, #FFE27A, #FFC21A) !important; color: #B07400; box-shadow: inset 0 3px 0 #FFF4C2, 0 5px 0 #D89A00; }
+.sheet--rk .rkpod__it--2 .rkpod__base { height: 96px; background: linear-gradient(180deg, #F2F4F7, #C9CED6) !important; color: #6B7280; box-shadow: inset 0 3px 0 #fff, 0 5px 0 #9CA3AF; }
+.sheet--rk .rkpod__it--3 .rkpod__base { height: 78px; background: linear-gradient(180deg, #F3B27E, #D9864B) !important; color: #fff; box-shadow: inset 0 3px 0 #FAD3B3, 0 5px 0 #A85E2B; }
+.sheet--rk .rkpod__base em { text-shadow: 0 2px 0 rgba(0,0,0,.08); }
+.sheet--rk .rkhero__fig::before { inset: 4px; }
