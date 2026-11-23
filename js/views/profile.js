@@ -10,7 +10,7 @@ import { icon } from '../icons.js';
 import { esc } from '../utils.js';
 import { sininho, alive, act, vivo } from '../sininho.js';
 import { mascotOn } from '../mascote.js';
-import { meuStory, openViewer, comoPostar, refreshFeed, fotoPendente, postStory } from '../stories.js';
+import { meuStory, openViewer, comoPostar, refreshFeed, fotoPendente } from '../stories.js';
 import { CONFIG } from '../../config.js';
 import { professionFor } from '../../functions/catalog.js';
 
@@ -219,7 +219,7 @@ export function photoActions(after) {
       <div class="phm__head"><span class="phm__pic${ms ? ' has-story' : ''}"><span>${avatar(store.me, 84)}</span></span><b>Sua foto e seus stories</b><small>Amigos veem sua foto, nível e stories</small></div>
       <div class="phm__grp">
         ${ms ? row('data-vermeus', 'eye', 'is-story', 'Ver seus stories', `${ms.stories.length} ${ms.stories.length === 1 ? 'story no ar' : 'stories no ar'} · ${nViews} ${nViews === 1 ? 'visualização' : 'visualizações'}`) : ''}
-        ${row('data-postar', 'camera', 'is-cam', ms ? 'Postar outro story' : 'Postar story', fp ? `Foto de “${esc(fp.title)}” · +${fp.P.total} XP agora` : 'Conclua algo da agenda e mostre que fez · XP em dobro')}
+        ${row('data-postar', 'camera', 'is-cam', ms ? 'Postar outro story' : 'Postar story', fp ? `Foto de “${esc(fp.title)}” · +${fp.P.total} XP agora` : 'Câmera ou galeria · só seus amigos veem')}
       </div>
       <div class="phm__grp">
         ${me.photo ? row('data-view', 'image', 'is-n', 'Ver foto') : ''}
@@ -239,8 +239,7 @@ export function photoActions(after) {
       };
       x.el.querySelectorAll('[data-file]').forEach((inp) => (inp.onchange = () => { const f = inp.files && inp.files[0]; if (!f) return; x.close(); usa(f); }));
       const vm = x.el.querySelector('[data-vermeus]'); if (vm) vm.onclick = () => { x.close(); openViewer(ms.uid, after); };
-      // postar: se tem algo concluído hoje, a câmera abre no mesmo toque (o navegador exige)
-      x.el.querySelector('[data-postar]').onclick = () => { x.close(); if (fp) postStory({ title: fp.title, ref: fp.ref, kind: fp.kind }); else comoPostar(); };
+      x.el.querySelector('[data-postar]').onclick = () => { x.close(); comoPostar(after); };
       const v = x.el.querySelector('[data-view]'); if (v) v.onclick = () => { x.close(); viewPhoto(me.photo); };
       const aj = x.el.querySelector('[data-ajusta]'); if (aj) aj.onclick = async () => { x.close(); try { const blob = await (await fetch(me.photo)).blob(); usa(new File([blob], 'foto.jpg', { type: blob.type || 'image/jpeg' })); } catch { toast('Não consegui abrir a foto atual.'); } };
       const d = x.el.querySelector('[data-del]');

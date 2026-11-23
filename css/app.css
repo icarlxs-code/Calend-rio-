@@ -3767,3 +3767,21 @@ body.has-stv .snhbud { display: none; }
 /* o botão de tirar a foto fica sempre à vista, mesmo quando o convite é maior que a tela */
 .cvs__go { position: sticky; bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); z-index: 3; }
 .cvs__depois { position: relative; z-index: 2; }
+
+/* stories: arrastar (fechar / ver quem viu) e o editor do story livre */
+.stv { touch-action: none; overscroll-behavior: contain; will-change: transform; }
+.stv:not(.is-drag) { transition: opacity .2s, transform .22s cubic-bezier(.2,.8,.2,1), border-radius .22s; }
+.stv.is-drag { transition: none; overflow: hidden; }
+.stv__img img { -webkit-user-drag: none; user-select: none; pointer-events: none; }
+.stv__done--vazio { min-height: 20px; }
+.stv--edit .stv__top { justify-content: flex-start; }
+.stv--edit .stv__top > span { display: flex; flex-direction: column; }
+.stv--edit .stv__top small { opacity: .7; font-size: 12px; }
+.stve { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px)); position: relative; z-index: 3; }
+.stve__cap { width: 100%; border: 1.5px solid rgba(255,255,255,.35); background: rgba(0,0,0,.35); color: #fff; border-radius: 999px; padding: 12px 16px; font: inherit; font-size: 16px; outline: none; touch-action: auto; }
+.stve__cap::placeholder { color: rgba(255,255,255,.65); }
+.stve__cap:focus { border-color: #fff; }
+.stve__go { align-self: flex-end; display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 999px; background: #fff; color: #111; font: inherit; font-weight: 800; padding: 7px 14px 7px 7px; cursor: pointer; }
+.stve__go .stface, .stve__go img { width: 26px; height: 26px; border-radius: 50%; }
+.stve__go.is-busy { opacity: .6; pointer-events: none; }
+.phm__row { cursor: pointer; }

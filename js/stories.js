@@ -32,6 +32,7 @@ export async function refreshFeed() {
   if (!store.user || store.mode !== 'cloud') return feed;
   doAparelho();
   try { const r = await call('/friends/stories'); feed = { rows: r.rows || [], pedidos: r.pedidos || 0, online: r.online || [], at: Date.now() }; gravaCache('feed', feed); } catch { /* ok */ }
+  limpaFotos();
   window.__meuStory = !!meuStory(); document.querySelectorAll('[data-lvring]').forEach((el) => el.classList.toggle('has-story', window.__meuStory));
   return feed;
 }
@@ -43,6 +44,23 @@ export async function refreshVisitors() {
 }
 
 /* ---------- câmera: só foto tirada agora ---------- */
+/* foto → JPEG leve (até 1080 px, até ~400 KB) */
+function prepara(f) {
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(f);
+    img.onload = () => {
+      const max = 1080, k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      let q = 0.8, out = c.toDataURL('image/jpeg', q);
+      while (out.length > 400000 && q > 0.35) { q -= 0.1; out = c.toDataURL('image/jpeg', q); }
+      res(out);
+    };
+    img.onerror = () => rej(new Error('Não consegui ler a foto.'));
+    img.src = url;
+  });
+}
+/* câmera (story do compromisso: só foto da hora) */
 function tiraFoto(cam = 'environment') {
   return new Promise((res, rej) => {
     const inp = document.createElement('input');
@@ -52,19 +70,9 @@ function tiraFoto(cam = 'environment') {
     inp.onchange = () => {
       const f = inp.files && inp.files[0]; inp.remove();
       if (!f) return rej(new Error('cancelou'));
-      // foto antiga (da galeria) não vale: a câmera gera um arquivo com data de agora
+      // foto antiga (da galeria) não vale como prova: a câmera gera um arquivo com data de agora
       if (f.lastModified && f.lastModified < t0 - 10 * 60e3) return rej(new Error('A foto precisa ser tirada agora, pela câmera 📸'));
-      const img = new Image(), url = URL.createObjectURL(f);
-      img.onload = () => {
-        const max = 1080, k = Math.min(1, max / Math.max(img.width, img.height));
-        const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
-        let q = 0.78, out = c.toDataURL('image/jpeg', q);
-        while (out.length > 400000 && q > 0.35) { q -= 0.1; out = c.toDataURL('image/jpeg', q); }
-        res(out);
-      };
-      img.onerror = () => rej(new Error('Não consegui ler a foto.'));
-      img.src = url;
+      prepara(f).then(res, rej);
     };
     inp.click();
   });
@@ -98,7 +106,7 @@ export function storyStrip(rows = feed.rows, { comMeu = true, lembra = true } = 
   const novos = itens.filter((r) => r.stories.some((x) => !x.seen)), vistos = itens.filter((r) => !r.stories.some((x) => !x.seen)); // quem tem story novo vem primeiro
   const lb = lembra && mascotOn() ? `<button class="ststrip__it" data-st-lembra role="listitem"><span class="stface stface--snh" style="--s:60px">${sininho('feliz', { size: 58 })}</span><i class="ststrip__ring${lembraVisto() ? ' is-seen' : ''}"></i><small>Lembra</small></button>` : '';
   return `<div class="ststrip" role="list">
-    ${comMeu ? `<button class="ststrip__it" data-st-me role="listitem">${face(store.member(store.me) || { name: 'Você' }, 60)}${meus ? '' : `<i class="ststrip__plus">${icon('plus', 14)}</i>`}<small>Seu story</small><i class="ststrip__ring${meus ? (meus.stories.some((x) => !x.seen) ? '' : ' is-seen is-mine') : ' is-off'}"></i></button>` : ''}
+    ${comMeu ? `<button class="ststrip__it" data-st-me role="listitem">${face(store.member(store.me) || { name: 'Você' }, 60)}<i class="ststrip__plus" data-st-novo role="button" aria-label="Novo story">${icon('plus', 14)}</i><small>Seu story</small><i class="ststrip__ring${meus ? (meus.stories.some((x) => !x.seen) ? '' : ' is-seen is-mine') : ' is-off'}"></i></button>` : ''}
     ${!lembraVisto() ? lb : ''}
     ${novos.map((r) => `<button class="ststrip__it" data-st-owner="${esc(r.uid)}" role="listitem">${face(r, 60)}<i class="ststrip__ring"></i><small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
     ${lembraVisto() ? lb : ''}
@@ -108,21 +116,42 @@ export function storyStrip(rows = feed.rows, { comMeu = true, lembra = true } = 
 export function bindStrip(el, onChange) {
   el.querySelectorAll('[data-st-owner]').forEach((b) => (b.onclick = () => openViewer(b.dataset.stOwner, onChange)));
   const me = el.querySelector('[data-st-me]');
-  if (me) me.onclick = () => { const meus = meuStory(); if (meus) openViewer(meus.uid, onChange); else comoPostar(); };
+  if (me) me.onclick = (ev) => { if (ev.target.closest('[data-st-novo]')) return novoStory(onChange); const meus = meuStory(); if (meus) openViewer(meus.uid, onChange); else novoStory(onChange); };
   const lb = el.querySelector('[data-st-lembra]'); if (lb) lb.onclick = () => openLembraStory(onChange);
 }
-export function comoPostar() {
-  const fp = fotoPendente();
-  if (fp) return convidaStory({ ref: fp.ref, kind: fp.kind });
-  openSheet({ className: 'sheet--dialog', html: `${sheetHead('Seu story', { left: '<button class="btn-text" data-close>Fechar</button>' })}<div class="page page--sheet">
-    <p>O story do Lembra é a prova de que você <b>fez</b>: abra um compromisso, marque como <b>feito</b> e toque em <b>📸 Postar story</b>. A foto é tirada na hora, vale <b>XP em dobro</b> e some sozinha em 24 h.</p></div>` });
-}
+export function comoPostar(onChange) { return novoStory(onChange); }
 
 /* ---------- visualizador em tela cheia ---------- */
+/* fotos dos stories guardadas no aparelho: vista uma vez, abre na hora da próxima (somem junto com o story, em 24 h) */
+const FOTOS = new Map(), CACHE_ST = 'lembra-stories-v1', chaveFoto = (id) => `/__story/${id}`;
+async function fotoGuardada(id) {
+  if (FOTOS.has(id)) return FOTOS.get(id);
+  try { const c = await caches.open(CACHE_ST); const r = await c.match(chaveFoto(id)); if (r) { const t = await r.text(); FOTOS.set(id, t); return t; } } catch { /* sem cache: tudo bem */ }
+  return null;
+}
+async function guardaFoto(id, foto) {
+  FOTOS.set(id, foto);
+  try { const c = await caches.open(CACHE_ST); await c.put(chaveFoto(id), new Response(foto, { headers: { 'Content-Type': 'text/plain' } })); } catch { /* ok */ }
+}
+async function limpaFotos() { // apaga as de stories que já sumiram
+  try { const vivos = new Set(feed.rows.flatMap((r) => r.stories.map((x) => chaveFoto(x.id)))); const c = await caches.open(CACHE_ST); for (const k of await c.keys()) if (!vivos.has(new URL(k.url).pathname)) c.delete(k); } catch { /* ok */ }
+}
+/* a foto de um story: do aparelho se já tiver; senão baixa (e marca visto). "adianta" baixa sem marcar */
+async function fotoDe(r, st, { adianta = false } = {}) {
+  const tem = await fotoGuardada(st.id);
+  if (tem) { if (!adianta && !st.seen && !r.me) { st.seen = true; call('/friends/story-view', { owner: r.uid, id: st.id, modo: 'visto' }).catch(() => {}); } return tem; }
+  const res = await call('/friends/story-view', { owner: r.uid, id: st.id, ...(adianta ? { modo: 'foto' } : {}) });
+  if (!adianta) st.seen = true;
+  guardaFoto(st.id, res.photo);
+  return res.photo;
+}
+
+/* ---------- visualizador em tela cheia (estilo Instagram) ----------
+   toque à direita/esquerda: próximo/anterior · segurar: pausa · arrastar pra baixo: fecha · arrastar pra cima (no seu): quem viu */
 export async function openViewer(ownerUid, onChange) {
   if (!feed.rows.length || Date.now() - feed.at > 60e3) await refreshFeed();
   const ordem = feed.rows.filter((r) => r.stories.length);
-  let oi = Math.max(0, ordem.findIndex((r) => r.uid === ownerUid)), si = 0, timer = 0, t0 = 0, pausado = false;
+  let oi = Math.max(0, ordem.findIndex((r) => r.uid === ownerUid)), si = 0, timer = 0, pausado = false, vez = 0;
   if (!ordem.length) return toast('Nenhum story agora.');
   const first = ordem[oi].stories.findIndex((x) => !x.seen); si = first < 0 ? 0 : first;
   const w = document.createElement('div');
@@ -132,47 +161,67 @@ export async function openViewer(ownerUid, onChange) {
   const fecha = () => { clearInterval(timer); w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-stv'); }, 220); onChange && onChange(); };
   const proximo = () => { const r = ordem[oi]; if (si < r.stories.length - 1) si++; else if (oi < ordem.length - 1) { oi++; si = 0; } else return fecha(); mostra(); };
   const anterior = () => { if (si > 0) si--; else if (oi > 0) { oi--; si = ordem[oi].stories.length - 1; } mostra(); };
+  const abreQuemViu = () => { const r = ordem[oi], st = r.stories[si]; if (!r.me) return; pausado = true; openViewers(st.id, () => { pausado = false; }, w.querySelector('.stv__img img')?.src, st); };
+  // adianta os próximos 2 (do mesmo amigo e o primeiro do próximo): abrem na hora
+  const adianta = () => { const L = []; const r = ordem[oi]; if (r.stories[si + 1]) L.push([r, r.stories[si + 1]]); const r2 = ordem[oi + 1]; if (r2) { const k = Math.max(0, r2.stories.findIndex((x) => !x.seen)); L.push([r2, r2.stories[k]]); } L.forEach(([rr, ss]) => fotoDe(rr, ss, { adianta: true }).catch(() => {})); };
   async function mostra() {
     clearInterval(timer);
-    const r = ordem[oi], st = r.stories[si];
+    const minha = ++vez, r = ordem[oi], st = r.stories[si];
+    const rodape = r.me ? `<footer class="stv__me"><button class="stv__ativ" data-viewers><span class="stv__faces" data-faces></span><b>Atividade</b><small>${st.views || 0} ${st.views === 1 ? 'visualização' : 'visualizações'} · arraste pra cima</small></button><button class="stv__ic" data-postar aria-label="Postar outro">${icon('camera', 22)}<small>Postar</small></button><button class="stv__ic" data-del aria-label="Apagar">${icon('trash', 22)}<small>Apagar</small></button></footer>`
+      : st.title ? `<footer class="stv__done">${icon('check', 16)} ${esc(r.name.split(' ')[0])} concluiu “${esc(st.title)}”</footer>` : '<footer class="stv__done stv__done--vazio"></footer>';
     w.innerHTML = `<div class="stv__bars">${r.stories.map((x, i) => `<i><b style="width:${i < si ? 100 : 0}%"></b></i>`).join('')}</div>
-      <header class="stv__top">${face(r, 36)}<span><b>${r.me ? 'Você' : esc(r.name)}</b><small>${desde(st.at)}${st.title ? ` · ${esc(st.title)}` : ''}</small></span><button class="stv__x" data-x aria-label="Fechar">${icon('x', 22)}</button></header>
+      <header class="stv__top">${face(r, 36)}<span><b>${r.me ? 'Seu story' : esc(r.name)}</b><small>${desde(st.at)}${st.title ? ` · ${esc(st.title)}` : ''}</small></span><button class="stv__x" data-x aria-label="Fechar">${icon('x', 22)}</button></header>
       <div class="stv__img"><div class="stv__load"><i></i><i></i><i></i></div></div>
       ${st.caption ? `<p class="stv__cap">${esc(st.caption)}</p>` : ''}
       ${r.me ? '' : `<button class="stv__more" data-more aria-label="Mais opções">${icon('dots', 22)}</button>`}
-      ${r.me ? `<footer class="stv__me"><button class="stv__ativ" data-viewers><span class="stv__faces" data-faces></span><b>Atividade</b><small>${st.views || 0} ${st.views === 1 ? 'visualização' : 'visualizações'}</small></button><button class="stv__ic" data-postar aria-label="Postar outro">${icon('camera', 22)}<small>Postar</small></button><button class="stv__ic" data-del aria-label="Apagar">${icon('trash', 22)}<small>Apagar</small></button></footer>` : `<footer class="stv__done">${icon('check', 16)} ${esc(r.name.split(' ')[0])} concluiu ${st.title ? `“${esc(st.title)}”` : 'um compromisso'}</footer>`}
+      ${rodape}
       <button class="stv__nav stv__nav--l" data-prev aria-label="Anterior"></button><button class="stv__nav stv__nav--r" data-next aria-label="Próximo"></button>`;
     w.querySelector('[data-x]').onclick = fecha;
-    w.querySelector('[data-prev]').onclick = anterior;
-    w.querySelector('[data-next]').onclick = proximo;
-    const v = w.querySelector('[data-viewers]'); if (v) v.onclick = () => { pausado = true; openViewers(st.id, () => { pausado = false; }, w.querySelector('.stv__img img')?.src, st); };
-    const pp = w.querySelector('[data-postar]'); if (pp) pp.onclick = () => { fecha(); comoPostar(); };
+    w.querySelector('[data-prev]').onclick = () => { if (!arrastou) anterior(); };
+    w.querySelector('[data-next]').onclick = () => { if (!arrastou) proximo(); };
+    const v = w.querySelector('[data-viewers]'); if (v) v.onclick = abreQuemViu;
+    const pp = w.querySelector('[data-postar]'); if (pp) pp.onclick = () => { fecha(); novoStory(onChange); };
     if (r.me && st.views) call('/friends/story-viewers', { id: st.id }).then((x) => { const f = w.querySelector('[data-faces]'); if (f) f.innerHTML = (x.viewers || []).slice(0, 3).map((c) => face(c, 26)).join(''); }).catch(() => {});
     const mais = w.querySelector('[data-more]');
     if (mais) mais.onclick = () => { pausado = true; denunciaOuBloqueia({ uid: r.uid, name: r.name, storyId: st.id }, () => { pausado = false; }, fecha); };
     const d = w.querySelector('[data-del]');
     if (d) d.onclick = async () => {
       pausado = true;
-      if (!(await confirmDialog({ title: 'Apagar este story?', text: 'A foto some na hora. O XP em dobro que ele deu sai também (você fica só com o XP normal do compromisso).', ok: 'Apagar', danger: true }))) { pausado = false; return; }
+      if (!(await confirmDialog({ title: 'Apagar este story?', text: st.title ? 'A foto some na hora. O XP em dobro que ele deu sai também (você fica só com o XP normal do compromisso).' : 'A foto some na hora para todo mundo.', ok: 'Apagar', danger: true }))) { pausado = false; return; }
       try { await call('/friends/story-delete', { id: st.id }); const G = await import('./game.js'); const v2 = G.storyXpOff(st.id); toast(v2 ? `Story apagado · −${v2} XP do bônus` : 'Story apagado'); r.stories.splice(si, 1); } catch (e) { toast(e.message || 'Não consegui apagar.'); }
       if (!r.stories.length) return fecha();
       si = Math.min(si, r.stories.length - 1); pausado = false; mostra();
     };
     try {
-      const res = await call('/friends/story-view', { owner: r.uid, id: st.id });
-      if (!w.isConnected) return;
-      w.querySelector('.stv__img').innerHTML = `<img src="${res.photo}" alt="Story de ${esc(r.name)}">`;
-      st.seen = true;
-    } catch (e) { w.querySelector('.stv__img').innerHTML = `<p class="stv__gone">${esc(e.message || 'Esse story já sumiu.')}</p>`; }
-    t0 = Date.now(); let gasto = 0, ult = Date.now();
+      const foto = await fotoDe(r, st);
+      if (!w.isConnected || minha !== vez) return;
+      w.querySelector('.stv__img').innerHTML = `<img src="${foto}" alt="Story de ${esc(r.name)}" draggable="false">`;
+    } catch (e) { if (minha === vez) w.querySelector('.stv__img').innerHTML = `<p class="stv__gone">${esc(e.message || 'Esse story já sumiu.')}</p>`; }
+    if (minha !== vez) return;
+    adianta();
+    let gasto = 0, ult = Date.now();
     const bar = w.querySelectorAll('.stv__bars b')[si];
     timer = setInterval(() => { const agora = Date.now(); if (!pausado && !document.hidden) gasto += agora - ult; ult = agora; if (bar) bar.style.width = `${Math.min(100, (gasto / DUR) * 100)}%`; if (gasto >= DUR) proximo(); }, 50);
   }
-  // segurar o dedo pausa; arrastar pra baixo fecha (como no Instagram)
-  let y0 = null;
-  w.addEventListener('pointerdown', (e) => { pausado = true; y0 = e.clientY; });
-  w.addEventListener('pointermove', (e) => { if (y0 != null && e.clientY - y0 > 0) w.style.transform = `translateY(${(e.clientY - y0) * 0.6}px) scale(${1 - Math.min(0.08, (e.clientY - y0) / 3000)})`; });
-  const solta = (e) => { pausado = false; const dy = y0 == null ? 0 : e.clientY - y0; y0 = null; if (dy > 110) return fecha(); w.style.transform = ''; };
+  // gestos: o dedo segura (pausa), arrasta pra baixo (fecha) ou pra cima (quem viu, no seu story)
+  let y0 = null, x0 = 0, arrastou = false;
+  w.addEventListener('pointerdown', (e) => { if (e.target.closest('button:not(.stv__nav), a, input')) return; pausado = true; y0 = e.clientY; x0 = e.clientX; arrastou = false; w.classList.add('is-drag'); });
+  w.addEventListener('pointermove', (e) => {
+    if (y0 == null) return;
+    const dy = e.clientY - y0;
+    if (Math.abs(dy) > 8 || Math.abs(e.clientX - x0) > 8) arrastou = true;
+    if (dy > 0) w.style.transform = `translateY(${dy * 0.75}px) scale(${1 - Math.min(0.12, dy / 2400)})`;
+    else w.style.transform = `translateY(${Math.max(-60, dy * 0.25)}px)`;
+    w.style.borderRadius = dy > 0 ? `${Math.min(28, dy / 6)}px` : '';
+  });
+  const solta = (e) => {
+    if (y0 == null) return;
+    const dy = e.clientY - y0; y0 = null; pausado = false; w.classList.remove('is-drag');
+    if (dy > 110) { w.style.transform = `translateY(${innerHeight}px)`; return setTimeout(fecha, 120); }
+    w.style.transform = ''; w.style.borderRadius = '';
+    if (dy < -70 && ordem[oi].me) abreQuemViu();
+    setTimeout(() => { arrastou = false; }, 60);
+  };
   w.addEventListener('pointerup', solta);
   w.addEventListener('pointercancel', solta);
   requestAnimationFrame(() => w.classList.add('is-in'));
@@ -360,4 +409,53 @@ export function openLembraStory(onChange) {
   w.addEventListener('pointerdown', () => { pausado = true; }); w.addEventListener('pointerup', () => { pausado = false; }); w.addEventListener('pointercancel', () => { pausado = false; });
   requestAnimationFrame(() => w.classList.add('is-in'));
   mostra();
+}
+
+/* ---------- novo story (livre, como no Instagram): câmera ou galeria, com legenda ----------
+   o story do compromisso concluído (foto da hora) continua valendo XP em dobro; o livre não dá XP */
+export function novoStory(onChange) {
+  if (store.mode !== 'cloud' || !store.user) return toast('Entre na sua conta para postar stories.');
+  const fp = fotoPendente();
+  const a = openSheet({
+    className: 'sheet--actions sheet--phm',
+    html: `<div class="phm">
+      <div class="phm__head"><span class="phm__pic"><span>${face(store.member(store.me) || { name: 'Você' }, 72)}</span></span><b>Novo story</b><small>Só seus amigos veem · some em 24 h</small></div>
+      ${fp ? `<div class="phm__grp"><button class="phm__row" data-tarefa><span class="phm__ic is-cam">${icon('check', 21)}</span><span class="phm__t"><b>Foto de “${esc(fp.title)}”</b><small>Prova do que você fez · +${fp.P.total} XP agora</small></span>${icon('right', 16)}</button></div>` : ''}
+      <div class="phm__grp">
+        <label class="phm__row"><span class="phm__ic is-story">${icon('camera', 21)}</span><span class="phm__t"><b>Câmera</b><small>Tirar uma foto agora</small></span>${icon('right', 16)}<input type="file" accept="image/*" capture="environment" data-livre hidden></label>
+        <label class="phm__row"><span class="phm__ic is-n">${icon('image', 21)}</span><span class="phm__t"><b>Galeria</b><small>Escolher uma foto do celular</small></span>${icon('right', 16)}<input type="file" accept="image/*" data-livre hidden></label>
+      </div>
+      <button class="phm__cancel" data-close>Cancelar</button>
+    </div>`,
+    onMount: (x) => {
+      const t = x.el.querySelector('[data-tarefa]'); if (t) t.onclick = () => { x.close(); postStory({ title: fp.title, ref: fp.ref, kind: fp.kind }).then(() => onChange && onChange()); };
+      x.el.querySelectorAll('[data-livre]').forEach((inp) => (inp.onchange = async () => {
+        const f = inp.files && inp.files[0]; if (!f) return; x.close();
+        try { editorStory(await prepara(f), onChange); } catch (e) { toast(e.message || 'Não consegui abrir a foto.'); }
+      }));
+    },
+  });
+  return a;
+}
+function editorStory(foto, onChange) {
+  const w = document.createElement('div');
+  w.className = 'stv stv--edit'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Novo story');
+  (document.getElementById('sheets') || document.body).appendChild(w); document.body.classList.add('has-stv');
+  w.innerHTML = `<header class="stv__top"><button class="stv__x" data-x aria-label="Cancelar">${icon('x', 22)}</button><span><b>Novo story</b><small>some em 24 h</small></span></header>
+    <div class="stv__img"><img src="${foto}" alt="" draggable="false"></div>
+    <div class="stve"><input class="stve__cap" type="text" maxlength="120" placeholder="Escreva uma legenda…" data-cap>
+    <button class="stve__go" data-go>${face(store.member(store.me) || { name: 'Você' }, 26)}<span>Seu story</span>${icon('right', 18)}</button></div>`;
+  const fecha = () => { w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-stv'); }, 220); };
+  w.querySelector('[data-x]').onclick = fecha;
+  w.querySelector('[data-go]').onclick = async (ev) => {
+    const b = ev.currentTarget; b.disabled = true; b.classList.add('is-busy');
+    try {
+      const r = await call('/friends/story-post', { photo: foto, caption: w.querySelector('[data-cap]').value.trim() });
+      guardaFoto(r.id, foto);
+      toast('📸 Story no ar! Seus amigos vão ver por 24 h');
+      fecha(); await refreshFeed(); onChange && onChange();
+      import('./mascote.js').then((M) => M.react('story')).catch(() => {});
+    } catch (e) { toast(e.message || 'Não consegui postar agora.'); b.disabled = false; b.classList.remove('is-busy'); }
+  };
+  requestAnimationFrame(() => w.classList.add('is-in'));
 }

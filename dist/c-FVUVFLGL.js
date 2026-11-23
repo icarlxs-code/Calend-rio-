@@ -1,1 +1,0 @@
-var r=Object.defineProperty;var n=(a,e)=>{for(var o in e)r(a,o,{get:e[o],enumerable:!0})};var t=["O Lembra agora aparece pra todo mundo: arraste ele e ele fica escondidinho na borda que voc\xEA escolher.","Stories no topo, anel colorido em quem postou e \u201CQuem viu\u201D no seu story.","Perfil novo, foto com recorte e emblemas que abrem na hora."];export{n as a,t as b};

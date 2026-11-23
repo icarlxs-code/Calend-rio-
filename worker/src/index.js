@@ -604,11 +604,12 @@ async function handle(req, env) {
     if (url.pathname === '/friends/story-post') {
       const photo = typeof body.photo === 'string' && body.photo.length < 420000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(body.photo) ? body.photo : null;
       if (!photo) return reply(env, req, { error: 'Foto inválida. Tire a foto pela câmera do app.' }, 400);
-      if (body.camera !== true) return reply(env, req, { error: 'O story precisa ser uma foto tirada agora, pela câmera.' }, 400);
+      const livre = !body.ref; // story livre (câmera ou galeria, sem XP); o de compromisso concluído precisa ser foto da hora
+      if (!livre && body.camera !== true) return reply(env, req, { error: 'O story do compromisso precisa ser uma foto tirada agora, pela câmera.' }, 400);
       const id = Array.from(crypto.getRandomValues(new Uint8Array(12)), (x) => 'abcdefghijkmnpqrstuvwxyz23456789'[x % 32]).join('');
       const list = vivos(await getL(`stories:${meU}`));
       if (list.length >= 10) return reply(env, req, { error: 'Você já postou 10 stories hoje. Espere alguns sumirem.' }, 429);
-      list.push({ id, at: now, title: clean(body.title, 60), caption: clean(body.caption, 120), ref: clean(body.ref, 80), views: {} });
+      list.push({ id, at: now, title: livre ? '' : clean(body.title, 60), caption: clean(body.caption, 120), ref: clean(body.ref, 80), livre, views: {} });
       await env.CAL.put(`stories:${meU}`, JSON.stringify(list), { expirationTtl: 26 * 3600 });
       await env.CAL.put(`storyimg:${id}`, photo, { expirationTtl: 24 * 3600 }); // a foto some sozinha em 24h (não fica guardada)
       const mine = await cardOf(meU), fr = await getL(`friends:${meU}`);
@@ -629,7 +630,7 @@ async function handle(req, env) {
       const donos = [meU, ...fr.slice(0, 200)];
       const rows = (await Promise.all(donos.map(async (u) => {
         const l = vivos(await getL(`stories:${u}`)); if (!l.length) return null;
-        return { ...(await cardOf(u)), me: u === meU, stories: l.map((x) => ({ id: x.id, at: x.at, title: x.title, caption: x.caption, seen: !!x.views[meU], views: u === meU ? Object.keys(x.views).length : undefined })) };
+        return { ...(await cardOf(u)), me: u === meU, stories: l.map((x) => ({ id: x.id, at: x.at, title: x.title, caption: x.caption, livre: !!x.livre, seen: !!x.views[meU], views: u === meU ? Object.keys(x.views).length : undefined })) };
       }))).filter(Boolean);
       // como no Instagram/WhatsApp: os seus primeiro, depois quem tem novidade, do mais recente ao mais antigo
       rows.sort((a, b) => (b.me - a.me) || (a.stories.every((x) => x.seen) - b.stories.every((x) => x.seen)) || (Math.max(...b.stories.map((x) => x.at)) - Math.max(...a.stories.map((x) => x.at))));
@@ -642,10 +643,12 @@ async function handle(req, env) {
       const owner = clean(body.owner, 64), id = clean(body.id, 40);
       if (!(await isFriend(meU, owner))) return reply(env, req, { error: 'Só amigos veem os stories.' }, 403);
       const list = await getL(`stories:${owner}`), st = list.find((x) => x.id === id && now - x.at < DAY);
-      const photo = st && (await env.CAL.get(`storyimg:${id}`));
-      if (!st || !photo) return reply(env, req, { error: 'Esse story já sumiu.' }, 404);
-      if (owner !== meU && !st.views[meU]) { st.views[meU] = now; await env.CAL.put(`stories:${owner}`, JSON.stringify(list), { expirationTtl: 26 * 3600 }); }
-      return reply(env, req, { ok: true, photo });
+      // modo "foto": só baixa (o app adianta o próximo story sem marcar como visto); "visto": só marca (a foto já está no celular)
+      const modo = body.modo === 'foto' || body.modo === 'visto' ? body.modo : '';
+      const photo = st && modo !== 'visto' ? await env.CAL.get(`storyimg:${id}`) : null;
+      if (!st || (modo !== 'visto' && !photo)) return reply(env, req, { error: 'Esse story já sumiu.' }, 404);
+      if (modo !== 'foto' && owner !== meU && !st.views[meU]) { st.views[meU] = now; await env.CAL.put(`stories:${owner}`, JSON.stringify(list), { expirationTtl: 26 * 3600 }); }
+      return reply(env, req, modo === 'visto' ? { ok: true } : { ok: true, photo });
     }
     if (url.pathname === '/friends/story-viewers') {
       const st = (await getL(`stories:${meU}`)).find((x) => x.id === clean(body.id, 40));
