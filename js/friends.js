@@ -5,7 +5,7 @@ import { store } from './store.js';
 import { api, server } from './avisos.js';
 import { openSheet, sheetHead, toast, confirmDialog } from './components.js';
 import { icon } from './icons.js';
-import { esc } from './utils.js';
+import { esc, comUtm } from './utils.js';
 import { CONFIG } from '../config.js';
 import { sininho, alive, vivo } from './sininho.js';
 import { leCache, gravaCache } from './cache.js';
@@ -120,11 +120,16 @@ const sugCard = (c) => `<div class="fsug" data-sug="${esc(c.uid)}">
     ${c.rel === 'amigo' ? `<span class="fsug__ok is-amigo">${icon('check', 14)} Amigo</span>` : c.rel === 'enviado' ? `<span class="fsug__ok">${icon('clock', 14)} Enviado</span>` : c.rel === 'recebido' ? `<button class="fsug__add" data-add="${esc(c.uid)}">Aceitar</button>` : `<button class="fsug__add" data-add="${esc(c.uid)}">${icon('plus', 14)} Adicionar</button>`}
   </div>`;
 const PERTO = 'lembra.perto';
-// ligado por padrão (a pessoa desliga se quiser); o celular pede a permissão de localização na 1ª vez
-const pertoLigado = () => { try { return localStorage.getItem(PERTO) !== '0'; } catch { return true; } };
+// DESLIGADO por padrão (LGPD): só entra quem ligou de propósito; dá pra desligar quando quiser
+const pertoLigado = () => { try { return localStorage.getItem(PERTO) === '1'; } catch { return false; } };
 /* atualiza a região em segundo plano (no máximo a cada 3 h), só se a permissão já foi dada */
 export async function pertoAuto() {
-  if (store.mode !== 'cloud' || !server() || !store.solo || store.shared || !store.user || !pertoLigado()) return;
+  if (store.mode !== 'cloud' || !server() || !store.solo || store.shared || !store.user) return;
+  // quem ficou "ligado" só pelo padrão antigo (sem ter escolhido): tira a região do servidor uma vez
+  if (!pertoLigado()) {
+    try { if (localStorage.getItem('lembra.perto.limpo')) return; await call('/friends/perto', { on: false }); localStorage.setItem('lembra.perto.limpo', '1'); } catch { /* tenta na próxima */ }
+    return;
+  }
   try { if (Date.now() - Number(localStorage.getItem('lembra.perto.at') || 0) < 3 * 3600e3) return; } catch { /* ok */ }
   try { const st = await navigator.permissions?.query({ name: 'geolocation' }); if (st && st.state !== 'granted') return; } catch { return; }
   try { const pos = await localizacao(); await call('/friends/perto', pos); localStorage.setItem('lembra.perto.at', String(Date.now())); } catch { /* ok */ }
@@ -207,7 +212,7 @@ export function openFriends() {
       <p class="fhelp fx__nota">Amigos veem seu nível, emblemas e stories. Sua agenda continua só sua.</p>
     </div>`;
   };
-  const conviteLink = async () => { const { token } = await call('/friends/link'); return `${site()}#/amigo/${token}`; };
+  const conviteLink = async () => { const { token } = await call('/friends/link'); return comUtm(`${site()}#/amigo/${token}`, 'convite'); };
   const me = () => store.member(store.me) || {};
   const textoConvite = () => `${(me().name || 'Eu').split(' ')[0]} te chamou pro Lembra 🤝 A agenda que lembra de tudo por você. Entra pelo meu link que a gente vira amigo lá (e você já começa com XP de bônus):`;
   const bind = (x) => {
@@ -255,7 +260,11 @@ export function openFriends() {
       if (des) { try { localStorage.setItem(PERTO, '0'); } catch { /* ok */ } perto = null; call('/friends/perto', { on: false }).catch(() => {}); x.set(html()); toast('Perto de você desligado'); }
       return;
     }
-    if (pediu) { try { localStorage.setItem(PERTO, '1'); } catch { /* ok */ } }
+    if (pediu) {
+      const ok = await confirmDialog({ title: 'Ligar “Perto de você”?', text: 'Você passa a aparecer para quem usa o Lembra num raio de até 100 km, e vê quem está perto. Ninguém vê onde você está, só a distância aproximada (por exemplo “a ~20 km”). Dá pra desligar quando quiser.', ok: 'Ligar' });
+      if (!ok) return;
+      try { localStorage.setItem(PERTO, '1'); } catch { /* ok */ }
+    }
     try {
       const pos = await localizacao();
       const r = await call('/friends/perto', pos);
@@ -359,10 +368,10 @@ export function openShareChoice() {
     onMount: (x) => {
       x.el.querySelector('[data-amigo]').onclick = async (ev) => {
         ev.currentTarget.disabled = true;
-        try { const { token } = await call('/friends/link'); a.close(); await send('Convite de amizade · Lembra', `${me.name || 'Eu'} quer ser seu amigo no Lembra 🤝 Toque para aceitar:`, `${site()}#/amigo/${token}`); }
+        try { const { token } = await call('/friends/link'); a.close(); await send('Convite de amizade · Lembra', `${me.name || 'Eu'} quer ser seu amigo no Lembra 🤝 Toque para aceitar:`, comUtm(`${site()}#/amigo/${token}`, 'convite')); }
         catch (e) { toast(e.message || 'Não consegui criar o convite.'); ev.currentTarget.disabled = false; }
       };
-      x.el.querySelector('[data-app]').onclick = async () => { a.close(); await send('Lembra', 'Conhece o Lembra? A agenda que lembra de tudo por você 🔔', `${site()}conheca/`); };
+      x.el.querySelector('[data-app]').onclick = async () => { a.close(); await send('Lembra', 'Conhece o Lembra? A agenda que lembra de tudo por você 🔔', comUtm(`${site()}conheca/`, 'convite')); };
     },
   });
   return a;

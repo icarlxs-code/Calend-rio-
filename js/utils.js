@@ -153,3 +153,12 @@ export function resizeImage(file, size = 160) {
 
 export const isStandalone = () =>
   window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+/* links de convite/compartilhamento com a origem marcada (o app lê utm_* no 1º acesso e o painel mostra de onde vieram os cadastros).
+   Os parâmetros vão ANTES do # (as rotas do app ficam no #). medium: 'convite' ou 'story'. */
+export function comUtm(url, medium = 'convite') {
+  const [base, hash = ''] = String(url).split('#');
+  const q = `utm_source=app&utm_medium=${encodeURIComponent(medium)}&utm_campaign=indicacao`;
+  const limpo = base.replace(/([?&])utm_(source|medium|campaign)=[^&]*/g, '$1').replace(/[?&]+$/, '').replace(/\?&/, '?');
+  return `${limpo}${limpo.includes('?') ? '&' : '?'}${q}${hash ? `#${hash}` : ''}`;
+}

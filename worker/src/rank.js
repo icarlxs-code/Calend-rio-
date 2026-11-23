@@ -28,7 +28,9 @@ export function weekKey(now) {
 }
 const prevWeek = (wk) => new Date(Date.parse(wk) - 7 * 864e5).toISOString().slice(0, 10);
 const initial = (name) => (String(name || '?').trim()[0] || '?').toUpperCase();
-export const eligible = (plan) => !!plan && plan.active && plan.plan === 'monthly' && plan.tier !== 'essencial';
+/* quem pontua: planos com o ranking (grátis do lançamento, mensal/anual Profissional, vitalício, cortesia e equipe); o Essencial fica de fora */
+const RANK_PLANS = new Set(['gratis', 'monthly', 'lifetime', 'comp', 'team', 'equipe']);
+export const eligible = (plan) => !!plan && !!plan.active && RANK_PLANS.has(plan.plan) && plan.tier !== 'essencial';
 
 /* Detector de robô */
 export function suspicious(acts, now) {
@@ -83,7 +85,7 @@ async function leagueFor(env, ws, wk) {
 
 /* Registra uma ação. type: create | done (ontime) | personal | note | open */
 export async function recordAct(env, me, plan, act, now = Date.now()) {
-  if (!eligible(plan)) return { ok: false, reason: 'O ranking faz parte do plano Profissional (mensal ou anual).' };
+  if (!eligible(plan)) return { ok: false, reason: 'O ranking não faz parte do plano Essencial.' };
   let type = String(act.type || '');
   const ref = String(act.ref || '').slice(0, 80);
   if (!(type in POINTS)) return { ok: false, reason: 'ação inválida' };

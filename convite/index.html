@@ -19,6 +19,6 @@
   // o código do convite fica depois do # (nunca vai para servidor nenhum)
   var t = (location.hash || '').replace(/^#\/?/, '').replace(/[^A-Za-z0-9]/g, '');
   var go = document.getElementById('go');
-  if (/^[A-Za-z0-9]{32}$/.test(t)) { go.href = '../#/convite/' + t; setTimeout(function () { location.replace(go.href); }, 350); }
+  if (/^[A-Za-z0-9]{32}$/.test(t)) { go.href = '../' + (location.search || '') + '#/convite/' + t; setTimeout(function () { location.replace(go.href); }, 350); }
   else { document.getElementById('msg').textContent = 'Este link de convite está incompleto. Peça para a pessoa enviar de novo.'; }
 </script></body></html>

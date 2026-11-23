@@ -5,10 +5,14 @@ const kv = () => { const m = new Map(); return { get: async (k, t) => { const v 
 const pro = { plan: 'monthly', active: true, tier: 'pro' };
 const at = (s) => Date.parse(`2026-11-${s}-03:00`);
 
-test('só o Profissional (mensal/anual) participa; Essencial e vitalício não', async () => {
-  const env = { CAL: kv() }, me = { ws: 'u1', id: 'u1', name: 'Ana' };
-  assert.equal((await recordAct(env, me, { plan: 'monthly', active: true, tier: 'essencial' }, { type: 'create', ref: 'ev_1' })).ok, false);
-  assert.equal((await recordAct(env, me, { plan: 'lifetime', active: true, tier: 'pro' }, { type: 'create', ref: 'ev_1' })).ok, false);
+test('pontuam: grátis do lançamento, Profissional, vitalício, cortesia e equipe; Essencial e sem plano não', async () => {
+  const env = { CAL: kv() };
+  assert.equal((await recordAct(env, { ws: 'u0', id: 'u0', name: 'Ana' }, { plan: 'monthly', active: true, tier: 'essencial' }, { type: 'create', ref: 'ev_1' })).ok, false);
+  assert.equal((await recordAct(env, { ws: 'u0', id: 'u0', name: 'Ana' }, { plan: 'expired', active: false }, { type: 'create', ref: 'ev_1' })).ok, false);
+  assert.equal((await recordAct(env, { ws: 'u0', id: 'u0', name: 'Ana' }, { plan: 'trial', active: true, tier: 'pro' }, { type: 'create', ref: 'ev_1' })).ok, false);
+  for (const [i, plan] of [{ plan: 'gratis', active: true, tier: 'pro' }, { plan: 'monthly', active: true, tier: 'pro' }, { plan: 'lifetime', active: true, tier: 'pro' }, { plan: 'comp', active: true, tier: 'pro' }, { plan: 'team', active: true }].entries()) {
+    assert.equal((await recordAct(env, { ws: `u${i + 1}`, id: `u${i + 1}`, name: 'Ana' }, plan, { type: 'create', ref: 'ev_1' })).ok, true, plan.plan);
+  }
 });
 
 test('qualidade vale mais: concluir no horário 3, atrasado 1; 1º uso do dia +2; item pontua 1 vez', async () => {

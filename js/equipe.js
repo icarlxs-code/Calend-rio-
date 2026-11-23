@@ -9,7 +9,7 @@
 import { store, saveUserProfile, soloMember } from './store.js';
 import { openSheet, sheetHead, toast, confirmDialog, avatar } from './components.js';
 import { icon } from './icons.js';
-import { esc } from './utils.js';
+import { esc, comUtm } from './utils.js';
 import { api, server } from './avisos.js';
 import { openPlans, openPortal, markBuying } from './billing.js';
 import { CONFIG } from '../config.js';
@@ -35,7 +35,7 @@ export const siteUrl = () => {
   const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname); // testes no computador
   return ((!local && CONFIG.siteUrl) || `${location.origin}${location.pathname.replace(/[^/]*$/, '')}`).replace(/\/?$/, '/');
 };
-export const inviteLink = (token) => `${siteUrl()}convite/#${token}`;
+export const inviteLink = (token) => comUtm(`${siteUrl()}convite/#${token}`, 'convite');
 
 /* Pessoas de uma equipe, na ordem: dono e convidados */
 const hex = (c, d) => (/^#[0-9a-fA-F]{6}$/.test(c || '') ? c : d);

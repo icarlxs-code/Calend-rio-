@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://meulembra.com.br/sitemap.xml

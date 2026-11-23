@@ -36,10 +36,12 @@ export function reportStats({ open = false, force = false } = {}) {
   let prev = {};
   try { prev = JSON.parse(localStorage.getItem(LS_STATS) || '{}'); } catch { prev = {}; }
   const sameUser = prev.uid === store.user.uid, newDay = !sameUser || prev.day !== todayKey();
-  if (!newDay && now - Math.max(lastFull, sameUser ? prev.at || 0 : 0) < 20 * 60e3) return;
-  if (!open && !force && now - lastFull < 60e3) return;
+  // versão nova neste aparelho: grava na hora (senão o painel continua mostrando a versão antiga por até 20 min)
+  const build = appInfo().b, novaVersao = prev.b !== build;
+  if (!newDay && !novaVersao && now - Math.max(lastFull, sameUser ? prev.at || 0 : 0) < 20 * 60e3) return;
+  if (!open && !force && !novaVersao && now - lastFull < 60e3) return;
   lastFull = now;
-  try { localStorage.setItem(LS_STATS, JSON.stringify({ uid: store.user.uid, at: now, day: todayKey() })); } catch { /* ok */ }
+  try { localStorage.setItem(LS_STATS, JSON.stringify({ uid: store.user.uid, at: now, day: todayKey(), b: build })); } catch { /* ok */ }
   const t = todayKey(), weekEnd = addDays(t, 6), monthAgo = addDays(t, -30);
   const me = store.member(store.me) || {};
   const evs = store.state.events;

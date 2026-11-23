@@ -3,7 +3,9 @@
 import { store } from './store.js';
 import { api, server } from './avisos.js';
 
-const eligible = () => store.mode === 'cloud' && store.solo && !!server() && store.billing?.plan === 'monthly' && store.billing?.active && store.billing?.tier !== 'essencial';
+// mesmos planos que o servidor aceita no ranking (worker/src/rank.js): o Essencial fica de fora
+const RANK_PLANS = ['gratis', 'monthly', 'lifetime', 'comp', 'team', 'equipe'];
+const eligible = () => store.mode === 'cloud' && store.solo && !!server() && RANK_PLANS.includes(store.billing?.plan) && !!store.billing?.active && store.billing?.tier !== 'essencial';
 const queue = [];
 let busy = false;
 async function flush() {

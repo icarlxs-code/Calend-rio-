@@ -2,11 +2,13 @@
    e fica na tela até a pessoa fechar. Dá para compartilhar como imagem pronta para stories/feed, em modelos
    com personalidade diferente — e sempre com a marca e o endereço do Lembra (quem vê sabe de onde veio). */
 import { icon } from './icons.js';
-import { esc } from './utils.js';
+import { esc, comUtm } from './utils.js';
 import { toast } from './components.js';
 import { CONFIG } from '../config.js';
 
 const SITE = () => (CONFIG.siteUrl || 'https://meulembra.com.br/').replace(/^https?:\/\//, '').replace(/\/$/, '');
+/* link do texto compartilhado (a imagem leva o endereço limpo; o texto leva o link marcado) */
+const LINK = () => comUtm(`${(CONFIG.siteUrl || 'https://meulembra.com.br/').replace(/\/?$/, '/')}conheca/`, 'story');
 const HIST = 'lembra.frases';
 
 /* separa a referência bíblica do texto: "… — Salmos 23:1" ou "… (Filipenses 4:13)" */
@@ -135,11 +137,11 @@ export function abreFrase(n) {
   w.addEventListener('click', (e) => { if (e.target === w) fecha(); });
   w.querySelectorAll('[data-mod]').forEach((b) => (b.onclick = () => { mi = +b.dataset.mod; w.querySelectorAll('[data-mod]').forEach((x) => x.classList.toggle('is-on', x === b)); pinta(); }));
   w.querySelectorAll('[data-fmt]').forEach((b) => (b.onclick = () => { fmt = b.dataset.fmt; w.querySelectorAll('[data-fmt]').forEach((x) => x.classList.toggle('is-on', x === b)); pinta(); }));
-  w.querySelector('[data-copy]').onclick = async () => { try { await navigator.clipboard.writeText(`${texto}${ref ? ` — ${ref}` : ''}\n\nvia Lembra · ${SITE()}`); toast('Texto copiado 📋'); } catch { toast('Não consegui copiar.'); } };
+  w.querySelector('[data-copy]').onclick = async () => { try { await navigator.clipboard.writeText(`${texto}${ref ? ` — ${ref}` : ''}\n\nvia Lembra · ${LINK()}`); toast('Texto copiado 📋'); } catch { toast('Não consegui copiar.'); } };
   w.querySelector('[data-share]').onclick = async () => {
     const blob = await new Promise((r) => cv.toBlob(r, 'image/png'));
     const file = blob && new File([blob], `lembra-${MODELOS[mi].id}.png`, { type: 'image/png' });
-    const txt = `${texto}${ref ? ` — ${ref}` : ''}\n\nvia Lembra · ${SITE()}`;
+    const txt = `${texto}${ref ? ` — ${ref}` : ''}\n\nvia Lembra · ${LINK()}`;
     try {
       if (file && navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], text: txt }); }
       else { const a = document.createElement('a'); a.href = url; a.download = file?.name || 'lembra.jpg'; document.body.appendChild(a); a.click(); a.remove(); toast('Imagem salva. É só postar 📸'); }

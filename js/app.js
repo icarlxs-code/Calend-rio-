@@ -828,6 +828,8 @@ let signupMode = false;
 let pendingProfile = null;
 /* qual conta entrou por último neste aparelho (protege contra sessão antiga de outra conta) */
 const LS_UID = 'lembra.uid';
+/* chegou por um link de amizade (guardado até entrar): o mais comum é ainda não ter conta */
+const conviteAmigo = () => { if (/^#\/amigo\//.test(location.hash || '')) return true; try { const p = JSON.parse(localStorage.getItem('lembra.amigo') || 'null'); return !!p && Date.now() - p.at < 14 * 864e5; } catch { return false; } };
 function purgeAuth() {
   try { Object.keys(localStorage).filter((k) => /^firebase:authUser:/.test(k)).forEach((k) => localStorage.removeItem(k)); } catch { /* ok */ }
   try { indexedDB.deleteDatabase('firebaseLocalStorageDb'); } catch { /* ok */ }
@@ -850,11 +852,17 @@ async function loadInviteInfo() {
   if (box && inviteInfo?.ownerName) box.textContent = inviteInfo.ownerName;
 }
 function showLogin(errMsg = '') {
+  // 1ª vez na tela: quem nunca entrou neste aparelho cai em "Criar conta"; quem já entrou, em "Entrar"
+  if (!showLogin.ini) {
+    showLogin.ini = true;
+    const jaEntrou = (() => { try { return !!remembered() || !!localStorage.getItem('lembra.jaentrou') || !!localStorage.getItem(LS_UID); } catch { return false; } })();
+    signupMode = !jaEntrou;
+  }
   // já entrou antes neste celular: abre direto em "Entrar", com o e-mail lembrado
-  if (remembered()?.email && !showLogin.rem && !invitedBy()) { showLogin.rem = true; signupMode = false; }
+  if (remembered()?.email && !showLogin.rem && !invitedBy() && !conviteAmigo()) { showLogin.rem = true; signupMode = false; }
   try { if (sessionStorage.getItem('lembra.deleted')) { sessionStorage.removeItem('lembra.deleted'); loginNotice = 'Sua conta foi excluída e seus dados foram apagados. Obrigado por ter usado o Lembra.'; } } catch { /* ok */ }
   // convidado chegando pelo link: o mais comum é ainda não ter conta
-  if (invitedBy() && !showLogin.seen) { showLogin.seen = true; signupMode = true; }
+  if ((invitedBy() || conviteAmigo()) && !showLogin.seen) { showLogin.seen = true; signupMode = true; }
   // veio do anúncio / da página de apresentação ("Testar grátis"): abre direto em "Criar conta"
   if (/^#\/cadastro/.test(location.hash)) { signupMode = true; history.replaceState(null, '', location.pathname + location.search); }
   const msg = errMsg || loginNotice;
@@ -1501,7 +1509,7 @@ async function boot() {
       return showLogin();
     }
     try { sessionStorage.setItem('lembra.sess', '1'); } catch { /* ok */ }
-    try { localStorage.setItem(LS_UID, user.uid); } catch { /* ok */ }
+    try { localStorage.setItem(LS_UID, user.uid); localStorage.setItem('lembra.jaentrou', '1'); } catch { /* ok */ }
     // entrou de novo depois de sair (sem fechar o app): recomeça do zero para não misturar nada
     if (window.__saiu && started) { setTimeout(() => location.replace(location.pathname + '?r=' + Date.now()), 300); return; }
     // trocou de conta com o app aberto: recomeça do zero (nunca mistura uma conta com a outra)

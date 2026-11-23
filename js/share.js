@@ -1,5 +1,5 @@
 /* Link do cliente: cada empresa vê SOMENTE o próprio cronograma */
-import { todayKey, addDays } from './utils.js';
+import { todayKey, addDays, comUtm } from './utils.js';
 
 const PAST_DAYS = 30;
 const FUTURE_DAYS = 180;
@@ -103,5 +103,5 @@ export async function decodeSnapshot(str) {
 }
 
 export const appBaseUrl = () => location.href.split('#')[0].split('?')[0];
-export const liveLink = (token) => `${appBaseUrl()}#/c/${token}`;
-export const snapshotLink = (encoded) => `${appBaseUrl()}#/v/${encoded}`;
+export const liveLink = (token) => comUtm(`${appBaseUrl()}#/c/${token}`, 'convite');
+export const snapshotLink = (encoded) => comUtm(`${appBaseUrl()}#/v/${encoded}`, 'convite');
