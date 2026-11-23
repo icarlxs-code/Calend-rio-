@@ -14,7 +14,7 @@ import { runTick, planReminders, planPersonal, seedPerson, upgradeLegacy, usageM
 import { dueOf } from './kvsql.js';
 import { regGet, regPut, regDel, regAll, idOfWs } from './registry.js';
 import { boardOf } from './leaderboard.js';
-import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling, untilOf, statusOf, grantComp, markVipSent, vipMigrate } from './billing.js';
+import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling, untilOf, statusOf, grantComp, markVipSent, vipMigrate, vipCompacta } from './billing.js';
 
 const SUBJECT = 'mailto:avisos@calendario.app';
 
@@ -1001,6 +1001,7 @@ export async function cronTick(env, { now = Date.now(), meter = { pushes: 0 }, m
     const safe = (name, p) => p.catch((e) => console.log(name, e.message));
     await safe('aviso único', oneShot(env));
     await safe('vitalício (quem ganhou antes da surpresa)', vipMigrate(env, (uid) => vipNotify(env, uid)));
+    await safe('vitalício (numeração sem buracos)', vipCompacta(env));
     await safe('ranking', monthlyAward(env, { stripe: stripeApi, getBill, putBill, notify: (id, msg) => send(env, id, msg) }));
   }
   const more = r.more || (await dueOf(env).dueBefore(now, 1)).length > 0;

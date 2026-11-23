@@ -425,11 +425,49 @@ export async function grantComp(env, uid, on, now = Date.now(), until = 0) {
   } else if (on) {
     if (!b.lifetime) { b.lifetime = true; b.comp = true; b.lifetimeAt = now; }
     // presente "Vitalício": número de membro único (nunca se repete, nem se o acesso for retirado)
-    if (b.comp && !b.vip) { const no = Number(await env.CAL.get('vip-count') || 0) + 1; await env.CAL.put('vip-count', String(no)); b.vip = { no, at: now }; gifted = true; }
-  } else { if (b.comp) { b.lifetime = false; b.comp = false; delete b.vip; } delete b.compUntil; }
+    if (b.comp && !b.vip) { b.vip = { no: await vipLivre(env, uid), at: now }; gifted = true; }
+  } else { if (b.comp) { b.lifetime = false; b.comp = false; if (b.vip) await vipSolta(env, uid); delete b.vip; } delete b.compUntil; }
   b.updatedAt = now;
   await putBill(env, uid, b);
   return { ...statusOf(b, { ws: uid }, now), ...(gifted ? { gifted: true } : {}) };
+}
+
+/* números do Vitalício SEMPRE em sequência (001, 002, 003…): a lista de quem tem cada número fica em "vip-owners".
+   Quem perde o acesso libera o número, e o próximo presente usa o menor número livre — nunca fica buraco. */
+const vipDonos = async (env) => { try { return JSON.parse((await env.CAL.get('vip-owners')) || '{}'); } catch { return {}; } };
+async function vipLivre(env, uid) {
+  const d = await vipDonos(env); let no = 1;
+  while (d[no] && d[no] !== uid) no++;
+  d[no] = uid; await env.CAL.put('vip-owners', JSON.stringify(d));
+  await env.CAL.put('vip-count', String(Object.keys(d).length));
+  return no;
+}
+async function vipSolta(env, uid) {
+  const d = await vipDonos(env);
+  for (const k of Object.keys(d)) if (d[k] === uid) delete d[k];
+  await env.CAL.put('vip-owners', JSON.stringify(d)); await env.CAL.put('vip-count', String(Object.keys(d).length));
+}
+/* uma vez: refaz a numeração de quem é Vitalício hoje, na ordem em que ganhou, sem buracos (ex.: 001, 003 → 001, 002) */
+export async function vipCompacta(env, now = Date.now()) {
+  if (await env.CAL.get('vip-compact-1')) return 0;
+  const reg = await regAll(env);
+  const seen = new Set(), vips = [];
+  for (const u of Object.values(reg)) {
+    if (!u || !u.ws || seen.has(u.ws) || !/^[A-Za-z0-9]{6,64}$/.test(u.ws)) continue;
+    seen.add(u.ws);
+    const b = await getBill(env, u.ws);
+    if (b && b.lifetime && b.comp && b.vip) vips.push(b);
+  }
+  vips.sort((a, b) => (a.vip.no - b.vip.no) || ((a.vip.at || 0) - (b.vip.at || 0)));
+  const donos = {};
+  for (let i = 0; i < vips.length; i++) {
+    const b = vips[i], no = i + 1; donos[no] = b.uid;
+    if (b.vip.no !== no) { b.vip.no = no; b.updatedAt = now; await putBill(env, b.uid, b); }
+  }
+  await env.CAL.put('vip-owners', JSON.stringify(donos));
+  await env.CAL.put('vip-count', String(vips.length));
+  await env.CAL.put('vip-compact-1', String(now));
+  return vips.length;
 }
 
 /* resultado do aviso "Você recebeu algo raro." (o painel mostra se chegou no celular) */
@@ -455,9 +493,7 @@ export async function vipMigrate(env, notify, now = Date.now()) {
   }
   olds.sort((a, b) => (a.lifetimeAt || 0) - (b.lifetimeAt || 0));
   for (const b of olds) {
-    const no = Number(await env.CAL.get('vip-count') || 0) + 1;
-    await env.CAL.put('vip-count', String(no));
-    b.vip = { no, at: b.lifetimeAt || now };
+    b.vip = { no: await vipLivre(env, b.uid), at: b.lifetimeAt || now };
     b.vip.sent = await notify(b.uid).catch(() => 0);
     b.updatedAt = now;
     await putBill(env, b.uid, b);

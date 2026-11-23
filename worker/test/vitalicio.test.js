@@ -104,13 +104,13 @@ test('liberar só até uma data não é o presente vitalício', async () => {
   assert.equal(r.data.gifted, undefined);
 });
 
-test('tirar o acesso apaga o cartão; o número não volta a ser usado', async () => {
+test('tirar o acesso apaga o cartão e libera o número (sem buraco na sequência)', async () => {
   await call('/admin/grant', { ...DONO, body: { uid: JOAO.uid, on: false } });
   const st = (await call('/billing/status', JOAO)).data;
   assert.notEqual(st.plan, 'lifetime');
   assert.equal(st.vip, undefined);
   const r = await call('/admin/grant', { ...DONO, body: { uid: JOAO.uid, on: true } });
-  assert.equal(r.data.status.vip.no, 3);
+  assert.equal(r.data.status.vip.no, 2); // o número 2 ficou livre e volta pra ele: nunca pula
 });
 
 test('quem ganhou o "para sempre" antes da surpresa existir recebe número e aviso (uma vez só)', async () => {
@@ -154,4 +154,17 @@ test('Vitalício presenteado já vem com a agenda compartilhada Equipe, sem paga
   await assert.rejects(createCheckout(env, { ws: CARLA.uid, id: 'u' + CARLA.uid, email: CARLA.email }, { plan: 'equipe' }), /já está incluída/);
   // quem pagou o vitalício (não é presente) continua com o complemento à parte
   assert.equal(addonOf({ lifetime: true }), null);
+});
+
+test('numeração antiga com buraco (001, 003) é refeita uma vez: 001, 002', async () => {
+  const { vipCompacta } = await import('../src/billing.js');
+  kv.delete && kv.delete('vip-compact-1');
+  kv.set('bill:aaaUid0000000001', JSON.stringify({ uid: 'aaaUid0000000001', lifetime: true, comp: true, vip: { no: 1, at: 1 } }));
+  kv.set('bill:cccUid0000000003', JSON.stringify({ uid: 'cccUid0000000003', lifetime: true, comp: true, vip: { no: 7, at: 3 } }));
+  kv.set('reg:uaaaUid0000000001', JSON.stringify({ ws: 'aaaUid0000000001' })); kv.set('reg:ucccUid0000000003', JSON.stringify({ ws: 'cccUid0000000003' }));
+  await vipCompacta(env);
+  const nums = [];
+  for (const [k, v] of kv) if (k.startsWith('bill:')) { const b = JSON.parse(v); if (b.lifetime && b.comp && b.vip) nums.push(b.vip.no); }
+  nums.sort((a, b) => a - b);
+  assert.deepEqual(nums, nums.map((_, i) => i + 1));
 });
