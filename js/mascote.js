@@ -15,6 +15,7 @@ import { sininho, setMood, act, say, lookAt } from './sininho.js';
 import { todayKey, addDays, diffDays, fmtTime } from './utils.js';
 import { personal } from './personal.js';
 import { itensAtrasados } from './views/atrasados.js';
+import { falasDosBilhetes, marca } from './lembra-mente.js';
 
 export const isOwner = () => !!store.user && !!CONFIG.adminEmail && (store.user.email || '').toLowerCase() === CONFIG.adminEmail.toLowerCase();
 export const mascotOn = () => {
@@ -127,6 +128,12 @@ function falas(c) {
     ]);
     out.push({ k: 'late', i, t, m: 'triste', u: 3, acoes: [{ label: `Ver os ${L.length}`, go: A.atrasados }, { label: 'Agora não' }] });
   }
+  /* o que a pessoa escreveu nos bilhetes: ele lembra e puxa assunto */
+  try { falasDosBilhetes().forEach((f) => out.push({ ...f, acoes: (f.acoes || []).map((a) => ({ label: a.label, go: () => {
+    marca(f.memoId);
+    if (a.abrir) import('./views/personal.js').then((m) => m.openPersonalEditor(null, a.abrir));
+    if (a.resposta) setTimeout(() => fala({ t: a.resposta.t, m: a.resposta.m }, a.resposta.gesto || 'sim'), a.abrir ? 1600 : 450);
+  } })) })); } catch { /* ok */ }
   /* o próximo compromisso, quando está chegando */
   if (c.prox) {
     const { e, min } = c.prox, T = q(e.title), em = min < 60 ? `${min} min` : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`;
@@ -181,6 +188,16 @@ function falas(c) {
     ['sino', 'Sabia que eu sou um sino? Por isso vivo te dando um toque 🔔', 'feliz'],
     ['cabeca', 'Deixa a memória comigo e a cabeça livre pra você 🧠', 'feliz'],
     ['perfil', 'Quer ver como tá sua ofensiva? 🔥', 'surpreso', [{ label: 'Ver', go: A.perfil }, { label: 'Depois' }]],
+    ['boba1', 'Eu ia te contar uma piada de calendário… mas ela é meio datada 😅', 'desconfiado'],
+    ['boba2', 'Sabia que sino não sente cócegas? Mentira. Sinto sim 🤭', 'feliz'],
+    ['boba3', 'Plim plom! Era só pra ver se você tava prestando atenção 👀', 'desconfiado'],
+    ['boba4', 'Se eu tivesse braço maior, eu mesmo anotava pra você 💪', 'feliz'],
+    ['boba5', 'Meu sonho é ser despertador. Mas sou fofo demais pra acordar alguém no susto 😌', 'amor'],
+    ['boba6', 'Nunca esqueço nada. É meu único talento… e minha beleza, claro 💅', 'desconfiado'],
+    ['boba7', 'Hoje eu acordei badalando! 🔔🎶', 'danca'],
+    ['boba8', 'Me dá um toque que eu te dou um lembrete. Trato feito? 🤝', 'acena'],
+    ['boba9', 'Tô de olho em você… brincadeira. Ou não 👀', 'desconfiado'],
+    ['boba10', 'Você fica bem melhor quando sorri. Pronto, falei 🥹', 'amor'],
   ].forEach(([k, t, m, acoes]) => out.push({ k, t, m, acoes, leve: 1 }));
   return out;
 }
@@ -261,7 +278,33 @@ function fala(line, gesto, tentativa = 0) {
   setMood(el(), line.m || 'feliz');
   const g = gesto || line.gesto;
   if (g) setTimeout(() => act(el(), g), 220);
+  // roteiro: uma sequência de gestos enquanto fala (olha pros lados, desconfia, tapa a boca rindo…)
+  (line.roteiro || []).forEach((r, i) => setTimeout(() => { if (B && falando()) act(el(), r); }, 900 + i * 1900));
   setTimeout(() => balao(line), 260);
+}
+
+/* ---------- fingindo que dorme: o tapinha acorda, ele sente a dor e jura que não tava dormindo ---------- */
+let fingindo = false, fingeT = 0;
+const DESCULPAS = [
+  'Ai! 😣 Eu não tava dormindo… tava só fingindo!',
+  'Aiii! Tava de olho fechado, mas com o ouvido bem aberto 👂',
+  'Dormindo? Eu?! Tava meditando, tá? 🧘',
+  'Ai, isso é jeito de acordar um sino? Quase toquei sozinho! 🔔',
+  'Ei! Tava só descansando a vista… e cuidando da sua agenda ao mesmo tempo 😤',
+  'Ai! Eu tava testando se você ia sentir minha falta 😏',
+];
+function fingeDormir() {
+  if (!B || fingindo || falando()) return;
+  fingindo = true; state('rest');
+  setMood(el(), 'sono'); act(el(), 'boceja');
+  clearTimeout(fingeT);
+  fingeT = setTimeout(() => { if (fingindo) { fingindo = false; act(el(), 'susto'); setTimeout(() => setMood(el(), 'feliz'), 900); } }, R(25, 50) * 1000);
+}
+function levaTapinha() {
+  fingindo = false; clearTimeout(fingeT); busyUntil = 0;
+  setMood(el(), 'bravo'); act(el(), 'dor');
+  try { navigator.vibrate && navigator.vibrate([30, 40, 20]); } catch { /* ok */ }
+  setTimeout(() => fala({ t: outra(DESCULPAS), m: 'desconfiado', roteiro: ['cinico'] }), 650);
 }
 /* volta a ficar quietinho no canto */
 function settle() {
@@ -276,6 +319,8 @@ const CENAS = [
   { g: 'olhaLados', w: 3 }, { g: 'pisca', w: 2 }, { g: 'pensa', w: 2 }, { g: 'riso', w: 1.5 }, { g: 'sim', w: 1 },
   { g: 'pop', w: 1 }, { g: 'timido', w: 1.2 }, { g: 'tchau', w: 1 }, { g: 'pulo', w: 0.8 },
   { m: 'surpreso', g: 'pop', w: 0.8, volta: 1300 }, { m: 'amor', w: 0.8, volta: 2200 }, { m: 'desconfiado', g: 'olhaLados', w: 1, volta: 2000 },
+  { g: 'cinico', w: 1.2 }, { g: 'coca', w: 1.2 }, { g: 'balanca', w: 1.4 }, { g: 'maoBoca', w: 0.9 }, { g: 'susto', w: 0.4 },
+  { m: 'desconfiado', g: 'cinico', w: 0.8, volta: 2200 }, { m: 'danca', w: 0.5, volta: 2600 },
 ];
 function cena() {
   clearTimeout(cenaT);
@@ -284,6 +329,8 @@ function cena() {
   const parado = (Date.now() - ultimoToque) / 1000, h = new Date().getHours();
   // sem mexer na tela há um tempo (ou tarde da noite): boceja e cochila um pouquinho
   if ((parado > 45 || h >= 23 || h < 5) && Math.random() < 0.45) { act(el(), 'boceja'); if (parado > 90) setMood(el(), 'sono'); return; }
+  if (fingindo) return;
+  if (Math.random() < 0.07) return fingeDormir();
   const pool = CENAS.filter((c) => (c.g || c.m) !== ultimoGesto), tot = pool.reduce((s, c) => s + c.w, 0);
   let r = Math.random() * tot, c = pool[0];
   for (const x of pool) { r -= x.w; if (r <= 0) { c = x; break; } }
@@ -295,6 +342,7 @@ function cena() {
 /* ao tocar: fala o que mais importa agora (com ação quando faz sentido) */
 let toques = [];
 function onTap() {
+  if (fingindo || el()?.dataset.snh === 'sono') return levaTapinha();
   const now = Date.now();
   toques = toques.filter((t) => now - t < 3200); toques.push(now);
   try { navigator.vibrate && navigator.vibrate(8); } catch { /* ok */ }
@@ -309,6 +357,7 @@ function onTap() {
 function sai() { if (!B || falando()) return; state('away', pick(['l', 'r'])); }
 function volta() {
   if (!B) return;
+  fingindo = false;
   state('rest', pick(['l', 'r']));
   settle();
   if (Math.random() < 0.65) setTimeout(() => { if (!blocked()) fala(melhor(falas(ctx())), 'tchau'); }, 800);
@@ -341,7 +390,7 @@ function ouvir() {
       if (Math.random() < 0.4) setTimeout(() => { const l = melhor(falas(ctx()).filter((x) => x.ctx)); if (l && pontua(l) > 35) fala(l); }, 900);
     }
   });
-  document.addEventListener('pointerdown', () => { ultimoToque = Date.now(); if (B && el()?.dataset.snh === 'sono' && !falando()) setMood(el(), 'surpreso'); }, { passive: true });
+  document.addEventListener('pointerdown', (ev) => { ultimoToque = Date.now(); if (B && !B.contains(ev.target) && el()?.dataset.snh === 'sono' && !fingindo && !falando()) setMood(el(), 'surpreso'); }, { passive: true });
   // rolagem: ele acompanha com os olhos
   let rolT = 0, y0 = scrollY;
   addEventListener('scroll', () => {
