@@ -578,9 +578,11 @@ function falaJa(g, ms = 1900, m) {
   ultDrag = g;
 }
 
+let mexeu = false; // a pessoa já tocou/arrastou o Lembra nesta sessão
 function arrastavel(fig) {
   fig.addEventListener('pointerdown', (ev) => {
     if (!B || arr || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+    mexeu = true; B.classList.remove('is-hidden');
     arr = { id: ev.pointerId, x0: ev.clientX, y0: ev.clientY, fx: ev.clientX, fy: ev.clientY, on: false, t0: performance.now() };
   });
   fig.addEventListener('pointermove', (ev) => {
@@ -811,7 +813,8 @@ export function start() {
   { const p = lePos(); if (p) { const L = limites(); encosta(p.side, cl(p.fy * innerHeight, L.y0, L.y1)); } }
   let guardaT = 0;
   // no Hoje, com o Foco na tela, ele fica escondido (não cobre nada) — mas aparece quando tem algo a dizer
-  const guardaJa = () => { guardaT = 0; if (B) B.classList.toggle('is-hidden', blocked() || (document.body.classList.contains('foco-visivel') && !falando())); };
+  // só se esconde com janela/tela cheia por cima; nunca enquanto a pessoa segura ou arrasta (antes ele sumia no Hoje por causa do Foco)
+  const guardaJa = () => { guardaT = 0; if (B) B.classList.toggle('is-hidden', blocked() && !arr); };
   window.__snhGuarda = guardaJa;
   const guarda = () => { if (!guardaT) guardaT = setTimeout(guardaJa, 150); }; // junta as mudanças em 150 ms
   B._mo = new MutationObserver(guarda); B._mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'], characterData: false });

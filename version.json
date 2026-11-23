@@ -1,10 +1,11 @@
 {
-  "version": "2.24.1",
-  "build": "c4di6wp5",
+  "version": "2.24.2",
+  "build": "mut2kzqs",
   "date": "2026-11-23",
   "min": "2.22.0",
   "title": "Hoje mais simples",
   "notes": [
+    "O Lembra não some mais da tela quando você arrasta ele.",
     "Modo noturno preto de verdade, com o laranja do Lembra.",
     "A tela Hoje ficou mais simples: stories no topo, semana compacta e o próximo lembrete em destaque.",
     "O Lembra se mexe com mais jeito e gasta menos bateria.",
@@ -15,8 +16,7 @@
     "Painel da equipe: cargos (Suporte, Moderação, Marketing, Dados, Financeiro, RH, Produto, Administração), cada um vê só o que precisa.",
     "Tudo grátis até 31 de dezembro de 2026, inclusive o assistente com IA.",
     "Tocou na notificação da frase? Ela abre no app e fica até você fechar, com 6 modelos de imagem pra compartilhar.",
-    "Ache amigos pelo número de celular ou importando seus contatos (.vcf), também no iPhone.",
-    "Sair da conta funciona em qualquer tela."
+    "Ache amigos pelo número de celular ou importando seus contatos (.vcf), também no iPhone."
   ],
-  "builtAt": "2026-11-23T22:12:27.400Z"
+  "builtAt": "2026-11-23T22:26:13.966Z"
 }
