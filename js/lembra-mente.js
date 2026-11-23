@@ -86,3 +86,45 @@ export function falasDosBilhetes() {
   // o mais importante primeiro (saúde, remédio, sentimento), depois o mais recente
   return out.sort((a, b) => b.u - a.u).slice(0, 3);
 }
+
+/* ---------- padrões: o Lembra percebe o seu ritmo (cabelo a cada ~15 dias, unha todo mês…) ----------
+   Junta o que você já FEZ (Pessoal e Trabalho), agrupa por assunto e calcula o intervalo médio entre as vezes.
+   Perto da data provável ele avisa ("pelo seu ritmo, amanhã é dia de cortar o cabelo");
+   se passou bem do normal, ele estranha ("já faz 40 dias que você não faz a unha… tá tudo bem?"). */
+const ASSUNTOS = [
+  { k: 'cabelo', re: /cabel|corte|cortar o cabelo|barbearia|escova|progressiva|luzes|tintura|pintar o cabelo/i, faz: 'cortar o cabelo', fez: 'cortou o cabelo', cat: 'beleza' },
+  { k: 'barba', re: /barba|bigode/i, faz: 'fazer a barba', fez: 'fez a barba', cat: 'beleza' },
+  { k: 'unha', re: /unha|manicure|pedicure|esmalte/i, faz: 'fazer a unha', fez: 'fez a unha', cat: 'beleza' },
+  { k: 'sobrancelha', re: /sobrancelha|design de sobrancelha|cílios|cilios/i, faz: 'fazer a sobrancelha', fez: 'fez a sobrancelha', cat: 'beleza' },
+  { k: 'depilacao', re: /depila/i, faz: 'fazer a depilação', fez: 'fez a depilação', cat: 'beleza' },
+  { k: 'mercado', re: /mercado|feira|compras do m[eê]s/i, faz: 'ir ao mercado', fez: 'foi ao mercado', cat: 'compromisso' },
+  { k: 'academia', re: /academia|treino|muscula/i, faz: 'treinar', fez: 'treinou', cat: 'saude' },
+  { k: 'dentista', re: /dentista|limpeza nos dentes/i, faz: 'ir ao dentista', fez: 'foi ao dentista', cat: 'saude' },
+  { k: 'carro', re: /lavar o carro|lava.?jato|troca de [oó]leo|revis[aã]o do carro/i, faz: 'cuidar do carro', fez: 'cuidou do carro', cat: 'compromisso' },
+  { k: 'pet', re: /banho e tosa|pet ?shop|veterin/i, faz: 'levar o pet', fez: 'levou o pet', cat: 'compromisso' },
+];
+const dk = (s) => { const [y, m, d] = String(s).split('-').map(Number); return Date.UTC(y, m - 1, d) / 864e5; };
+const hojeK = () => { const d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5; };
+export function padroes() {
+  const datas = {}; // assunto → [dias feitos]
+  const soma = (titulo, dia) => { const a = ASSUNTOS.find((x) => x.re.test(titulo || '')); if (a && dia) (datas[a.k] = datas[a.k] || new Set()).add(dk(dia)); };
+  try { (personal.events || []).forEach((it) => { (it.doneDates || []).forEach((d) => soma(it.title, d)); if (it.done && it.date) soma(it.title, it.date); }); } catch { /* ok */ }
+  try { (store.state?.events || []).forEach((e) => { if (e.status === 'feito') soma(e.title, e.date); }); } catch { /* ok */ }
+  const hoje = hojeK(), out = [];
+  for (const a of ASSUNTOS) {
+    const ds = [...(datas[a.k] || [])].sort((x, y) => x - y);
+    if (ds.length < 2) continue;
+    const gaps = ds.slice(1).map((d, i) => d - ds[i]).filter((g) => g >= 2 && g <= 120);
+    if (!gaps.length) continue;
+    const media = Math.round(gaps.reduce((x, y) => x + y, 0) / gaps.length), desde = hoje - ds[ds.length - 1], falta = media - desde;
+    const marcado = (personal.events || []).some((it) => a.re.test(it.title || '') && !it.done && it.date && dk(it.date) >= hoje);
+    if (marcado) continue; // já tem um marcado: não precisa lembrar
+    if (falta >= -1 && falta <= 1) out.push({ k: `padrao:${a.k}`, memoId: `padrao:${a.k}:${ds[ds.length - 1]}`, u: 1.8, m: 'desconfiado', roteiro: ['coca', 'sobrancelha'],
+      t: `Hmm… você ${a.fez} há uns ${desde} dias, e costuma fazer a cada ~${media}. Pelo seu ritmo, ${falta <= 0 ? 'hoje' : 'amanhã'} é dia de ${a.faz}, né? 😏`,
+      acoes: [{ label: 'Marcar', abrir: { title: a.faz.charAt(0).toUpperCase() + a.faz.slice(1), cat: a.cat }, resposta: { t: 'Marcado! Eu conheço você melhor que o espelho 😎', m: 'feliz' } }, { label: 'Ainda não', resposta: { t: 'Tá bom, tá bom… mas eu vou lembrar, hein 👀', m: 'desconfiado', gesto: 'cinico' } }] });
+    else if (desde > Math.max(media * 1.5, media + 6)) out.push({ k: `padrao:${a.k}`, memoId: `padrao:${a.k}:atraso:${ds[ds.length - 1]}`, u: 1.5, m: 'surpreso', roteiro: ['olhaLados', 'pensa'],
+      t: `Ué… a última vez que você ${a.fez} foi há ${desde} dias, e você costuma ${a.faz} a cada ~${media}. O que tá acontecendo? Tá tudo bem? 🤔`,
+      acoes: [{ label: 'Marcar agora', abrir: { title: a.faz.charAt(0).toUpperCase() + a.faz.slice(1), cat: a.cat }, resposta: { t: 'Boa! Voltando pro ritmo 💪', m: 'comemora', gesto: 'pulo' } }, { label: 'Tô dando um tempo', resposta: { t: 'Entendi! Pausa também é cuidado 🌿', m: 'amor' } }] });
+  }
+  return out.filter((f) => !respondido(f.memoId));
+}

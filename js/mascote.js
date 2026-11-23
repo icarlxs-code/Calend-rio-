@@ -15,7 +15,7 @@ import { sininho, setMood, act, say, lookAt } from './sininho.js';
 import { todayKey, addDays, diffDays, fmtTime } from './utils.js';
 import { personal } from './personal.js';
 import { itensAtrasados } from './views/atrasados.js';
-import { falasDosBilhetes, marca } from './lembra-mente.js';
+import { falasDosBilhetes, padroes, marca } from './lembra-mente.js';
 
 export const isOwner = () => !!store.user && !!CONFIG.adminEmail && (store.user.email || '').toLowerCase() === CONFIG.adminEmail.toLowerCase();
 export const mascotOn = () => {
@@ -129,7 +129,7 @@ function falas(c) {
     out.push({ k: 'late', i, t, m: 'triste', u: 3, acoes: [{ label: `Ver os ${L.length}`, go: A.atrasados }, { label: 'Agora não' }] });
   }
   /* o que a pessoa escreveu nos bilhetes: ele lembra e puxa assunto */
-  try { falasDosBilhetes().forEach((f) => out.push({ ...f, acoes: (f.acoes || []).map((a) => ({ label: a.label, go: () => {
+  try { [...falasDosBilhetes(), ...padroes()].forEach((f) => out.push({ ...f, acoes: (f.acoes || []).map((a) => ({ label: a.label, go: () => {
     marca(f.memoId);
     if (a.abrir) import('./views/personal.js').then((m) => m.openPersonalEditor(null, a.abrir));
     if (a.resposta) setTimeout(() => fala({ t: a.resposta.t, m: a.resposta.m }, a.resposta.gesto || 'sim'), a.abrir ? 1600 : 450);
@@ -429,6 +429,8 @@ export function start() {
   B._mo = new MutationObserver(guarda); B._mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
   document.addEventListener('focusin', guarda); document.addEventListener('focusout', () => setTimeout(guarda, 50));
   if (!window.__snhOuve) { window.__snhOuve = 1; ouvir(); }
+  // só no modo de teste local (emuladores): ganchos para o robô de testes
+  try { if (localStorage.getItem('cal.emulator') === '1' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__lembra = { finge: () => { state('rest'); busyUntil = 0; fingeDormir(); }, toca: onTap, falas: () => falas(ctx()), estado: () => ({ st: B && B.dataset.st, humor: el()?.dataset.snh, fingindo, fala: B && B.querySelector('.snhbud__bub span')?.textContent }) }; } catch { /* ok */ }
   // chega dando oi, com o que mais importa agora
   setTimeout(() => { state('rest'); setTimeout(() => fala(abre(ctx()), 'tchau'), 900); }, 1200);
   ciclo(); cena();
