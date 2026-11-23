@@ -52,6 +52,7 @@ export function renderSettings() {
       </div>
     </section>
     ${cloud && (store.user?.email || '').toLowerCase() === (CONFIG.adminEmail || '').toLowerCase() ? `<section class="block"><div class="glist">${grow({ attrs: 'data-action="admin"', ic: 'chart', c: '#0A84FF', t: 'Painel do dono', s: 'Receita, pessoas e saúde do app' })}</div></section>` : ''}
+    ${cloud && window.__equipe?.perms?.length ? `<section class="block"><div class="glist">${grow({ attrs: 'data-action="staff"', ic: 'shield', c: '#5856D6', t: 'Painel da equipe', s: 'Números, suporte, denúncias e equipe (conforme o seu cargo)' })}</div></section>` : ''}
     <section class="block">
       <h2 class="block__title">${icon('user', 16)} ${cloud ? 'Sua conta' : 'Quem está usando este celular?'}</h2>
       ${cloud

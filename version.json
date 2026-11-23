@@ -1,15 +1,16 @@
 {
-  "version": "2.19.0",
-  "build": "yesztu43",
+  "version": "2.20.0",
+  "build": "qih2vmyd",
   "date": "2026-11-23",
   "min": "2.2.0",
-  "title": "Tudo grátis até 31/12/2026",
+  "title": "Painel da equipe",
   "notes": [
+    "Painel da equipe: cargos (Suporte, Moderação, Marketing, Dados, Financeiro, RH, Produto, Administração), cada um vê só o que precisa.",
     "Tudo grátis até 31 de dezembro de 2026, inclusive o assistente com IA.",
     "Tocou na notificação da frase? Ela abre no app e fica até você fechar, com 6 modelos de imagem pra compartilhar.",
     "Perto de você ligado: quem usa o Lembra a até 100 km, do mais perto ao mais longe.",
     "Ache amigos pelo número de celular ou importando seus contatos (.vcf), também no iPhone.",
     "Sair da conta funciona em qualquer tela."
   ],
-  "builtAt": "2026-11-23T20:13:38.308Z"
+  "builtAt": "2026-11-23T20:22:12.173Z"
 }

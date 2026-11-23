@@ -5,6 +5,7 @@
    - Conversa com o Claude dentro do app (/ask), se houver chave da Anthropic
    Dados guardados num Durable Object com SQLite (veja entry.js e kvsql.js): chaves VAPID, aparelhos,
    listas de lembretes e a fila do relógio. O código usa a mesma interface do KV (env.CAL). */
+import { staffRoute, pode } from './staff.js';
 import { generateVapid, sendPush } from './webpush.js';
 import { verifyIdToken } from './auth.js';
 import { recordAct, getBoard, adminBoard, monthlyAward, eligible as rankEligible, standing as rankStanding, weekKey as rankWeek } from './rank.js';
@@ -242,7 +243,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/friends/suggest': 20, '/friends/email': 15, '/friends/perto': 10, '/friends/close': 30, '/friends/dismiss': 30, '/friends/ping': 40, '/lb/report': 20, '/lb/board': 40 };
+const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/friends/suggest': 20, '/friends/email': 15, '/friends/perto': 10, '/friends/close': 30, '/friends/dismiss': 30, '/friends/ping': 40, '/staff/me': 30, '/staff/list': 20, '/staff/set': 20, '/staff/remove': 20, '/staff/metrics': 20, '/staff/reports': 20, '/staff/report-action': 30, '/lb/report': 20, '/lb/board': 40 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -407,7 +408,7 @@ async function handle(req, env) {
     return reply(env, req, { error: 'Validação da loja ainda não configurada.' }, 501);
   }
   if (url.pathname === '/billing/all') {
-    if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
+    if (!isAdmin(env, me) && !(await pode(env, me, 'receita'))) return reply(env, req, { error: 'só o dono do app' }, 403);
     return reply(env, req, { ok: true, byWs: await billingAll(env) });
   }
 
@@ -534,6 +535,9 @@ async function handle(req, env) {
     await dueOf(env).set(`${coach ? 'cch' : 'amg'}:${me.id}`, Date.now());
     return reply(env, req, { ok: true });
   }
+
+  // ---------- equipe interna (cargos com acesso mínimo) ----------
+  if (url.pathname.startsWith('/staff/')) return staffRoute(env, me, url.pathname, body, (d, st) => reply(env, req, d, st));
 
   // ---------- amizades: convite por link → pedido na conta da pessoa → ela aceita ----------
   if (url.pathname.startsWith('/friends/')) {
@@ -908,7 +912,7 @@ async function handle(req, env) {
       if (th && th.userUnread) { th.userUnread = 0; await env.CAL.put(key(me.id), JSON.stringify(th)); }
       return reply(env, req, { ok: true, thread: th ? th.msgs : [] });
     }
-    if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
+    if (!isAdmin(env, me) && !(await pode(env, me, 'suporte'))) return reply(env, req, { error: 'só a equipe de suporte' }, 403);
     if (url.pathname === '/support/inbox') {
       const idx = (await env.CAL.get('support-index', 'json')) || {};
       const id = clean(body.id, 80);

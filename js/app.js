@@ -271,6 +271,7 @@ const actions = {
   privacy: async () => (await import('./privacy.js')).openPrivacy(),
   theme: (b) => { setThemePref(b.dataset.v); applySpaceMeta(ui.space === 'personal'); render(); },
   admin: async () => (await import('./views/admin.js')).openAdmin(),
+  staff: async () => (await import('./views/staff.js')).openStaff(),
   'set-person': (b) => {
     ui.person = b.dataset.p;
     saveUi();
@@ -1190,6 +1191,8 @@ function startApp() {
   setTimeout(() => import('./game.js').then((gm) => { gm.startGame(); gm.onGame(() => refreshLevelRings()); refreshLevelRings(); }).catch((e) => console.warn('conquistas', e)), 1800);
   // amizades: publica o cartão (nível, emblemas) e, se veio por um link de amizade, mostra o pedido
   setTimeout(() => import('./frase.js').then((F) => F.confereAvisoTocado()).catch(() => {}), 1500);
+  // equipe interna: quem tem cargo vê o "Painel da equipe" em Ajustes
+  setTimeout(() => import('./views/staff.js').then(async (S) => { window.__equipe = await S.minhaEquipe(); if (window.__equipe?.perms?.length && ui.tab === 'ajustes') render(); }).catch(() => {}), 4000);
   setTimeout(() => import('./friends.js').then((f) => { f.publishCard(); f.processFriendLink(); f.pingOnline(); setTimeout(f.pertoAuto, 15e3); setInterval(f.pingOnline, 60e3); document.addEventListener('visibilitychange', f.pingOnline); import('./game.js').then((gm) => gm.onGame(() => { clearTimeout(window.__cardT); window.__cardT = setTimeout(f.publishCard, 8000); })); }).catch(() => {}), 5000);
   setTimeout(askReinstall, 2500); // aviso de instalar a versão nova (só para quem precisa)
   // versão: confere se há nova ao voltar para o app (atualiza sozinho) e mostra as novidades uma vez

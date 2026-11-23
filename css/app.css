@@ -3884,3 +3884,24 @@ body.has-stv .snhbud { display: none; }
 .frs__fmt button.is-on { background: var(--surface, #fff); color: var(--text); box-shadow: 0 2px 6px rgba(0,0,0,.08); }
 .frs__go { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 16px; padding: 15px; background: linear-gradient(135deg, #FF9A3C, #FF5A1A); color: #fff; font: inherit; font-weight: 800; font-size: 16.5px; cursor: pointer; box-shadow: 0 8px 22px rgba(255,90,26,.3); }
 .frs__copy { margin-top: 8px; border: 0; background: none; color: var(--text-2); font: inherit; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; padding: 8px; cursor: pointer; }
+/* painel da equipe */
+.stf__eu { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--text-2); margin: 4px 0 10px; }
+.stf__sup { width: 100%; display: flex; align-items: center; gap: 10px; padding: 14px; border: 0; border-radius: 14px; background: var(--surface-2); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; margin-bottom: 6px; }
+.stf__sup svg:last-child { margin-left: auto; }
+.stf__grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+@media (min-width: 520px) { .stf__grid { grid-template-columns: repeat(4, 1fr); } }
+.stf__k { padding: 12px; border-radius: 14px; background: var(--surface); box-shadow: 0 1px 6px rgba(0,0,0,.05); display: flex; flex-direction: column; gap: 2px; }
+.stf__k b { font-size: 22px; font-weight: 850; } .stf__k small { font-size: 12px; color: var(--text-2); }
+.stf__bars { display: flex; align-items: flex-end; gap: 3px; height: 120px; padding: 8px; border-radius: 14px; background: var(--surface); overflow-x: auto; }
+.stf__bars span { flex: 1 0 14px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; }
+.stf__bars i { width: 100%; border-radius: 4px 4px 0 0; background: linear-gradient(#FF9A3C, #FF5A1A); }
+.stf__bars small { font-size: 9px; color: var(--text-3, #999); }
+.stf__rep, .stf__p { display: flex; align-items: center; gap: 10px; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.stf__rep div, .stf__p div { display: flex; flex-direction: column; gap: 2px; min-width: 0; } .stf__rep small, .stf__p small { color: var(--text-2); font-size: 12.5px; }
+.stf__rep.is-ok { opacity: .6; } .stf__acts { display: flex; gap: 6px; flex: none; }
+.stf__novo { display: grid; gap: 8px; }
+.stf__cargos { display: grid; gap: 6px; }
+.stf__cargos label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--surface); cursor: pointer; }
+.stf__cargos input { margin-top: 3px; width: 18px; height: 18px; accent-color: #FF6B1A; }
+.stf__cargos span { display: flex; flex-direction: column; } .stf__cargos small { font-size: 12px; color: var(--text-2); }
+.stf__nota { margin-top: 18px; }
