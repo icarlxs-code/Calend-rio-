@@ -12,9 +12,12 @@ import { sininho, alive } from '../sininho.js';
 const fmt = (n) => Number(n || 0).toLocaleString('pt-BR');
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 const daysLeft = () => { const d = new Date(); const end = new Date(d.getFullYear(), d.getMonth() + 1, 1); return Math.max(1, Math.ceil((end - d) / 864e5)); };
+let ST = null; import('../stories.js').then((m) => { ST = m; }).catch(() => {});
+const anel = (p) => { const r = ST && ST.feedCache().rows.find((x) => x.uid === p.uid && x.stories.length); return r ? (r.stories.some((x) => !x.seen) ? ' rkstory' : ' rkstory is-seen') : ''; };
+const abre = (p) => (p.uid && p.name !== 'Pessoa anônima' ? ` data-uid="${esc(p.uid)}" role="button" tabindex="0"` : '');
 const face = (p, size) => p.photo
-  ? `<span class="rkface" style="--s:${size}px"><img src="${p.photo}" alt="" loading="lazy"></span>`
-  : `<span class="rkface" style="--s:${size}px;background:${esc(p.color || '#7C5CFF')}">${esc((p.name || '?').charAt(0).toUpperCase())}</span>`;
+  ? `<span class="rkface${anel(p)}" style="--s:${size}px"><img src="${p.photo}" alt="" loading="lazy"></span>`
+  : `<span class="rkface${anel(p)}" style="--s:${size}px;background:${esc(p.color || '#7C5CFF')}">${esc((p.name || '?').charAt(0).toUpperCase())}</span>`;
 const flame = (n) => (n > 0 ? `<i class="rkfire${n >= 30 ? ' is-blue' : n >= 7 ? ' is-hot' : ''}">${icon('flame', 12)}${n}</i>` : '');
 
 export async function openRanking({ kind = 'month' } = {}) {
@@ -34,7 +37,7 @@ export async function openRanking({ kind = 'month' } = {}) {
     const me = d.me, L = G.levelInfo(), off = G.offensive();
     const top3 = d.top.slice(0, 3), rest = d.top.slice(3);
     const order = [top3[1], top3[0], top3[2]];
-    const podium = top3.length ? `<div class="rkpod">${order.map((p, i) => p ? `<div class="rkpod__it rkpod__it--${[2, 1, 3][i]}${p.uid === me?.uid ? ' is-me' : ''}">
+    const podium = top3.length ? `<div class="rkpod">${order.map((p, i) => p ? `<div class="rkpod__it rkpod__it--${[2, 1, 3][i]}${p.uid === me?.uid ? ' is-me' : ''}"${abre(p)}>
         ${[2, 1, 3][i] === 1 ? `<span class="rkcrown">${icon('crown', 22)}</span>` : ''}
         ${face(p, [2, 1, 3][i] === 1 ? 76 : 60)}
         <b>${esc(p.name)}</b><small>${fmt(p.points)} XP</small>
@@ -45,7 +48,7 @@ export async function openRanking({ kind = 'month' } = {}) {
           ${d.above ? `<small class="rkme__next">Faltam <b>${fmt(d.above.points - me.points + 1)} XP</b> para passar ${esc(d.above.name)}</small>` : me.pos === 1 ? `<small class="rkme__next">${icon('crown', 13)} Você é o 1º lugar!</small>` : ''}</div>
         ${off.days ? `<div class="rkme__fire">${icon('flame', 16)}<b>${off.days}</b><small>${off.days === 1 ? 'dia' : 'dias'}</small></div>` : ''}</div>`
       : `<div class="rkme rkme--out"><div class="rkme__info"><b>Você ainda não entrou ${cur === 'month' ? 'no ranking deste mês' : 'no ranking'}</b><small>Conclua um compromisso ou um lembrete para ganhar XP e aparecer aqui.</small></div></div>`;
-    const row = (p) => `<div class="rkrow${p.uid === me?.uid ? ' is-me' : ''}"><span class="rkrow__pos">${fmt(p.pos)}</span>${face(p, 40)}
+    const row = (p) => `<div class="rkrow${p.uid === me?.uid ? ' is-me' : ''}"${abre(p)}><span class="rkrow__pos">${fmt(p.pos)}</span>${face(p, 40)}
       <span class="rkrow__id"><b>${esc(p.name)}${p.vip ? ` <i class="rkvip">${icon('crown', 11)}</i>` : ''}</b><small>Nível ${p.level}${p.streak ? ' · ' : ''}${flame(p.streak)}</small></span><span class="rkrow__pts">${fmt(p.points)}<small>XP</small></span></div>`;
     const meOutsideTop = me && me.pos && me.pos > d.top.length;
     const mes = MONTHS[new Date().getMonth()], dl = daysLeft();
@@ -72,6 +75,7 @@ export async function openRanking({ kind = 'month' } = {}) {
     html: html(),
     onMount: (x) => {
       alive();
+      x.el.querySelectorAll('[data-uid]').forEach((b) => (b.onclick = () => import('../friends.js').then((m) => m.openPublicProfile(b.dataset.uid))));
       x.el.querySelectorAll('[data-k]').forEach((b) => (b.onclick = () => { cur = b.dataset.k; x.set(html()); if (!data[cur]) load(cur, x); }));
       const lg = x.el.querySelector('[data-league]');
       if (lg) lg.onclick = async () => (await import('./league.js')).openLeague();

@@ -176,7 +176,10 @@ function render() {
       const pinta = () => {
         const v = document.getElementById('view'); if (!v) return;
         v.querySelector('.ststrip-wrap')?.remove();
-        const rows = m.feedCache().rows; if (!rows.some((r) => !r.me)) return;
+        const fc = m.feedCache(), rows = fc.rows;
+        const tem = rows.some((r) => !r.me && r.stories.some((x) => !x.seen)) || fc.pedidos > 0;
+        v.querySelectorAll('.iconbtn--friends').forEach((b) => b.classList.toggle('is-dot', tem));
+        if (!rows.some((r) => !r.me)) return;
         const host = v.querySelector('.page'); if (!host) return;
         host.insertAdjacentHTML('afterbegin', `<div class="ststrip-wrap">${m.storyStrip(rows)}</div>`);
         m.bindStrip(host.querySelector('.ststrip-wrap'), pinta);

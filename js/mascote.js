@@ -150,6 +150,24 @@ function falas(c) {
       ]);
       out.push({ k: 'story', i, t, m: 'desconfiado', roteiro: ['olhaLados', 'maoBoca'], u: 2.1, acoes: [{ label: 'Quero ver', go: () => ST.openViewer(r.uid) }, { label: 'Depois' }] });
     }
+    const fc = ST.feedCache();
+    if (fc.pedidos > 0) {
+      const [i, t] = variante('pedidos', [
+        fc.pedidos === 1 ? 'Ei! Tem alguém querendo ser seu amigo 👀 Quer ver quem é?' : `${fc.pedidos} pedidos de amizade te esperando! Você tá famoso(a), hein 😎`,
+        'Psiu… chegou pedido de amizade. Vai deixar a pessoa no vácuo? 🤭',
+      ]);
+      out.push({ k: 'pedidos', i, t, m: 'surpreso', roteiro: ['pulo', 'sobrancelha'], u: 2.2, acoes: [{ label: 'Ver pedido', go: () => import('./friends.js').then((m) => m.openFriends()) }, { label: 'Depois' }] });
+    }
+    const on = (fc.online || []).filter((x) => x.uid);
+    if (on.length) {
+      const n1 = on[0].name.split(' ')[0];
+      const [i, t] = variante('online', [
+        on.length === 1 ? `${n1} tá online agora 🟢 Bora ver o que anda aprontando?` : `${n1} e mais ${on.length - 1} amigo${on.length > 2 ? 's' : ''} estão online agora 🟢`,
+        `Olha só quem apareceu: ${n1} tá on! 👋`,
+        `${n1} tá no Lembra agora. Será que já riscou tudo de hoje? 🤔`,
+      ]);
+      out.push({ k: 'online', i, t, m: 'acena', roteiro: ['olhaLados'], u: 1.2, acoes: [{ label: 'Ver perfil', go: () => import('./friends.js').then((m) => m.openPublicProfile(on[0].uid, on[0])) }, { label: 'Depois' }] });
+    }
     const vis = ST.visitasCache().list; let vistos = 0; try { vistos = +localStorage.getItem(visKey) || 0; } catch { /* ok */ }
     const recentes = vis.filter((v) => v.at > vistos);
     if (recentes.length) {
@@ -476,6 +494,7 @@ export function react(kind, o = {}) {
   busyUntil = 0;
   if (kind === 'done') return fala(o.perfect ? { k: 'perfeito', t: pick(['Dia 100%! Você zerou tudo! 🏆', 'Zerou o dia! Pode comemorar 🎉']), m: 'danca' } : o.late ? { t: outra(DONE_LATE), m: 'feliz' } : { t: outra(DONE), m: 'comemora' }, 'pulo');
   if (kind === 'created') return fala({ t: outra(CREATED), m: 'feliz' }, 'sim');
+  if (kind === 'pedido') return fala({ t: pick([`Pedido enviado! Agora é torcer pra ${(o.nome || 'pessoa').split(' ')[0]} aceitar 🤞`, 'Mandei o convite voando! 🕊️ Já já chega no celular da pessoa.', 'Feito! Amizade a um toque de distância 🤝']), m: 'comemora', roteiro: ['balanca'] }, 'pulo');
   if (kind === 'story') return fala({ t: pick(['Postou story! Agora todo mundo vai ver que você fez 😎📸', 'XP em dobro na conta! Fotógrafo(a) profissional, hein 📸', 'Prova registrada! Ninguém pode dizer que você não fez 😏']), m: 'danca', roteiro: ['balanca'] }, 'pulo');
   if (kind === 'visitas') { try { localStorage.setItem(visKey, String(Date.now())); } catch { /* ok */ } return o.n ? fala({ t: pick([`Hmm… que que será que ${(o.nome || 'essa pessoa').split(' ')[0]} tava querendo, hein? 🤭`, `${(o.nome || 'Alguém').split(' ')[0]} passou por aqui… será que tá com saudade? 👀`, 'Olha quanta gente curiosa com a sua vida 😏']), m: 'desconfiado', roteiro: ['olhaLados', 'maoBoca'] }, 'sobrancelha') : fala({ t: 'Ninguém passou ainda… posta um story que o povo aparece 😉', m: 'feliz' }, 'pisca'); }
   if (kind === 'late') return fala({ t: 'Ih… esse passou da hora. Quer ver o que ficou pra trás?', m: 'triste', acoes: [{ label: 'Ver', go: A.atrasados }, { label: 'Depois' }] }, null);

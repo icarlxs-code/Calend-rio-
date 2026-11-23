@@ -63,6 +63,7 @@ export function renderToday() {
       <div class="hdr__actions">
         ${date !== today ? `<button class="chip chip--accent" data-action="go-today">Hoje</button>` : ''}
         <button class="iconbtn iconbtn--personal" data-action="space" data-space="personal" aria-label="Ir para o Pessoal">${icon('heart', 19)}</button>
+        ${store.mode === 'cloud' && store.solo ? `<button class="iconbtn iconbtn--friends" data-action="friends" aria-label="Amigos e stories">${icon('users', 19)}<i class="iconbtn__dot"></i></button>` : ''}
         <button class="iconbtn iconbtn--ai" data-action="assistant" aria-label="Assistente">${icon('sparkle', 20)}</button>
         <button class="iconbtn iconbtn--me" data-action="profile" aria-label="Seu perfil e conquistas">${me ? meRing(me.id, 32) : icon('user', 20)}</button>
       </div>

@@ -17,12 +17,12 @@ const desde = (at) => { const m = Math.round((Date.now() - at) / 60000); return 
 const face = (c, size = 56) => c.photo ? `<span class="stface" style="--s:${size}px"><img src="${esc(c.photo)}" alt=""></span>` : `<span class="stface" style="--s:${size}px;background:${esc(c.color || '#FF6B1A')}">${esc((c.name || '?').charAt(0).toUpperCase())}</span>`;
 
 /* ---------- cache do feed (o Lembra usa para puxar assunto) ---------- */
-let feed = { rows: [], at: 0 }, visitas = { list: [], at: 0 };
+let feed = { rows: [], pedidos: 0, online: [], at: 0 }, visitas = { list: [], at: 0 };
 export const feedCache = () => feed;
 export const visitasCache = () => visitas;
 export async function refreshFeed() {
   if (!store.user || store.mode !== 'cloud') return feed;
-  try { const r = await call('/friends/stories'); feed = { rows: r.rows || [], at: Date.now() }; } catch { /* ok */ }
+  try { const r = await call('/friends/stories'); feed = { rows: r.rows || [], pedidos: r.pedidos || 0, online: r.online || [], at: Date.now() }; } catch { /* ok */ }
   return feed;
 }
 export async function refreshVisitors() {

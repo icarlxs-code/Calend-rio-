@@ -242,7 +242,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/lb/report': 20, '/lb/board': 40 };
+const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/lb/report': 20, '/lb/board': 40 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -491,7 +491,7 @@ async function handle(req, env) {
       await Promise.all(sts.map((x) => env.CAL.delete(`storyimg:${x.id}`)));
       const frs = (await env.CAL.get(`friends:${me.ws}`, 'json')) || [];
       for (const f of frs) { const l = (await env.CAL.get(`friends:${f}`, 'json')) || []; await env.CAL.put(`friends:${f}`, JSON.stringify(l.filter((x) => x !== me.ws))); }
-      await Promise.all([`stories:${me.ws}`, `visits:${me.ws}`, `friends:${me.ws}`, `freq:${me.ws}`].map((k) => env.CAL.delete(k)));
+      await Promise.all([`stories:${me.ws}`, `visits:${me.ws}`, `friends:${me.ws}`, `freq:${me.ws}`, `ls:${me.ws}`, `blocks:${me.ws}`].map((k) => env.CAL.delete(k)));
     } catch { /* ok */ }
     const D = dueOf(env);
     await Promise.all([`per:${me.id}`, `amg:${me.id}`, `cch:${me.id}`, `rem:${me.ws}`].map((k) => D.del(k)));
@@ -541,13 +541,16 @@ async function handle(req, env) {
     const vipOfU = async (u) => { const b = await getBill(env, u); return b && b.lifetime && b.comp && b.vip ? { no: b.vip.no } : null; };
     const cardOf = async (u) => {
       const c = (await env.CAL.get(`card:${u}`, 'json')) || {};
-      return { uid: u, name: c.name || 'Alguém', photo: c.photo || null, color: c.color || '#7C5CFF', level: c.level || 0, xp: c.xp || 0, badges: c.badges || [], tier: c.tier || '', since: c.since || null, vip: await vipOfU(u) };
+      return { uid: u, name: c.name || 'Alguém', photo: c.photo || null, color: c.color || '#7C5CFF', level: c.level || 0, xp: c.xp || 0, badges: c.badges || [], tier: c.tier || '', since: c.since || null, bio: c.bio || '', job: c.job || '', role: c.role || '', place: c.place || '', hide: !!c.hide, teen: !!c.teen, vip: await vipOfU(u) };
     };
     if (url.pathname === '/friends/card') {
       const photo = typeof body.photo === 'string' && body.photo.length < 90000 && /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(body.photo) ? body.photo : null;
-      const card = { name: clean(body.name, 40) || me.name, photo, color: /^#[0-9a-fA-F]{6}$/.test(body.color || '') ? body.color : '#7C5CFF', level: Math.max(0, Math.min(100, Math.round(Number(body.level) || 0))), xp: Math.max(0, Math.round(Number(body.xp) || 0)), tier: clean(body.tier, 30), since: Number(body.since) || null, teen: body.teen === true,
+      const card = { name: clean(body.name, 40) || me.name, photo, color: /^#[0-9a-fA-F]{6}$/.test(body.color || '') ? body.color : '#7C5CFF', level: Math.max(0, Math.min(100, Math.round(Number(body.level) || 0))), xp: Math.max(0, Math.round(Number(body.xp) || 0)), tier: clean(body.tier, 30), since: Number(body.since) || null, teen: body.teen === true, hide: body.hide === true,
+        bio: clean(body.bio, 150), job: clean(body.job, 60), role: clean(body.role, 40), place: clean(body.place, 60),
         badges: (Array.isArray(body.badges) ? body.badges : []).filter((x) => typeof x === 'string' && /^[a-z0-9_-]{1,30}$/.test(x)).slice(0, 150), at: Date.now() };
       await env.CAL.put(`card:${meU}`, JSON.stringify(card));
+      // celular embaralhado (SHA-256): só serve para amigos que já têm o seu número na agenda te encontrarem
+      if (/^[a-f0-9]{64}$/.test(body.phoneHash || '')) await env.CAL.put(`phash:${body.phoneHash}`, meU);
       return reply(env, req, { ok: true });
     }
     if (url.pathname === '/friends/link') {
@@ -591,6 +594,8 @@ async function handle(req, env) {
     const memberOf = (u) => 'u' + String(u).replace(/[^A-Za-z0-9]/g, '').slice(0, 24);
     const DAY = 864e5, now = Date.now();
     const vivos = (l) => l.filter((x) => now - x.at < DAY);
+    const marcaOnline = async () => { const k = `ls:${meU}`, v = +(await env.CAL.get(k)) || 0; if (now - v > 90e3) await env.CAL.put(k, String(now), { expirationTtl: 30 * 864e2 }); };
+    const vistoEm = async (u) => +(await env.CAL.get(`ls:${u}`)) || 0;
     const brHora = () => new Date(Date.now() - 3 * 3600e3).getUTCHours();
     const dormindo = async (u) => { const c = (await env.CAL.get(`card:${u}`, 'json')) || {}; const h = brHora(); return c.teen === true && (h >= 22 || h < 7); }; // modo dormir (menores)
     const isFriend = async (a, b) => a === b || (await getL(`friends:${a}`)).includes(b);
@@ -617,6 +622,7 @@ async function handle(req, env) {
       return reply(env, req, { ok: true });
     }
     if (url.pathname === '/friends/stories') {
+      await marcaOnline();
       const fr = await getL(`friends:${meU}`);
       const donos = [meU, ...fr.slice(0, 200)];
       const rows = (await Promise.all(donos.map(async (u) => {
@@ -625,7 +631,10 @@ async function handle(req, env) {
       }))).filter(Boolean);
       // como no Instagram/WhatsApp: os seus primeiro, depois quem tem novidade, do mais recente ao mais antigo
       rows.sort((a, b) => (b.me - a.me) || (a.stories.every((x) => x.seen) - b.stories.every((x) => x.seen)) || (Math.max(...b.stories.map((x) => x.at)) - Math.max(...a.stories.map((x) => x.at))));
-      return reply(env, req, { ok: true, rows });
+      const pedidos = (await getL(`freq:${meU}`)).length;
+      const online = (await Promise.all(fr.slice(0, 200).map(async (u) => ({ u, t: await vistoEm(u) })))).filter((x) => now - x.t < 5 * 60e3).slice(0, 20);
+      const on = await Promise.all(online.map(async (x) => { const c = await cardOf(x.u); return { uid: x.u, name: c.name, photo: c.photo, color: c.color }; }));
+      return reply(env, req, { ok: true, rows, pedidos, online: on });
     }
     if (url.pathname === '/friends/story-view') {
       const owner = clean(body.owner, 64), id = clean(body.id, 40);
@@ -684,9 +693,54 @@ async function handle(req, env) {
       const l = (await getL(`visits:${meU}`)).filter((x) => now - x.at < 7 * DAY);
       return reply(env, req, { ok: true, visitors: await Promise.all(l.map(async (x) => ({ ...(await cardOf(x.from)), at: x.at, n: x.n }))) });
     }
+    // ---------- perfil público (ranking), pedido de amizade, online e contatos ----------
+    const relacao = async (u) => {
+      if (u === meU) return 'eu';
+      if ((await getL(`friends:${meU}`)).includes(u)) return 'amigo';
+      if ((await getL(`freq:${u}`)).some((r) => r.from === meU)) return 'enviado';
+      if ((await getL(`freq:${meU}`)).some((r) => r.from === u)) return 'recebido';
+      return 'nenhum';
+    };
+    if (url.pathname === '/friends/public') {
+      const u = clean(body.uid, 64);
+      if (!/^[A-Za-z0-9]{6,64}$/.test(u)) return reply(env, req, { error: 'Perfil não encontrado.' }, 404);
+      if ((await getL(`blocks:${u}`)).includes(meU) || (await getL(`blocks:${meU}`)).includes(u)) return reply(env, req, { error: 'Perfil indisponível.' }, 403);
+      const rel = await relacao(u), c = await cardOf(u);
+      // perfil privado (anônimo no ranking, padrão de quem tem 13–17): só amigos veem os detalhes
+      if (c.hide && rel !== 'amigo' && rel !== 'eu') return reply(env, req, { ok: true, privado: true, rel, card: { uid: u, name: 'Perfil privado', level: c.level, color: c.color } });
+      const sts = rel === 'amigo' || rel === 'eu' ? vivos(await getL(`stories:${u}`)) : [];
+      return reply(env, req, { ok: true, rel, card: c, online: rel === 'amigo' ? await vistoEm(u) : 0, story: sts.length ? (sts.some((x) => !x.views[meU]) ? 'novo' : 'visto') : (vivos(await getL(`stories:${u}`)).length ? 'amigos' : '') });
+    }
+    if (url.pathname === '/friends/request') {
+      const u = clean(body.uid, 64);
+      if (!/^[A-Za-z0-9]{6,64}$/.test(u) || u === meU) return reply(env, req, { error: 'Pedido inválido.' }, 400);
+      if ((await getL(`blocks:${u}`)).includes(meU) || (await getL(`blocks:${meU}`)).includes(u)) return reply(env, req, { error: 'Não dá para enviar pedido para essa pessoa.' }, 403);
+      const rel = await relacao(u);
+      if (rel === 'amigo') return reply(env, req, { ok: true, rel });
+      if (rel === 'recebido') { // ela já tinha pedido: vira amizade na hora
+        await env.CAL.put(`freq:${meU}`, JSON.stringify((await getL(`freq:${meU}`)).filter((r) => r.from !== u)));
+        await env.CAL.put(`friends:${meU}`, JSON.stringify([...new Set([u, ...(await getL(`friends:${meU}`))])].slice(0, 300)));
+        await env.CAL.put(`friends:${u}`, JSON.stringify([...new Set([meU, ...(await getL(`friends:${u}`))])].slice(0, 300)));
+        const mine = await cardOf(meU);
+        await sendToMember(env, memberOf(u), { title: '🤝 Agora vocês são amigos', body: `${mine.name} aceitou a sua amizade no Lembra.`, tag: `amigo-${meU}`, url: './#/amigos' }).catch(() => 0);
+        return reply(env, req, { ok: true, rel: 'amigo' });
+      }
+      const reqs = (await getL(`freq:${u}`)).filter((r) => r.from !== meU);
+      reqs.unshift({ from: meU, at: now });
+      await env.CAL.put(`freq:${u}`, JSON.stringify(reqs.slice(0, 50)));
+      if (rel !== 'enviado') { const mine = await cardOf(meU); await sendToMember(env, memberOf(u), { title: '👋 Novo pedido de amizade', body: `${mine.name.split(' ')[0]} quer ser seu amigo no Lembra. Toque pra ver o perfil e aceitar.`, tag: `pedido-${meU}`, url: './#/amigos' }).catch(() => 0); }
+      return reply(env, req, { ok: true, rel: 'enviado' });
+    }
+    if (url.pathname === '/friends/contacts') {
+      const hs = (Array.isArray(body.hashes) ? body.hashes : []).filter((h) => /^[a-f0-9]{64}$/.test(h)).slice(0, 1500);
+      const achados = [...new Set((await Promise.all(hs.map((h) => env.CAL.get(`phash:${h}`)))).filter((u) => u && u !== meU))].slice(0, 100);
+      const rows = await Promise.all(achados.map(async (u) => ({ ...(await cardOf(u)), rel: await relacao(u) })));
+      return reply(env, req, { ok: true, rows: rows.filter((c) => c.rel !== 'amigo').map((c) => (c.hide ? { uid: c.uid, name: c.name, color: c.color, level: c.level, rel: c.rel } : c)) });
+    }
     if (url.pathname === '/friends/list') {
+      await marcaOnline();
       const [fr, rq] = [await getL(`friends:${meU}`), await getL(`freq:${meU}`)];
-      const friends = await Promise.all(fr.slice(0, 200).map(cardOf));
+      const friends = await Promise.all(fr.slice(0, 200).map(async (u) => ({ ...(await cardOf(u)), online: await vistoEm(u) })));
       const requests = await Promise.all(rq.slice(0, 30).map(async (r) => ({ ...(await cardOf(r.from)), at: r.at })));
       return reply(env, req, { ok: true, friends: friends.sort((x, y) => y.level - x.level || y.xp - x.xp), requests, me: await cardOf(meU) });
     }
