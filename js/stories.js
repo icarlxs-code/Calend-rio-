@@ -115,12 +115,15 @@ export async function openViewer(ownerUid, onChange) {
       <header class="stv__top">${face(r, 36)}<span><b>${r.me ? 'Você' : esc(r.name)}</b><small>${desde(st.at)}${st.title ? ` · ${esc(st.title)}` : ''}</small></span><button class="stv__x" data-x aria-label="Fechar">${icon('x', 22)}</button></header>
       <div class="stv__img"><div class="stv__load"><i></i><i></i><i></i></div></div>
       ${st.caption ? `<p class="stv__cap">${esc(st.caption)}</p>` : ''}
+      ${r.me ? '' : `<button class="stv__more" data-more aria-label="Mais opções">${icon('dots', 22)}</button>`}
       ${r.me ? `<footer class="stv__me"><button data-viewers>${icon('eye', 18)} Visto por ${st.views || 0}</button><button data-del>${icon('trash', 18)} Apagar</button></footer>` : `<footer class="stv__done">${icon('check', 16)} ${esc(r.name.split(' ')[0])} concluiu ${st.title ? `“${esc(st.title)}”` : 'um compromisso'}</footer>`}
       <button class="stv__nav stv__nav--l" data-prev aria-label="Anterior"></button><button class="stv__nav stv__nav--r" data-next aria-label="Próximo"></button>`;
     w.querySelector('[data-x]').onclick = fecha;
     w.querySelector('[data-prev]').onclick = anterior;
     w.querySelector('[data-next]').onclick = proximo;
     const v = w.querySelector('[data-viewers]'); if (v) v.onclick = () => { pausado = true; openViewers(st.id, () => { pausado = false; }); };
+    const mais = w.querySelector('[data-more]');
+    if (mais) mais.onclick = () => { pausado = true; denunciaOuBloqueia({ uid: r.uid, name: r.name, storyId: st.id }, () => { pausado = false; }, fecha); };
     const d = w.querySelector('[data-del]');
     if (d) d.onclick = async () => {
       pausado = true;
@@ -191,5 +194,25 @@ export async function openVisitors() {
     setTimeout(() => { setMood(fig, lista.length ? 'desconfiado' : 'feliz'); say(fig, t, { bubble: bub, speed: 24 }); }, 1100);
     if (lista.length) { setTimeout(() => act(fig, 'sobrancelha'), 2600); setTimeout(() => act(fig, 'maoBoca'), 4300); }
   }
+  return a;
+}
+
+/* denunciar um story / bloquear uma pessoa (sem sair do app) */
+export function denunciaOuBloqueia({ uid, name, storyId = '' }, onClose, depoisBloquear) {
+  const n1 = (name || 'essa pessoa').split(' ')[0];
+  const MOTIVOS = ['Nudez ou conteúdo sexual', 'Violência ou ameaça', 'Assédio ou bullying', 'Discurso de ódio', 'Spam ou golpe', 'Outro motivo'];
+  const a = openSheet({ className: 'sheet--actions', onClose, html: `${sheetHead(storyId ? 'Denunciar ou bloquear' : `Opções · ${esc(n1)}`, { left: '<button class="btn-text" data-close>Fechar</button>' })}
+    <div class="page page--sheet"><p class="fhelp">A denúncia é anônima: ${esc(n1)} não fica sabendo. O conteúdo é revisado e sai do ar se violar as regras.</p>
+    <div class="agroup">${MOTIVOS.map((m) => `<button class="frow" data-mot="${esc(m)}">${icon('flag', 18)}<span class="frow__id"><b>Denunciar: ${esc(m)}</b></span></button>`).join('')}</div>
+    <button class="btn btn--danger-soft btn--block" data-bloq>${icon('x', 16)} Bloquear ${esc(n1)}</button>
+    <p class="fhelp">Bloquear desfaz a amizade, esconde os stories e impede novos convites de ${esc(n1)}.</p></div>` ,
+    onMount: (x) => {
+      x.el.querySelectorAll('[data-mot]').forEach((b) => (b.onclick = async () => { try { await call('/friends/report', { owner: uid, id: storyId, motivo: b.dataset.mot }); toast('Denúncia enviada. Obrigado por avisar 🙏'); } catch { toast('Não consegui enviar agora.'); } x.close(); }));
+      x.el.querySelector('[data-bloq]').onclick = async () => {
+        if (!(await confirmDialog({ title: `Bloquear ${n1}?`, text: 'Vocês deixam de ser amigos e ninguém vê mais o perfil nem os stories do outro.', ok: 'Bloquear', danger: true }))) return;
+        try { await call('/friends/block', { uid }); toast(`${n1} foi bloqueado(a)`); feed.rows = feed.rows.filter((r) => r.uid !== uid); } catch { toast('Não consegui bloquear agora.'); }
+        x.close(); depoisBloquear && depoisBloquear();
+      };
+    } });
   return a;
 }

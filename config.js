@@ -21,8 +21,8 @@ export const CONFIG = {
   supportWhatsapp: '',
   supportEmail: 'icarlxs@gmail.com',
   // versão dos Termos/Privacidade: ao mudar, o app pede o aceite de novo
-  termsVersion: '1.1',
-  termsDate: '19/11/2026',
+  termsVersion: '1.2',
+  termsDate: '23/11/2026',
 
   // Celular confirmado por SMS e "recuperar a senha pelo celular" (Firebase → Authentication → Telefone).
   // Precisa do plano Blaze do Firebase (≈ US$ 0,02 por SMS no Brasil). Depois de ligar lá, troque para true.

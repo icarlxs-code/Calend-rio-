@@ -241,7 +241,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/visit': 30, '/friends/visitors': 20, '/lb/report': 20, '/lb/board': 40 };
+const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/lb/report': 20, '/lb/board': 40 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -550,6 +550,7 @@ async function handle(req, env) {
       const l = /^[A-Za-z0-9]{10,40}$/.test(token) ? await env.CAL.get(`flink:${token}`, 'json') : null;
       if (!l) return reply(env, req, { error: 'Este convite de amizade não existe mais. Peça um novo.' }, 404);
       if (l.uid === meU) return reply(env, req, { ok: true, self: true });
+      if ((await getL(`blocks:${l.uid}`)).includes(meU) || (await getL(`blocks:${meU}`)).includes(l.uid)) return reply(env, req, { error: 'Este convite não está disponível.' }, 403);
       if ((await getL(`friends:${meU}`)).includes(l.uid)) return reply(env, req, { ok: true, already: true, from: await cardOf(l.uid) });
       const reqs = (await getL(`freq:${meU}`)).filter((r) => r.from !== l.uid);
       reqs.unshift({ from: l.uid, at: Date.now() });
@@ -641,6 +642,30 @@ async function handle(req, env) {
         const B = ['Alguém acabou de olhar o seu perfil 👀 Toque pra ver quem foi', 'Tem gente bisbilhotando o seu perfil 🤭 Quer saber quem?', 'Seu perfil recebeu uma visita agora. Curioso(a)? 👀'];
         await sendToMember(env, memberOf(other), { title: '👀 Visita no seu perfil', body: B[now % B.length], tag: 'visitas', url: './#/visitas' }).catch(() => 0);
       }
+      return reply(env, req, { ok: true });
+    }
+    // denúncia e bloqueio (exigência das lojas para conteúdo de usuário)
+    if (url.pathname === '/friends/report') {
+      const owner = clean(body.owner, 64), id = clean(body.id, 40), motivo = clean(body.motivo, 200);
+      const rep = (await getL('reports')).slice(0, 499);
+      rep.unshift({ by: meU, owner, id, motivo, at: now });
+      await env.CAL.put('reports', JSON.stringify(rep));
+      // 2 denúncias diferentes no mesmo story: ele sai do ar na hora, até o dono do app revisar
+      if (id && rep.filter((r) => r.id === id).length >= 2) {
+        const l = await getL(`stories:${owner}`); await env.CAL.put(`stories:${owner}`, JSON.stringify(l.filter((x) => x.id !== id)), { expirationTtl: 26 * 3600 }); await env.CAL.delete(`storyimg:${id}`);
+      }
+      const adm = await adminMember(env);
+      if (adm) await sendToMember(env, adm, { title: '🚩 Denúncia no Lembra', body: `${motivo || 'Sem motivo'} · ${id ? 'story' : 'perfil'}`, tag: 'denuncia', url: './' }).catch(() => 0);
+      return reply(env, req, { ok: true });
+    }
+    if (url.pathname === '/friends/block') {
+      const other = clean(body.uid, 64);
+      if (!other || other === meU) return reply(env, req, { error: 'Não dá para bloquear.' }, 400);
+      const bl = await getL(`blocks:${meU}`); await env.CAL.put(`blocks:${meU}`, JSON.stringify([...new Set([other, ...bl])].slice(0, 500)));
+      await env.CAL.put(`friends:${meU}`, JSON.stringify((await getL(`friends:${meU}`)).filter((x) => x !== other)));
+      await env.CAL.put(`friends:${other}`, JSON.stringify((await getL(`friends:${other}`)).filter((x) => x !== meU)));
+      await env.CAL.put(`freq:${meU}`, JSON.stringify((await getL(`freq:${meU}`)).filter((r) => r.from !== other)));
+      await env.CAL.put(`visits:${meU}`, JSON.stringify((await getL(`visits:${meU}`)).filter((v) => v.from !== other)), { expirationTtl: 8 * 24 * 3600 });
       return reply(env, req, { ok: true });
     }
     if (url.pathname === '/friends/visitors') {

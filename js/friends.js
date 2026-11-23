@@ -109,9 +109,11 @@ async function friendProfile(c, onRemoved) {
       <h3 class="ah">Emblemas</h3>
       ${bs.length ? `<div class="bgrid">${bs.map((b) => `<div class="bgrid__it">${badgeArt(b, 72)}<b>${esc(b.name())}</b><small>${RARITY[b.rarity].label}</small></div>`).join('')}</div>` : '<p class="fhelp">Ainda sem emblemas.</p>'}
       <button class="btn btn--danger-soft btn--block" data-rm>Remover amizade</button>
+      <button class="btn-text btn-text--danger btn-text--sm fprof__bloq" data-bloq>${icon('flag', 14)} Denunciar ou bloquear</button>
     </div>`,
     onMount: (a) => {
       const sb = a.el.querySelector('[data-story]'); if (sb) sb.onclick = () => S.openViewer(c.uid);
+      const bq = a.el.querySelector('[data-bloq]'); if (bq) bq.onclick = () => S.denunciaOuBloqueia({ uid: c.uid, name: c.name }, null, () => { a.close(); onRemoved && onRemoved(); });
       a.el.querySelector('[data-rm]').onclick = async () => {
         if (!(await confirmDialog({ title: `Remover ${c.name.split(' ')[0]} dos amigos?`, text: 'Vocês deixam de ver o perfil um do outro. Dá para virar amigo de novo com um novo convite.', ok: 'Remover', danger: true }))) return;
         try { await call('/friends/remove', { uid: c.uid }); a.close(); toast('Amizade removida'); onRemoved && onRemoved(); } catch (e) { toast(e.message || 'Não consegui agora.'); }
