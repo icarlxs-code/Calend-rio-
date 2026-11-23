@@ -1,9 +1,10 @@
 {
-  "version": "2.21.0",
+  "version": "2.22.0",
   "date": "2026-11-23",
-  "min": "2.20.0",
-  "title": "Ranking pra todo mundo no grátis",
+  "min": "2.22.0",
+  "title": "Visual novo: creme e laranja",
   "notes": [
+    "App com a cara nova do Lembra: creme, laranja e fonte Nunito.",
     "Ranking liberado pra todo mundo durante o grátis (até 31/12/2026).",
     "Quem chega pelo convite já cai em “Criar conta”.",
     "“Perto de você” agora é opcional: você liga se quiser.",

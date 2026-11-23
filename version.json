@@ -1,10 +1,11 @@
 {
-  "version": "2.21.0",
-  "build": "cgu3zbyz",
+  "version": "2.22.0",
+  "build": "f2ykubdy",
   "date": "2026-11-23",
-  "min": "2.20.0",
-  "title": "Ranking pra todo mundo no grátis",
+  "min": "2.22.0",
+  "title": "Visual novo: creme e laranja",
   "notes": [
+    "App com a cara nova do Lembra: creme, laranja e fonte Nunito.",
     "Ranking liberado pra todo mundo durante o grátis (até 31/12/2026).",
     "Quem chega pelo convite já cai em “Criar conta”.",
     "“Perto de você” agora é opcional: você liga se quiser.",
@@ -14,5 +15,5 @@
     "Ache amigos pelo número de celular ou importando seus contatos (.vcf), também no iPhone.",
     "Sair da conta funciona em qualquer tela."
   ],
-  "builtAt": "2026-11-23T20:46:46.584Z"
+  "builtAt": "2026-11-23T21:35:25.860Z"
 }

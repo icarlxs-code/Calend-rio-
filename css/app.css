@@ -1,3 +1,6 @@
+/* Nunito (variável, SIL Open Font License 1.1: uso comercial liberado) */
+@font-face { font-family: "Nunito"; font-style: normal; font-display: swap; font-weight: 200 1000; src: url('../media/fonts/nunito-latin-ext-wght-normal.woff2') format('woff2-variations'); unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+@font-face { font-family: "Nunito"; font-style: normal; font-display: swap; font-weight: 200 1000; src: url('../media/fonts/nunito-latin-wght-normal.woff2') format('woff2-variations'); unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
 /* ==========================================================
    Pauta — visual mobile-first (iPhone 16/17 Pro Max, 440pt)
    ========================================================== */
@@ -3065,7 +3068,7 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 
 /* cadastro no tom da marca: botão principal laranja com "base" (volume, como no Duolingo) */
 .login__installtop { background: linear-gradient(135deg, #FFA43A, #FF6B1A) !important; box-shadow: 0 8px 24px rgba(255, 107, 26, .35) !important; }
-.login .btn--primary, .ficha .btn--primary { background: #FF6B1A; color: #fff; border: 0; box-shadow: 0 4px 0 #C94A0C; transition: transform .08s, box-shadow .08s; }
+.login .btn--primary, .ficha .btn--primary { background: var(--ink); color: var(--ink-on); border: 0; box-shadow: var(--shadow-pill); transition: transform .08s, box-shadow .08s; }
 .login .btn--primary:active, .ficha .btn--primary:active { transform: translateY(3px); box-shadow: 0 1px 0 #C94A0C; }
 .ficha__prog i { background: #FF6B1A !important; }
 
@@ -3240,8 +3243,8 @@ input, select, textarea { font-size: max(16px, 1em); } /* o iPhone não dá zoom
 .ficha .fhelp::before, .login .login__hint::before { content: 'i'; flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #FF6B1A; color: #fff; font: 800 12px/1 Georgia, serif; font-style: italic; margin-top: 1px; }
 .ficha .ficha__list .fhelp { background: none; border: 0; }
 .ficha .ficha__list .fhelp::before { display: none; }
-.login .btn-text, .ficha .btn-text { color: #FF6B1A; }
-.login .consent a { color: #FF6B1A; }
+.login .btn-text, .ficha .btn-text { color: var(--accent); }
+.login .consent a { color: var(--accent); }
 :root[data-theme="dark"] .ficha .fhelp, :root[data-theme="dark"] .login .login__hint { background: rgba(255,107,26,.14); color: #F3D9C8; }
 /* botões principais no laranja da marca (a cor da profissão continua no fundo e no selo) */
 [data-space="work"] .btn--primary { background: var(--lb-o); color: #fff; box-shadow: 0 4px 0 var(--lb-o-d); }
@@ -3905,3 +3908,82 @@ body.has-stv .snhbud { display: none; }
 .stf__cargos input { margin-top: 3px; width: 18px; height: 18px; accent-color: #FF6B1A; }
 .stf__cargos span { display: flex; flex-direction: column; } .stf__cargos small { font-size: 12px; color: var(--text-2); }
 .stf__nota { margin-top: 18px; }
+
+
+/* DIREÇÃO DE ARTE 2.22 — "Creme & Laranja" (cores, fonte Nunito e componentes; sem mudar funcionalidade) */
+:root, :root[data-space="work"], :root[data-space="personal"] {
+  --bg: #FFF6EE; --surface-2: #FFECDC; --surface-3: #FEE1C1; --text: #201008; --text-2: #3E2012; --text-3: #7A5544;
+  --line: rgba(62,32,18,.10); --glass-line: rgba(62,32,18,.08); --press: rgba(255,107,26,.10);
+  --ink: #E85A0C; --ink-on: #FFF; --today: #E85A0C; --accent: #B8430A; --p-accent: #E85A0C; --p-grad: #E85A0C;
+  --brand: #FF6B1A; --brand-soft: rgba(255,107,26,.12); --o-700: #C94A0C; --o-800: #B8430A;
+  --shadow: 0 1px 0 rgba(62,32,18,.04), 0 8px 22px -10px rgba(62,32,18,.22);
+  --shadow-pill: 0 4px 0 #C94A0C, 0 10px 18px -8px rgba(201,74,12,.55);
+  --shadow-opt: 0 5px 14px -4px rgba(32,16,8,.2);
+  --blur-bg: rgba(255,246,238,.86); --tabbar-bg: rgba(255,255,255,.86); --radius: 22px; --radius-sm: 16px;
+  font-family: "Nunito", ui-rounded, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]), :root[data-space]:not([data-theme="light"]) {
+  --bg: #1A0E08; --surface: #2A160C; --surface-2: #3A1F10; --surface-3: #4A2A17; --text: #FFF6EE; --text-2: #E8CDBB; --text-3: #B8957F;
+  --line: rgba(255,190,140,.12); --glass-line: rgba(255,190,140,.12);
+  --ink: #FF7A2E; --ink-on: #1A0E08; --today: #FF7A2E; --accent: #FF8A3D; --p-accent: #FF7A2E; --p-grad: #FF7A2E; --brand: #FF7A2E;
+  --shadow: 0 0 0 1px rgba(255,190,140,.06); --shadow-pill: 0 4px 0 #B8430A; --shadow-opt: 0 0 0 1px rgba(255,190,140,.1);
+  --blur-bg: rgba(26,14,8,.86); --tabbar-bg: rgba(42,22,12,.88);
+  }
+}
+:root[data-theme="dark"], :root[data-theme="dark"][data-space] {
+  --bg: #1A0E08; --surface: #2A160C; --surface-2: #3A1F10; --surface-3: #4A2A17; --text: #FFF6EE; --text-2: #E8CDBB; --text-3: #B8957F;
+  --line: rgba(255,190,140,.12); --glass-line: rgba(255,190,140,.12);
+  --ink: #FF7A2E; --ink-on: #1A0E08; --today: #FF7A2E; --accent: #FF8A3D; --p-accent: #FF7A2E; --p-grad: #FF7A2E; --brand: #FF7A2E;
+  --shadow: 0 0 0 1px rgba(255,190,140,.06); --shadow-pill: 0 4px 0 #B8430A; --shadow-opt: 0 0 0 1px rgba(255,190,140,.1);
+  --blur-bg: rgba(26,14,8,.86); --tabbar-bg: rgba(42,22,12,.88);
+}
+body, button, input, select, textarea { font-family: inherit; }
+h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; line-height: 1.04; }
+.hdr__eyebrow, .phdr__eyebrow { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .28em; color: var(--o-800); }
+.btn { border-radius: 999px; font-weight: 800; }
+.btn--primary, .login .btn--primary, .ficha .btn--primary, .tabbar__fab, .stk__go { background: var(--ink); color: var(--ink-on); box-shadow: var(--shadow-pill); }
+.btn--primary:active, .login .btn--primary:active, .ficha .btn--primary:active, .tabbar__fab:active, .stk__go:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--o-700); }
+.btn--primary { font-size: 19px; font-weight: 800; min-height: 54px; }
+.chip { border-radius: 999px; font-weight: 800; }
+.chip.is-on { background: #C94A0C; color: #fff; }
+.card, .pcard, .summary, .dayprog, .ecard, .list, .plist, .pempty { border-radius: var(--radius); box-shadow: var(--shadow); }
+.input, .login .input { border-radius: 16px; }
+.input:focus, .login .input:focus { box-shadow: 0 0 0 2px var(--ink); }
+.ficha__opt, .typebtn { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-opt); font-weight: 800; }
+.ficha__opt.is-on, .ficha__opt[aria-checked="true"], .ficha__opt[aria-pressed="true"], .typebtn.is-on, .typebtn[aria-pressed="true"], .typebtn[aria-checked="true"] { border: 2px solid var(--ink); background: var(--surface-2); }
+.tabbar__btn.is-on, :root[data-space="personal"] .tabbar__btn.is-on { color: var(--accent); background: var(--press); }
+.phero { background: var(--surface-3); color: var(--text); box-shadow: none; }
+.snhb, .snhbud__bub { font: 700 15px/1.35 inherit; border-radius: 20px; }
+:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+/* selecionado: texto legível sobre o fundo creme (AA) */
+.typebtn.is-on { color: var(--text); box-shadow: var(--shadow-opt); }
+.typebtn.is-on .ic { color: var(--tc, var(--ink)); }
+.ficha__opt.is-on b { color: var(--accent); }
+.ficha__opt.is-on .ficha__optic { background: var(--ink); color: var(--ink-on); }
+/* AA: no escuro o laranja escuro some no fundo; botões laranja com texto branco usam texto grande (19px/800) */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hdr__eyebrow, :root:not([data-theme="light"]) .phdr__eyebrow { color: var(--accent); } }
+:root[data-theme="dark"] .hdr__eyebrow, :root[data-theme="dark"] .phdr__eyebrow { color: var(--accent); }
+.login .btn--primary, .ficha .btn--primary, .stk__go { font-size: 19px; font-weight: 800; min-height: 54px; }
+/* 2.22: a camada antiga de laranja (--lb-o, [data-space="work"]) passa a seguir as cores novas, com contraste AA.
+   --sel-bg/--sel-on: fundo e texto de itens selecionados com texto pequeno (claro: laranja escuro + branco; escuro: laranja + texto escuro) */
+:root, :root[data-space] { --lb-o: var(--ink); --lb-o-d: var(--o-700); --sel-bg: #C94A0C; --sel-on: #FFFFFF; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]), :root[data-space]:not([data-theme="light"]) { --sel-bg: #FF7A2E; --sel-on: #1A0E08; } }
+:root[data-theme="dark"], :root[data-theme="dark"][data-space] { --sel-bg: #FF7A2E; --sel-on: #1A0E08; }
+:root[data-space] .btn--primary { background: var(--ink); color: var(--ink-on); box-shadow: var(--shadow-pill); }
+:root[data-space] .btn--primary:active { box-shadow: 0 1px 0 var(--o-700); }
+:root[data-space] .tabbar__fab { background: var(--ink); color: var(--ink-on); box-shadow: var(--shadow-pill); }
+:root[data-space] .tabbar__btn.is-on { background: var(--press); color: var(--accent); }
+:root[data-space] .wday.is-sel { background: var(--sel-bg); box-shadow: 0 4px 0 var(--o-800); }
+:root[data-space] .wday.is-sel .wday__l, :root[data-space] .wday.is-sel .wday__n, :root[data-space] .wday.is-sel.is-today .wday__n { color: var(--sel-on); }
+:root[data-space] .wday.is-today:not(.is-sel) .wday__n { color: var(--accent); }
+:root[data-space] .chip--accent, :root[data-space] .pcats__b.is-on, .sheet--prof .pcats__b.is-on { background: var(--sel-bg); color: var(--sel-on); }
+.xpbig__rk { color: var(--accent); }
+.tag { color: #0E6B39; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tag { color: var(--ok); } }
+:root[data-theme="dark"] .tag { color: var(--ok); }
+/* AA: texto branco sobre os fundos laranja com imagem (ofensiva e ranking): véu laranja-escuro por cima da imagem (que fica intacta) */
+.sheet--rk { background: linear-gradient(rgba(140,40,0,.6), rgba(140,40,0,.6)), #C94A0C url(../assets/fundos/raios.webp) center top / cover no-repeat; }
+.ofs, .ofs--f3 { background: linear-gradient(rgba(140,40,0,.6), rgba(140,40,0,.6)), #C94A0C url(../assets/fundos/leque.webp) center 30% / cover no-repeat; }
+.sheet--rk .sheet__grab, .sheet--rk .sheet__head { background: #A8400A; }
+.sheet--rk .rkme__fire { color: #8C3608; } .sheet--rk .rkme__fire small { opacity: 1; }

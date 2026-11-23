@@ -63,7 +63,7 @@ function shell() {
     </nav>`;
 }
 /* Cor da barra de status do iPhone (hora/bateria) acompanha o app */
-const SPACE_BAR = { work: ['#F2F2F7', '#000000'], personal: ['#F2F2F7', '#000000'] };
+const SPACE_BAR = { work: ['#FFF6EE', '#1A0E08'], personal: ['#FFF6EE', '#1A0E08'] };
 function setBarColor(light, dark = light) {
   // tema escolhido à mão (Claro/Escuro) vale para as duas situações do celular
   const forced = document.documentElement.dataset.theme;
@@ -74,7 +74,7 @@ function setBarColor(light, dark = light) {
 }
 /* Pessoal parece outro app: título, ícone e cor da barra do iPhone próprios */
 function applySpaceMeta(personalMode) {
-  const [l, d] = personalMode ? SPACE_BAR.personal : [WORK.theme?.bg || SPACE_BAR.work[0], SPACE_BAR.work[1]];
+  const [l, d] = personalMode ? SPACE_BAR.personal : SPACE_BAR.work;
   if (document.documentElement.classList.contains('intro-done')) setBarColor(l, d); // durante a abertura fica preta
   const set = (sel, attr, val) => { const el = document.querySelector(sel); if (el) el.setAttribute(attr, val); };
   // ícone e nome na tela inicial: sempre a marca principal (Lembra), em qualquer modo
@@ -115,7 +115,7 @@ function switchSpace(space, from) {
     if (view) { view.classList.add('is-entering'); setTimeout(() => view.classList.remove('is-entering'), 600); }
     setBarColor(veilBar); // continua na cor da transição enquanto ela está na tela
   }, 430);
-  setTimeout(() => { veil.classList.add('is-out'); const [l, d] = space === 'personal' ? SPACE_BAR.personal : [WORK.theme?.bg || SPACE_BAR.work[0], SPACE_BAR.work[1]]; setBarColor(l, d); }, 700);
+  setTimeout(() => { veil.classList.add('is-out'); const [l, d] = space === 'personal' ? SPACE_BAR.personal : SPACE_BAR.work; setBarColor(l, d); }, 700);
   setTimeout(() => veil.remove(), 1050);
 }
 window.__calRender = () => render();

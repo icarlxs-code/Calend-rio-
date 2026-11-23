@@ -33,12 +33,13 @@ export function applyProfTheme() {
   const t = WORK.theme;
   if (!t) { if (el) el.textContent = ''; return; }
   if (!el) { el = document.createElement('style'); el.id = 'proftheme'; document.head.appendChild(el); }
-  const light = `--ink:${t.accent};--ink-on:#FFFFFF;--bg:${t.bg};--blur-bg:${rgba(t.bg, 0.84)};--brand:${t.accent};--brand-soft:${rgba(t.accent, 0.1)}`;
-  const dark = `--ink:${t.dark};--ink-on:#06121A;--brand:${t.dark};--brand-soft:${rgba(t.dark, 0.14)}`;
+  // direção de arte 2.22: fundo, botões e barras ficam no creme & laranja; a profissão só tinge a marca
+  const light = `--brand:${t.accent};--brand-soft:${rgba(t.accent, 0.1)}`;
+  const dark = `--brand:${t.dark};--brand-soft:${rgba(t.dark, 0.14)}`;
   el.textContent = `@media (prefers-color-scheme: light){:root[data-space="work"]:not([data-theme="dark"]){${light}}}
 :root[data-space="work"][data-theme="light"]{${light}}
 @media (prefers-color-scheme: dark){:root[data-space="work"]:not([data-theme="light"]){${dark}}}
 :root[data-space="work"][data-theme="dark"]{${dark}}`;
 }
 /* fundo do topo do iPhone (barra de hora/bateria) no modo Trabalho */
-export const workBarColor = () => (isDark() ? '#000000' : WORK.theme?.bg || '#F4F4F6');
+export const workBarColor = () => (isDark() ? '#1A0E08' : '#FFF6EE');
