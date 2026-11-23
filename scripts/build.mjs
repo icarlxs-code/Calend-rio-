@@ -56,7 +56,7 @@ writeFileSync(swPath, readFileSync(swPath, 'utf8')
 const { CONFIG } = await import(resolve(root, 'config.js') + `?v=${Date.now()}`);
 const site = (CONFIG.siteUrl || '').replace(/\/?$/, '/');
 const style = readFileSync(resolve(root, 'pages/_style.css'), 'utf8').replace(/\s*\n\s*/g, '');
-for (const name of ['convite', 'pago', 'termos', 'privacidade', 'conheca']) {
+for (const name of ['convite', 'pago', 'termos', 'privacidade', 'conheca', 'excluir-conta', 'suporte']) {
   const html = readFileSync(resolve(root, `pages/${name}.html`), 'utf8')
     .replaceAll('{{STYLE}}', style).replaceAll('{{SITE}}', site).replaceAll('{{APP}}', CONFIG.appName || 'Lembra')
     .replaceAll('{{OWNER}}', CONFIG.legalName || CONFIG.appName || 'Lembra').replaceAll('{{CONTACT}}', CONFIG.supportEmail || CONFIG.adminEmail || '')
