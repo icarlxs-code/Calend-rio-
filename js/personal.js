@@ -1,6 +1,7 @@
 /* Espaço Pessoal: privado de cada pessoa. Fica em pessoal/{uid}/itens na nuvem
    (só o dono lê e escreve) e não se mistura com o calendário de trabalho.
    Tipos de documento: compromisso/lembrete (padrão), lista ("list") e preferências ("prefs"). */
+import { iaOk } from './ia-consent.js';
 import { store } from './store.js';
 import { todayKey, addDays, fromKey, pad, uid } from './utils.js';
 import { server, api } from './avisos.js';
@@ -470,6 +471,7 @@ export function personalProfile() {
   const p = personal.prefs;
   return {
     date: t,
+    ia: iaOk(),
     prefs: { nudges: p.nudges, water: p.water, meals: p.meals, faith: p.faith, freq: p.freq, wake: p.wake, sleep: p.sleep, lunch: p.lunch, tone: p.tone, pronoun: p.pronoun || store.profile?.pronoun,
       nickname: p.nickname, age: p.age, religion: p.religion, motivation: p.motivation, perDay: p.perDay, waterEvery: p.waterEvery, mind: p.mind },
     work: store.profile?.profession ? { profession: store.profile.profession, goal: GOAL_TEXT[store.profile.goal] || '' } : null,

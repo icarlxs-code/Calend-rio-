@@ -3415,3 +3415,7 @@ body.has-stv .snhbud { display: none; }
 @media (prefers-reduced-motion: reduce) { .ststrip__ring { animation: none; } }
 .stv__more { position: absolute; right: 52px; top: calc(env(safe-area-inset-top, 0px) + 30px); z-index: 4; border: 0; background: none; color: #fff; padding: 6px; cursor: pointer; }
 .fprof__bloq { display: flex; align-items: center; gap: 6px; margin: 10px auto 0; }
+.iacons__l { list-style: none; padding: 0; margin: 12px 0 16px; display: flex; flex-direction: column; gap: 10px; }
+.iacons__l li { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.4; }
+.iacons__l li > svg { flex: none; color: #FF6B1A; margin-top: 2px; }
+.iacons .btn + .btn { margin-top: 8px; }

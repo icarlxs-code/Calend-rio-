@@ -408,7 +408,7 @@ const KIND_TASK = {
   selfcare: 'Sugira um cuidado rápido com o corpo/mente (respirar, alongar, postura, tomar um ar, descansar os olhos).',
 };
 export async function humanize(env, msg, p, recent, br) {
-  if (!env.AI || !msg.kind || !KIND_TASK[msg.kind]) return null;
+  if (!env.AI || p.ia !== true || !msg.kind || !KIND_TASK[msg.kind]) return null; // só com o consentimento da pessoa
   const today = (p.today || []).filter((x) => !x.done).map((x) => `${x.time ? x.time + ' ' : ''}${x.title}`).slice(0, 5).join('; ');
   const tone = { carinhoso: 'Tom: carinhoso e acolhedor.', firme: 'Tom: amigo coach, firme e motivador, que puxa para cima.', direto: 'Tom: direto e objetivo, sem rodeios, mas gentil.' }[p.prefs?.tone] || '';
   const work = p.work && p.work.profession ? `${p.name} trabalha como ${p.work.profession}${p.work.goal ? ` e o objetivo ${g.dele} é: ${p.work.goal}` : ''}. Quando fizer sentido, conecte a mensagem com a rotina dessa profissão (sem inventar fatos).` : '';

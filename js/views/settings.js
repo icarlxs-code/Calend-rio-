@@ -1,4 +1,5 @@
 /* Ajustes: perfil, lembretes, sincronização, backup */
+import { iaStatus } from '../ia-consent.js';
 import { coachTest } from '../coach.js';
 import { fmtLeft } from '../billing.js';
 import { usagePlaceholder, fillUsage } from '../usage.js';
@@ -41,6 +42,7 @@ export function renderSettings() {
         ${grow({ attrs: 'data-action="profile"', ic: 'crown', c: '#AF52DE', t: 'Perfil e conquistas', s: 'Seu nível, XP e emblemas' })}
         ${cloud && phoneAuthOn() ? grow({ attrs: store.profile?.phoneVerified ? '' : 'data-action="confirm-phone"', ic: 'shield', c: store.profile?.phoneVerified ? '#34C759' : '#0A84FF', t: store.profile?.phoneVerified ? 'Celular confirmado ✓' : 'Confirmar meu celular', s: store.profile?.phoneVerified ? esc(store.profile.phone || '') + ' · dá para recuperar a senha por SMS' : 'Protege a conta e permite recuperar a senha por SMS' }) : ''}
         ${grow({ attrs: 'data-action="guide"', ic: 'sparkles', c: '#5856D6', t: 'Como funciona o Lembra', s: 'Trabalho e Pessoal em 1 minuto' })}
+        ${cloud ? grow({ attrs: 'data-action="ia-toggle"', ic: 'sparkle', c: '#FF6B1A', t: 'Inteligência artificial', s: iaStatus() === true ? 'Ativada · toque para desativar' : iaStatus() === false ? 'Desativada · nada é enviado para a IA' : 'Ainda não decidiu · toque para ver como funciona' }) : ''}
         ${cloud ? grow({ cls: 'pbig--privacy', attrs: 'data-action="privacy"', ic: 'lock', c: '#8E8E93', t: 'Privacidade e dados', s: 'Termos, baixar ou apagar meus dados' }) : ''}
         ${cloud && store.solo ? grow({ attrs: 'data-action="ranking"', ic: 'trophy', c: '#FF9F0A', t: 'Ranking da semana', s: store.billing?.plan === 'monthly' && store.billing?.tier !== 'essencial' ? 'Ligas semanais · o nº 1 do mês ganha o mês seguinte grátis' : 'Plano Profissional · ligas e meses grátis' }) : ''}
         ${cloud ? ((store.user?.email || '').toLowerCase() === (CONFIG.adminEmail || '').toLowerCase()

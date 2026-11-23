@@ -161,12 +161,12 @@ export async function coachOne(env, sendToMember, m, now = Date.now(), cache = {
     const kind = mins < 9 * 60 + 30 ? 'motivacao' : pick(WORK_KINDS);
     const w = { ...ctx.work, me: m.id };
     const useAI = kind !== 'agenda' || !w.late;
-    msg = (useAI ? await aiWork(env, kind, w, m.name, today, recent) : null) || workFallback(kind, w, m.name, br.date);
+    msg = (useAI && ctx.ia === true ? await aiWork(env, kind, w, m.name, today, recent) : null) || workFallback(kind, w, m.name, br.date);
   } else {
     const kind = mins < 9 * 60 + 30 ? 'motivacao' : pick(KINDS);
     const co = chooseCompany((ctx.companies || []).filter((c) => !c.onlyFor || c.onlyFor === m.id));
     const trends = co ? await (cache.trends ||= getTrends(env)) : [];
-    msg = (co || kind === 'motivacao' ? await aiMessage(env, co ? kind : 'motivacao', co, m.name, ctx, trends, upcomingDates(br.date), recent) : null)
+    msg = ((co || kind === 'motivacao') && ctx.ia === true ? await aiMessage(env, co ? kind : 'motivacao', co, m.name, ctx, trends, upcomingDates(br.date), recent) : null)
       || fallback(co ? kind : 'motivacao', co, m.name, upcomingDates(br.date));
   }
   st.recent = [...recent, msg.body].slice(-6);

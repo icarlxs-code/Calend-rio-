@@ -196,6 +196,7 @@ function cleanProfile(p, me) {
   const P = p.prefs || {};
   return {
     name: me.name,
+    ia: p.ia === true, // a pessoa autorizou a IA no app (sem isso, só frases prontas)
     date: day(p.date),
     prefs: {
       nudges: P.nudges !== false, water: P.water !== false, meals: P.meals !== false, faith: P.faith !== false, freq: ['alta', 'normal', 'calma'].includes(P.freq) ? P.freq : 'normal',
@@ -512,7 +513,7 @@ async function handle(req, env) {
     } : null;
     const ctxKey = me.ws === 'main' ? 'coach-ctx' : `coach-ctx:${me.ws}`;
     const oldCtx = await env.CAL.get(ctxKey, 'json');
-    if (!oldCtx || JSON.stringify([oldCtx.companies, oldCtx.work]) !== JSON.stringify([companies, work]) || Date.now() - (oldCtx.updatedAt || 0) > 6 * 3600e3) await env.CAL.put(ctxKey, JSON.stringify({ companies, work, updatedAt: Date.now() }));
+    if (!oldCtx || oldCtx.ia !== (body.ia === true) || JSON.stringify([oldCtx.companies, oldCtx.work]) !== JSON.stringify([companies, work]) || Date.now() - (oldCtx.updatedAt || 0) > 6 * 3600e3) await env.CAL.put(ctxKey, JSON.stringify({ companies, work, ia: body.ia === true, updatedAt: Date.now() }));
     await registerUser(env, me, plan);
     return reply(env, req, { ok: true });
   }

@@ -1,4 +1,5 @@
 /* Envia ao servidor o resumo das empresas para as dicas ao longo do dia (coach) */
+import { iaOk } from './ia-consent.js';
 import { store } from './store.js';
 import { todayKey, diffDays } from './utils.js';
 import { TYPES, WORK, isMarketing } from './constants.js';
@@ -50,9 +51,9 @@ export function syncCoach() {
   timer = setTimeout(() => {
     const companies = coachContext();
     const work = workContext();
-    const sig = JSON.stringify([companies, work]);
+    const sig = JSON.stringify([companies, work, iaOk()]);
     if (sig === lastSig) return;
-    api('/coach', { companies, work }).then(() => (lastSig = sig)).catch(() => {});
+    api('/coach', { companies, work, ia: iaOk() }).then(() => (lastSig = sig)).catch(() => {});
   }, 4000);
 }
 export const coachTest = () => api('/coach-test', {});

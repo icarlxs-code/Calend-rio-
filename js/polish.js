@@ -1,6 +1,7 @@
 /* Arruma os títulos dos MEUS eventos (de hoje em diante): primeiro pelas regras locais,
    depois a IA corrige ortografia e acentos ("manga palmer" → "Manga Palmer").
    Gravado em lote, sem disparar aviso para o parceiro. Cada título é arrumado uma vez só. */
+import { iaOk } from './ia-consent.js';
 import { store } from './store.js';
 import { todayKey, addDays } from './utils.js';
 import { tidyTitle } from './tidy.js';
@@ -42,7 +43,7 @@ async function run() {
     // a IA corrige só o assunto (depois do "—"); o começo fica fixo
     const subject = (t) => (t.includes(' — ') ? t.split(' — ').slice(1).join(' — ') : t);
     let ai = [];
-    if (server()) {
+    if (server() && iaOk()) { // só com o consentimento da IA; sem ele, arruma só no aparelho
       try { ai = (await api('/tidy', { titles: local.map(subject) })).titles || []; } catch { ai = []; }
     }
     const items = mine.map((e, i) => {

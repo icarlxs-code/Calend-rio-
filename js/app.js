@@ -218,6 +218,12 @@ function setTab(tab) {
 
 /* ---------- ações (delegação de cliques) ---------- */
 const actions = {
+  'ia-toggle': async () => {
+    const m = await import('./ia-consent.js');
+    if (m.iaStatus() === true) { await m.setIa(false); toast('IA desativada: nada mais é enviado para ela'); }
+    else { localStorage.removeItem('lembra.iaConsent'); if (store.profile) store.profile.iaConsent = undefined; await m.pedeIa({ motivo: 'usar o assistente, arrumar títulos e escrever mensagens' }); }
+    render();
+  },
   atrasados: () => import('./views/atrasados.js').then((m) => m.openAtrasados()),
   tab: (b) => setTab(b.dataset.tab),
   space: (b) => switchSpace(b.dataset.space, b),
@@ -1205,6 +1211,8 @@ function startApp() {
     });
     store.hooks.activity = onActivity;
     store.hooks.ask = async (question, history) => {
+      const { pedeIa } = await import('./ia-consent.js');
+      if (!(await pedeIa({ motivo: 'responder e mexer na sua agenda pelo assistente' }))) return { text: 'Tudo bem! Sem a sua autorização eu não envio nada para a inteligência artificial. Se mudar de ideia, é só ativar em Ajustes → Inteligência artificial. 😉', actions: [] };
       const d = new Date();
       const context = buildContext({
         events: store.state.events, companies: store.state.companies, routine: routine(), notes: store.state.notes,
