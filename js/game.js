@@ -281,6 +281,7 @@ function completed({ key, due, createdAt = 0, kind = 'work', hasTime = false }) 
     if (week.length >= 3 && week.every((e) => e.status === 'feito')) c.fridayClear = 1;
   }
   settle();
+  try { window.dispatchEvent(new CustomEvent('lembra:concluiu', { detail: { ref: key, kind: kind === 'personal' ? 'p' : 'w', xp } })); } catch { /* ok */ }
   // Sininho reage: 1ª conclusão do dia → tela da ofensiva; depois → ele espia comemorando
   const late = now > due + 15 * 60e3;
   // Sininho (por enquanto só para o dono): 1ª conclusão do dia → tela da ofensiva; depois ele comemora no canto
@@ -513,17 +514,41 @@ export { BADGES, RARITY, badgeArt, crest };
 export const iconFor = (b) => icon(b.icon || 'star', 16);
 
 /* ---------- story do compromisso: foto tirada na hora = XP em dobro; apagou a foto = perde só o bônus ---------- */
-export function storyXp(id, kind = 'w') {
+/* o bônus do story vale UMA vez por compromisso (ref "e:id" / "p:id"): postar de novo do mesmo não dá XP */
+const storyBonus = (kind) => (kind === 'p' ? XP.personal : XP.onTime);
+export function storyXp(id, kind = 'w', ref = '') {
   load(); dayReset();
-  const v = kind === 'p' ? XP.personal : XP.onTime;
-  const got = gain(v, 'story 📸 XP em dobro');
+  if (ref && (S.sref || {})[ref]) return 0;
+  const got = gain(storyBonus(kind), 'story 📸 XP em dobro');
   S.sx = { ...(S.sx || {}), [id]: got };
+  if (ref) S.sref = { ...(S.sref || {}), [ref]: id };
   settle();
   return got;
 }
 export function storyXpOff(id) {
   load();
   const v = (S.sx || {})[id] || 0;
+  if (S.sref) for (const k of Object.keys(S.sref)) if (S.sref[k] === id) delete S.sref[k];
   if (v) { S.xp = Math.max(0, S.xp - v); addMonth(-v); delete S.sx[id]; settle(); }
   return v;
 }
+/* o que a pessoa ganha DE VERDADE se postar o story agora: simula o XP (com o limite do dia),
+   os níveis e os emblemas que dependem de XP/nível (em cadeia: emblema também dá XP). Nada inventado. */
+export function previewStory(kind = 'w', ref = '') {
+  load(); dayReset();
+  const ja = !!(ref && (S.sref || {})[ref]);
+  const got = ja ? 0 : Math.max(0, Math.min(storyBonus(kind), CAPS.dayXp - S.d.xp));
+  const lv0 = levelOf(S.xp);
+  let xp = S.xp + got; const badges = [];
+  for (let r = 0; r < 4 && got; r++) {
+    const m = { xp, level: levelOf(xp) };
+    const now = BADGES.filter((b) => !S.badges[b.id] && !badges.includes(b) && (b.metric === 'xp' || b.metric === 'level') && m[b.metric] >= b.goal);
+    if (!now.length) break;
+    now.forEach((b) => { badges.push(b); xp += RARITY[b.rarity].xp; });
+  }
+  const lv1 = levelOf(xp), L0 = levelInfo(S.xp), L1 = levelInfo(xp);
+  return { ja, got, total: xp - S.xp, xpAntes: S.xp, xpDepois: xp, lv0, lv1, badges, novoBrasao: tierOf(lv0).from !== tierOf(lv1).from, tier: tierOf(lv1), L0, L1 };
+}
+
+/* só no modo de teste local (emuladores): ganchos para o robô conferir o XP e os emblemas */
+try { if (typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(location.hostname) && localStorage.getItem('cal.emulator') === '1') window.__lembraGame = { estado: () => { load(); return { xp: S.xp, badges: Object.keys(S.badges), dia: S.d.xp }; }, setXp: (x) => { load(); S.xp = x; save(); }, preview: (k, r) => { const p = previewStory(k, r); return { ...p, badges: p.badges.map((b) => b.id), tier: null, L0: null, L1: null }; } }; } catch { /* ok */ }

@@ -359,7 +359,6 @@ export const personalActions = {
       const t = todayKey();
       const left = b.dataset.date === t ? occurrences(t, t).filter((o) => !o.done).length : null;
       toast(onDone({ el: at, left }), { action: 'Desfazer', onAction: () => toggleDone(personal.item(it.id), b.dataset.date) });
-      if (store.mode === 'cloud') setTimeout(() => toast('📸 Postar um story disso? XP em dobro!', { action: 'Postar', onAction: () => postStory({ title: it.title || '', ref: `p:${it.id}`, kind: 'p' }), ms: 6000 }), 2900);
     }
   },
   'p-new': (b) => {

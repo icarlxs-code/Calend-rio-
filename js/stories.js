@@ -11,6 +11,9 @@ import { icon } from './icons.js';
 import { esc } from './utils.js';
 import { sininho, setMood, act, say, alive, vivo } from './sininho.js';
 import { mascotOn } from './mascote.js';
+import { personal } from './personal.js';
+import { previewStory } from './game.js';
+import { todayKey } from './utils.js';
 
 const call = (path, body = {}) => api(path, { ws: '', ...body });
 const desde = (at) => { const m = Math.round((Date.now() - at) / 60000); return m < 1 ? 'agora' : m < 60 ? `há ${m} min` : `há ${Math.round(m / 60)} h`; };
@@ -32,10 +35,10 @@ export async function refreshVisitors() {
 }
 
 /* ---------- câmera: só foto tirada agora ---------- */
-function tiraFoto() {
+function tiraFoto(cam = 'environment') {
   return new Promise((res, rej) => {
     const inp = document.createElement('input');
-    inp.type = 'file'; inp.accept = 'image/*'; inp.setAttribute('capture', 'environment'); // abre a câmera direto (sem galeria)
+    inp.type = 'file'; inp.accept = 'image/*'; inp.setAttribute('capture', cam); // abre a câmera direto (sem galeria); 'user' = selfie
     inp.style.display = 'none'; document.body.appendChild(inp);
     const t0 = Date.now();
     inp.onchange = () => {
@@ -60,14 +63,15 @@ function tiraFoto() {
 }
 
 /* postar o story de um compromisso concluído (kind: 'w' trabalho | 'p' pessoal) */
-export async function postStory({ title = '', ref = '', kind = 'w' } = {}) {
+export const selfie = (t) => /cabel|corte|barb|unha|manicure|sobrancelh|maqui|make|escova|penteado|academia|treino|corrida|caminhada|selfie|look|roupa|pele|dentista|clareamento/i.test(t || '');
+export async function postStory({ title = '', ref = '', kind = 'w', cam } = {}) {
   let photo;
-  try { photo = await tiraFoto(); } catch (e) { if (e.message !== 'cancelou') toast(e.message); return null; }
+  try { photo = await tiraFoto(cam || (selfie(title) ? 'user' : 'environment')); } catch (e) { if (e.message !== 'cancelou') toast(e.message); return null; }
   toast('Postando seu story…');
   try {
     const r = await call('/friends/story-post', { photo, camera: true, title, ref });
     const G = await import('./game.js');
-    const got = G.storyXp(r.id, kind);
+    const got = G.storyXp(r.id, kind, ref);
     toast(got ? `📸 Story no ar! +${got} XP (em dobro)` : '📸 Story no ar! Seus amigos vão ver por 24 h');
     refreshFeed();
     import('./mascote.js').then((M) => M.react('story')).catch(() => {});
@@ -216,4 +220,81 @@ export function denunciaOuBloqueia({ uid, name, storyId = '' }, onClose, depoisB
       };
     } });
   return a;
+}
+
+/* ---------- convite para postar o story logo depois de concluir ----------
+   Aparece na hora em que a pessoa conclui algo (neste aparelho), quando não tem outra comemoração na tela.
+   Mostra só o que é VERDADE: o XP da foto (com o limite do dia), o nível que ela alcança e os emblemas que
+   destravam com esse XP (calculado com as mesmas regras do jogo). Se já postou desse compromisso, não aparece. */
+let ultimoToque = 0, ultConvite = 0;
+if (typeof document !== 'undefined') document.addEventListener('pointerdown', () => { ultimoToque = Date.now(); }, { passive: true, capture: true });
+const ocupado = () => !!document.querySelector('.stk, .gx, .okfx, .photogate, .paywall, .ficha, .stv, .sheet--cvs');
+function quandoLivre(fn, n = 0) { if (!ocupado()) return fn(); if (n < 50) setTimeout(() => quandoLivre(fn, n + 1), 600); }
+if (typeof window !== 'undefined') window.addEventListener('lembra:concluiu', (ev) => {
+  const d = ev.detail || {};
+  if (!d.ref || store.mode !== 'cloud' || !store.solo || !store.user) return;
+  if (Date.now() - ultimoToque > 10000) return;          // concluído em outro aparelho: aqui não convida
+  if (Date.now() - ultConvite < 20000) return;            // várias de uma vez: um convite só
+  ultConvite = Date.now();
+  setTimeout(() => quandoLivre(() => convidaStory(d)), 900);
+});
+const tituloDe = (ref) => {
+  const [k, id] = ref.split(':');   // e:id | p:id | p:id:data (lembrete que repete: cada dia vale uma foto)
+  if (k === 'e') { const e = store.event(id); return e ? (e.title || 'Compromisso') : ''; }
+  const p = personal.item(id); return p ? (p.title || 'Lembrete') : '';
+};
+export async function convidaStory({ ref, kind = 'w' }) {
+  const G = await import('./game.js');
+  const { badgeArt, crest, RARITY } = await import('./badges.js');
+  const title = tituloDe(ref);
+  if (!title) return;
+  const P = G.previewStory(kind, ref);
+  if (P.ja) return;                                       // já postou desse: nada de pedir de novo
+  const snh = mascotOn();
+  const amigos = feed.rows.filter((r) => !r.me && r.stories.length);
+  const sobe = P.lv1 > P.lv0, bs = P.badges.slice(0, 2);
+  const frases = bs.length ? [`Posta a foto e o emblema “${bs[0].name()}” é seu na hora 🏅`, `Uma foto e “${bs[0].name()}” entra pra sua coleção ✨`]
+    : sobe ? [`Uma foto e você sobe pro nível ${P.lv1}! 🚀`, `Tá a uma foto do nível ${P.lv1}! Bora? 😎`]
+    : !P.got ? ['Seu XP de hoje já bateu o limite… mas seus amigos vão adorar ver 📸']
+    : selfie(title) ? ['Ficou bom demais, né? Mostra pra galera! 🤳', 'Isso merece uma selfie 😏 XP em dobro!']
+    : ['Foto = XP em dobro. Bora mostrar que você fez? 😎', 'Quem posta, prova. E quem prova, sobe no ranking 🏆', 'Seus amigos vão ver que você mandou bem 👀'];
+  const fala = frases[Math.floor(Math.random() * frases.length)];
+  const barra = () => {
+    if (sobe || !P.got) return '';
+    const a = Math.round(P.L0.pct * 100), b = Math.round(P.L1.pct * 100), falta = P.L1.need;
+    return `<div class="cvs__nivel"><span class="cvs__nv">${crest(P.lv0, 40)}</span><div class="cvs__bar"><small>Nível ${P.lv0} → ${P.lv0 + 1}</small><span class="cvs__trilho"><i style="width:${a}%"></i><i class="cvs__ganho" style="left:${a}%;width:${Math.max(2, b - a)}%"></i></span><small>${falta ? `Com a foto, faltam só <b>${falta.toLocaleString('pt-BR')} XP</b> pro nível ${P.lv0 + 1}` : `Com a foto você chega no nível ${P.lv0 + 1}`}</small></div></div>`;
+  };
+  const html = `<div class="cvs">
+    <button class="cvs__x" data-close aria-label="Fechar">${icon('x', 18)}</button>
+    <div class="cvs__hero">${snh ? `<span class="cvs__snh">${sininho('comemora', { size: 112 })}</span>` : `<span class="cvs__cam">${icon('camera', 40)}</span>`}<p class="cvs__bub">${esc(fala)}</p></div>
+    <h2 class="cvs__t">Feito! Agora mostra que você fez 📸</h2>
+    <p class="cvs__task">${icon('check', 14)} ${esc(title)}</p>
+    ${P.got ? `<div class="cvs__xp"><span><b>+${P.got} XP</b><small>pela foto · o dobro do que você ganhou</small></span><i>2×</i></div>` : ''}
+    ${bs.length ? `<div class="cvs__unlock"><small>Desbloqueia agora com essa foto</small>${bs.map((b) => `<div class="cvs__emb">${badgeArt(b, 64)}<span><b>${esc(b.name())}</b><small>${RARITY[b.rarity].label} · +${RARITY[b.rarity].xp} XP</small></span></div>`).join('')}</div>` : ''}
+    ${sobe ? `<div class="cvs__unlock cvs__unlock--lv">${crest(P.lv1, 64)}<span><b>Você sobe pro nível ${P.lv1}</b><small>${P.novoBrasao ? `e ganha o brasão ${esc(P.tier.name())} 🛡️` : `${(P.xpDepois).toLocaleString('pt-BR')} XP no total`}</small></span></div>` : barra()}
+    ${amigos.length ? `<div class="cvs__amigos"><span class="cvs__faces">${amigos.slice(0, 3).map((r) => face(r, 28)).join('')}</span><small>${esc(amigos[0].name.split(' ')[0])}${amigos.length > 1 ? ` e mais ${amigos.length - 1}` : ''} ${amigos.length > 1 ? 'postaram' : 'postou'} nas últimas 24 h</small></div>` : ''}
+    <button class="cvs__go" data-foto>${icon('camera', 20)} ${P.got ? `Tirar foto agora · +${P.total} XP` : 'Tirar foto agora'}</button>
+    <button class="cvs__depois" data-close>Agora não</button>
+    <p class="cvs__fine">${icon('lock', 12)} Foto tirada na hora, pela câmera · só seus amigos veem · some em 24 h</p>
+  </div>`;
+  const a = openSheet({ className: 'sheet--cvs', html, onMount: (x) => {
+    alive();
+    const f = x.el.querySelector('.cvs__snh [data-snh]'); if (f) vivo(f, { aponta: x.el.querySelector('[data-foto]'), gestos: ['pisca', 'riso', 'sim'], cada: [2.6, 4.2] });
+    // a câmera precisa abrir no mesmo toque (o navegador bloqueia se esperar)
+    x.el.querySelector('[data-foto]').onclick = () => { a.close(); postStory({ title, ref, kind }); };
+  } });
+  return a;
+}
+
+/* algo concluído hoje que ainda pode virar story com bônus (o Lembra lembra depois, com os números de verdade) */
+export function fotoPendente() {
+  if (store.mode !== 'cloud' || !store.solo || !store.user) return null;
+  const t = todayKey();
+  const ws = (store.eventsOn ? store.eventsOn(t, { person: store.me || 'all' }) : [])
+    .filter((e) => e.status === 'feito' && [...(e.assignees || []), e.createdBy].includes(store.me))
+    .map((e) => ({ ref: `e:${e.id}`, title: e.title || 'Compromisso', kind: 'w', at: e.updatedAt || 0 }));
+  const ps = (personal.events || []).filter((p) => p.done && p.date === t && (!p.repeat || p.repeat === 'none'))
+    .map((p) => ({ ref: `p:${p.id}`, title: p.title || 'Lembrete', kind: 'p', at: p.updatedAt || 0 }));
+  for (const x of [...ws, ...ps].sort((a, b) => b.at - a.at)) { const P = previewStory(x.kind, x.ref); if (!P.ja && P.got) return { ...x, P }; }
+  return null;
 }

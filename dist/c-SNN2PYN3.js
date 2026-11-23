@@ -1,0 +1,1 @@
+var r=Object.defineProperty;var c=(o,a)=>{for(var e in a)r(o,e,{get:a[e],enumerable:!0})};var b=["Ao concluir, o Lembra te convida a postar a foto: XP em dobro na hora.","Ele mostra de verdade o que voc\xEA ganha: o n\xEDvel que sobe e o emblema que destrava com essa foto.","Cabelo, unha, academia\u2026: a c\xE2mera j\xE1 abre pra selfie."];export{c as a,b};

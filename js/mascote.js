@@ -168,6 +168,17 @@ function falas(c) {
       ]);
       out.push({ k: 'online', i, t, m: 'acena', roteiro: ['olhaLados'], u: 1.2, acoes: [{ label: 'Ver perfil', go: () => import('./friends.js').then((m) => m.openPublicProfile(on[0].uid, on[0])) }, { label: 'Depois' }] });
     }
+    /* concluiu e não postou a foto: lembra do bônus (só o que é verdade: XP, nível e emblema calculados) */
+    const fp = ST.fotoPendente && ST.fotoPendente();
+    if (fp) {
+      const T = q(fp.title), b0 = fp.P.badges[0], sobe = fp.P.lv1 > fp.P.lv0;
+      const [i, t] = variante('foto', [
+        b0 ? `Se postar a foto de ${T} agora, o emblema “${b0.name()}” é seu na hora 🏅` : sobe ? `Uma foto de ${T} e você sobe pro nível ${fp.P.lv1}! 🚀` : `Ainda dá tempo de postar a foto de ${T} e ganhar +${fp.P.total} XP 📸`,
+        `Fez ${T} e não mostrou? Foto = XP em dobro (+${fp.P.total}) 😏`,
+        `Psiu… a foto de ${T} ainda vale +${fp.P.total} XP. Tira rapidinho? 🤳`,
+      ]);
+      out.push({ k: 'foto', i, t, m: 'comemora', roteiro: ['sobrancelha'], u: 1.6, acoes: [{ label: '📸 Postar', go: () => ST.postStory({ title: fp.title, ref: fp.ref, kind: fp.kind }) }, { label: 'Depois' }] });
+    }
     const vis = ST.visitasCache().list; let vistos = 0; try { vistos = +localStorage.getItem(visKey) || 0; } catch { /* ok */ }
     const recentes = vis.filter((v) => v.at > vistos);
     if (recentes.length) {

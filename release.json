@@ -1,11 +1,11 @@
 {
-  "version": "2.14.0",
+  "version": "2.15.0",
   "date": "2026-11-23",
   "min": "2.2.0",
-  "title": "Leve o Lembra pra onde quiser",
+  "title": "Concluiu? Mostra pra galera 📸",
   "notes": [
-    "Arraste o Lembra pra qualquer canto da tela: ele fica onde você deixar.",
-    "Ele sente o movimento: balança, se debate, fica tonto se sacudir e reclama se for jogado.",
-    "E conta quando alguém passa no seu perfil… só não diz quem 🤫"
+    "Ao concluir, o Lembra te convida a postar a foto: XP em dobro na hora.",
+    "Ele mostra de verdade o que você ganha: o nível que sobe e o emblema que destrava com essa foto.",
+    "Cabelo, unha, academia…: a câmera já abre pra selfie."
   ]
 }

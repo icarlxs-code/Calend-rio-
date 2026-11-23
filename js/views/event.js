@@ -1,5 +1,6 @@
 /* Detalhe do evento e editor (criar/editar) */
 import { postStory } from '../stories.js';
+import { previewStory } from '../game.js';
 import { okFx } from '../okfx.js';
 import { store } from '../store.js';
 import { CONFIG } from '../../config.js';
@@ -50,7 +51,7 @@ function detailHtml(id) {
       ${STATUS_ORDER.map((s) => `<button class="seg__btn${e.status === s ? ' is-on' : ''} st-${s}" data-status="${s}">${s === 'feito' ? icon('check', 14) : ''}${STATUS[s].label}</button>`).join('')}
     </div>
 
-    ${e.status === 'feito' && (e.assignees || []).concat(e.createdBy).includes(store.me) && store.mode === 'cloud' ? `<button class="storybtn" data-act="story"><span class="storybtn__ic">${icon('camera', 20)}</span><span><b>Postar story do que você fez</b><small>Foto tirada agora · XP em dobro · some em 24 h</small></span><i class="storybtn__x2">2×</i></button>` : ''}
+    ${e.status === 'feito' && (e.assignees || []).concat(e.createdBy).includes(store.me) && store.mode === 'cloud' ? `<button class="storybtn" data-act="story"><span class="storybtn__ic">${icon('camera', 20)}</span>${(() => { const P = previewStory('w', `e:${e.id}`); return P.ja ? '<span><b>Postar outro story</b><small>O bônus dessa você já ganhou ✔️ · some em 24 h</small></span></button>' : `<span><b>Postar story do que você fez</b><small>${P.got ? `+${P.total} XP agora` : 'Foto tirada agora'}${P.badges[0] ? ` · desbloqueia “${esc(P.badges[0].name())}”` : P.lv1 > P.lv0 ? ` · sobe pro nível ${P.lv1}` : ' · XP em dobro'} · some em 24 h</small></span><i class="storybtn__x2">2×</i></button>`; })()}` : ''}
     <ul class="rows">
       ${solo() ? '' : `<li><span class="rows__k">${icon('users', 16)} Responsável</span><span class="rows__v">${(e.assignees || []).map((a) => avatar(a, 22)).join('')} ${esc(whoText(e.assignees))}</span></li>`}
       ${e.location ? `<li><span class="rows__k">${icon('pin', 16)} Local</span><a class="rows__v link" href="https://maps.apple.com/?q=${encodeURIComponent(e.location)}" target="_blank" rel="noopener">${esc(e.location)}</a></li>` : ''}
@@ -82,7 +83,6 @@ function mountDetail(api, id) {
     if (b.dataset.status === 'feito' && e.status !== 'feito' && store.event(id)?.status === 'feito') {
       const left = e.date === todayKey() ? store.eventsOn(e.date, { person: store.me }).filter((x) => x.status !== 'feito').length : null;
       toast(onDone({ el: at, left }));
-      if (store.mode === 'cloud') setTimeout(() => toast('📸 Que tal postar um story disso? XP em dobro!', { action: 'Postar', onAction: () => postStory({ title: e.title || TYPES[e.type]?.label || '', ref: `e:${id}`, kind: 'w' }), ms: 6000 }), 2900);
     }
   }));
   const act = (name, fn) => {
