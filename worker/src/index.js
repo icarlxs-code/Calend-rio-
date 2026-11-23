@@ -258,6 +258,8 @@ async function handle(req, env) {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors(env, req) });
   if (url.pathname === '/vapid') return reply(env, req, { publicKey: (await getVapid(env)).publicKey });
   if (url.pathname === '/' || url.pathname === '/health') return reply(env, req, { ok: true, servico: 'Lembra', chat: !!(env.ANTHROPIC_API_KEY || env.AI) });
+  // público (página de apresentação): quantas vagas de Fundadores ainda existem — número real, sem dado pessoal
+  if (url.pathname === '/public/founders') return reply(env, req, { left: Math.max(0, 200 - Number(await env.CAL.get('founders-count') || 0)), max: 200 });
   // Abre o lembrete direto na tela "Adicionar ao Calendário" do iPhone (sem menu de apps)
   if (url.pathname === '/ics' && req.method === 'POST') {
     const form = await req.formData().catch(() => null);

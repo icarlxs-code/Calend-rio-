@@ -8,7 +8,7 @@
    Cada parte é um canal com mola (frequência + amortecimento), desenhado em canvas a cada quadro da tela (60/120 Hz). */
 import { esc } from './utils.js';
 
-const R = 'assets/mascot/rig/';
+const R = (() => { try { return new URL('../assets/mascot/rig/', import.meta.url).href; } catch { return 'assets/mascot/rig/'; } })(); // funciona no app e em qualquer página (ex.: /conheca/)
 const VIEW = { x: 400, y: -40, w: 1160, h: 1080 };         // área do desenho (espaço das peças)
 const FEET = [965, 1009];                                  // ponto de apoio (inclinação e achatamento)
 const SKIN = 'rgb(253,109,21)', SKIN_EDGE = 'rgb(232,84,10)', INK = '#3B2620';
