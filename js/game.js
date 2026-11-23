@@ -516,6 +516,16 @@ export const iconFor = (b) => icon(b.icon || 'star', 16);
 /* ---------- story do compromisso: foto tirada na hora = XP em dobro; apagou a foto = perde só o bônus ---------- */
 /* o bônus do story vale UMA vez por compromisso (ref "e:id" / "p:id"): postar de novo do mesmo não dá XP */
 const storyBonus = (kind) => (kind === 'p' ? XP.personal : XP.onTime);
+/* XP de amizade/convite: o servidor decide e paga uma vez (cada prêmio tem id); fora do limite diário */
+export function socialXp(premios = []) {
+  load();
+  S.soc = S.soc || {};
+  let tot = 0;
+  for (const p of premios) { if (!p || !p.id || S.soc[p.id] || !(p.xp > 0) || p.xp > 500) continue; S.soc[p.id] = p.at || Date.now(); S.xp += p.xp; addMonth(p.xp); tot += p.xp; }
+  if (tot) { xpFly(tot, premios.length === 1 ? premios[0].why : 'amigos 🤝'); settle(); }
+  return tot;
+}
+export const socialTotal = (premios = []) => { load(); return premios.filter((p) => (S.soc || {})[p.id]).reduce((t, p) => t + p.xp, 0); };
 export function storyXp(id, kind = 'w', ref = '') {
   load(); dayReset();
   if (ref && (S.sref || {})[ref]) return 0;

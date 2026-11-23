@@ -3796,3 +3796,56 @@ body.has-stv .snhbud { display: none; }
 .ststrip img, .stface img, .stv img, .avatar img, .prof2__img img, .phm__pic img, .pp2 img, .fx img, .photoview img, .stvw img, .lvring img {
   -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-user-drag: none;
 }
+
+/* ---------- amigos: abas, descobrir, sugestões, convite com XP, online ---------- */
+.fxtabs { display: flex; gap: 4px; margin: 12px 0 6px; padding: 4px; border-radius: 14px; background: var(--surface-2, #F1F1F4); }
+.fxtabs button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 11px; background: none; padding: 9px 8px; font: inherit; font-weight: 750; font-size: 14.5px; color: var(--text-2); cursor: pointer; }
+.fxtabs button.is-on { background: var(--fx-card, var(--surface, #fff)); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.fxtabs__n { font-style: normal; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #FF3B30; color: #fff; font-size: 11.5px; font-weight: 800; display: inline-grid; place-items: center; }
+.fxfind { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; margin: 12px 0; }
+.fxfind__b { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 14px 6px 12px; border: 0; border-radius: 18px; background: var(--fx-card, var(--surface, #fff)); box-shadow: 0 2px 10px rgba(0,0,0,.05); font: inherit; color: var(--text); cursor: pointer; }
+.fxfind__b b { font-size: 14px; } .fxfind__b small { font-size: 11.5px; color: var(--text-2); }
+.fxfind__ic { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; color: #fff; margin-bottom: 4px; }
+.fxfind__ic.is-a { background: linear-gradient(135deg, #34C759, #1E9E46); } .fxfind__ic.is-b { background: linear-gradient(135deg, #5AA9FF, #2F6BFF); } .fxfind__ic.is-c { background: linear-gradient(135deg, #FF9A3C, #FF5A1A); }
+.fxgift { margin: 14px 0; padding: 14px; border-radius: 22px; background: linear-gradient(135deg, #FFF3E6, #FFE3CC); color: #3A1E08; box-shadow: 0 6px 20px rgba(255,107,26,.15); }
+.fxgift__top { display: flex; align-items: center; gap: 10px; }
+.fxgift__top > span:last-child { display: flex; flex-direction: column; gap: 3px; }
+.fxgift__top b { font-size: 17px; } .fxgift__top small { font-size: 13px; line-height: 1.35; color: #6B3A14; } .fxgift__top small b { font-size: 13px; color: #E2560A; }
+.fxgift__snh { flex: none; width: 74px; height: 74px; } .fxgift__ic { flex: none; width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: #FF6B1A; color: #fff; }
+.fxgift__btns { display: flex; gap: 6px; margin-top: 12px; }
+.fxgift__b { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 0; border-radius: 12px; padding: 10px 6px; background: #fff; color: #3A1E08; font: inherit; font-weight: 750; font-size: 13.5px; cursor: pointer; }
+.fxgift__b.is-wa { background: #25D366; color: #fff; }
+.fxgift__tot { margin: 10px 2px 0; font-size: 12.5px; color: #6B3A14; } .fxgift__tot b { color: #E2560A; }
+.fsugs { display: flex; gap: 10px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 8px; scrollbar-width: none; scroll-snap-type: x proximity; }
+.fsugs::-webkit-scrollbar { display: none; }
+.fsug { position: relative; flex: none; width: 150px; scroll-snap-align: start; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 10px 12px; border-radius: 18px; background: var(--fx-card, var(--surface, #fff)); box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+.fsug__x { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border: 0; border-radius: 50%; background: none; color: var(--text-3, #999); display: grid; place-items: center; cursor: pointer; }
+.fsug__pp { display: flex; flex-direction: column; align-items: center; gap: 4px; border: 0; background: none; font: inherit; color: var(--text); cursor: pointer; text-align: center; width: 100%; }
+.fsug__ava { width: 72px; height: 72px; border-radius: 50%; overflow: hidden; display: grid; margin-bottom: 4px; }
+.fsug__ava .fxava__in, .fsug__ava img, .fsug__ava .fxava__in > span { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 26px; }
+.fsug__pp b { font-size: 14px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fsug__pp small { font-size: 11.5px; color: var(--text-2); line-height: 1.3; min-height: 30px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fsug__add { width: 100%; border: 0; border-radius: 10px; padding: 8px; background: #FF6B1A; color: #fff; font: inherit; font-weight: 800; font-size: 13.5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; }
+.fsug__add:disabled { opacity: .6; }
+.fsug__ok { width: 100%; text-align: center; padding: 8px; border-radius: 10px; background: var(--surface-2, #F1F1F4); color: var(--text-2); font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+.fx__vertodas { margin-left: auto; border: 0; background: none; color: #FF6B1A; font: inherit; font-weight: 750; font-size: 14px; cursor: pointer; }
+.fxon__row { display: flex; gap: 12px; overflow-x: auto; margin: 0 -16px; padding: 2px 16px 6px; scrollbar-width: none; }
+.fxon__row::-webkit-scrollbar { display: none; }
+.fxon__it { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; border: 0; background: none; font: inherit; color: var(--text); cursor: pointer; width: 66px; }
+.fxon__it .fxava { width: 58px; height: 58px; background: none; padding: 0; }
+.fxon__it .fxava.is-story { background: linear-gradient(135deg, #FFC21A, #FF6B1A 50%, #B05CFF); padding: 3px; }
+.fxon__it small { font-size: 12px; font-weight: 600; max-width: 66px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fxstar { display: inline-grid; place-items: center; margin-left: 5px; width: 18px; height: 18px; border-radius: 50%; background: #22C55E; color: #fff; vertical-align: -3px; }
+.fxstar svg { fill: currentColor; }
+.ststrip__it.is-on::after { content: ''; position: absolute; z-index: 3; top: 52px; right: 6px; width: 14px; height: 14px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 0 3px var(--bg, #fff); }
+.fxachavel { display: flex; gap: 10px; align-items: flex-start; margin: 16px 2px 4px; padding: 12px; border-radius: 14px; background: var(--fx-card, var(--surface, #fff)); cursor: pointer; }
+.fxachavel input { margin-top: 3px; width: 20px; height: 20px; accent-color: #FF6B1A; flex: none; }
+.fxachavel span { display: flex; flex-direction: column; gap: 2px; } .fxachavel b { font-size: 14px; } .fxachavel small { font-size: 12px; color: var(--text-2); }
+.freq__xp { display: inline-flex; align-items: center; gap: 6px; margin: 4px auto 12px; padding: 8px 14px; border-radius: 999px; background: #FFF1E3; color: #E2560A; font-size: 14px; }
+.fmail h3 { margin: 0 0 4px; } .fmail p { margin: 0 0 12px; color: var(--text-2); }
+.fmail .field { width: 100%; margin-bottom: 10px; }
+.fmail [data-res] { margin-bottom: 10px; }
+.pp2__prox { display: flex; align-items: center; justify-content: center; gap: 6px; width: max-content; margin: 0 auto 8px; padding: 5px 12px; border-radius: 999px; background: #22C55E; color: #fff; font-weight: 800; font-size: 12.5px; }
+.pp2__prox svg { fill: currentColor; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fxgift { background: linear-gradient(135deg, #3A2010, #2A1608); color: #FFE3CC; } :root:not([data-theme="light"]) .fxgift__top small, :root:not([data-theme="light"]) .fxgift__tot { color: #FFC9A0; } :root:not([data-theme="light"]) .fxgift__b:not(.is-wa) { background: #1C1C1E; color: #fff; } }
+:root[data-theme="dark"] .fxgift { background: linear-gradient(135deg, #3A2010, #2A1608); color: #FFE3CC; } :root[data-theme="dark"] .fxgift__top small, :root[data-theme="dark"] .fxgift__tot { color: #FFC9A0; } :root[data-theme="dark"] .fxgift__b:not(.is-wa) { background: #1C1C1E; color: #fff; }

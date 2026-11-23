@@ -1,16 +1,12 @@
 {
-  "version": "2.17.1",
+  "version": "2.18.0",
   "date": "2026-11-23",
   "min": "2.2.0",
-  "title": "Perfil e stories separados, telas mais legíveis",
+  "title": "Amigos: descubra, convide e ganhe XP",
   "notes": [
-    "Foto do perfil e stories separados como no Instagram: a bolinha é do story e a foto se muda em “Editar perfil”.",
-    "Menus de postar story e de denunciar com fundo sólido, fáceis de ler.",
-    "O story do Lembra some depois que você vê.",
-    "Fotos de perfil e de stories não podem mais ser salvas segurando o dedo.",
-    "Poste um story quando quiser: tire uma foto ou escolha da galeria e escreva uma legenda.",
-    "O story de um compromisso concluído continua valendo XP em dobro.",
-    "Story que você já viu abre na hora da próxima vez.",
-    "Arraste o story pra baixo para fechar e, no seu, arraste pra cima para ver quem viu."
+    "Nova aba Descobrir: sugestões de amigos de amigos, busca pelo e-mail, contatos e “Perto de você” (opcional).",
+    "Convide e ganhe: +300 XP por amigo que entrar pelo seu link e +40 XP por amizade nova.",
+    "Convite direto pelo WhatsApp ou copiando o link.",
+    "Veja quem está online agora e marque seus amigos próximos ⭐."
   ]
 }

@@ -1173,7 +1173,7 @@ function startApp() {
   store.hooks.note = (n) => import('./game.js').then((gm) => gm.onNote(n)).catch(() => {});
   setTimeout(() => import('./game.js').then((gm) => { gm.startGame(); gm.onGame(() => refreshLevelRings()); refreshLevelRings(); }).catch((e) => console.warn('conquistas', e)), 1800);
   // amizades: publica o cartão (nível, emblemas) e, se veio por um link de amizade, mostra o pedido
-  setTimeout(() => import('./friends.js').then((f) => { f.publishCard(); f.processFriendLink(); import('./game.js').then((gm) => gm.onGame(() => { clearTimeout(window.__cardT); window.__cardT = setTimeout(f.publishCard, 8000); })); }).catch(() => {}), 5000);
+  setTimeout(() => import('./friends.js').then((f) => { f.publishCard(); f.processFriendLink(); f.pingOnline(); setInterval(f.pingOnline, 60e3); document.addEventListener('visibilitychange', f.pingOnline); import('./game.js').then((gm) => gm.onGame(() => { clearTimeout(window.__cardT); window.__cardT = setTimeout(f.publishCard, 8000); })); }).catch(() => {}), 5000);
   setTimeout(askReinstall, 2500); // aviso de instalar a versão nova (só para quem precisa)
   // versão: confere se há nova ao voltar para o app (atualiza sozinho) e mostra as novidades uma vez
   import('./version.js').then((v) => {

@@ -242,7 +242,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/lb/report': 20, '/lb/board': 40 };
+const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/friends/suggest': 20, '/friends/email': 15, '/friends/perto': 10, '/friends/close': 30, '/friends/dismiss': 30, '/friends/ping': 40, '/lb/report': 20, '/lb/board': 40 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -545,6 +545,40 @@ async function handle(req, env) {
       const c = (await env.CAL.get(`card:${u}`, 'json')) || {};
       return { uid: u, name: c.name || 'Alguém', photo: c.photo || null, color: c.color || '#7C5CFF', level: c.level || 0, xp: c.xp || 0, badges: c.badges || [], tier: c.tier || '', since: c.since || null, bio: c.bio || '', job: c.job || '', role: c.role || '', place: c.place || '', hide: !!c.hide, teen: !!c.teen, vip: await vipOfU(u) };
     };
+    // ---------- recompensas por amizade (o servidor decide: o app só mostra) ----------
+    //  +300 XP: alguém NOVO entrou no Lembra pelo seu convite e virou seu amigo (1 vez por pessoa, nunca repete)
+    //  +100 XP: quem chegou pelo convite ganha as boas-vindas
+    //  +40 XP: cada amizade nova (1 vez por par de pessoas, até 10 por dia: remover e adicionar de novo não conta)
+    const PREMIO = { convidou: 300, chegou: 100, amizade: 40 };
+    const premia = async (u, id, xp, why, tipo) => {
+      const l = await getL(`fprem:${u}`);
+      if (l.some((x) => x.id === id)) return 0;
+      if (tipo === 'amizade' && l.filter((x) => x.tipo === 'amizade' && Date.now() - x.at < 864e5).length >= 10) return 0;
+      l.unshift({ id, xp, why, tipo, at: Date.now() });
+      await env.CAL.put(`fprem:${u}`, JSON.stringify(l.slice(0, 300)));
+      return xp;
+    };
+    const fazAmizade = async (a, b) => {
+      await env.CAL.put(`friends:${a}`, JSON.stringify([...new Set([b, ...(await getL(`friends:${a}`))])].slice(0, 300)));
+      await env.CAL.put(`friends:${b}`, JSON.stringify([...new Set([a, ...(await getL(`friends:${b}`))])].slice(0, 300)));
+      const par = [a, b].sort().join(':');
+      if (!(await env.CAL.get(`fpar:${par}`))) {
+        await env.CAL.put(`fpar:${par}`, '1');
+        const ca = await cardOf(a), cb = await cardOf(b);
+        await premia(a, `am:${b}`, PREMIO.amizade, `Nova amizade com ${cb.name.split(' ')[0]}`, 'amizade');
+        await premia(b, `am:${a}`, PREMIO.amizade, `Nova amizade com ${ca.name.split(' ')[0]}`, 'amizade');
+      }
+      // quem chegou pelo convite de alguém (conta nova): os dois ganham
+      for (const [novo, outro] of [[a, b], [b, a]]) {
+        const via = await env.CAL.get(`fvia:${novo}`, 'json');
+        if (via && via.from === outro && !via.pago) {
+          via.pago = Date.now(); await env.CAL.put(`fvia:${novo}`, JSON.stringify(via));
+          const cn = await cardOf(novo), co = await cardOf(outro);
+          await premia(outro, `cv:${novo}`, PREMIO.convidou, `${cn.name.split(' ')[0]} entrou no Lembra pelo seu convite`, 'convite');
+          await premia(novo, `cg:${outro}`, PREMIO.chegou, `Boas-vindas: você chegou pelo convite de ${co.name.split(' ')[0]}`, 'chegou');
+        }
+      }
+    };
     if (url.pathname === '/friends/card') {
       const photo = typeof body.photo === 'string' && body.photo.length < 90000 && /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(body.photo) ? body.photo : null;
       const card = { name: clean(body.name, 40) || me.name, photo, color: /^#[0-9a-fA-F]{6}$/.test(body.color || '') ? body.color : '#7C5CFF', level: Math.max(0, Math.min(100, Math.round(Number(body.level) || 0))), xp: Math.max(0, Math.round(Number(body.xp) || 0)), tier: clean(body.tier, 30), since: Number(body.since) || null, teen: body.teen === true, hide: body.hide === true,
@@ -552,7 +586,13 @@ async function handle(req, env) {
         badges: (Array.isArray(body.badges) ? body.badges : []).filter((x) => typeof x === 'string' && /^[a-z0-9_-]{1,30}$/.test(x)).slice(0, 150), at: Date.now() };
       await env.CAL.put(`card:${meU}`, JSON.stringify(card));
       // celular embaralhado (SHA-256): só serve para amigos que já têm o seu número na agenda te encontrarem
-      if (/^[a-f0-9]{64}$/.test(body.phoneHash || '')) await env.CAL.put(`phash:${body.phoneHash}`, meU);
+      // e-mail embaralhado também (quem souber o seu e-mail te acha); quem é menor ou desligou "me encontrem" não é achado
+      const achavel = body.achavel !== false && body.teen !== true;
+      for (const [campo, pre] of [['phoneHash', 'phash'], ['emailHash', 'mhash']]) {
+        const h = body[campo]; if (!/^[a-f0-9]{64}$/.test(h || '')) continue;
+        if (achavel || pre === 'phash') await env.CAL.put(`${pre}:${h}`, meU); else if ((await env.CAL.get(`${pre}:${h}`)) === meU) await env.CAL.delete(`${pre}:${h}`);
+      }
+      card.achavel = achavel; await env.CAL.put(`card:${meU}`, JSON.stringify(card));
       return reply(env, req, { ok: true });
     }
     if (url.pathname === '/friends/link') {
@@ -567,10 +607,14 @@ async function handle(req, env) {
       if (l.uid === meU) return reply(env, req, { ok: true, self: true });
       if ((await getL(`blocks:${l.uid}`)).includes(meU) || (await getL(`blocks:${meU}`)).includes(l.uid)) return reply(env, req, { error: 'Este convite não está disponível.' }, 403);
       if ((await getL(`friends:${meU}`)).includes(l.uid)) return reply(env, req, { ok: true, already: true, from: await cardOf(l.uid) });
+      // conta nova (criada depois do convite): fica marcado quem trouxe, pra recompensa quando virarem amigos
+      const meuCard = await env.CAL.get(`card:${meU}`, 'json');
+      const desde = Number(meuCard?.since || body.since) || 0;
+      if (!(await env.CAL.get(`fvia:${meU}`)) && desde && desde >= l.at - 3600e3 && Date.now() - desde < 7 * 864e5) await env.CAL.put(`fvia:${meU}`, JSON.stringify({ from: l.uid, at: Date.now() }));
       const reqs = (await getL(`freq:${meU}`)).filter((r) => r.from !== l.uid);
       reqs.unshift({ from: l.uid, at: Date.now() });
       await env.CAL.put(`freq:${meU}`, JSON.stringify(reqs.slice(0, 50)));
-      return reply(env, req, { ok: true, from: await cardOf(l.uid) });
+      return reply(env, req, { ok: true, from: await cardOf(l.uid), premio: (await env.CAL.get(`fvia:${meU}`, 'json'))?.from === l.uid ? PREMIO.chegou : 0 });
     }
     if (url.pathname === '/friends/answer') {
       const from = clean(body.from, 64);
@@ -578,9 +622,7 @@ async function handle(req, env) {
       if (!reqs.some((r) => r.from === from)) return reply(env, req, { error: 'Pedido não encontrado.' }, 404);
       await env.CAL.put(`freq:${meU}`, JSON.stringify(reqs.filter((r) => r.from !== from)));
       if (body.ok === true) {
-        const a = await getL(`friends:${meU}`), b = await getL(`friends:${from}`);
-        await env.CAL.put(`friends:${meU}`, JSON.stringify([...new Set([from, ...a])].slice(0, 300)));
-        await env.CAL.put(`friends:${from}`, JSON.stringify([...new Set([meU, ...b])].slice(0, 300)));
+        await fazAmizade(meU, from);
         const mine = await cardOf(meU);
         await sendToMember(env, 'u' + from.replace(/[^A-Za-z0-9]/g, '').slice(0, 24), { title: '🤝 Nova amizade no Lembra', body: `${mine.name} aceitou o seu convite. Veja o perfil, o nível e os emblemas.`, tag: `amigo-${meU}`, url: './#/amigos' }).catch(() => 0);
       }
@@ -590,6 +632,7 @@ async function handle(req, env) {
       const other = clean(body.uid, 64);
       await env.CAL.put(`friends:${meU}`, JSON.stringify((await getL(`friends:${meU}`)).filter((x) => x !== other)));
       await env.CAL.put(`friends:${other}`, JSON.stringify((await getL(`friends:${other}`)).filter((x) => x !== meU)));
+      await env.CAL.put(`close:${meU}`, JSON.stringify((await getL(`close:${meU}`)).filter((x) => x !== other)));
       return reply(env, req, { ok: true });
     }
     // ---------- stories (24h) e visitas ao perfil ----------
@@ -714,7 +757,7 @@ async function handle(req, env) {
       // perfil privado (anônimo no ranking, padrão de quem tem 13–17): só amigos veem os detalhes
       if (c.hide && rel !== 'amigo' && rel !== 'eu') return reply(env, req, { ok: true, privado: true, rel, card: { uid: u, name: 'Perfil privado', level: c.level, color: c.color } });
       const sts = rel === 'amigo' || rel === 'eu' ? vivos(await getL(`stories:${u}`)) : [];
-      return reply(env, req, { ok: true, rel, card: c, online: rel === 'amigo' ? await vistoEm(u) : 0, story: sts.length ? (sts.some((x) => !x.views[meU]) ? 'novo' : 'visto') : (vivos(await getL(`stories:${u}`)).length ? 'amigos' : '') });
+      return reply(env, req, { ok: true, rel, card: c, close: rel === 'amigo' && (await getL(`close:${meU}`)).includes(u), online: rel === 'amigo' ? await vistoEm(u) : 0, story: sts.length ? (sts.some((x) => !x.views[meU]) ? 'novo' : 'visto') : (vivos(await getL(`stories:${u}`)).length ? 'amigos' : '') });
     }
     if (url.pathname === '/friends/request') {
       const u = clean(body.uid, 64);
@@ -724,8 +767,7 @@ async function handle(req, env) {
       if (rel === 'amigo') return reply(env, req, { ok: true, rel });
       if (rel === 'recebido') { // ela já tinha pedido: vira amizade na hora
         await env.CAL.put(`freq:${meU}`, JSON.stringify((await getL(`freq:${meU}`)).filter((r) => r.from !== u)));
-        await env.CAL.put(`friends:${meU}`, JSON.stringify([...new Set([u, ...(await getL(`friends:${meU}`))])].slice(0, 300)));
-        await env.CAL.put(`friends:${u}`, JSON.stringify([...new Set([meU, ...(await getL(`friends:${u}`))])].slice(0, 300)));
+        await fazAmizade(meU, u);
         const mine = await cardOf(meU);
         await sendToMember(env, memberOf(u), { title: '🤝 Agora vocês são amigos', body: `${mine.name} aceitou a sua amizade no Lembra.`, tag: `amigo-${meU}`, url: './#/amigos' }).catch(() => 0);
         return reply(env, req, { ok: true, rel: 'amigo' });
@@ -747,7 +789,78 @@ async function handle(req, env) {
       const [fr, rq] = [await getL(`friends:${meU}`), await getL(`freq:${meU}`)];
       const friends = await Promise.all(fr.slice(0, 200).map(async (u) => ({ ...(await cardOf(u)), online: await vistoEm(u) })));
       const requests = await Promise.all(rq.slice(0, 30).map(async (r) => ({ ...(await cardOf(r.from)), at: r.at })));
-      return reply(env, req, { ok: true, friends: friends.sort((x, y) => y.level - x.level || y.xp - x.xp), requests, me: await cardOf(meU) });
+      const close = (await getL(`close:${meU}`)).filter((u) => fr.includes(u));
+      const premios = (await getL(`fprem:${meU}`)).slice(0, 100);
+      return reply(env, req, { ok: true, friends: friends.sort((x, y) => y.level - x.level || y.xp - x.xp).map((c) => ({ ...c, close: close.includes(c.uid) })), requests, me: await cardOf(meU), premios, valores: PREMIO });
+    }
+    if (url.pathname === '/friends/ping') { await marcaOnline(); return reply(env, req, { ok: true }); }
+    // amigos próximos (como os "Melhores amigos" do Instagram): só você vê a sua lista
+    if (url.pathname === '/friends/close') {
+      const u = clean(body.uid, 64);
+      if (!(await isFriend(meU, u)) || u === meU) return reply(env, req, { error: 'Só amigos podem ser próximos.' }, 400);
+      const l = (await getL(`close:${meU}`)).filter((x) => x !== u);
+      if (body.on === true) l.unshift(u);
+      await env.CAL.put(`close:${meU}`, JSON.stringify(l.slice(0, 100)));
+      return reply(env, req, { ok: true, close: body.on === true });
+    }
+    // achar pelo e-mail (o app manda o e-mail embaralhado; o servidor nunca recebe o e-mail de quem procura)
+    if (url.pathname === '/friends/email') {
+      const h = /^[a-f0-9]{64}$/.test(body.hash || '') ? body.hash : '';
+      const u = h ? await env.CAL.get(`mhash:${h}`) : null;
+      if (!u || u === meU || (await getL(`blocks:${u}`)).includes(meU) || (await getL(`blocks:${meU}`)).includes(u)) return reply(env, req, { ok: true, row: null, self: u === meU });
+      const c = await cardOf(u);
+      return reply(env, req, { ok: true, row: { ...c, rel: await relacao(u) } });
+    }
+    // perto de você (opcional): só a "região" (quadrado de ~5 km), nunca a localização exata; menores não entram
+    const celula = (la, lo) => `${Math.floor(la * 20)}_${Math.floor(lo * 20)}`;
+    if (url.pathname === '/friends/perto') {
+      const minha = await cardOf(meU);
+      const velha = await env.CAL.get(`geome:${meU}`);
+      const tira = async (cel) => { const l = (await getL(`geo:${cel}`)).filter((x) => x.u !== meU); await env.CAL.put(`geo:${cel}`, JSON.stringify(l)); };
+      if (body.on === false) { if (velha) await tira(velha); await env.CAL.delete(`geome:${meU}`); return reply(env, req, { ok: true, off: true }); }
+      if (minha.teen) return reply(env, req, { error: 'Para a sua segurança, “Perto de você” não fica disponível para menores de 18 anos.' }, 403);
+      const la = Number(body.lat), lo = Number(body.lon);
+      if (!Number.isFinite(la) || !Number.isFinite(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180) return reply(env, req, { error: 'Localização inválida.' }, 400);
+      const cel = celula(la, lo);
+      if (velha && velha !== cel) await tira(velha);
+      const l = (await getL(`geo:${cel}`)).filter((x) => x.u !== meU && now - x.at < 7 * DAY);
+      l.unshift({ u: meU, at: now }); await env.CAL.put(`geo:${cel}`, JSON.stringify(l.slice(0, 300))); await env.CAL.put(`geome:${meU}`, cel, { expirationTtl: 8 * 86400 });
+      const [ci, cj] = cel.split('_').map(Number), vizinhas = [];
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) vizinhas.push(`${ci + i}_${cj + j}`);
+      const fr = await getL(`friends:${meU}`), bl = await getL(`blocks:${meU}`);
+      const perto = [...new Set((await Promise.all(vizinhas.map((v) => getL(`geo:${v}`)))).flat().filter((x) => x.u !== meU && now - x.at < 7 * DAY && !fr.includes(x.u) && !bl.includes(x.u)).map((x) => x.u))].slice(0, 40);
+      const rows = (await Promise.all(perto.map(async (u) => { if ((await getL(`blocks:${u}`)).includes(meU)) return null; const c = await cardOf(u); return c.teen || c.hide ? null : { ...c, rel: await relacao(u), motivo: 'Perto de você' }; }))).filter(Boolean);
+      return reply(env, req, { ok: true, rows });
+    }
+    if (url.pathname === '/friends/dismiss') {
+      const u = clean(body.uid, 64), l = (await getL(`fdis:${meU}`)).filter((x) => x !== u);
+      l.unshift(u); await env.CAL.put(`fdis:${meU}`, JSON.stringify(l.slice(0, 300)));
+      return reply(env, req, { ok: true });
+    }
+    // sugestões (como "Pessoas que você talvez conheça"): amigos de amigos (mais amigos em comum primeiro),
+    // quem te convidou / você convidou e quem está perto (se você ligou). Menores só aparecem para quem tem amigo em comum e também é menor.
+    if (url.pathname === '/friends/suggest') {
+      const fr = await getL(`friends:${meU}`), fset = new Set(fr);
+      const fora = new Set([meU, ...fr, ...(await getL(`blocks:${meU}`)), ...(await getL(`fdis:${meU}`))]);
+      const enviados = new Set();
+      const comum = new Map();
+      await Promise.all(fr.slice(0, 80).map(async (f) => { for (const u of (await getL(`friends:${f}`)).slice(0, 300)) { if (fora.has(u)) continue; if (!comum.has(u)) comum.set(u, []); comum.get(u).push(f); } }));
+      const via = await env.CAL.get(`fvia:${meU}`, 'json');
+      const extra = via && !fset.has(via.from) && !fora.has(via.from) ? [via.from] : [];
+      const cands = [...new Set([...extra, ...[...comum.entries()].sort((a, b) => b[1].length - a[1].length).map(([u]) => u)])].slice(0, 30);
+      const eu = await cardOf(meU);
+      const nomes = new Map();
+      const nomeDe = async (u) => { if (!nomes.has(u)) nomes.set(u, (await cardOf(u)).name.split(' ')[0]); return nomes.get(u); };
+      const rows = (await Promise.all(cands.map(async (u) => {
+        if ((await getL(`blocks:${u}`)).includes(meU)) return null;
+        const c = await cardOf(u), mut = comum.get(u) || [];
+        if (c.teen && !eu.teen) return null;
+        const rel = await relacao(u); if (rel === 'amigo') return null; if (rel === 'enviado') enviados.add(u);
+        const ns = await Promise.all(mut.slice(0, 2).map(nomeDe));
+        const motivo = extra.includes(u) ? 'Te convidou pro Lembra' : mut.length === 1 ? `Amigo de ${ns[0]}` : `${ns.join(', ')}${mut.length > 2 ? ` e mais ${mut.length - 2}` : ''} · ${mut.length} amigos em comum`;
+        return { ...(c.hide ? { uid: c.uid, name: c.name, color: c.color, level: c.level, photo: null } : c), rel, mutuos: mut.length, motivo };
+      }))).filter(Boolean);
+      return reply(env, req, { ok: true, rows: rows.slice(0, 20) });
     }
     return reply(env, req, { error: 'não encontrado' }, 404);
   }
