@@ -3785,3 +3785,14 @@ body.has-stv .snhbud { display: none; }
 .stve__go .stface, .stve__go img { width: 26px; height: 26px; border-radius: 50%; }
 .stve__go.is-busy { opacity: .6; pointer-events: none; }
 .phm__row { cursor: pointer; }
+
+/* folhas de ações: o título fica num cartão sólido (nada de letra escura em cima do fundo borrado) */
+.phm__head { background: var(--surface, #fff); border-radius: 18px; margin-bottom: 10px; padding: 16px 12px 14px; box-shadow: 0 4px 16px rgba(0,0,0,.06); color: var(--text); }
+.sheet-wrap:has(.sheet--actions) .sheet-backdrop, .sheet-wrap:has(.sheet--phm) > .sheet-backdrop { background: rgba(0,0,0,.45); }
+/* categorias dos troféus: uma linha só, rolando pro lado */
+.pcats { flex-wrap: nowrap !important; }
+.pcats__b { white-space: nowrap; }
+/* fotos de perfil e de stories não podem ser salvas (segurar o dedo não abre "Salvar imagem") */
+.ststrip img, .stface img, .stv img, .avatar img, .prof2__img img, .phm__pic img, .pp2 img, .fx img, .photoview img, .stvw img, .lvring img {
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-user-drag: none;
+}

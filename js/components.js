@@ -257,3 +257,10 @@ export function chooseDialog({ title, text = '', bodyHtml = '', options }) {
     });
   });
 }
+
+/* fotos de perfil e de stories: sem "Salvar imagem" ao segurar o dedo nem arrastar pra fora */
+if (typeof document !== 'undefined') {
+  const PROTEGE = '.ststrip img, .stface img, .stv img, .avatar img, .prof2__img img, .phm__pic img, .pp2 img, .fx img, .photoview img, .stvw img, .lvring img';
+  document.addEventListener('contextmenu', (e) => { if (e.target.closest?.(PROTEGE) || e.target.closest?.('.stv')) e.preventDefault(); }, true);
+  document.addEventListener('dragstart', (e) => { if (e.target.closest?.(PROTEGE)) e.preventDefault(); }, true);
+}

@@ -10,7 +10,7 @@ import { icon } from '../icons.js';
 import { esc } from '../utils.js';
 import { sininho, alive, act, vivo } from '../sininho.js';
 import { mascotOn } from '../mascote.js';
-import { meuStory, openViewer, comoPostar, refreshFeed, fotoPendente } from '../stories.js';
+import { meuStory, openViewer, comoPostar, refreshFeed } from '../stories.js';
 import { CONFIG } from '../../config.js';
 import { professionFor } from '../../functions/catalog.js';
 
@@ -91,8 +91,8 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
       ${(() => {
         const ms = meuStory(), o = G.offensive(), nEmb = Object.keys(st.badges).length;
         return `<div class="prof2__head">
-        <button class="prof2__pic${ms ? (ms.stories.some((x) => !x.seen) ? ' has-story' : ' has-story is-seen') : ''}${store.billing?.plan === 'lifetime' && store.billing?.vip ? ' is-vip' : ''}" data-pic aria-label="Sua foto e seus stories">
-          <span class="prof2__ring"><span class="prof2__img">${avatar(store.me, 88)}</span></span><i class="prof2__plus">${icon('plus', 14)}</i></button>
+        <button class="prof2__pic${ms ? (ms.stories.some((x) => !x.seen) ? ' has-story' : ' has-story is-seen') : ''}${store.billing?.plan === 'lifetime' && store.billing?.vip ? ' is-vip' : ''}" data-pic aria-label="${ms ? 'Ver seu story' : 'Novo story'}">
+          <span class="prof2__ring"><span class="prof2__img">${avatar(store.me, 88)}</span></span><i class="prof2__plus" data-novo role="button" aria-label="Novo story">${icon('plus', 14)}</i></button>
         <div class="prof2__right">
           <div class="prof__name prof2__name"><b>${esc(me.name || '')}</b>${prof.phoneVerified ? `<span class="prof__ok" title="Celular confirmado">${icon('check', 11)}</span>` : ''}</div>
           <div class="prof2__nums">
@@ -155,8 +155,11 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
       el.querySelectorAll('[data-cat]').forEach((b) => (b.onclick = () => { cat = b.dataset.cat; a.set(html()); }));
       el.querySelectorAll('[data-badge]').forEach((b) => (b.onclick = () => badgeDetail(b.dataset.badge)));
       el.querySelectorAll('[data-edit]').forEach((b) => (b.onclick = () => openEditProfile(() => a.set(html()))));
-      el.querySelector('[data-pic]').onclick = () => photoActions(() => a.set(html()));
-      const msb = el.querySelector('[data-meustory]'); if (msb) msb.onclick = () => { const ms = meuStory(); if (ms) openViewer(ms.uid, () => { if (!a.closed) a.set(html()); }); else comoPostar(); };
+      // como no Instagram: a bolinha é do story (ver o seu, ou o + para postar); a foto se muda em "Editar perfil"
+      const volta = () => { if (!a.closed) a.set(html()); };
+      const doStory = (ev) => { const ms = meuStory(); if (ms && !ev?.target?.closest('[data-novo]')) openViewer(ms.uid, volta); else comoPostar(volta); };
+      el.querySelector('[data-pic]').onclick = doStory;
+      const msb = el.querySelector('[data-meustory]'); if (msb) msb.onclick = doStory;
       { const f = el.querySelector('.prof2__snh [data-snh]'); if (f) vivo(f, { aponta: el.querySelector('[data-share]'), gestos: ['pisca', 'olhaLados', 'riso', 'sobrancelha'], cada: [4, 8] }); }
       const sh = el.querySelector('[data-share]');
       if (sh) sh.onclick = () => import('../friends.js').then((m) => m.openShareChoice());
@@ -210,17 +213,11 @@ function tilt(stage) {
 /* ---------- foto: como no WhatsApp ---------- */
 export function photoActions(after) {
   const me = store.member(store.me) || {};
-  const ms = meuStory(), fp = fotoPendente();
-  const nViews = ms ? ms.stories.reduce((t, x) => t + (x.views || 0), 0) : 0;
   const row = (attr, ic, cls, t, sub = '') => `<button class="phm__row" ${attr}><span class="phm__ic ${cls}">${icon(ic, 21)}</span><span class="phm__t"><b>${t}</b>${sub ? `<small>${sub}</small>` : ''}</span>${icon('right', 16)}</button>`;
   const a = openSheet({
     className: 'sheet--actions sheet--phm',
     html: `<div class="phm">
-      <div class="phm__head"><span class="phm__pic${ms ? ' has-story' : ''}"><span>${avatar(store.me, 84)}</span></span><b>Sua foto e seus stories</b><small>Amigos veem sua foto, nível e stories</small></div>
-      <div class="phm__grp">
-        ${ms ? row('data-vermeus', 'eye', 'is-story', 'Ver seus stories', `${ms.stories.length} ${ms.stories.length === 1 ? 'story no ar' : 'stories no ar'} · ${nViews} ${nViews === 1 ? 'visualização' : 'visualizações'}`) : ''}
-        ${row('data-postar', 'camera', 'is-cam', ms ? 'Postar outro story' : 'Postar story', fp ? `Foto de “${esc(fp.title)}” · +${fp.P.total} XP agora` : 'Câmera ou galeria · só seus amigos veem')}
-      </div>
+      <div class="phm__head"><span class="phm__pic"><span>${avatar(store.me, 84)}</span></span><b>Foto do perfil</b><small>Aparece pros seus amigos e no ranking</small></div>
       <div class="phm__grp">
         ${me.photo ? row('data-view', 'image', 'is-n', 'Ver foto') : ''}
         ${me.photo ? row('data-ajusta', 'edit', 'is-n', 'Ajustar foto', 'Recortar e reposicionar') : ''}
@@ -238,8 +235,6 @@ export function photoActions(after) {
         catch { toast('Não consegui salvar agora. Verifique a internet.'); }
       };
       x.el.querySelectorAll('[data-file]').forEach((inp) => (inp.onchange = () => { const f = inp.files && inp.files[0]; if (!f) return; x.close(); usa(f); }));
-      const vm = x.el.querySelector('[data-vermeus]'); if (vm) vm.onclick = () => { x.close(); openViewer(ms.uid, after); };
-      x.el.querySelector('[data-postar]').onclick = () => { x.close(); comoPostar(after); };
       const v = x.el.querySelector('[data-view]'); if (v) v.onclick = () => { x.close(); viewPhoto(me.photo); };
       const aj = x.el.querySelector('[data-ajusta]'); if (aj) aj.onclick = async () => { x.close(); try { const blob = await (await fetch(me.photo)).blob(); usa(new File([blob], 'foto.jpg', { type: blob.type || 'image/jpeg' })); } catch { toast('Não consegui abrir a foto atual.'); } };
       const d = x.el.querySelector('[data-del]');

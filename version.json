@@ -1,14 +1,18 @@
 {
-  "version": "2.17.0",
-  "build": "zhpc7v6s",
+  "version": "2.17.1",
+  "build": "2h6k7rle",
   "date": "2026-11-23",
   "min": "2.2.0",
-  "title": "Story livre, do jeito que você quiser",
+  "title": "Perfil e stories separados, telas mais legíveis",
   "notes": [
+    "Foto do perfil e stories separados como no Instagram: a bolinha é do story e a foto se muda em “Editar perfil”.",
+    "Menus de postar story e de denunciar com fundo sólido, fáceis de ler.",
+    "O story do Lembra some depois que você vê.",
+    "Fotos de perfil e de stories não podem mais ser salvas segurando o dedo.",
     "Poste um story quando quiser: tire uma foto ou escolha da galeria e escreva uma legenda.",
     "O story de um compromisso concluído continua valendo XP em dobro.",
     "Story que você já viu abre na hora da próxima vez.",
     "Arraste o story pra baixo para fechar e, no seu, arraste pra cima para ver quem viu."
   ],
-  "builtAt": "2026-11-23T17:26:37.425Z"
+  "builtAt": "2026-11-23T17:43:10.876Z"
 }

@@ -169,7 +169,7 @@ export function openShareChoice() {
     else { await navigator.clipboard?.writeText(`${text} ${url}`).catch(() => {}); toast('Link copiado! Cole no WhatsApp 📋'); }
   };
   const a = openSheet({
-    className: 'sheet--actions',
+    className: 'sheet--solid',
     html: `${sheetHead('Compartilhar', { left: '<button class="btn-text" data-close>Fechar</button>' })}
     <div class="page page--sheet shch">
       <button class="shch__op" data-amigo><span class="shch__ic shch__ic--a">${icon('users', 22)}</span><span><b>Convidar pra ser meu amigo</b><small>Quem abrir o link entra na sua lista de amigos. Pode mandar o mesmo link pra várias pessoas (vale 14 dias).</small></span></button>
@@ -255,7 +255,7 @@ export async function openPublicProfile(uid, prev = {}, onRemoved) {
     const mn = x.el.querySelector('[data-menu]');
     if (mn) mn.onclick = () => {
       const c = d?.card || prev;
-      const m = openSheet({ className: 'sheet--actions', html: `${sheetHead('Opções', { left: '<button class="btn-text" data-close>Fechar</button>' })}<div class="page page--sheet"><div class="agroup">
+      const m = openSheet({ className: 'sheet--solid', html: `${sheetHead('Opções', { left: '<button class="btn-text" data-close>Fechar</button>' })}<div class="page page--sheet"><div class="agroup">
         ${d?.rel === 'amigo' ? `<button class="frow" data-rm>${icon('x', 18)}<span class="frow__id"><b>Remover amizade</b></span></button>` : ''}
         <button class="frow" data-bq>${icon('flag', 18)}<span class="frow__id"><b>Denunciar ou bloquear</b></span></button></div></div>`,
         onMount: (y) => {

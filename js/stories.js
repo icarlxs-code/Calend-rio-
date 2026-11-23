@@ -98,18 +98,18 @@ export async function postStory({ title = '', ref = '', kind = 'w', cam } = {}) 
 /* ---------- faixa de stories (bolinhas com anel colorido) ---------- */
 /* o story do próprio Lembra (novidades e dicas), como a conta oficial no Instagram */
 const lembraKey = () => `lembra.storyLembra.${APP_VERSION}`;
-const lembraVisto = () => { try { return localStorage.getItem(lembraKey()) === '1'; } catch { return true; } };
+// visto uma vez, some (volta só quando tiver novidade nova); e como todo story, some em 24 h mesmo sem ver
+const lembraVisto = () => { try { if (localStorage.getItem(lembraKey()) === '1') return true; const k = lembraKey() + '.desde', d = Number(localStorage.getItem(k)); if (!d) { localStorage.setItem(k, String(Date.now())); return false; } return Date.now() - d > 24 * 3600e3; } catch { return true; } };
 export const meuStory = () => feed.rows.find((r) => r.me && r.stories.length) || null;
 export function storyStrip(rows = feed.rows, { comMeu = true, lembra = true } = {}) {
   const meus = rows.find((r) => r.me && r.stories.length);
   const itens = rows.filter((r) => !r.me && r.stories.length);
   const novos = itens.filter((r) => r.stories.some((x) => !x.seen)), vistos = itens.filter((r) => !r.stories.some((x) => !x.seen)); // quem tem story novo vem primeiro
-  const lb = lembra && mascotOn() ? `<button class="ststrip__it" data-st-lembra role="listitem"><span class="stface stface--snh" style="--s:60px">${sininho('feliz', { size: 58 })}</span><i class="ststrip__ring${lembraVisto() ? ' is-seen' : ''}"></i><small>Lembra</small></button>` : '';
+  const lb = lembra && mascotOn() ? `<button class="ststrip__it" data-st-lembra role="listitem"><span class="stface stface--snh" style="--s:60px">${sininho('feliz', { size: 58 })}</span><i class="ststrip__ring"></i><small>Lembra</small></button>` : '';
   return `<div class="ststrip" role="list">
     ${comMeu ? `<button class="ststrip__it" data-st-me role="listitem">${face(store.member(store.me) || { name: 'Você' }, 60)}<i class="ststrip__plus" data-st-novo role="button" aria-label="Novo story">${icon('plus', 14)}</i><small>Seu story</small><i class="ststrip__ring${meus ? (meus.stories.some((x) => !x.seen) ? '' : ' is-seen is-mine') : ' is-off'}"></i></button>` : ''}
     ${!lembraVisto() ? lb : ''}
     ${novos.map((r) => `<button class="ststrip__it" data-st-owner="${esc(r.uid)}" role="listitem">${face(r, 60)}<i class="ststrip__ring"></i><small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
-    ${lembraVisto() ? lb : ''}
     ${vistos.map((r) => `<button class="ststrip__it" data-st-owner="${esc(r.uid)}" role="listitem">${face(r, 60)}<i class="ststrip__ring is-seen"></i><small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
   </div>`;
 }
@@ -284,7 +284,7 @@ export async function openVisitors() {
 export function denunciaOuBloqueia({ uid, name, storyId = '' }, onClose, depoisBloquear) {
   const n1 = (name || 'essa pessoa').split(' ')[0];
   const MOTIVOS = ['Nudez ou conteúdo sexual', 'Violência ou ameaça', 'Assédio ou bullying', 'Discurso de ódio', 'Spam ou golpe', 'Outro motivo'];
-  const a = openSheet({ className: 'sheet--actions', onClose, html: `${sheetHead(storyId ? 'Denunciar ou bloquear' : `Opções · ${esc(n1)}`, { left: '<button class="btn-text" data-close>Fechar</button>' })}
+  const a = openSheet({ className: 'sheet--solid', onClose, html: `${sheetHead(storyId ? 'Denunciar ou bloquear' : `Opções · ${esc(n1)}`, { left: '<button class="btn-text" data-close>Fechar</button>' })}
     <div class="page page--sheet"><p class="fhelp">A denúncia é anônima: ${esc(n1)} não fica sabendo. O conteúdo é revisado e sai do ar se violar as regras.</p>
     <div class="agroup">${MOTIVOS.map((m) => `<button class="frow" data-mot="${esc(m)}">${icon('flag', 18)}<span class="frow__id"><b>Denunciar: ${esc(m)}</b></span></button>`).join('')}</div>
     <button class="btn btn--danger-soft btn--block" data-bloq>${icon('x', 16)} Bloquear ${esc(n1)}</button>
