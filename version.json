@@ -1,14 +1,15 @@
 {
-  "version": "2.18.0",
-  "build": "q2koaj4l",
+  "version": "2.18.1",
+  "build": "srdlrg7a",
   "date": "2026-11-23",
   "min": "2.2.0",
-  "title": "Amigos: descubra, convide e ganhe XP",
+  "title": "Sair da conta volta direto pro Entrar",
   "notes": [
+    "Ao sair da conta, a tela de Entrar aparece na hora (sem precisar fechar e abrir o app).",
     "Nova aba Descobrir: sugestões de amigos de amigos, busca pelo e-mail, contatos e “Perto de você” (opcional).",
     "Convide e ganhe: +300 XP por amigo que entrar pelo seu link e +40 XP por amizade nova.",
     "Convite direto pelo WhatsApp ou copiando o link.",
     "Veja quem está online agora e marque seus amigos próximos ⭐."
   ],
-  "builtAt": "2026-11-23T18:08:32.970Z"
+  "builtAt": "2026-11-23T18:42:06.189Z"
 }

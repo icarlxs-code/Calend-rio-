@@ -403,10 +403,18 @@ const actions = {
     if (await confirmDialog({ title: 'Sair da conta?', text: 'Este celular deixa de receber os lembretes desta conta até você entrar de novo.', ok: 'Sair' })) {
       // antes de sair: este aparelho para de receber as notificações desta conta (privacidade)
       await Promise.race([push.unregisterDevice(), new Promise((r) => setTimeout(r, 4000))]);
+      window.__saiu = true;
       await cloudApi.signOut();
-      purgeAuth();
+      // (não apaga o banco do login aqui: com o app aberto, o apagar fica pendente e levaria junto o próximo login)
+      try { Object.keys(localStorage).filter((k) => /^firebase:authUser:/.test(k)).forEach((k) => localStorage.removeItem(k)); } catch { /* ok */ }
       try { localStorage.removeItem(LS_UID); } catch { /* ok */ }
-      location.reload();
+      // mostra o "Entrar" na hora: no app instalado (iPhone) o recarregar às vezes não acontece e a tela ficava vazia
+      try {
+        document.querySelectorAll('.sheet-wrap, .stv, .snhbud, .cvs, .toast, .photoview').forEach((e) => e.remove());
+        document.body.className = ''; document.body.style.overflow = '';
+        history.replaceState(null, '', location.pathname + location.search);
+        showLogin();
+      } catch { location.replace(location.pathname + '?saiu=' + Date.now()); }
     }
   },
 };
@@ -1458,6 +1466,7 @@ async function boot() {
     authAnswered = true;
     if (!user) {
       // a sessão caiu com o app aberto: recomeça do zero para o próximo login funcionar
+      if (window.__saiu) return showLogin(); // saiu pelo botão: o "Entrar" já está na tela
       if (started) return location.reload();
       return showLogin();
     }
@@ -1481,6 +1490,8 @@ async function boot() {
     }
     try { sessionStorage.setItem('lembra.sess', '1'); } catch { /* ok */ }
     try { localStorage.setItem(LS_UID, user.uid); } catch { /* ok */ }
+    // entrou de novo depois de sair (sem fechar o app): recomeça do zero para não misturar nada
+    if (window.__saiu && started) { setTimeout(() => location.replace(location.pathname + '?r=' + Date.now()), 300); return; }
     // trocou de conta com o app aberto: recomeça do zero (nunca mistura uma conta com a outra)
     if (started) { if (store.user && store.user.uid !== user.uid) location.reload(); return; }
     // qualquer conta entra: a dupla vê o espaço dela; contas novas, o próprio espaço (vazio no começo)
