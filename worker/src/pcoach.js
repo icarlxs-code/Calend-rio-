@@ -40,63 +40,61 @@ const NIGHT_VERSES = [
 
 const T = {
   morning: [
-    'Bom dia, {n}! Hoje é um novo começo. Você é capaz de muito mais do que imagina ☀️',
-    'Bom dia, {n}! Levanta, toma uma água e vai com tudo. Hoje vai dar certo ☀️',
-    'Bom dia! Deus está contigo hoje, {n}. Um passo de cada vez ☀️',
-    'Acordou? Bora, {n}! Que hoje seja leve e produtivo ☀️',
+    'Bom dia, {n}. O dia ainda tá em branco: você escolhe a primeira coisa que entra nele ☀️',
+    'Acordou, {n}? Antes do celular te engolir: qual é a UMA coisa que, feita hoje, já salva o dia?',
+    'Bom dia! Café, cara lavada e a agenda aberta. Nessa ordem, {n} ☕',
+    'Dia novo, placar zerado. Ontem não conta mais, {n} ☀️',
+    'Bom dia, {n}. Hoje não precisa ser perfeito, precisa só começar.',
+    'Ei, {n}, bom dia! A versão de você das 18h vai agradecer o que você fizer nas próximas 2 horas.',
+    'Bom dia! Abre a janela, respira esse ar e me diz: o que tá na sua lista hoje? 🌤️',
   ],
   water: [
-    'Já bebeu água hoje, {n}? Vai lá, um copo agora 💧',
-    'Pausa rápida: bebe um copo d’água. Seu corpo agradece 💧',
-    'Ei, {n}! Hidratação em dia? Vai beber água 💧',
-    'Lembrete de amigo: água! Cabeça boa começa com corpo hidratado 💧',
-    'Tá bebendo água direitinho? Bora mais um copo 💧',
-    'Só passando pra lembrar: água, {n}! 💧',
-    'Hora da água! Um copo agora e a cabeça agradece 💧',
-    'Garrafinha do lado? Dá uns goles aí, {n} 💧',
-    'Seu corpo é 70% água. Repõe aí, campeão 💧',
-    'Cansaço às vezes é só sede. Bebe um copo e sente a diferença 💧',
-    'Mais um copo pra conta de hoje! Bora, {n} 💧',
-    'Pausa de 10 segundos: bebe água e volta com tudo 💧',
-    'Pele, foco e disposição agradecem: vai beber água 💧',
-    'Água agora, {n}! Cuidar de você é prioridade 💧',
-    'Lembra da água? Um copinho já ajuda 💧',
-    'Hidratado rende mais. Bebe um copo aí 💧',
-    'Ô {n}, cadê a água? Vai lá rapidinho 💧',
-    'Brinde com você mesmo: um copo d’água agora 💧',
-    'Cuidar do corpo também é produtividade. Água! 💧',
-    'Já faz uma hora... hora de mais um copo 💧',
+    'Teu copo tá aí do lado te olhando faz um tempão, {n} 👀',
+    'Desafio relâmpago: termina o copo antes de responder a próxima mensagem 🥤',
+    'Se a garrafinha falasse, ela tava te chamando agora, {n}.',
+    'Dor de cabeça no meio da tarde muitas vezes é sede disfarçada. Uns goles resolvem.',
+    'A gente só lembra da água quando a boca seca. Adianta ela, {n} 😉',
+    'Um copo agora = menos cansaço lá pelas 16h. Conta simples.',
+    'Pausa estratégica: levanta, enche o copo, volta. Rende mais do que parece.',
+    'Seu cérebro tá pedindo combustível transparente. Três goles e tá pago, {n}.',
+    'Já percebeu que o cansaço da tarde às vezes é só sede? Testa agora.',
+    'Hora do gole. Sem desculpa de "depois", {n} 🫗',
+    'Copo cheio do lado do computador é o melhor lembrete que existe. Arruma um aí.',
+    'Água com limão, gelada, natural… do jeito que for. Só não deixa pra amanhã.',
+    'Missão rápida: um copo inteiro até o próximo compromisso, {n}.',
+    'Seu rim mandou um recado: "lembra de mim?" 🫗',
+    'Quanto você bebeu até agora hoje, {n}? Se precisou pensar, já sabe a resposta.',
+    'Tem prova de que boca seca derruba o foco. Gole agora, foco depois.',
   ],
   lunch: [
-    'Já tá dando a hora do almoço, {n}. Vai almoçar, hein! Não pula refeição 🍽️',
-    'Hora de comer! Para um pouquinho e almoça com calma 🍽️',
-    'Almoçou já? Saco vazio não para em pé 😄 Vai comer 🍽️',
+    'Tá na hora do almoço, {n}. Come sentado e longe da tela, nem que seja por 15 minutos 🍽️',
+    'Pular o almoço vira mau humor às 15h. Para um pouco e come direito, {n}.',
+    'Almoço não é intervalo entre duas tarefas: é a tarefa agora 🍽️',
+    'O que tem pra hoje no prato, {n}? Capricha que a tarde é longa.',
   ],
   dinner: [
-    'Já jantou, {n}? Come alguma coisa boa e descansa 🍽️',
-    'Hora de jantar! Você merece uma pausa depois do dia de hoje 🍽️',
+    'Janta com calma hoje, {n}. O dia já cobrou o suficiente 🍽️',
+    'Hora de fechar a cozinha do dia: janta e desacelera, {n}.',
+    'Jantar leve, cabeça leve, sono melhor. Bora, {n}?',
   ],
   night: [
-    'Você foi bem hoje, {n}. Descansa, que amanhã tem mais 🌙',
-    'Hora de desacelerar. Deixa o celular de lado e descansa 🌙',
-    'Orgulho de você por mais um dia vencido, {n}. Boa noite 🌙',
+    'Fecha as abas do dia, {n}. O que ficou, amanhã eu te lembro 🌙',
+    'Você aguentou o dia inteiro, {n}. Agora o compromisso é descansar 🌙',
+    'Antes de dormir: uma coisa boa que aconteceu hoje. Pensa nela e apaga a luz.',
+    'Celular longe da cama hoje, combinado? Eu cuido da agenda enquanto você dorme 🌙',
   ],
   motivation: [
-    'Você é melhor do que imagina, {n}. Nunca esquece disso 💜',
-    'Confia no seu processo. O que é seu está guardado 🙏',
-    'Você tem potencial demais, {n}. Bora usar um pouco dele agora 💪',
-    'Respira. Você dá conta. Sempre deu 💜',
-    'Pequenas vitórias também contam. Comemora cada uma 🎉',
-    'Feito é melhor que perfeito. Bora fazer acontecer 💪',
-    'Você é {lindo} por dentro e por fora, {n}. Se valoriza 💜',
-    'Deus está contigo em cada detalhe do seu dia 🙏',
-    'Quem planta constância colhe resultado. Continua 🌱',
-    'Não se compara com ninguém. Seu tempo é seu 💜',
-    'Você já venceu coisa muito mais difícil que isso, {n} 💪',
-    'Seja gentil com você hoje. Você está fazendo o seu melhor 💜',
-    'Sorri um pouco, {n}. Você tem muitos motivos 😊',
-    'Acredita em você como eu acredito 💜',
-    'O dia não acabou. Ainda dá tempo de fazer algo incrível ✨',
+    'Você riscou coisa hoje que ninguém viu, {n}. Eu vi 👀',
+    'Quem marca na agenda já está um passo na frente de quem só pensa em fazer.',
+    'Nem todo dia vai ser 100%. Os dias de 60% também te levam pra frente, {n}.',
+    'O que parecia enorme semana passada hoje você já resolve sem pensar. Isso é crescer.',
+    'Você é {lindo}, {n}. E não é só por fora, tá?',
+    'A pessoa que você quer ser daqui a 6 meses está sendo construída nos seus dias comuns.',
+    'Lembra daquilo que você achou que não ia dar conta? Deu. Vai dar de novo.',
+    'Hoje o mínimo bem feito já conta como vitória, {n}.',
+    'Ninguém te cobra mais do que você mesmo(a). Pega um pouco mais leve hoje 💜',
+    'Disciplina é só lembrar do que você quer quando a preguiça bater. Por isso eu tô aqui 😉',
+    'Seu jeito de fazer as coisas é único, {n}. Não precisa copiar o ritmo de ninguém.',
   ],
   counsel: [
     'Como você tá de verdade hoje, {n}? Se algo pesou, tudo bem. Respira e vai no seu ritmo 💜',
@@ -133,10 +131,11 @@ const T = {
     'Já faz um tempinho que você não passa aqui, {n}. Bora dar uma conferida no dia? 👀',
   ],
   selfcare: [
-    'Dá uma alongada rápida e arruma a postura, {n} 🧘',
-    'Faz uma pausa de 5 minutinhos. Respira fundo 3 vezes 🌿',
-    'Já tomou um ar hoje? Dá uma volta rapidinha 🌿',
-    'Descansa os olhos da tela um pouco, {n} 👀',
+    'Ombro grudado na orelha? Solta ele. Agora o outro, {n} 🧘',
+    'Olha pra algo bem longe da tela por 20 segundos. Seu olho agradece 👀',
+    'Levanta, estica os braços pro alto e dá uma volta no cômodo. 60 segundos.',
+    'Inspira contando até 4, segura 4, solta em 4. Duas vezes e volta pro jogo.',
+    'Dá uma checada na postura agora mesmo, {n}. Pegou, né? 😄',
   ],
 };
 /* hábitos do dia a dia, de acordo com a hora (escovar os dentes, arrumar a cama, ler...) */
@@ -154,8 +153,8 @@ const HABITS = [
   [19, 23, 'Faz seu cuidado da noite: banho, pele, cabelo... você merece esse carinho 🧴'],
   [20, 23, 'Deixa o celular longe da cama hoje. O sono vem melhor 📵'],
 ];
-const OPENERS = ['Ei, {n}!', 'Opa, passando aqui:', 'Ô {n},', 'Só um toque de amigo:', 'Olha só,', 'Psiu, {n}!', 'Rapidinho:', 'Ei, {campeao},', 'Fala, {n}!', 'Lembrete de quem torce por você:'];
-const CLOSERS = ['Tô contigo 💜', 'Bora! 💪', 'Você consegue.', 'Confia.', 'Orgulho de você.', 'Conta comigo.', 'Vai dar certo 🙏', 'Um passo de cada vez.', 'Você é importante, viu?', 'Segue firme!'];
+const OPENERS = ['Ei, {n}!', 'Ô {n},', 'Psiu, {n}!', 'Rapidinho:', 'Fala, {n}!', 'Olha só,', 'Plim! 🔔', '{n}, escuta essa:'];
+const CLOSERS = ['Tô de olho 👀', 'Conta comigo.', 'Depois me conta 😉', 'Eu lembro do resto.', 'Fechou?', 'Valeu, {n}!'];
 const pick = (a, seed) => a[Math.abs(seed) % a.length];
 const fill = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
 /* palavras no gênero que a pessoa escolheu na ficha: feminino, masculino ou neutro */
@@ -392,9 +391,9 @@ const AI_MODELS = ['@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/meta/llama-3
 const KIND_TASK = {
   morning: 'Mensagem de bom dia carinhosa e animadora, que faça a pessoa se sentir importante. Se ela tiver coisas hoje, cite 1 ou 2 com leveza.',
   night: 'Mensagem de boa noite acolhedora: reconheça o esforço do dia, diga que ela foi bem e que pode descansar.',
-  lunch: 'Lembre com carinho que está na hora de almoçar e de fazer uma pausa de verdade.',
+  lunch: 'Lembre que é hora do almoço de um jeito original e específico (comer longe da tela, não pular refeição pra não ficar de mau humor à tarde). Sem frases batidas.',
   dinner: 'Lembre com carinho de jantar e desacelerar.',
-  water: 'Lembre de beber água de um jeito divertido e cuidadoso (varie: copo, garrafinha, hidratação, cabeça boa).',
+  water: 'Lembre de tomar água de um jeito original: uma observação concreta (o copo do lado, a sede que vira cansaço às 16h, um desafio de 3 goles). Nunca diga "beba água" nem "hidrate-se".',
   agenda: 'Lembre a pessoa disto da agenda pessoal dela, como um amigo que se importa e dá aquela força: ',
   verse: 'Escreva UMA frase curta e acolhedora para apresentar o versículo (sem repetir o versículo).',
   motivation: 'Mensagem de ânimo e autoestima, sincera e específica (não genérica), como um amigo próximo ou conselheiro que acredita muito nela.',
@@ -415,7 +414,7 @@ export async function humanize(env, msg, p, recent, br) {
   const g = p.prefs?.pronoun === 'f' ? { dele: 'dela', o: 'a', ele: 'ela' } : p.prefs?.pronoun === 'm' ? { dele: 'dele', o: 'o', ele: 'ele' } : { dele: 'dele(a)', o: 'o(a)', ele: 'ele(a)' };
   const sys = `Você escreve notificações de celular em português do Brasil para ${p.name}${p.prefs?.pronoun === 'f' ? ' (mulher; use o feminino)' : p.prefs?.pronoun === 'm' ? ' (homem; use o masculino)' : ' (use linguagem neutra, sem marcar gênero)'}, como o melhor amigo ${g.dele} — alguém que se importa de verdade, conselheiro, que levanta a autoestima e a moral.${p.prefs?.faith === false || (p.prefs?.religion && (RELIGIONS[p.prefs.religion] || {}).fam === 'secular') ? ' Não fale de religião nem de Deus.' : p.prefs?.religion ? ` A religião da pessoa é ${RELIGIONS[p.prefs.religion]?.label || 'cristã'}: se falar de fé, respeite SÓ essa tradição.` : ' Pode citar fé em Deus com naturalidade.'}${p.mind ? ` Sobre a pessoa: ${mindBrief(p.mind)}.` : ''}${p.age ? ` Ela tem por volta de ${p.age} anos: use referências e jeito de falar dessa idade.` : ''}
 ${tone} ${work}
-Estilo: humano, caloroso, informal, como mensagem de WhatsApp de um amigo. Frases curtas. No máximo 1 ou 2 emojis. Nunca soe robótico, nunca use "lembrete:" seco, não use aspas, não repita frases prontas.
+Estilo: humano, caloroso, informal, como mensagem de WhatsApp de um amigo espirituoso. Frases curtas. No máximo 1 emoji. Nunca soe robótico, nunca use "lembrete:" seco, não use aspas. PROIBIDO frases batidas de autoajuda e de app: "saco vazio não para em pé", "beba água", "hidrate-se", "seu corpo agradece", "um passo de cada vez", "você é capaz", "você consegue", "foco, força e fé", "bora lá", "não desista", "acredite em você". Seja específico, com uma imagem concreta, uma observação esperta ou um desafio pequeno — como quem conhece a pessoa.
 Agora são ${String(br.h).padStart(2, '0')}h${String(br.m).padStart(2, '0')} (${['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][br.wd]}).
 ${today ? `Coisas de hoje na agenda pessoal: ${today}.` : 'Hoje a agenda pessoal está livre.'}
 NÃO repita nem parafraseie estas mensagens recentes: ${(recent || []).slice(-8).join(' | ') || '—'}

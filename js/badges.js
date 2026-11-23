@@ -143,7 +143,7 @@ export const tierOf = (level) => [...TIERS].reverse().find((t) => level >= t.fro
 /* brasão do nível (o número fica no centro) */
 /* arte nova (pacote "conquista"): cada brasão é uma imagem; não conquistado = preto e branco com cadeado */
 const pad3 = (n) => String(n).padStart(3, '0');
-const artImg = (src, size, opts, alt) => `<span class="bart${opts.locked ? ' is-locked' : ''}" style="--s:${size}px"><img src="${src}" alt="${alt || ''}" width="${size}" height="${size}" loading="lazy" decoding="async" draggable="false">${opts.locked ? '<i class="bart__lock" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></i>' : ''}</span>`;
+const artImg = (src, size, opts, alt) => `<span class="bart${opts.locked ? ' is-locked' : ''}" style="--s:${size}px"><img src="${src}" alt="${alt || ''}" width="${size}" height="${size}" decoding="async" draggable="false" onerror="this.onerror=null;setTimeout(()=>{this.src=this.src.split('?')[0]+'?r='+Date.now()},1200)">${opts.locked ? '<i class="bart__lock" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></i>' : ''}</span>`;
 export const crestSrc = (level) => `media/emblemas/brasoes/nivel-${pad3(tierOf(level).from)}.webp`;
 export const crest = (level, size = 96, opts = {}) => artImg(crestSrc(level), size, opts, tierOf(level).name());
 

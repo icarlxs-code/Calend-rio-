@@ -137,6 +137,9 @@ function syncWork() {
   return true;
 }
 function render() {
+  // proteção: se a abertura não terminou por algum motivo, termina aqui (o fundo branco dela nunca fica preso na tela)
+  clearTimeout(window.__introGuard);
+  window.__introGuard = setTimeout(() => { const de = document.documentElement, it = document.getElementById('intro'); if (!de.classList.contains('intro-done') && (!it || it.classList.contains('is-gone') || !it.isConnected || getComputedStyle(it).opacity === '0')) { de.classList.add('intro-done'); } else if (!de.classList.contains('intro-done') && window.PautaIntro) window.PautaIntro.finish(); }, 9000);
   // mudou a profissão do espaço: refaz a barra de abas (o nome da aba muda)
   if (syncWork() && document.getElementById('view')) shell();
   const view = document.getElementById('view');
@@ -169,7 +172,7 @@ function render() {
   if (tb) (view.querySelector('.page') || view).insertAdjacentHTML('afterbegin', tb);
   bindSwipes();
   bindStrip(view);
-  if (store.user && !window.__snhTried) { window.__snhTried = 1; import('./mascote.js').then((m) => m.start()).catch(() => {}); }
+  if (store.user && !window.__snhTried) { window.__snhTried = 1; import('./mascote.js').then((m) => m.start()).catch(() => {}); setTimeout(() => import('./cache.js').then((m) => m.aqueceEmblemas()), 6000); }
   // stories dos amigos no topo do Hoje (Trabalho e Pessoal), como no Instagram/WhatsApp
   if (store.user && store.mode === 'cloud' && (personalMode ? (ui.ptab || 'p-hoje') === 'p-hoje' : ui.tab === 'hoje')) {
     import('./stories.js').then((m) => {
@@ -221,6 +224,12 @@ function setTab(tab) {
 
 /* ---------- ações (delegação de cliques) ---------- */
 const actions = {
+  'snh-toggle': async () => {
+    const M = await import('./mascote.js'); let off = false;
+    try { off = localStorage.getItem('lembra.companheiroOff') === '1'; off ? localStorage.removeItem('lembra.companheiroOff') : localStorage.setItem('lembra.companheiroOff', '1'); } catch { /* ok */ }
+    if (off) { M.start(); toast('O Lembra voltou! 👋'); } else { M.stop(); toast('Lembra escondido. Ele continua cuidando da sua agenda 😉'); }
+    render();
+  },
   'ia-toggle': async () => {
     const m = await import('./ia-consent.js');
     if (m.iaStatus() === true) { await m.setIa(false); toast('IA desativada: nada mais é enviado para ela'); }
@@ -659,7 +668,8 @@ function requirePhoto(tries = 0) {
     if (!f) return;
     const err = w.querySelector('[data-err]');
     try {
-      const photo = await resizeImage(f, 256);
+      const photo = await (await import('./views/profile.js')).cropper(f); // recortar e posicionar antes de salvar
+      if (!photo) return;
       w.querySelector('[data-pic]').innerHTML = `<img src="${photo}" alt="">`;
       // não mexe no nome: o "me.name" é o apelido e apagaria o nome completo da ficha
       await saveMyProfile({ ...(store.profile?.name ? {} : { name: me.name }), photo, color: me.color });

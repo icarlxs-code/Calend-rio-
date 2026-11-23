@@ -237,18 +237,26 @@ function falas(c) {
   if (desistiu && Date.now() - desistiu < 60000) out.push({ k: 'desistiu', t: pick(['Fechou sem salvar? Se lembrar depois, é só me chamar 😉', 'Esqueceu o que ia marcar? Acontece! Quer tentar de novo?']), m: 'desconfiado', gesto: 'pensa', ctx: 3, acoes: [{ label: 'Tentar de novo', go: agendaAqui }, { label: 'Deixa' }] });
 
   /* hora do dia */
-  if (c.h >= 5 && c.h < 10) out.push({ k: 'manha', t: pick([`Bom dia${c.primeiro}! ☀️ Bora começar leve?`, 'Café tomado? Então bora ☕', 'Manhã é ótima pra riscar o mais difícil primeiro 💪']), m: 'acena', tod: 1 });
-  if (c.h >= 11 && c.h < 14) out.push({ k: 'almoco', t: pick(['Já almoçou? Saco vazio não para em pé 🍽️', 'Pausa pro almoço também é compromisso 😋']), m: 'feliz', tod: 1 });
-  if (c.h >= 14 && c.h < 17) out.push({ k: 'tarde', t: pick(['Tarde de produtividade? Eu acredito em você 💪', 'Aquela moleza da tarde… bebe uma água 💧']), m: 'feliz', tod: 1 });
-  if (c.h >= 21 || c.h < 5) out.push({ k: 'noite', t: pick(['Já já é hora de descansar 🌙', 'Deixa o amanhã comigo. Eu lembro 😴']), m: 'sono', tod: 1 });
+  const primeiro = c.pend[0] ? q(c.pend[0].title) : '';
+  if (c.h >= 5 && c.h < 10) out.push({ k: 'manha', t: pick([
+    primeiro ? `Bom dia${c.primeiro}! Primeira da lista: ${primeiro}. Vai nela antes do celular te distrair ☀️` : `Bom dia${c.primeiro}! Agenda limpinha… quer colocar alguma coisa nela? ☀️`,
+    `Acordei antes de você${c.primeiro}. Mentira, eu nem durmo 😅 Bom dia!`,
+    c.pend.length > 2 ? `${c.pend.length} coisas hoje. Começa pela que dá mais preguiça: o resto fica fácil 😏` : 'Manhã é o horário nobre do cérebro. Usa ela pro que importa 🧠',
+  ]), m: 'acena', tod: 1 });
+  if (c.h >= 11 && c.h < 14) out.push({ k: 'almoco', t: pick(['Almoço longe da tela, combinado? Até eu desligo um pouco 🍽️', 'Pular almoço vira mau humor às 15h. Eu já vi isso acontecer 😬', 'Hora de comer! Depois me conta o que teve de bom no prato 🍽️']), m: 'feliz', tod: 1 });
+  if (c.h >= 14 && c.h < 17) out.push({ k: 'tarde', t: pick([
+    c.pend.length ? `Tarde é traiçoeira: parece que sobra tempo e não sobra. Ainda tem ${c.pend.length === 1 ? q(c.pend[0].title) : `${c.pend.length} coisas`} 👀` : 'Tarde livre na agenda? Que raridade. Aproveita bem 😌',
+    'Bateu a moleza das 15h? Levanta, estica e volta. Eu espero aqui 🧘',
+  ]), m: 'feliz', tod: 1 });
+  if (c.h >= 21 || c.h < 5) out.push({ k: 'noite', t: pick(['Fecha as abas do dia. O que ficou, amanhã eu te cutuco 🌙', c.amanha ? `Amanhã tem ${c.amanha}. Deixa que eu te lembro, pode dormir tranquilo(a) 😴` : 'Amanhã tá livre por enquanto. Dorme sem culpa 😴']), m: 'sono', tod: 1 });
 
   /* papo leve (sempre disponível, com pouco peso) */
   [
     ['oi', `Oi${c.primeiro}! Quer agendar alguma coisa?`, 'acena', [{ label: 'Sim', go: agendaAqui }, { label: 'Não' }]],
     ['marcar', `Tá precisando marcar algo${c.primeiro}?`, 'feliz', [{ label: 'Sim', go: agendaAqui }, { label: 'Agora não' }]],
-    ['agua', 'Bebe uma água 💧 Eu sou o Lembra, não posso deixar passar!', 'feliz'],
-    ['forte', `Você é mais forte do que imagina${c.primeiro} 💪`, 'amor'],
-    ['respira', 'Respira fundo. Um passo de cada vez 🌿', 'sono'],
+    ['agua', 'Teu copo tá aí do lado te olhando faz um tempão 👀', 'desconfiado'],
+    ['forte', `Sabe o que eu reparei${c.primeiro}? Você sempre volta. Mesmo nos dias ruins 🧡`, 'amor'],
+    ['respira', 'Ombro grudado na orelha? Solta ele. Agora o outro 😌', 'sono'],
     ['olho', 'Tá fazendo o quê? Eu tô de olho 👀', 'desconfiado'],
     ['marcou', 'Toda vez que você marca algo, eu fico feliz 🧡', 'amor'],
     ['sino', 'Sabia que eu sou um sino? Por isso vivo te dando um toque 🔔', 'feliz'],
@@ -421,7 +429,7 @@ function onTap() {
 }
 
 /* sai andando e aparece de novo, às vezes espiando e às vezes com algo a dizer */
-function sai() { if (!B || falando() || livre || arr) return; state('away', pick(['l', 'r'])); }
+function sai() { if (!B || falando() || arr) return; state('away', pick(['l', 'r'])); }
 function volta() {
   if (!B) return;
   fingindo = false;
@@ -436,7 +444,7 @@ function ciclo() {
   if (!B) return;
   if (B.dataset.st === 'away') { spyT = setTimeout(() => { volta(); ciclo(); }, R(15, 60) * 1000); return; }
   spyT = setTimeout(() => {
-    if (!B || document.hidden || blocked() || falando() || livre || arr) return ciclo();
+    if (!B || document.hidden || blocked() || falando() || arr) return ciclo();
     if (Math.random() < 0.5) { // espia pela borda
       const side = pick(['l', 'r']); state('spy', side); setMood(el(), pick(['desconfiado', 'feliz', 'surpreso']));
       setTimeout(() => { if (Math.random() < 0.6) balao({ t: pick(SPY) }, 2600); else act(el(), pick(['sim', 'olhaLados', 'pisca'])); }, 900);
@@ -496,23 +504,31 @@ const safe = () => {
 };
 const limites = () => { const [st, sb] = safe(); return { x0: 2, x1: innerWidth - FIG - 2, y0: st + 36, y1: innerHeight - FIGH - 4 - sb }; };
 const cantoXY = () => { const [, sb] = safe(); return { x: innerWidth - 6 - FIG, y: innerHeight - sb - 76 - FIGH }; };
-const lePos = () => { try { const p = JSON.parse(localStorage.getItem(POSK) || 'null'); return p && p.fx >= 0 && p.fy >= 0 ? p : null; } catch { return null; } };
-const gravaPos = () => { try { if (livre) localStorage.setItem(POSK, JSON.stringify({ fx: livre.x / innerWidth, fy: livre.y / innerHeight })); else localStorage.removeItem(POSK); } catch { /* ok */ } };
+/* posição escolhida: o lado (esquerda/direita) e a altura. Ele fica ali escondidinho na borda, como sempre */
+const lePos = () => { try { const p = JSON.parse(localStorage.getItem(POSK) || 'null'); if (!p || !(p.fy >= 0)) return null; return { side: p.side || (p.fx < 0.5 ? 'l' : 'r'), fy: p.fy }; } catch { return null; } };
+const gravaPos = () => { try { if (livre) localStorage.setItem(POSK, JSON.stringify({ side: livre.side, fy: livre.y / innerHeight })); else localStorage.removeItem(POSK); } catch { /* ok */ } };
 const rig = () => rigOf(el());
-function poeLivre(x, y, desde) {
+const bordaX = (side) => (side === 'l' ? 6 : innerWidth - 6 - FIG);
+/* enquanto está sendo carregado: posição livre na tela */
+function pos(x, y) {
   if (!B) return;
-  livre = { x, y, em: desde || (livre && livre.em) || Date.now() };
-  B.classList.add('is-free'); B.style.left = `${Math.round(x * 10) / 10}px`; B.style.top = `${Math.round(y * 10) / 10}px`;
+  B.style.left = `${Math.round(x * 10) / 10}px`; B.style.top = `${Math.round(y * 10) / 10}px`;
   B.dataset.side = x + FIG / 2 < innerWidth / 2 ? 'l' : 'r';
+  B.classList.toggle('bub-baixo', y < 170);
+}
+/* encostado na borda escolhida, na altura escolhida */
+function encosta(side, y, desde) {
+  if (!B) return;
+  livre = { side, y, em: desde || (livre && livre.em) || Date.now() };
+  B.classList.add('is-free'); B.style.left = ''; B.style.top = `${Math.round(y)}px`; B.dataset.side = side;
   B.classList.toggle('bub-baixo', y < 170);
 }
 function voltaCanto() {
   livre = null; gravaPos();
   if (!B) return;
-  B.classList.remove('is-free', 'bub-baixo'); B.style.left = B.style.top = ''; B.dataset.side = 'r';
+  B.classList.remove('is-free', 'is-drag', 'bub-baixo'); B.style.left = B.style.top = ''; B.dataset.side = 'r';
 }
-const zona = (x, y) => { const cx = x + FIG / 2, cy = y + FIGH / 2, W = innerWidth, H = innerHeight;
-  return cy < H * 0.3 ? 'topo' : cy > H * 0.72 ? 'baixo' : cx < W * 0.3 ? 'esq' : cx > W * 0.7 ? 'dir' : 'meio'; };
+const zona = (side, y) => { const cy = y + FIGH / 2, H = innerHeight; return cy < H * 0.3 ? 'topo' : cy > H * 0.72 ? 'baixo' : side === 'l' ? 'esq' : 'dir'; };
 
 /* falas (muitas, para nunca soar repetido; cada grupo evita a última dita) */
 const F = {
@@ -534,7 +550,6 @@ const F = {
   baixo: ['Aqui embaixo é bem tranquilo 😌', 'Pertinho dos botões… dica, hein? 😉', 'Pé no chão, como deve ser 🦶', 'Aqui eu fico de olho no que você vai marcar ✍️'],
   esq: ['Lado esquerdo, lado do coração 🧡', 'Cantinho novo, vida nova ✨', 'Gostei daqui. Sombra e água fresca 🌴'],
   dir: ['Ok, lado direito. Sou um sino de direita… digo, do lado direito 😅', 'Aqui tá ótimo, obrigado 🙏', 'Bom lugar! Bem pertinho de você 🧡'],
-  meio: ['No meio de tudo! Eu adoro ser o centro das atenções 💅', 'Bem no meio da sua tela. Agora você não me esquece 😏', 'Centro da festa! 🎉'],
   lugar: ['Hmm… gostei daqui. Vista boa 👀', 'Novo escritório! 🏢', 'Ok, me mudei. Avisa o correio 📮', 'Aqui tá bom. Pode deixar que eu cuido 🔔', 'Lugar novo, mesma memória de elefante 🐘'],
   rebelde: ['Não… eu não vou ficar aqui onde você me colocou. 😤', 'Aqui? Nem pensar. Vou voltar pro meu cantinho! 😤', 'Não gostei. Tchau! 😤'],
   casa: ['Aqui é o meu cantinho. 😌', 'Pronto. Lar, doce lar 🏠', 'Bem melhor. 😏'],
@@ -574,7 +589,7 @@ function arrastavel(fig) {
     arr = null;
   };
   fig.addEventListener('pointerup', fim); fig.addEventListener('pointercancel', fim);
-  addEventListener('resize', () => { if (livre && !arr) { const L = limites(); poeLivre(cl(livre.x, L.x0, L.x1), cl(livre.y, L.y0, L.y1)); } });
+  addEventListener('resize', () => { if (livre && !arr) { const L = limites(); encosta(livre.side, cl(livre.y, L.y0, L.y1)); } });
 }
 
 function comeca(fig, ev) {
@@ -582,19 +597,19 @@ function comeca(fig, ev) {
   const r = fig.getBoundingClientRect();
   const x = r.left + r.width / 2 - FIG / 2, y = r.top + r.height / 2 - FIGH / 2;
   const st = B.dataset.st, sd = B.dataset.side;
-  const rot0 = livre ? 0 : st === 'rest' ? (sd === 'l' ? 14 : -14) : st === 'spy' ? (sd === 'l' ? 62 : -62) : 0;
+  const rot0 = st === 'rest' ? (sd === 'l' ? 14 : -14) : st === 'spy' ? (sd === 'l' ? 62 : -62) : 0;
   const ox = cl(arr.x0 - x, 6, FIG - 6), oy = cl(arr.y0 - y, 4, FIGH - 4);
   // centro de massa (um pouco abaixo do meio do sino); se pegou por baixo, o corpo não vira de cabeça pra baixo
   const cmx = FIG / 2 - ox, cmy = Math.max(22, FIGH * 0.56 - oy);
   const L = Math.max(26, Math.hypot(cmx, cmy)), phi0 = Math.atan2(cmx, cmy) * 0.75;
   const psi0 = (rot0 * Math.PI) / 180;
   const hr = new Date().getHours();
-  const era = { falava: falando() && B.querySelector('.snhbud__bub').classList.contains('is-in'), madruga: hr >= 23 || hr < 5, antes: livre ? { x: livre.x, y: livre.y } : null, sono: fingindo || el()?.dataset.snh === 'sono', recente: livre && Date.now() - livre.em < 8000, antigo: livre && Date.now() - livre.em > 20 * 60e3 };
+  const era = { falava: falando() && B.querySelector('.snhbud__bub').classList.contains('is-in'), madruga: hr >= 23 || hr < 5, antes: livre ? { side: livre.side, y: livre.y } : null, sono: fingindo || el()?.dataset.snh === 'sono', recente: livre && Date.now() - livre.em < 8000, antigo: livre && Date.now() - livre.em > 20 * 60e3 };
   Object.assign(arr, { on: true, x, y, ox, oy, L, phi0, th: phi0 - psi0, om: 0, vx: 0, vy: 0, ax: 0, ay: 0, lt: performance.now(), quieto: performance.now(),
     agito: 0, viradas: [], picoVir: 0, totVir: 0, sx: 0, sy: 0, dist: 0, era, falou: 0, beira: false, parou: false, bateu: false, vmax: 0 });
   clearTimeout(hideT); clearTimeout(holdT); busyUntil = 0; fingindo = false; clearTimeout(fingeT);
   B.querySelector('.snhbud__bub').classList.remove('is-in');
-  B.classList.add('is-drag'); poeLivre(x, y, livre?.em);
+  B.classList.add('is-drag'); pos(x, y);
   B.dataset.st = 'up';
   fig.style.transformOrigin = `${ox}px ${oy}px`;
   const rg = rig(); rg && rg.pega();
@@ -626,6 +641,7 @@ function passo(now) {
   const pvx = arr.vx, pvy = arr.vy;
   arr.vx += (rvx - arr.vx) * kv; arr.vy += (rvy - arr.vy) * kv;
   arr.ax += (cl((arr.vx - pvx) / dt, -26000, 26000) - arr.ax) * ka; arr.ay += (cl((arr.vy - pvy) / dt, -26000, 26000) - arr.ay) * ka;
+  if (arr.voo && arr.enc) { const k = Math.min(1, (now - arr.enc.t0) / 420), e = 1 - Math.pow(1 - k, 3); nx = arr.enc.x0 + (arr.enc.x1 - arr.enc.x0) * e; ny = arr.y; } // desliza até a borda
   arr.dist += Math.hypot(nx - arr.x, ny - arr.y); arr.x = nx; arr.y = ny;
   const sp = Math.hypot(arr.vx, arr.vy); arr.vmax = Math.max(arr.vmax, sp);
   if (!arr.voo) { arr.hist = (arr.hist || []).filter((h) => now - h[0] < 90); arr.hist.push([now, arr.vx, arr.vy, sp]); }
@@ -651,7 +667,7 @@ function passo(now) {
   arr.viradas = arr.viradas.filter((t) => now - t < 1500); arr.picoVir = Math.max(arr.picoVir, arr.viradas.length);
   arr.agito += Math.abs(om0) * dt + (arr.viradas.length >= 2 ? dt * 1.2 : 0);
   B.style.left = `${nx.toFixed(1)}px`; B.style.top = `${ny.toFixed(1)}px`;
-  if (!arr.voo) { B.dataset.side = nx + FIG / 2 < innerWidth / 2 ? 'l' : 'r'; B.classList.toggle('bub-baixo', ny < 170); }
+  if (!arr.voo || arr.enc) { B.dataset.side = arr.enc ? arr.enc.side : nx + FIG / 2 < innerWidth / 2 ? 'l' : 'r'; B.classList.toggle('bub-baixo', ny < 170); }
   fig.style.transform = calmo() ? '' : `rotate(${((psi * 180) / Math.PI).toFixed(2)}deg)`; // "reduzir movimento": arrasta sem balançar
   const parado = (now - arr.quieto) / 1000;
   const rg = rig();
@@ -674,7 +690,7 @@ function passo(now) {
     const gsp = Math.hypot(arr.gvx, arr.gvy);
     if (rg && rg.dr && gsp < 240) rg.solta({ vx: arr.gvx * 3, vy: arr.gvy * 3, tonto: arr.tonto });
     if (gsp < 14 && !arr.reagiu) { arr.reagiu = true; reage(arr); }
-    if (gsp < 14 && Math.abs(psi) < 0.012 && Math.abs(arr.om) < 0.06) return pousou();
+    if (gsp < 14 && arr.enc && now - arr.enc.t0 > 440 && Math.abs(psi) < 0.012 && Math.abs(arr.om) < 0.06) return pousou();
   }
   requestAnimationFrame(passo);
 }
@@ -699,15 +715,19 @@ function pousou() {
   if (!B) return;
   const fig = B.querySelector('.snhbud__fig');
   fig.style.transform = ''; fig.style.transformOrigin = '';
-  B.classList.remove('is-drag');
   if (!a.reagiu) reage(a);
+  B.classList.remove('is-drag');
+  if (livre) encosta(livre.side, livre.y);
+  if (!falando()) state('rest');         // escondidinho na borda, como sempre
 }
 /* o que ele acha da mudança (assim que para de voar) */
 function reage(a) {
   if (!B) return;
   const Lm = limites(), x = cl(a.x, Lm.x0, Lm.x1), y = cl(a.y, Lm.y0, Lm.y1);
   const rg = rig(); if (rg && rg.dr) rg.solta({ tonto: a.tonto });
-  poeLivre(x, y, Date.now()); a.x = x; a.y = y; gravaPos();
+  const side = x + FIG / 2 < innerWidth / 2 ? 'l' : 'r';
+  a.y = y; a.enc = { t0: performance.now(), x0: a.x, x1: bordaX(side), side };   // vai deslizando pra borda mais perto
+  livre = { side, y, em: Date.now() }; gravaPos();
   const agora = Date.now(); mudancas++; solturas = solturas.filter((t) => agora - t < 30000); solturas.push(agora);
   // o que ele acha da mudança
   const fala2 = (g, m, gesto, ms) => { busyUntil = 0; B.dataset.st = 'up'; setTimeout(() => { if (!B || (arr && !arr.voo)) return; fala({ t: fraseDe(g), m }, gesto); }, ms); };
@@ -717,8 +737,8 @@ function reage(a) {
   if (a.lancou) return fala2('jogou', 'surpreso', 'nao', 300);
   if (a.durou < 0.45 && a.dist < 70) return fala2('ue', 'desconfiado', 'sobrancelha', 200);
   if (solturas.length >= 3) return fala2('ioio', 'desconfiado', 'revira', 300);
-  if (a.era.antes && Math.hypot(x - a.era.antes.x, y - a.era.antes.y) < 36 && a.dist > 80) return fala2('mesmo', 'desconfiado', 'pensa', 300);
-  const longe = Math.hypot(x - cantoXY().x, y - cantoXY().y) > 120;
+  if (a.era.antes && a.era.antes.side === side && Math.abs(y - a.era.antes.y) < 36 && a.dist > 80) return fala2('mesmo', 'desconfiado', 'pensa', 300);
+  const longe = side === 'l' || Math.abs(y - cantoXY().y) > 120;
   if (deboche || (rebelou && agora - rebelou < 10 * 60e3)) { // depois de ter se rebelado: aceita, revirando os olhos
     rebelou = 0; deboche = false;
     setTimeout(() => { if (B && !(arr && !arr.voo)) act(el(), 'revira'); }, 250);
@@ -730,21 +750,22 @@ function reage(a) {
     setTimeout(() => { if (B && !arr && livre) andaPraCasa(); }, 2600);
     return;
   }
-  const z = zona(x, y);
+  const z = zona(side, y);
   fala2(Math.random() < 0.6 ? z : 'lugar', pick(['feliz', 'amor', 'acena']), pick(['sim', 'balanca', 'pisca', 'olhaLados']), 350);
 }
 
 /* rebeldia: sai andando de volta pro canto dele */
 function andaPraCasa() {
-  const fim = cantoXY(), ini = { ...livre }, d = Math.hypot(fim.x - ini.x, fim.y - ini.y), dur = Math.min(2.6, 0.8 + d / 380);
+  const fim = cantoXY(), ini = { x: bordaX(livre.side), y: livre.y }, d = Math.hypot(fim.x - ini.x, fim.y - ini.y), dur = Math.min(2.6, 0.8 + d / 380);
   rebelou = Date.now(); deboche = true;
   const rg = rig(); rg && rg.anda(Math.sign(fim.x - ini.x) || 1, dur);
   setMood(el(), 'desconfiado');
   const t0 = performance.now();
+  B.dataset.st = 'up'; B.classList.add('is-drag'); pos(ini.x, ini.y);
   const f = (now) => {
     if (!B || arr) return;
     const k = Math.min(1, (now - t0) / 1000 / dur), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-    poeLivre(ini.x + (fim.x - ini.x) * e, ini.y + (fim.y - ini.y) * e - Math.abs(Math.sin(k * Math.PI * dur * 2.6)) * 3);
+    pos(ini.x + (fim.x - ini.x) * e, ini.y + (fim.y - ini.y) * e - Math.abs(Math.sin(k * Math.PI * dur * 2.6)) * 3);
     if (k < 1) return requestAnimationFrame(f);
     voltaCanto(); busyUntil = 0;
     setTimeout(() => { if (B && !arr) fala({ t: fraseDe('casa'), m: 'desconfiado' }, 'cinico'); }, 350);
@@ -768,8 +789,9 @@ function avisaVisita() {
 }
 
 /* ---------- API ---------- */
+export const companheiroOn = () => { try { return mascotOn() && localStorage.getItem('lembra.companheiroOff') !== '1'; } catch { return mascotOn(); } };
 export function start() {
-  if (B || !mascotOn()) { if (B && !mascotOn()) stop(); return; }
+  if (B || !companheiroOn()) { if (B && !companheiroOn()) stop(); return; }
   document.documentElement.classList.add('snh-theme');
   B = document.createElement('div');
   B.className = 'snhbud';
@@ -778,7 +800,7 @@ export function start() {
   document.body.appendChild(B);
   B.querySelector('.snhbud__fig').addEventListener('click', onTap);
   arrastavel(B.querySelector('.snhbud__fig'));
-  { const p = lePos(); if (p) { const L = limites(); poeLivre(cl(p.fx * innerWidth, L.x0, L.x1), cl(p.fy * innerHeight, L.y0, L.y1)); } }
+  { const p = lePos(); if (p) { const L = limites(); encosta(p.side, cl(p.fy * innerHeight, L.y0, L.y1)); } }
   const guarda = () => { if (B) B.classList.toggle('is-hidden', blocked()); };
   B._mo = new MutationObserver(guarda); B._mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
   document.addEventListener('focusin', guarda); document.addEventListener('focusout', () => setTimeout(guarda, 50));

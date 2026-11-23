@@ -10,6 +10,7 @@ import { icon } from '../icons.js';
 import { esc } from '../utils.js';
 import { sininho, alive, act, vivo } from '../sininho.js';
 import { mascotOn } from '../mascote.js';
+import { meuStory, openViewer, comoPostar, refreshFeed, fotoPendente, postStory } from '../stories.js';
 import { CONFIG } from '../../config.js';
 import { professionFor } from '../../functions/catalog.js';
 
@@ -87,31 +88,44 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
     };
     return `${sheetHead(esc((me.name || 'Perfil').split(' ')[0]), { left: '<button class="btn-text" data-close>Fechar</button>', right: '<button class="btn-text" data-edit>Editar</button>' })}
     <div class="prof">
-      <div class="prof__top">
-        <button class="prof__pic${store.billing?.plan === 'lifetime' && store.billing?.vip ? ' prof__pic--vip' : ''}" data-pic aria-label="Foto do perfil" style="--ring:${ring}">
-          <span class="prof__ring">${avatar(store.me, 96)}</span>
-          <span class="prof__cam">${icon('camera', 15)}</span>
-        </button>
-        ${mascotOn() ? `<span class="prof__snh" aria-hidden="true"><i class="prof__swoosh"></i><i class="prof__risco"></i>${sininho('acena', { size: 150 })}</span>` : ''}
+      ${(() => {
+        const ms = meuStory(), o = G.offensive(), nEmb = Object.keys(st.badges).length;
+        return `<div class="prof2__head">
+        <button class="prof2__pic${ms ? (ms.stories.some((x) => !x.seen) ? ' has-story' : ' has-story is-seen') : ''}${store.billing?.plan === 'lifetime' && store.billing?.vip ? ' is-vip' : ''}" data-pic aria-label="Sua foto e seus stories">
+          <span class="prof2__ring"><span class="prof2__img">${avatar(store.me, 88)}</span></span><i class="prof2__plus">${icon('plus', 14)}</i></button>
+        <div class="prof2__right">
+          <div class="prof__name prof2__name"><b>${esc(me.name || '')}</b>${prof.phoneVerified ? `<span class="prof__ok" title="Celular confirmado">${icon('check', 11)}</span>` : ''}</div>
+          <div class="prof2__nums">
+            <div><b>${fmt(done)}</b><small>${done === 1 ? 'concluído' : 'concluídos'}</small></div>
+            <div><b>${pct}</b><small>no horário</small></div>
+            <button data-tab="emblemas"><b>${fmt(nEmb)}</b><small>${nEmb === 1 ? 'emblema' : 'emblemas'}</small></button>
+          </div>
+        </div>
       </div>
       ${store.billing?.plan === 'lifetime' && store.billing?.vip ? `<div class="prof__vipline">${icon('crown', 13)} Lembra Vitalício · Nº ${String(store.billing.vip.no).padStart(3, '0')}</div>` : ''}
-      <div class="prof__name"><b>${esc(me.name || '')}</b>${prof.phoneVerified ? `<span class="prof__ok" title="Celular confirmado">${icon('check', 11)}</span>` : ''}</div>
-      <div class="prof__stats">
-        <div><i class="prof__sic prof__sic--ok">${icon('check', 18)}</i><span><b>${fmt(done)}</b><small>${done === 1 ? 'concluído' : 'concluídos'}</small></span></div>
-        <div><i class="prof__sic prof__sic--alvo">${icon('target', 18)}</i><span><b>${pct}</b><small>no horário</small></span></div>
-        <div><i class="prof__sic prof__sic--emb">${icon('star', 18)}</i><span><b>${fmt(Object.keys(st.badges).length)}</b><small>${Object.keys(st.badges).length === 1 ? 'emblema' : 'emblemas'}</small></span></div>
+      ${prof.profession ? `<div class="prof2__job">${esc(professionFor(prof.profession, prof.pronoun))}${prof.role ? ' · ' + esc(prof.role) : ''}</div>` : ''}
+      ${prof.bio ? `<div class="prof2__bio">${esc(prof.bio)}</div>` : ''}
+      <div class="prof2__lvrow">
+        <button class="prof2__lv" data-tab="niveis">
+          <span class="prof__crest">${crest(L.level, 46)}</span>
+          <span class="prof__lvtxt"><b>Nível ${L.level} · ${esc(L.tier.name())}</b>
+            <span class="prof__bar"><i style="width:${Math.round(L.pct * 100)}%;background:${L.tier.hue}"></i></span>
+            <small>${L.level >= 100 ? 'Nível máximo! Você é lenda.' : `${fmt(L.xp - L.cur)} / ${fmt(L.next - L.cur)} XP para o nível ${L.level + 1}`}</small></span>
+        </button>
+        <button class="prof2__fire${o.days >= 30 ? ' is-blue' : o.days >= 7 ? ' is-hot' : ''}" data-tab="numeros" aria-label="Ofensiva"><span class="fire fire--sm"><i></i><i></i><i></i><i class="fire__core"></i></span><b>${o.days}</b><small>${o.days === 1 ? 'dia' : 'dias'}</small></button>
+        ${mascotOn() ? `<span class="prof2__snh" aria-hidden="true">${sininho('acena', { size: 62 })}</span>` : ''}
       </div>
-      ${prof.profession ? `<div class="prof__job">${esc(professionFor(prof.profession, prof.pronoun))}${prof.role ? ' · ' + esc(prof.role) : ''}</div>` : ''}
-      ${prof.bio ? `<div class="prof__bio">${esc(prof.bio)}</div>` : ''}
-      ${(() => { const o = G.offensive(); return o.days ? `<button class="prof__fire${o.days >= 30 ? ' is-blue' : o.days >= 7 ? ' is-hot' : ''}" data-tab="numeros"><span class="fire fire--sm"><i></i><i></i><i></i><i class="fire__core"></i></span><b>${o.days}</b><small>${o.days === 1 ? 'dia de ofensiva' : 'dias de ofensiva'}</small></button>` : ''; })()}
-      <button class="prof__lv" data-tab="niveis">
-        <span class="prof__crest">${crest(L.level, 54)}</span>
-        <span class="prof__lvtxt"><b>Nível ${L.level} · ${esc(L.tier.name())}</b>
-          <span class="prof__bar"><i style="width:${Math.round(L.pct * 100)}%;background:${L.tier.hue}"></i></span>
-          <small>${L.level >= 100 ? 'Nível máximo! Você é lenda.' : `${fmt(L.xp - L.cur)} / ${fmt(L.next - L.cur)} XP para o nível ${L.level + 1}`}</small></span>
-      </button>
-      <div class="prof__btns"><button class="btn btn--soft btn--sm" data-edit><i class="pbic pbic--e">${icon('edit', 18)}</i> Editar perfil</button><button class="btn btn--soft btn--sm" data-action="ranking"><i class="pbic pbic--r">${icon('trophy', 18)}</i> Ranking</button><button class="btn btn--soft btn--sm" data-action="friends"><i class="pbic pbic--a">${icon('users', 18)}</i> Amigos</button><button class="btn btn--soft btn--sm" data-share><i class="pbic pbic--c">${icon('share', 18)}</i> Compartilhar</button></div>
-      ${earned.length ? `<div class="prof__hl">${earned.slice(0, 8).map((b) => `<button class="prof__hlit" data-badge="${b.id}"><span>${badgeArt(b, 58)}</span><small>${esc(b.name())}</small></button>`).join('')}</div>` : ''}
+      <div class="prof2__btns">
+        <button data-edit>Editar perfil</button>
+        <button data-share>Compartilhar perfil</button>
+        <button class="is-ic" data-action="friends" aria-label="Amigos">${icon('users', 19)}</button>
+      </div>
+      <div class="prof2__hl">
+        <button class="prof2__hlit" data-meustory><span class="prof2__hlc${ms ? ' has-story' : ''}">${ms ? icon('camera', 24) : icon('plus', 26)}</span><small>${ms ? 'Seu story' : 'Novo story'}</small></button>
+        <button class="prof2__hlit" data-action="ranking"><span class="prof2__hlc is-rk">${icon('trophy', 24)}</span><small>Ranking</small></button>
+        ${earned.slice(0, 8).map((b) => `<button class="prof2__hlit" data-badge="${b.id}"><span class="prof2__hlc">${badgeArt(b, 56)}</span><small>${esc(b.name())}</small></button>`).join('')}
+      </div>`;
+      })()}
       <div class="prof__tabs" role="tablist">
         <button role="tab" class="${cur === 'emblemas' ? 'is-on' : ''}" data-tab="emblemas" aria-label="Emblemas">${icon('grid', 20)}</button>
         <button role="tab" class="${cur === 'niveis' ? 'is-on' : ''}" data-tab="niveis" aria-label="Níveis">${icon('trophy', 20)}</button>
@@ -127,7 +141,6 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
     onMount: (a) => {
       const el = a.el;
       alive();
-      { const f = el.querySelector('.prof__snh [data-snh]'); if (f) vivo(f, { aponta: el.querySelector('[data-share]'), gestos: ['pisca', 'olhaLados', 'riso', 'sobrancelha'] }); }
       { const f = el.querySelector('.ofs__snh [data-snh]'); if (f) vivo(f, { gestos: ['pisca', 'olhaLados', 'riso', 'sim'] }); }
       // os Lembras dos números: um gesto calmo de vez em quando (piscar, olhar, pensar), cada um no seu tempo
       clearInterval(a._peek);
@@ -143,11 +156,14 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
       el.querySelectorAll('[data-badge]').forEach((b) => (b.onclick = () => badgeDetail(b.dataset.badge)));
       el.querySelectorAll('[data-edit]').forEach((b) => (b.onclick = () => openEditProfile(() => a.set(html()))));
       el.querySelector('[data-pic]').onclick = () => photoActions(() => a.set(html()));
+      const msb = el.querySelector('[data-meustory]'); if (msb) msb.onclick = () => { const ms = meuStory(); if (ms) openViewer(ms.uid, () => { if (!a.closed) a.set(html()); }); else comoPostar(); };
+      { const f = el.querySelector('.prof2__snh [data-snh]'); if (f) vivo(f, { aponta: el.querySelector('[data-share]'), gestos: ['pisca', 'olhaLados', 'riso', 'sobrancelha'], cada: [4, 8] }); }
       const sh = el.querySelector('[data-share]');
       if (sh) sh.onclick = () => import('../friends.js').then((m) => m.openShareChoice());
     },
   });
   const off = G.onGame(() => { if (!api.closed) api.set(html()); else off(); });
+  if (store.mode === 'cloud') refreshFeed().then(() => { if (!api.closed) api.set(html()); }).catch(() => {}); // o anel do story na foto
   return api;
 }
 
@@ -194,30 +210,39 @@ function tilt(stage) {
 /* ---------- foto: como no WhatsApp ---------- */
 export function photoActions(after) {
   const me = store.member(store.me) || {};
+  const ms = meuStory(), fp = fotoPendente();
+  const nViews = ms ? ms.stories.reduce((t, x) => t + (x.views || 0), 0) : 0;
+  const row = (attr, ic, cls, t, sub = '') => `<button class="phm__row" ${attr}><span class="phm__ic ${cls}">${icon(ic, 21)}</span><span class="phm__t"><b>${t}</b>${sub ? `<small>${sub}</small>` : ''}</span>${icon('right', 16)}</button>`;
   const a = openSheet({
-    className: 'sheet--actions',
-    html: `<div class="asheet">
-      <div class="asheet__pic">${avatar(store.me, 72)}<b>Foto do perfil</b><small>Aparece para quem divide a agenda com você</small></div>
-      <div class="asheet__grp">
-        ${me.photo ? `<button class="asheet__b" data-view>${icon('eye', 20)} Ver foto</button>` : ''}
-        <label class="asheet__b">${icon('camera', 20)} Tirar foto<input type="file" accept="image/*" capture="user" data-file hidden></label>
-        <label class="asheet__b">${icon('image', 20)} Escolher da galeria<input type="file" accept="image/*" data-file hidden></label>
-        ${me.photo ? `<button class="asheet__b is-danger" data-del>${icon('trash', 20)} Remover foto</button>` : ''}
+    className: 'sheet--actions sheet--phm',
+    html: `<div class="phm">
+      <div class="phm__head"><span class="phm__pic${ms ? ' has-story' : ''}"><span>${avatar(store.me, 84)}</span></span><b>Sua foto e seus stories</b><small>Amigos veem sua foto, nível e stories</small></div>
+      <div class="phm__grp">
+        ${ms ? row('data-vermeus', 'eye', 'is-story', 'Ver seus stories', `${ms.stories.length} ${ms.stories.length === 1 ? 'story no ar' : 'stories no ar'} · ${nViews} ${nViews === 1 ? 'visualização' : 'visualizações'}`) : ''}
+        ${row('data-postar', 'camera', 'is-cam', ms ? 'Postar outro story' : 'Postar story', fp ? `Foto de “${esc(fp.title)}” · +${fp.P.total} XP agora` : 'Conclua algo da agenda e mostre que fez · XP em dobro')}
       </div>
-      <button class="asheet__b asheet__cancel" data-close>Cancelar</button>
+      <div class="phm__grp">
+        ${me.photo ? row('data-view', 'image', 'is-n', 'Ver foto') : ''}
+        ${me.photo ? row('data-ajusta', 'edit', 'is-n', 'Ajustar foto', 'Recortar e reposicionar') : ''}
+        <label class="phm__row"><span class="phm__ic is-n">${icon('camera', 21)}</span><span class="phm__t"><b>Tirar foto</b></span>${icon('right', 16)}<input type="file" accept="image/*" capture="user" data-file hidden></label>
+        <label class="phm__row"><span class="phm__ic is-n">${icon('image', 21)}</span><span class="phm__t"><b>Escolher da galeria</b></span>${icon('right', 16)}<input type="file" accept="image/*" data-file hidden></label>
+        ${me.photo ? row('data-del', 'trash', 'is-del', '<span class="is-danger">Remover foto</span>') : ''}
+      </div>
+      <button class="phm__cancel" data-close>Cancelar</button>
     </div>`,
     onMount: (x) => {
-      x.el.querySelectorAll('[data-file]').forEach((inp) => (inp.onchange = async () => {
-        const f = inp.files && inp.files[0];
-        if (!f) return;
-        x.close();
+      const usa = async (f) => {
         const url = await cropper(f);
         if (!url) return;
         try { await saveMyProfile({ photo: url }); toast('Foto atualizada ✓'); after && after(); }
         catch { toast('Não consegui salvar agora. Verifique a internet.'); }
-      }));
-      const v = x.el.querySelector('[data-view]');
-      if (v) v.onclick = () => { x.close(); viewPhoto(me.photo); };
+      };
+      x.el.querySelectorAll('[data-file]').forEach((inp) => (inp.onchange = () => { const f = inp.files && inp.files[0]; if (!f) return; x.close(); usa(f); }));
+      const vm = x.el.querySelector('[data-vermeus]'); if (vm) vm.onclick = () => { x.close(); openViewer(ms.uid, after); };
+      // postar: se tem algo concluído hoje, a câmera abre no mesmo toque (o navegador exige)
+      x.el.querySelector('[data-postar]').onclick = () => { x.close(); if (fp) postStory({ title: fp.title, ref: fp.ref, kind: fp.kind }); else comoPostar(); };
+      const v = x.el.querySelector('[data-view]'); if (v) v.onclick = () => { x.close(); viewPhoto(me.photo); };
+      const aj = x.el.querySelector('[data-ajusta]'); if (aj) aj.onclick = async () => { x.close(); try { const blob = await (await fetch(me.photo)).blob(); usa(new File([blob], 'foto.jpg', { type: blob.type || 'image/jpeg' })); } catch { toast('Não consegui abrir a foto atual.'); } };
       const d = x.el.querySelector('[data-del]');
       if (d) d.onclick = async () => { x.close(); try { await saveMyProfile({ photo: null }); toast('Foto removida'); after && after(); } catch { toast('Não consegui agora.'); } };
     },

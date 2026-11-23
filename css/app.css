@@ -3596,11 +3596,9 @@ body.has-stv .snhbud { display: none; }
 .sheet--fxl .agroup > .frow::after, .sheet--fxl .agroup > .frow + .frow::before { display: none; }
 .sheet--fxl .atr__bub { background: var(--fx-card); border: 1px solid var(--fx-line); }
 /* Lembra solto: a pessoa escolhe onde ele fica (arrastando) */
-.snhbud.is-free { right: auto; bottom: auto; transform: none !important; transition: opacity .3s; }
-.snhbud.is-free[data-st="away"] { opacity: 0; }
-.snhbud.is-free.is-hidden { opacity: 0; }
+.snhbud.is-free { bottom: auto; }
 .snhbud__fig { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-.snhbud.is-drag { transition: none !important; z-index: 9000; }
+.snhbud.is-drag { transition: none !important; z-index: 9000; right: auto; bottom: auto; transform: none !important; }
 .snhbud.is-drag .snhbud__fig { cursor: grabbing; filter: drop-shadow(0 16px 12px rgba(60, 20, 0, .28)); }
 .snhbud.bub-baixo .snhbud__bub { bottom: auto; top: calc(100% - 4px); transform-origin: 85% 0; }
 .snhbud.bub-baixo[data-side="l"] .snhbud__bub { transform-origin: 15% 0; }
@@ -3646,3 +3644,126 @@ body.has-stv .snhbud { display: none; }
 .cvs__depois { display: block; margin: 8px auto 0; padding: 10px 18px; border: 0; background: none; color: var(--cv-t2); font: inherit; font-weight: 700; font-size: 14.5px; cursor: pointer; }
 .cvs__fine { display: flex; align-items: center; justify-content: center; gap: 5px; margin: 4px 0 0; color: var(--cv-t2); font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { .cvs__go, .cvs__xp i, .cvs__unlock::after, .cvs__trilho i.cvs__ganho { animation: none; } }
+
+/* ===== Compartilhar (ícone à esquerda, título e explicação embaixo) ===== */
+.shch { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; }
+.shch__op { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; border: 1px solid var(--line, rgba(0,0,0,.08)); border-radius: 18px; background: var(--surface, #fff); color: var(--text); text-align: left; font: inherit; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.05); }
+.shch__op > span:last-child { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.shch__op b { font-size: 16px; } .shch__op small { color: var(--text-2); font-size: 13.5px; line-height: 1.35; }
+.shch__ic { flex: none; width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; color: #fff; }
+.shch__ic--a { background: linear-gradient(135deg, #FF8A1A, #FF5A1A); } .shch__ic--b { background: linear-gradient(135deg, #5AC8FA, #0A84FF); }
+
+/* ===== Faixa de stories (estilo Instagram) ===== */
+.ststrip { gap: 12px; padding: 8px 16px 10px; }
+.ststrip__it { width: 76px; gap: 6px; }
+.ststrip__it > .stface, .ststrip__it > .fphoto { --s: 64px !important; width: 64px; height: 64px; margin-top: 3px; box-shadow: 0 0 0 3px var(--bg, #fff); }
+.ststrip__ring { width: 74px; height: 74px; background: conic-gradient(from 210deg, #FFC21A, #FF6B1A, #FF2D7A, #B05CFF, #FFC21A); }
+.ststrip__ring.is-seen { background: var(--line-2, #D1D1D6); animation: none; }
+.ststrip__ring.is-off { border: 0; background: var(--line-2, #D1D1D6); animation: none; }
+.ststrip__plus { top: 50px; margin-left: 16px; width: 24px; height: 24px; background: #1C1C1E; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ststrip__plus { background: #FF6B1A; } }
+:root[data-theme="dark"] .ststrip__plus { background: #FF6B1A; }
+.ststrip__it small { font-weight: 600; color: var(--text-2); }
+.stface--snh { display: grid !important; place-items: center; overflow: hidden; border-radius: 50%; background: radial-gradient(circle at 50% 40%, #FFE2C8, #FFC79A) !important; }
+.stface--snh .snh { margin-top: 10px; }
+.sheet--fx .ststrip-wrap, .sheet--fx .ststrip { margin-right: 0; }
+.sheet--fx .ststrip { margin: 0 -16px; padding: 10px 16px 12px; }
+.sheet--fx .ststrip__it > .stface, .sheet--fx .ststrip__it > .fphoto, .sheet--fx .ststrip__plus { box-shadow: 0 0 0 3px var(--fx-bg); }
+.sheet--fx .ststrip__ring.is-off { background: rgba(120,70,20,.18); }
+/* anel que gira devagar em quem postou (lista de amigos e perfil) */
+.fxava.is-story { animation: stgira 5s linear infinite; }
+.fxava.is-story .fxava__in { animation: stgira 5s linear infinite reverse; }
+.fxava[data-ava] { cursor: pointer; }
+
+/* ===== Visualizador: rodapé do seu story ("Atividade") ===== */
+.stv__me { justify-content: space-between; align-items: center; padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px)); }
+.stv__me .stv__ativ { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; background: none; padding: 4px 6px; border-radius: 12px; text-align: left; }
+.stv__ativ .stv__faces { grid-row: 1 / 3; display: flex; min-width: 26px; } .stv__faces .stface { margin-left: -8px; box-shadow: 0 0 0 2px #000; } .stv__faces .stface:first-child { margin-left: 0; }
+.stv__faces:empty::before { content: ''; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.2); }
+.stv__ativ b { font-size: 14px; } .stv__ativ small { font-size: 11.5px; opacity: .75; font-weight: 600; }
+.stv__me .stv__ic { flex-direction: column; gap: 3px; background: none; padding: 4px 10px; font-size: 11px; }
+.stv__me .stv__ic small { font-size: 11px; font-weight: 700; }
+/* lista "Quem viu este story" */
+.stvw { padding: 0 16px 10px; }
+.stvw__top { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 0 16px; margin: 0 -16px 8px; border-bottom: 1px solid var(--fx-line); }
+.stvw__x { position: absolute; right: 14px; top: 4px; border: 0; background: none; color: var(--text); padding: 6px; cursor: pointer; }
+.stvw__thumb { width: 96px; height: 160px; border-radius: 12px; overflow: hidden; background: #000; box-shadow: 0 10px 24px rgba(0,0,0,.25); }
+.stvw__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.stvw__n { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; color: var(--text); }
+.stvw__t { display: inline-flex; align-items: center; gap: 4px; color: var(--fx-t2); font-size: 12.5px; }
+.stvw__h { margin: 10px 2px 8px; font-size: 18px; font-weight: 800; }
+.stvw__row { display: flex; align-items: center; gap: 12px; padding: 8px 2px; }
+.stvw__row span:last-child { display: flex; flex-direction: column; } .stvw__row b { font-size: 15.5px; } .stvw__row small { color: var(--fx-t2); font-size: 13px; }
+/* story do Lembra (novidades e dicas) */
+.stv--lembra { background: radial-gradient(120% 80% at 50% 0%, #FF9A3C, #FF5A1A 55%, #C2370C); }
+.stvl { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 0 28px 70px; text-align: center; }
+.stvl__snh { filter: drop-shadow(0 16px 26px rgba(80,20,0,.35)); margin-bottom: 6px; }
+.stvl h2 { margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -.01em; }
+.stvl p { margin: 0; font-size: 17px; line-height: 1.4; opacity: .95; max-width: 340px; }
+
+/* ===== Perfil no jeito do Instagram ===== */
+.prof2__head { display: flex; align-items: center; gap: 18px; padding: 6px 2px 4px; }
+.prof2__pic { position: relative; flex: none; border: 0; background: none; padding: 0; cursor: pointer; }
+.prof2__ring { display: block; padding: 4px; border-radius: 50%; background: var(--line-2, #D1D1D6); }
+.prof2__pic.has-story .prof2__ring { background: conic-gradient(from 210deg, #FFC21A, #FF6B1A, #FF2D7A, #B05CFF, #FFC21A); animation: stgira 5s linear infinite; }
+.prof2__pic.has-story .prof2__img { animation: stgira 5s linear infinite reverse; }
+.prof2__pic.has-story.is-seen .prof2__ring { background: var(--line-2, #D1D1D6); animation: none; } .prof2__pic.is-seen .prof2__img { animation: none; }
+.prof2__pic.is-vip .prof2__ring { background: linear-gradient(135deg, #FFD54A, #B05CFF); }
+.prof2__img { display: block; border-radius: 50%; box-shadow: 0 0 0 3px var(--surface, #fff); overflow: hidden; }
+.prof2__img .avatar { display: block; }
+.prof2__plus { position: absolute; right: 2px; bottom: 2px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #1C1C1E; color: #fff; box-shadow: 0 0 0 3px var(--surface, #fff); font-style: normal; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .prof2__plus { background: #FF6B1A; } }
+:root[data-theme="dark"] .prof2__plus { background: #FF6B1A; }
+.prof2__right { flex: 1; min-width: 0; }
+.prof2__name { justify-content: flex-start; margin: 0 0 8px; } .prof2__name b { font-size: 20px; }
+.prof2__nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.prof2__nums > * { display: flex; flex-direction: column; align-items: flex-start; border: 0; background: none; padding: 0; color: var(--text); font: inherit; text-align: left; cursor: default; }
+.prof2__nums button { cursor: pointer; }
+.prof2__nums b { font-size: 19px; font-weight: 800; line-height: 1.15; } .prof2__nums small { color: var(--text-2); font-size: 13px; }
+.prof2__job { margin: 10px 2px 0; color: var(--text-2); font-weight: 600; font-size: 14.5px; }
+.prof2__bio { margin: 4px 2px 0; font-size: 15px; white-space: pre-wrap; }
+.prof2__lvrow { position: relative; display: flex; gap: 8px; margin: 14px 0 10px; }
+.prof2__lv { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; border-radius: 16px; background: var(--fill, rgba(120,120,128,.1)); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.prof2__lv .prof__lvtxt { flex: 1; min-width: 0; } .prof2__lv .prof__lvtxt b { font-size: 15px; } .prof2__lv small { font-size: 12px; }
+.prof2__fire { flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; width: 64px; border: 0; border-radius: 16px; background: rgba(255,107,26,.12); color: var(--text); font: inherit; cursor: pointer; }
+.prof2__fire b { font-size: 17px; line-height: 1; margin-top: 2px; } .prof2__fire small { font-size: 11px; color: var(--text-2); }
+.prof2__snh { position: absolute; right: -10px; top: -46px; pointer-events: none; z-index: 1; }
+.prof2__btns { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; }
+.prof2__btns button { height: 40px; border: 0; border-radius: 12px; background: var(--fill, rgba(120,120,128,.12)); color: var(--text); font: inherit; font-weight: 700; font-size: 14.5px; cursor: pointer; display: grid; place-items: center; }
+.prof2__btns .is-ic { width: 44px; }
+.prof2__hl { display: flex; gap: 14px; overflow-x: auto; margin: 16px -16px 6px; padding: 2px 16px 6px; scrollbar-width: none; }
+.prof2__hl::-webkit-scrollbar { display: none; }
+.prof2__hlit { flex: none; width: 70px; display: flex; flex-direction: column; align-items: center; gap: 6px; border: 0; background: none; padding: 0; color: var(--text); font: inherit; cursor: pointer; }
+.prof2__hlc { width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center; background: var(--surface, #fff); box-shadow: 0 0 0 1.5px var(--line-2, #D1D1D6), inset 0 0 0 3px var(--surface, #fff); color: var(--text-2); overflow: hidden; }
+.prof2__hlc.has-story { color: #fff; background: conic-gradient(from 210deg, #FFC21A, #FF6B1A, #FF2D7A, #B05CFF, #FFC21A); box-shadow: none; }
+.prof2__hlc.is-rk { color: #FFB800; }
+.prof2__hlc .bart { --s: 56px !important; width: 56px !important; height: 56px !important; }
+.prof2__hlit small { font-size: 12px; font-weight: 600; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ===== Menu da foto (sua foto e seus stories) ===== */
+.phm { padding: 6px 12px calc(8px + env(safe-area-inset-bottom, 0px)); }
+.phm__head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0 14px; text-align: center; }
+.phm__head b { font-size: 18px; margin-top: 6px; } .phm__head small { color: var(--text-2); font-size: 13px; }
+.phm__pic { display: block; padding: 3px; border-radius: 50%; background: var(--line-2, #D1D1D6); }
+.phm__pic.has-story { background: conic-gradient(from 210deg, #FFC21A, #FF6B1A, #FF2D7A, #B05CFF, #FFC21A); }
+.phm__pic > span { display: block; border-radius: 50%; box-shadow: 0 0 0 3px var(--surface, #fff); overflow: hidden; }
+.phm__grp { border-radius: 18px; background: var(--surface, #fff); overflow: hidden; margin-bottom: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.06); }
+.phm__row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.phm__row + .phm__row { border-top: 1px solid var(--line, rgba(0,0,0,.07)); }
+.phm__row > svg { color: var(--text-3); flex: none; }
+.phm__ic { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: #fff; }
+.phm__ic.is-story { background: conic-gradient(from 210deg, #FFC21A, #FF6B1A, #FF2D7A, #B05CFF, #FFC21A); }
+.phm__ic.is-cam { background: linear-gradient(135deg, #FF8A1A, #FF5A1A); }
+.phm__ic.is-n { background: var(--fill, rgba(120,120,128,.14)); color: var(--text); }
+.phm__ic.is-del { background: rgba(255,59,48,.12); color: #FF3B30; }
+.phm__t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; } .phm__t b { font-size: 15.5px; } .phm__t small { color: var(--text-2); font-size: 12.5px; }
+.phm__t .is-danger { color: #FF3B30; }
+.phm__cancel { display: block; width: 100%; height: 50px; border: 0; border-radius: 16px; background: var(--surface, #fff); color: var(--text); font: inherit; font-weight: 800; font-size: 16px; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.06); }
+/* foto do topo com story no ar: anel colorido girando (o número do nível continua) */
+.lvring.has-story { background: conic-gradient(from 210deg, #FFC21A, #FF6B1A, #FF2D7A, #B05CFF, #FFC21A) !important; }
+.stv__top > .stface { flex: none !important; width: var(--s); height: var(--s); display: grid; place-items: center; border-radius: 50%; overflow: hidden; }
+.stv__top > .stface img { width: 100%; height: 100%; object-fit: cover; }
+.prof2__snh { right: 66px; top: -44px; }
+/* o botão de tirar a foto fica sempre à vista, mesmo quando o convite é maior que a tela */
+.cvs__go { position: sticky; bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); z-index: 3; }
+.cvs__depois { position: relative; z-index: 2; }

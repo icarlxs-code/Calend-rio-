@@ -1,10 +1,11 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-5eqizuhh'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-radnd2v7'/*CACHE*/;
+const MEDIA = 'lembra-media-v1';
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'media/intro-poster5.jpg',
   ...Array.from({ length: 67 }, (_, i) => `media/intro5/f${String(i + 1).padStart(3, '0')}.webp`),
   'media/logos/pura-vida.jpg', 'media/lembra-logo.jpg', 'media/marca/completa-preto.png', 'assets/fundos/raios.webp', 'assets/fundos/leque.webp', 'media/marca/completa-branco.png', 'media/marca/simbolo-preto.png', 'media/marca/simbolo-branco.png', 'media/marca/palavra-preto.png', 'media/marca/palavra-branco.png', 'media/marca/letra-preto.png', 'media/marca/letra-branco.png', 'version.json', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/c-OUE2LV52.js', 'dist/c-O5S66B2X.js', 'dist/c-QK3DKYEF.js', 'dist/c-C2OOI72U.js', 'dist/c-3DCY6P2L.js', 'dist/c-Y6UVUL7P.js', 'dist/c-CMZAOUK2.js', 'dist/c-6Q37FFVX.js', 'dist/c-CGANU45E.js', 'dist/c-JJEXM3NE.js', 'dist/c-OA7VYUXT.js', 'dist/c-P342BHEF.js', 'dist/c-FZ3ISLLX.js', 'dist/c-NYT3A2Q4.js', 'dist/c-36RXWNYU.js', 'dist/c-NGL65IUN.js', 'dist/c-7LALZHTB.js', 'dist/c-G3KWKS35.js', 'dist/c-M42Q36KB.js', 'dist/c-C5AFB3Y2.js', 'dist/c-VEEOI5DX.js', 'dist/c-O5AHPRDX.js', 'dist/c-3DGZ4WYS.js', 'dist/c-QPVZR7WX.js', 'dist/c-UNC4LR74.js', 'dist/c-XFQWEAUX.js', 'dist/c-CFA7MIM6.js', 'dist/c-JDMNGEQU.js', 'dist/c-76MX73JL.js', 'dist/c-IQBKVDNR.js', 'dist/c-ZNCQ6TQK.js', 'dist/c-I5IGMDQZ.js', 'dist/c-TRCBHONM.js', 'dist/c-BWK7OKEF.js', 'dist/c-4WPHLIN6.js', 'dist/c-JW7WXDGR.js', 'dist/c-3CEK4WML.js', 'dist/c-I75AAJN7.js', 'dist/a-5EQIZUHH.js', 'dist/c-YT2W62DE.js', 'dist/c-X7IV3MMX.js', 'dist/c-M37MRWH4.js', 'dist/c-IK6HUDV6.js', 'dist/c-5PO2SQS2.js', 'dist/c-AE3HS7DG.js', 'dist/c-VTQ2R2F5.js', 'dist/c-ITSWGB5U.js', 'dist/c-BUT2XCJF.js', 'dist/c-XS4D7DFP.js', 'dist/c-C2JVISJL.js', 'dist/c-GX5KA2KR.js', 'dist/c-L372POOI.js', 'dist/c-7MBGCUI5.js', 'dist/c-FCHOFSJD.js', 'dist/c-ZBQ72YEF.js', 'dist/c-C4FC4YHL.js', 'dist/c-QMSI2HFQ.js', 'dist/c-6PVVLET6.js', 'dist/c-WEHMFER6.js', 'dist/c-SQDTHJ2I.js', 'dist/c-AFFAFY2O.js', 'dist/c-IR34IFFF.js', 'dist/c-CDN3HXO2.js', 'dist/c-7I554J4P.js', 'dist/c-BINNCI2M.js', 'dist/c-G5TC26LT.js', 'dist/c-DHVU32FY.js', 'dist/c-TZNCEDPQ.js', 'dist/c-OGGGXZMJ.js', 'dist/c-WLO3J2LO.js', 'dist/c-2TLTGRIW.js', 'dist/c-DWBEWQEH.js', 'dist/c-ERUCOL2A.js', 'dist/c-KENTCPHI.js', 'dist/c-7DNPR2DL.js', 'dist/c-GHF7SBN4.js', 'dist/c-XQMLTXRG.js', 'dist/c-FQJ5CCBF.js', 'dist/c-L7J4YNBM.js', 'dist/c-MRXVVMGO.js', 'dist/c-ZUAJ4OTH.js', 'dist/c-5PVYAXQB.js', 'dist/c-JRZKGWYQ.js', 'dist/c-S22CTDX7.js', 'dist/c-SNN2PYN3.js',
+  /*FILES*/ 'dist/c-I4OFHFR5.js', 'dist/c-AG3VEACB.js', 'dist/c-33RZ6PFT.js', 'dist/c-BXK3PVOS.js', 'dist/c-UNSV4GDS.js', 'dist/c-B5RNLMMF.js', 'dist/c-Y2SH7BMX.js', 'dist/c-XV7YP4NR.js', 'dist/c-P6U6YCGZ.js', 'dist/c-V4A2BDVD.js', 'dist/c-QCJU5UZQ.js', 'dist/c-YWS2WXSQ.js', 'dist/c-AK5LQYZQ.js', 'dist/c-37SFI7NE.js', 'dist/c-7UUOBDWH.js', 'dist/c-VIMDYYLC.js', 'dist/c-GXFCH4ZP.js', 'dist/c-WKDVKFHY.js', 'dist/c-LKVAESID.js', 'dist/c-QUR5HZJG.js', 'dist/c-IN3TZJAR.js', 'dist/c-P434BWRS.js', 'dist/c-6ZRVU2Q3.js', 'dist/c-KUQY7NEX.js', 'dist/c-JW7WXDGR.js', 'dist/c-IAVJ4SEV.js', 'dist/c-I75AAJN7.js', 'dist/c-RY5GHOLP.js', 'dist/c-C7OOBXYE.js', 'dist/c-NUGVQGQ4.js', 'dist/c-QDFQX77W.js', 'dist/c-PCZ5GZ3J.js', 'dist/c-YLB4OPZA.js', 'dist/c-GYJ45MCK.js', 'dist/c-FGIXZERU.js', 'dist/c-FX6D3WJV.js', 'dist/c-57YQG2J7.js', 'dist/c-MXJMLBCF.js', 'dist/c-5C7WBF4B.js', 'dist/a-RADND2V7.js', 'dist/c-JQTOY56E.js', 'dist/c-H5BXMIGV.js', 'dist/c-JRNKMS3Q.js', 'dist/c-MKEBHDB5.js', 'dist/c-CE34ACOO.js', 'dist/c-GWWGZ6P2.js', 'dist/c-JMVXRQJU.js', 'dist/c-Y5QXUPBY.js', 'dist/c-F4PPDHCV.js', 'dist/c-3AB4RQEJ.js', 'dist/c-ETGHQ7QW.js', 'dist/c-JLBOVAYP.js', 'dist/c-FLBPRMOU.js', 'dist/c-D37SF4AE.js', 'dist/c-GOER5DTM.js', 'dist/c-RLWSY5HF.js', 'dist/c-MGDEWEU6.js', 'dist/c-6PVVLET6.js', 'dist/c-BKIW3NSP.js', 'dist/c-NJJJEZW3.js', 'dist/c-GFKFO3CB.js', 'dist/c-7KY4VRKD.js', 'dist/c-6MSVFZYG.js', 'dist/c-CDN3HXO2.js', 'dist/c-HAUDBRZ4.js', 'dist/c-RGZ6QXDL.js', 'dist/c-LI2YLCGY.js', 'dist/c-ISBU324D.js', 'dist/c-XSJISYWJ.js', 'dist/c-O37OOWXC.js', 'dist/c-DY62WZQN.js', 'dist/c-ZTR2SEYD.js', 'dist/c-73TCWLZL.js', 'dist/c-DWBEWQEH.js', 'dist/c-H335VOXI.js', 'dist/c-VRSBNRGZ.js', 'dist/c-AGNRE762.js', 'dist/c-EWD4UQ4F.js', 'dist/c-XQMLTXRG.js', 'dist/c-FQJ5CCBF.js', 'dist/c-S73MOO3S.js', 'dist/c-3VF3KZPI.js', 'dist/c-ZUAJ4OTH.js', 'dist/c-5PVYAXQB.js', 'dist/c-JRZKGWYQ.js', 'dist/c-S22CTDX7.js', 'dist/c-FVUVFLGL.js',
 ];
 
 self.addEventListener('install', (e) => {
@@ -16,7 +17,7 @@ self.addEventListener('install', (e) => {
 });
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()),
+    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== MEDIA).map((k) => caches.delete(k)))).then(() => self.clients.claim()),
   );
 });
 self.addEventListener('fetch', (e) => {
@@ -24,6 +25,16 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   // vídeo: o iPhone pede em pedaços (Range); deixa o navegador cuidar direto
   if (url.pathname.endsWith('.mp4')) return;
+  // emblemas, brasões, peças do mascote e fundos: ficam guardados no celular (abrem na hora, mesmo sem internet)
+  // e são conferidos em segundo plano; o cache deles não é apagado a cada versão
+  if (/\/(media\/emblemas|assets\/mascot|assets\/fundos|media\/marca)\//.test(url.pathname)) {
+    e.respondWith(caches.open(MEDIA).then((c) => c.match(e.request, { ignoreSearch: true }).then((hit) => {
+      const net = fetch(e.request).then((res) => { if (res.ok && res.status === 200 && !res.redirected) c.put(e.request, res.clone()); return res; }).catch(() => hit || Response.error());
+      if (hit) { e.waitUntil(net.catch(() => {})); return hit; }
+      return net;
+    })));
+    return;
+  }
   // abertura animada: quadros sempre do celular (instantâneo e sem internet)
   if (url.pathname.includes('/media/intro5/')) {
     e.respondWith(caches.match(e.request, { ignoreSearch: true }).then((r) => r || fetch(e.request).then((res) => {

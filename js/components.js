@@ -17,7 +17,7 @@ export function avatar(id, size = 26) {
 export function meRing(id, size = 34) {
   const L = typeof window !== 'undefined' ? window.__lvl : null;
   const vip = store.billing?.plan === 'lifetime' && store.billing?.vip ? ' is-vip' : '';
-  return `<span class="lvring${L ? '' : ' is-off'}${vip}" data-lvring style="--s:${size}px;--p:${L ? L.deg : 0}deg;--h:${L ? L.hue : '#8E8E93'}">${avatar(id, size)}<i class="lvring__n">${L ? L.level : ''}</i></span>`;
+  return `<span class="lvring${L ? '' : ' is-off'}${vip}${window.__meuStory ? ' has-story' : ''}" data-lvring style="--s:${size}px;--p:${L ? L.deg : 0}deg;--h:${L ? L.hue : '#8E8E93'}">${avatar(id, size)}<i class="lvring__n">${L ? L.level : ''}</i></span>`;
 }
 /* atualiza os anéis já desenhados (sem redesenhar a tela) */
 export function refreshLevelRings() {

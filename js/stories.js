@@ -11,6 +11,8 @@ import { icon } from './icons.js';
 import { esc } from './utils.js';
 import { sininho, setMood, act, say, alive, vivo } from './sininho.js';
 import { mascotOn } from './mascote.js';
+import { APP_VERSION, APP_NOTES } from './version.js';
+import { leCache, gravaCache } from './cache.js';
 import { personal } from './personal.js';
 import { previewStory } from './game.js';
 import { todayKey } from './utils.js';
@@ -21,16 +23,22 @@ const face = (c, size = 56) => c.photo ? `<span class="stface" style="--s:${size
 
 /* ---------- cache do feed (o Lembra usa para puxar assunto) ---------- */
 let feed = { rows: [], pedidos: 0, online: [], at: 0 }, visitas = { list: [], at: 0 };
-export const feedCache = () => feed;
-export const visitasCache = () => visitas;
+export const feedCache = () => (doAparelho(), feed);
+export const visitasCache = () => (doAparelho(), visitas);
+/* o último feed/visitas fica guardado no aparelho: as bolinhas de story aparecem na hora ao abrir */
+let doCache = false;
+const doAparelho = () => { if (doCache || !store.user) return; doCache = true; const f = leCache('feed', 864e5), v = leCache('visitas', 7 * 864e5); if (f && !feed.at) feed = { ...f, at: 0 }; if (v && !visitas.at) visitas = { ...v, at: 0 }; };
 export async function refreshFeed() {
   if (!store.user || store.mode !== 'cloud') return feed;
-  try { const r = await call('/friends/stories'); feed = { rows: r.rows || [], pedidos: r.pedidos || 0, online: r.online || [], at: Date.now() }; } catch { /* ok */ }
+  doAparelho();
+  try { const r = await call('/friends/stories'); feed = { rows: r.rows || [], pedidos: r.pedidos || 0, online: r.online || [], at: Date.now() }; gravaCache('feed', feed); } catch { /* ok */ }
+  window.__meuStory = !!meuStory(); document.querySelectorAll('[data-lvring]').forEach((el) => el.classList.toggle('has-story', window.__meuStory));
   return feed;
 }
 export async function refreshVisitors() {
   if (!store.user || store.mode !== 'cloud') return visitas;
-  try { const r = await call('/friends/visitors'); visitas = { list: r.visitors || [], at: Date.now() }; } catch { /* ok */ }
+  doAparelho();
+  try { const r = await call('/friends/visitors'); visitas = { list: r.visitors || [], at: Date.now() }; gravaCache('visitas', visitas); } catch { /* ok */ }
   return visitas;
 }
 
@@ -80,20 +88,32 @@ export async function postStory({ title = '', ref = '', kind = 'w', cam } = {}) 
 }
 
 /* ---------- faixa de stories (bolinhas com anel colorido) ---------- */
-export function storyStrip(rows = feed.rows, { comMeu = true } = {}) {
-  const meus = rows.find((r) => r.me);
-  const itens = rows.filter((r) => !r.me);
+/* o story do próprio Lembra (novidades e dicas), como a conta oficial no Instagram */
+const lembraKey = () => `lembra.storyLembra.${APP_VERSION}`;
+const lembraVisto = () => { try { return localStorage.getItem(lembraKey()) === '1'; } catch { return true; } };
+export const meuStory = () => feed.rows.find((r) => r.me && r.stories.length) || null;
+export function storyStrip(rows = feed.rows, { comMeu = true, lembra = true } = {}) {
+  const meus = rows.find((r) => r.me && r.stories.length);
+  const itens = rows.filter((r) => !r.me && r.stories.length);
+  const novos = itens.filter((r) => r.stories.some((x) => !x.seen)), vistos = itens.filter((r) => !r.stories.some((x) => !x.seen)); // quem tem story novo vem primeiro
+  const lb = lembra && mascotOn() ? `<button class="ststrip__it" data-st-lembra role="listitem"><span class="stface stface--snh" style="--s:60px">${sininho('feliz', { size: 58 })}</span><i class="ststrip__ring${lembraVisto() ? ' is-seen' : ''}"></i><small>Lembra</small></button>` : '';
   return `<div class="ststrip" role="list">
-    ${comMeu ? `<button class="ststrip__it" data-st-me role="listitem">${face(store.member(store.me) || { name: 'Você' }, 60)}${meus ? '' : `<i class="ststrip__plus">${icon('plus', 14)}</i>`}<small>${meus ? 'Seu story' : 'Seu story'}</small><i class="ststrip__ring${meus ? '' : ' is-off'}"></i></button>` : ''}
-    ${itens.map((r) => { const novo = r.stories.some((x) => !x.seen); return `<button class="ststrip__it" data-st-owner="${esc(r.uid)}" role="listitem">${face(r, 60)}<i class="ststrip__ring${novo ? '' : ' is-seen'}"></i><small>${esc(r.name.split(' ')[0])}</small></button>`; }).join('')}
+    ${comMeu ? `<button class="ststrip__it" data-st-me role="listitem">${face(store.member(store.me) || { name: 'Você' }, 60)}${meus ? '' : `<i class="ststrip__plus">${icon('plus', 14)}</i>`}<small>Seu story</small><i class="ststrip__ring${meus ? (meus.stories.some((x) => !x.seen) ? '' : ' is-seen is-mine') : ' is-off'}"></i></button>` : ''}
+    ${!lembraVisto() ? lb : ''}
+    ${novos.map((r) => `<button class="ststrip__it" data-st-owner="${esc(r.uid)}" role="listitem">${face(r, 60)}<i class="ststrip__ring"></i><small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
+    ${lembraVisto() ? lb : ''}
+    ${vistos.map((r) => `<button class="ststrip__it" data-st-owner="${esc(r.uid)}" role="listitem">${face(r, 60)}<i class="ststrip__ring is-seen"></i><small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
   </div>`;
 }
 export function bindStrip(el, onChange) {
   el.querySelectorAll('[data-st-owner]').forEach((b) => (b.onclick = () => openViewer(b.dataset.stOwner, onChange)));
   const me = el.querySelector('[data-st-me]');
-  if (me) me.onclick = () => { const meus = feed.rows.find((r) => r.me); if (meus) openViewer(meus.uid, onChange); else comoPostar(); };
+  if (me) me.onclick = () => { const meus = meuStory(); if (meus) openViewer(meus.uid, onChange); else comoPostar(); };
+  const lb = el.querySelector('[data-st-lembra]'); if (lb) lb.onclick = () => openLembraStory(onChange);
 }
-function comoPostar() {
+export function comoPostar() {
+  const fp = fotoPendente();
+  if (fp) return convidaStory({ ref: fp.ref, kind: fp.kind });
   openSheet({ className: 'sheet--dialog', html: `${sheetHead('Seu story', { left: '<button class="btn-text" data-close>Fechar</button>' })}<div class="page page--sheet">
     <p>O story do Lembra é a prova de que você <b>fez</b>: abra um compromisso, marque como <b>feito</b> e toque em <b>📸 Postar story</b>. A foto é tirada na hora, vale <b>XP em dobro</b> e some sozinha em 24 h.</p></div>` });
 }
@@ -120,12 +140,14 @@ export async function openViewer(ownerUid, onChange) {
       <div class="stv__img"><div class="stv__load"><i></i><i></i><i></i></div></div>
       ${st.caption ? `<p class="stv__cap">${esc(st.caption)}</p>` : ''}
       ${r.me ? '' : `<button class="stv__more" data-more aria-label="Mais opções">${icon('dots', 22)}</button>`}
-      ${r.me ? `<footer class="stv__me"><button data-viewers>${icon('eye', 18)} Visto por ${st.views || 0}</button><button data-del>${icon('trash', 18)} Apagar</button></footer>` : `<footer class="stv__done">${icon('check', 16)} ${esc(r.name.split(' ')[0])} concluiu ${st.title ? `“${esc(st.title)}”` : 'um compromisso'}</footer>`}
+      ${r.me ? `<footer class="stv__me"><button class="stv__ativ" data-viewers><span class="stv__faces" data-faces></span><b>Atividade</b><small>${st.views || 0} ${st.views === 1 ? 'visualização' : 'visualizações'}</small></button><button class="stv__ic" data-postar aria-label="Postar outro">${icon('camera', 22)}<small>Postar</small></button><button class="stv__ic" data-del aria-label="Apagar">${icon('trash', 22)}<small>Apagar</small></button></footer>` : `<footer class="stv__done">${icon('check', 16)} ${esc(r.name.split(' ')[0])} concluiu ${st.title ? `“${esc(st.title)}”` : 'um compromisso'}</footer>`}
       <button class="stv__nav stv__nav--l" data-prev aria-label="Anterior"></button><button class="stv__nav stv__nav--r" data-next aria-label="Próximo"></button>`;
     w.querySelector('[data-x]').onclick = fecha;
     w.querySelector('[data-prev]').onclick = anterior;
     w.querySelector('[data-next]').onclick = proximo;
-    const v = w.querySelector('[data-viewers]'); if (v) v.onclick = () => { pausado = true; openViewers(st.id, () => { pausado = false; }); };
+    const v = w.querySelector('[data-viewers]'); if (v) v.onclick = () => { pausado = true; openViewers(st.id, () => { pausado = false; }, w.querySelector('.stv__img img')?.src, st); };
+    const pp = w.querySelector('[data-postar]'); if (pp) pp.onclick = () => { fecha(); comoPostar(); };
+    if (r.me && st.views) call('/friends/story-viewers', { id: st.id }).then((x) => { const f = w.querySelector('[data-faces]'); if (f) f.innerHTML = (x.viewers || []).slice(0, 3).map((c) => face(c, 26)).join(''); }).catch(() => {});
     const mais = w.querySelector('[data-more]');
     if (mais) mais.onclick = () => { pausado = true; denunciaOuBloqueia({ uid: r.uid, name: r.name, storyId: st.id }, () => { pausado = false; }, fecha); };
     const d = w.querySelector('[data-del]');
@@ -146,20 +168,27 @@ export async function openViewer(ownerUid, onChange) {
     const bar = w.querySelectorAll('.stv__bars b')[si];
     timer = setInterval(() => { const agora = Date.now(); if (!pausado && !document.hidden) gasto += agora - ult; ult = agora; if (bar) bar.style.width = `${Math.min(100, (gasto / DUR) * 100)}%`; if (gasto >= DUR) proximo(); }, 50);
   }
-  // segurar o dedo pausa (como no Instagram)
-  w.addEventListener('pointerdown', () => { pausado = true; });
-  w.addEventListener('pointerup', () => { pausado = false; });
-  w.addEventListener('pointercancel', () => { pausado = false; });
+  // segurar o dedo pausa; arrastar pra baixo fecha (como no Instagram)
+  let y0 = null;
+  w.addEventListener('pointerdown', (e) => { pausado = true; y0 = e.clientY; });
+  w.addEventListener('pointermove', (e) => { if (y0 != null && e.clientY - y0 > 0) w.style.transform = `translateY(${(e.clientY - y0) * 0.6}px) scale(${1 - Math.min(0.08, (e.clientY - y0) / 3000)})`; });
+  const solta = (e) => { pausado = false; const dy = y0 == null ? 0 : e.clientY - y0; y0 = null; if (dy > 110) return fecha(); w.style.transform = ''; };
+  w.addEventListener('pointerup', solta);
+  w.addEventListener('pointercancel', solta);
   requestAnimationFrame(() => w.classList.add('is-in'));
   mostra();
 }
 
 /* quem viu o seu story */
-function openViewers(id, onClose) {
+function openViewers(id, onClose, foto, st = {}) {
   let lista = null;
-  const html = () => `${sheetHead('Visto por', { left: '<button class="btn-text" data-close>Fechar</button>' })}<div class="page page--sheet">
-    ${!lista ? '<p class="fhelp">Carregando…</p>' : lista.length ? `<div class="agroup">${lista.map((c) => `<div class="frow">${face(c, 44)}<span class="frow__id"><b>${esc(c.name)}</b><small>viu ${desde(c.at)}</small></span></div>`).join('')}</div>` : '<p class="fhelp">Ninguém viu ainda. Daqui a pouco aparece gente 👀</p>'}</div>`;
-  const a = openSheet({ className: 'sheet--stview', html: html(), onClose });
+  const html = () => `<div class="stvw">
+    <header class="stvw__top"><button class="stvw__x" data-close aria-label="Fechar">${icon('x', 22)}</button>
+      ${foto ? `<span class="stvw__thumb"><img src="${esc(foto)}" alt=""></span>` : ''}
+      <span class="stvw__n">${icon('eye', 16)} ${lista ? lista.length : st.views || 0}</span>${st.title ? `<small class="stvw__t">${icon('check', 12)} ${esc(st.title)}</small>` : ''}</header>
+    <h3 class="stvw__h">Quem viu este story</h3>
+    ${!lista ? '<div class="fx__load"><i></i><i></i><i></i></div>' : lista.length ? lista.map((c) => `<div class="stvw__row">${face(c, 52)}<span><b>${esc(c.name)}</b><small>${desde(c.at).replace(/^há/, 'Há').replace(/^agora$/, 'Agora')}</small></span></div>`).join('') : '<p class="fhelp">Ninguém viu ainda. Daqui a pouco aparece gente 👀</p>'}</div>`;
+  const a = openSheet({ className: 'sheet--tall sheet--stview sheet--fx', html: html(), onClose });
   call('/friends/story-viewers', { id }).then((r) => { lista = r.viewers || []; if (!a.closed) a.set(html()); }).catch(() => { lista = []; if (!a.closed) a.set(html()); });
 }
 
@@ -297,4 +326,38 @@ export function fotoPendente() {
     .map((p) => ({ ref: `p:${p.id}`, title: p.title || 'Lembrete', kind: 'p', at: p.updatedAt || 0 }));
   for (const x of [...ws, ...ps].sort((a, b) => b.at - a.at)) { const P = previewStory(x.kind, x.ref); if (!P.ja && P.got) return { ...x, P }; }
   return null;
+}
+
+/* ---------- o story do Lembra: novidades da versão + dicas, em cartões com ele ---------- */
+export function openLembraStory(onChange) {
+  const dicas = [
+    { t: 'Concluiu? Mostra! 📸', s: 'A foto do que você fez vale XP em dobro. E eu te conto na hora se ela destrava nível ou emblema.', m: 'comemora' },
+    { t: 'Me leva pra onde quiser', s: 'Arrasta eu pra qualquer altura da tela. Só não me sacode muito, tá? 😵', m: 'surpreso' },
+    { t: 'Quem passou no seu perfil? 👀', s: 'Em Amigos aparece quem visitou você nos últimos 7 dias.', m: 'desconfiado' },
+    { t: 'Sua agenda em primeiro lugar', s: 'Marcou, eu lembro. Atrasou, eu aviso com jeitinho. Feito, a gente comemora.', m: 'acena' },
+  ];
+  const slides = [...(APP_NOTES || []).slice(0, 3).map((n, i) => ({ t: i ? 'E mais…' : 'Novidade no Lembra ✨', s: n, m: i ? 'feliz' : 'danca' })), ...dicas];
+  let i = 0, timer = 0, gasto = 0, ult = 0, pausado = false;
+  const w = document.createElement('div'); w.className = 'stv stv--lembra'; w.setAttribute('role', 'dialog');
+  (document.getElementById('sheets') || document.body).appendChild(w); document.body.classList.add('has-stv');
+  try { localStorage.setItem(lembraKey(), '1'); } catch { /* ok */ }
+  const fecha = () => { clearInterval(timer); w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-stv'); }, 220); onChange && onChange(); };
+  const mostra = () => {
+    clearInterval(timer);
+    const sl = slides[i];
+    w.innerHTML = `<div class="stv__bars">${slides.map((_, k) => `<i><b style="width:${k < i ? 100 : 0}%"></b></i>`).join('')}</div>
+      <header class="stv__top"><span class="stface stface--snh" style="--s:36px">${sininho('feliz', { size: 34 })}</span><span><b>Lembra</b><small>novidades e dicas</small></span><button class="stv__x" data-x aria-label="Fechar">${icon('x', 22)}</button></header>
+      <div class="stvl"><span class="stvl__snh">${sininho(sl.m, { size: 210 })}</span><h2>${esc(sl.t)}</h2><p>${esc(sl.s)}</p></div>
+      <button class="stv__nav stv__nav--l" data-prev aria-label="Anterior"></button><button class="stv__nav stv__nav--r" data-next aria-label="Próximo"></button>`;
+    alive();
+    w.querySelector('[data-x]').onclick = fecha;
+    w.querySelector('[data-prev]').onclick = () => { if (i > 0) { i--; mostra(); } };
+    w.querySelector('[data-next]').onclick = () => { if (i < slides.length - 1) { i++; mostra(); } else fecha(); };
+    gasto = 0; ult = Date.now();
+    const bar = w.querySelectorAll('.stv__bars b')[i];
+    timer = setInterval(() => { const agora = Date.now(); if (!pausado && !document.hidden) gasto += agora - ult; ult = agora; if (bar) bar.style.width = `${Math.min(100, (gasto / 5500) * 100)}%`; if (gasto >= 5500) { if (i < slides.length - 1) { i++; mostra(); } else fecha(); } }, 50);
+  };
+  w.addEventListener('pointerdown', () => { pausado = true; }); w.addEventListener('pointerup', () => { pausado = false; }); w.addEventListener('pointercancel', () => { pausado = false; });
+  requestAnimationFrame(() => w.classList.add('is-in'));
+  mostra();
 }

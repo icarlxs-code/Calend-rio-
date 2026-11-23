@@ -22,9 +22,10 @@ const flame = (n) => (n > 0 ? `<i class="rkfire${n >= 30 ? ' is-blue' : n >= 7 ?
 
 export async function openRanking({ kind = 'month' } = {}) {
   const G = await import('../game.js');
-  let cur = kind, data = { month: null, all: null }, err = '';
+  const { leCache, gravaCache } = await import('../cache.js');
+  let cur = kind, data = { month: leCache('rk.month', 864e5), all: leCache('rk.all', 864e5) }, err = '';
   const load = async (k, a) => {
-    try { const { api } = await import('../avisos.js'); data[k] = await api('/lb/board', { kind: k, limit: 50 }); err = ''; }
+    try { const { api } = await import('../avisos.js'); data[k] = await api('/lb/board', { kind: k, limit: 50 }); gravaCache(`rk.${k}`, data[k], 1200000); err = ''; }
     catch (e) { err = e.message || 'Sem conexão agora.'; }
     if (!a.closed) a.set(html());
   };

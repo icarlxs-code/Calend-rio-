@@ -55,12 +55,12 @@ test('mensagens da agenda: pendência, aniversário, lista; cabelo já marcado n
 });
 
 test('ao longo de um dia: pouca água (máx. 5) e muita variedade, sem repetir texto seguido', () => {
-  let st = {}, bodies = [];
+  let st = {}, bodies = [], kinds = [];
   for (let t = at('07:00'); t <= at('22:30'); t += 60e3) {
     const r = nextNudge(prof, st, t);
-    if (r) { st = r.state; bodies.push(r.msg.body); }
+    if (r) { st = r.state; bodies.push(r.msg.body); kinds.push(r.msg.kind); }
   }
-  const water = bodies.filter((b) => b.includes('💧')).length;
+  const water = kinds.filter((k) => k === 'water').length;
   assert.ok(water >= 2 && water <= 4, `água ${water}`);
   assert.ok(water / bodies.length <= 0.36, 'água não pode dominar');
   assert.ok(bodies.length >= 9 && bodies.length <= 30, `mandou ${bodies.length}`);

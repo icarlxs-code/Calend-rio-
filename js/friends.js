@@ -8,6 +8,7 @@ import { icon } from './icons.js';
 import { esc } from './utils.js';
 import { CONFIG } from '../config.js';
 import { sininho, alive, vivo } from './sininho.js';
+import { leCache, gravaCache } from './cache.js';
 
 const LS = 'lembra.amigo';
 const call = (path, body = {}) => api(path, { ws: '', ...body }); // sempre a própria conta (nunca a agenda de outra pessoa)
@@ -98,13 +99,13 @@ async function friendProfile(c, onRemoved) { return openPublicProfile(c.uid, c, 
 /* ---------- lista de amigos + pedidos + convidar ---------- */
 const foto = (c) => `<span class="fxava__in">${c.photo ? `<img src="${esc(c.photo)}" alt="">` : `<span style="background:${esc(c.color || '#7C5CFF')}">${esc((c.name || '?').charAt(0).toUpperCase())}</span>`}</span>`;
 export function openFriends() {
-  let data = null, err = '', busca = '';
+  let data = leCache('friends'), err = '', busca = '';
   const S = import('./stories.js');
   let St = null, snhOn = false;
   import('./mascote.js').then((m) => { snhOn = m.mascotOn(); }).catch(() => {});
   const anelDe = (c) => { const st = St && St.feedCache().rows.find((r) => r.uid === c.uid && r.stories.length); return !st ? '' : st.stories.some((x) => !x.seen) ? ' is-story' : ' is-seen'; };
   const card = (c) => `<button class="fxrow" data-fr="${esc(c.uid)}">
-      <span class="fxava${anelDe(c)}">${foto(c)}${isOnline(c.online) ? '<i class="fxava__on"></i>' : ''}</span>
+      <span class="fxava${anelDe(c)}"${anelDe(c) ? ` data-ava="${esc(c.uid)}"` : ''}>${foto(c)}${isOnline(c.online) ? '<i class="fxava__on"></i>' : ''}</span>
       <span class="fxrow__id"><b>${esc(c.name.split(' ').slice(0, 2).join(' '))}${c.vip ? `<i class="fxcrown">${icon('crown', 12)}</i>` : ''}</b>
         <small>${isOnline(c.online) ? `<em class="is-on">online agora</em>${c.job ? ` · ${esc(c.job)}` : ''}` : c.online ? `Visto por último ${esc(onlineTxt(c.online).replace('visto ', ''))}${c.job ? ` · ${esc(c.job)}` : ''}` : esc(c.job || `Nível ${c.level || 0}`)}</small></span>
       <span class="fxrow__go">${icon('right', 18)}</span></button>`;
@@ -116,7 +117,7 @@ export function openFriends() {
       <header class="fx__head">
         <button class="fx__pill" data-close>Fechar</button>
         <h2 class="fx__title">Amigos</h2>
-        <span class="fx__right">${snhOn ? `<span class="fx__snh">${sininho('acena', { size: 120 })}</span>` : ''}<button class="fx__inv" data-invite>${icon('plus', 18)} Convidar</button></span>
+        <span class="fx__right"><button class="fx__inv" data-invite>${icon('plus', 18)} Convidar</button></span>
       </header>
       ${St ? St.storyStrip() : ''}
       <div class="fx__busca"><label class="fsearch">${icon('search', 18)}<input type="search" placeholder="Buscar amigo" value="${esc(busca)}" data-busca autocomplete="off"></label>
@@ -147,9 +148,11 @@ export function openFriends() {
       openSheet({ className: 'sheet--tall sheet--fx', html: `<div class="fx"><header class="fx__head"><button class="fx__pill" data-close>Fechar</button><h2 class="fx__title">Dos seus contatos</h2><span></span></header><p class="fhelp">${rows.length} ${rows.length === 1 ? 'pessoa' : 'pessoas'} da sua agenda já usa${rows.length === 1 ? '' : 'm'} o Lembra:</p>${rows.map((c) => `<button class="fxrow" data-pp="${esc(c.uid)}"><span class="fxava">${foto(c)}</span><span class="fxrow__id"><b>${esc(c.name)}</b><small>${c.rel === 'enviado' ? 'pedido enviado' : c.rel === 'recebido' ? 'quer ser seu amigo' : esc(c.job || `Nível ${c.level || 0}`)}</small></span><span class="fxrow__go">${icon('right', 18)}</span></button>`).join('')}</div>`,
         onMount: (y) => y.el.querySelectorAll('[data-pp]').forEach((b) => (b.onclick = () => openPublicProfile(b.dataset.pp))) });
     };
+    // tocar no rostinho com anel abre o story na hora (como no Instagram); no resto da linha, o perfil
+    x.el.querySelectorAll('[data-ava]').forEach((s) => s.addEventListener('click', (ev) => { if (!St) return; ev.stopPropagation(); St.openViewer(s.dataset.ava, () => { if (!x.closed) x.set(html()); }); }));
     x.el.querySelectorAll('[data-fr]').forEach((b) => (b.onclick = () => { const c = data.friends.find((r) => r.uid === b.dataset.fr); if (c) friendProfile(c, () => load(x)); }));
   };
-  const load = async (a) => { try { data = await call('/friends/list'); err = ''; } catch (e) { err = e.message || 'Não consegui carregar agora.'; } if (!a.closed) a.set(html()); };
+  const load = async (a) => { try { data = await call('/friends/list'); gravaCache('friends', data); err = ''; } catch (e) { err = e.message || 'Não consegui carregar agora.'; } if (!a.closed) a.set(html()); };
   const a = openSheet({ className: 'sheet--tall sheet--fx', html: html(), onMount: bind });
   publishCard();
   load(a);

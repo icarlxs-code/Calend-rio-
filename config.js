@@ -7,6 +7,8 @@ export const CONFIG = {
   agencyName: 'Henrique & Matheus',
   // dono do app: vê o painel com todas as contas (Ajustes → Painel do dono)
   adminEmail: 'icarlxs@gmail.com',
+  // o mascote Lembra (companheiro, guia do cadastro, telas) para todo mundo
+  mascotPublic: true,
 
   // Endereço oficial do app (links de convite, volta do pagamento, termos e privacidade).
   siteUrl: 'https://meulembra.com.br/',
