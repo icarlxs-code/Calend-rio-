@@ -1224,6 +1224,7 @@ function startApp() {
     const quota = err && /quota/i.test(String(err.name || err.message));
     const denied = err && /permission/i.test(String(err.code || err.message));
     toast(quota ? 'Memória do aparelho cheia: use logos menores ou ative a nuvem' : denied ? 'Sem permissão na nuvem: confira as regras do Firebase' : 'Não foi possível salvar. Verifique a conexão.', { ms: 5000 });
+    import('./mascote.js').then((M) => { if (M.mascotOn()) M.react('erro'); }).catch(() => {});
   };
   watchConflicts();
   store.on(watchConflicts);
@@ -1538,7 +1539,7 @@ async function boot() {
 
 navigator.serviceWorker?.addEventListener('message', (ev) => {
   if (ev.data?.type === 'open' && ev.data.url) {
-    window.__openSrc = 'notif';
+    window.__openSrc = 'notif'; window.__avisoAt = Date.now(); // a abertura não toca quando vem da notificação
     // frase do aviso: abre no app (e fica até a pessoa fechar)
     if (ev.data.notif) import('./frase.js').then((F) => { if (F.abreFrase(ev.data.notif)) caches.open('lembra-notif').then((c) => c.delete('/__notif')).catch(() => {}); }).catch(() => {});
     import('./stats.js').then((m) => m.seenServer(true));

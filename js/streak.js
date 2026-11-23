@@ -6,9 +6,8 @@ import { esc } from './utils.js';
 const SHEET = 'assets/mascot/ofensiva.webp';
 /* folha com os 60 quadros desenhados (10 × 6, cada quadro 377 × 400); toca a 60 fps, 1 quadro por atualização de tela */
 const COLS = 10, FW = 377, FH = 400, FRAMES = 60, FLAME_AT = 44; // 44: ele abraça a chama — é aí que o número sobe
-/* os 60 desenhos são poses-chave (muito diferentes entre si): tocar 1 por atualização de tela deixava tudo em 1 s,
-   acelerado e fora de sincronia. Agora: ~23 poses por segundo (2,6 s no total) com uma fusão curta entre uma pose
-   e a seguinte, então o movimento fica contínuo a 60/120 fps sem pular. */
+/* os 60 desenhos são poses-chave (muito diferentes entre si). Tocamos ~12 poses por segundo (uma sim, uma não, em 2,6 s),
+   cada pose SEGURADA até a próxima, sem misturar duas (a fusão de transparência deixava um "fantasma" entre poses). */
 const DUR = 2.6;
 /* ofensiva fica mais rica com o tempo: cada nível muda a aura, o brilho e os enfeites em volta do Lembra */
 export const TIERS = [
@@ -45,10 +44,10 @@ const load = () => img || (img = new Promise((res) => {
 }));
 export const preloadStreak = () => load();
 
-export async function showStreak(days = 1) {
+export async function showStreak(days = 1, tries = 0) {
   if (!days || document.querySelector('.stk')) return;
-  // espera outras telas cheias (conquista, planos…) saírem
-  if (document.querySelector('.gx, .paywall, .ficha, .photogate, .okfx')) { setTimeout(() => showStreak(days), 1200); return; }
+  // espera outras telas cheias (conquista, planos…) saírem — no máx. 5 tentativas
+  if (document.querySelector('.gx, .paywall, .ficha, .photogate, .okfx')) { if (tries < 5) setTimeout(() => showStreak(days, tries + 1), 1200); return; }
   const snd = import('./sound.js').catch(() => null); // carrega o som ANTES (não engasga quando a chama acende)
   if (!(await load())) return;
   const marco = MARCOS[days];
@@ -56,7 +55,7 @@ export async function showStreak(days = 1) {
   const week = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); return { l: 'DSTQQSS'[d.getDay()], on: 6 - i < days, today: i === 6 }; });
   const el = document.createElement('div');
   el.className = `stk stk--${tierOf(days).id}${marco ? ' stk--marco' : ''}`;
-  el.setAttribute('role', 'dialog');
+  el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true');
   el.setAttribute('aria-label', `${days} ${days === 1 ? 'dia' : 'dias'} de ofensiva`);
   el.innerHTML = `<div class="stk__glow"></div>
     <div class="stk__card">
@@ -74,14 +73,13 @@ export async function showStreak(days = 1) {
   const ctx = spr.getContext('2d');
   ctx.imageSmoothingQuality = 'high';
   let shown = -1;
-  const pose = (f, a) => { ctx.globalAlpha = a; ctx.drawImage(sheet, (f % COLS) * FW, Math.floor(f / COLS) * FH, FW, FH, 0, 0, spr.width, spr.height); };
-  /* x: posição contínua na folha (0…59). Segura cada pose e só funde nos últimos 35% do tempo dela */
+  const pose = (f) => { ctx.drawImage(sheet, (f % COLS) * FW, Math.floor(f / COLS) * FH, FW, FH, 0, 0, spr.width, spr.height); };
+  /* x: posição contínua na folha (0…59). Pose segurada (de 2 em 2 = ~12 poses/s); só troca o quadro, sem fusão */
   const frame = (x) => {
-    const f = Math.min(FRAMES - 1, Math.floor(x)), k = x - f, mix = f < FRAMES - 1 ? Math.max(0, (k - 0.65) / 0.35) : 0;
-    const key = f + mix.toFixed(2); if (key === shown) return; shown = key;
+    const f = x >= FRAMES - 1 ? FRAMES - 1 : Math.floor(x / 2) * 2;
+    if (f === shown) return; shown = f;
     ctx.clearRect(0, 0, spr.width, spr.height);
-    pose(f, 1); if (mix > 0) pose(f + 1, mix * mix * (3 - 2 * mix));
-    ctx.globalAlpha = 1;
+    pose(f);
   };
   let raf = 0, lit = false;
   const light = () => {
@@ -110,6 +108,9 @@ export async function showStreak(days = 1) {
   frame(0);
   requestAnimationFrame(() => { el.classList.add('is-in'); setTimeout(play, 280); });
   el.querySelector('.stk__anim').onclick = play;
-  const close = () => { cancelAnimationFrame(raf); el.classList.remove('is-in'); el.classList.add('is-out'); setTimeout(() => el.remove(), 320); };
+  const esc2 = (ev) => { if (ev.key === 'Escape') close(); };
+  const close = () => { cancelAnimationFrame(raf); document.removeEventListener('keydown', esc2); el.classList.remove('is-in'); el.classList.add('is-out'); setTimeout(() => el.remove(), 320); };
   el.querySelector('[data-ok]').onclick = close;
+  document.addEventListener('keydown', esc2);
+  setTimeout(() => el.querySelector('[data-ok]')?.focus({ preventScroll: true }), 60);
 }

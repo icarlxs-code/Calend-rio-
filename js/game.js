@@ -422,7 +422,7 @@ function pumpMini() {
     const xp = group.reduce((a, x) => a + RARITY[x.rarity].xp, 0);
     el.innerHTML = `<span class="gxmini__m gxmini__stack">${group.slice(0, 3).map((x) => badgeArt(x, 44)).join('')}</span><span class="gxmini__t"><small>${group.length} conquistas desbloqueadas</small><b>${esc(group.slice(0, 2).map((x) => x.name()).join(' · '))}${group.length > 2 ? '…' : ''}</b></span><span class="gxmini__xp">+${xp} XP</span>`;
     b = { many: true };
-  } else if (b.level) el.innerHTML = `<span class="gxmini__m">${crest(b.level, 50)}</span><span class="gxmini__t"><small>Subiu de nível</small><b>Nível ${b.level}</b></span><span class="gxmini__xp">${esc(tierOf(b.level).name())}</span>`;
+  } else if (b.level) { el.innerHTML = `<span class="gxmini__m">${crest(b.level, 50)}</span><span class="gxmini__t"><small>Subiu de nível</small><b>Nível ${b.level}</b></span><span class="gxmini__xp">${esc(tierOf(b.level).name())}</span>`; const nv = b.level; setTimeout(() => import('./mascote.js').then((M) => { if (M.mascotOn()) M.react('nivel', { nivel: nv }); }).catch(() => {}), 900); }
   else el.innerHTML = `<span class="gxmini__m">${badgeArt(b, 50)}</span><span class="gxmini__t"><small>Conquista desbloqueada</small><b>${esc(b.name())}</b></span><span class="gxmini__xp">+${RARITY[b.rarity].xp} XP</span>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('is-in')));
@@ -444,7 +444,8 @@ function pump() {
     queue.push({ type: 'many', list: rest.map((x) => x.b) });
   }
   showing = true;
-  show(queue.shift(), () => { showing = false; setTimeout(pump, 300); });
+  const it0 = queue.shift();
+  show(it0, () => { showing = false; setTimeout(pump, 300); if (it0 && it0.type === 'level') import('./mascote.js').then((M) => { if (M.mascotOn()) M.react('nivel', { nivel: levelInfo().level }); }).catch(() => {}); });
 }
 function show(it, done) {
   const L = levelInfo();

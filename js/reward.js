@@ -46,7 +46,7 @@ export function burst(el, { big = false } = {}) {
   box.className = 'burst';
   box.style.left = `${r.left + r.width / 2}px`;
   box.style.top = `${r.top + r.height / 2}px`;
-  const colors = ['#34C759', '#A06BFF', '#FF7AA2', '#FFB547', '#4FA3FF'];
+  const colors = ['#FF6B1A', '#FFB020', '#FFFFFF', '#FFC24A', '#E85A0C'];
   const n = big ? 26 : 12;
   for (let i = 0; i < n; i++) {
     const p = document.createElement('i');
@@ -55,6 +55,7 @@ export function burst(el, { big = false } = {}) {
     p.style.setProperty('--x', `${Math.cos(a) * d}px`);
     p.style.setProperty('--y', `${Math.sin(a) * d}px`);
     p.style.background = colors[i % colors.length];
+    if (i % 2) { p.style.clipPath = 'polygon(50% 0,61% 39%,100% 50%,61% 61%,50% 100%,39% 61%,0 50%,39% 39%)'; p.style.borderRadius = '0'; p.style.scale = '1.6'; } // metade vira estrelinha de 4 pontas
     box.appendChild(p);
   }
   document.body.appendChild(box);

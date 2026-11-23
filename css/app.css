@@ -3987,3 +3987,9 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .ofs, .ofs--f3 { background: linear-gradient(rgba(140,40,0,.6), rgba(140,40,0,.6)), #C94A0C url(../assets/fundos/leque.webp) center 30% / cover no-repeat; }
 .sheet--rk .sheet__grab, .sheet--rk .sheet__head { background: #A8400A; }
 .sheet--rk .rkme__fire { color: #8C3608; } .sheet--rk .rkme__fire small { opacity: 1; }
+
+/* 2.23 — movimento: respiração do Lembra parado e brilho da ofensiva sem blur animado (gasta menos bateria) */
+@keyframes snhBreath { 0%, 100% { scale: 1 1; } 50% { scale: 1.015 .985; } }
+.stk__glow { filter: none; background: radial-gradient(circle, rgba(255, 120, 40, .42) 0%, rgba(255, 120, 40, .18) 38%, transparent 66%); animation: stkGlowOp 2.4s ease-in-out infinite; }
+@keyframes stkGlowOp { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .stk__glow, .stk__card, .stk.is-in .stk__card, .stk__anim.is-idle .stk__spr { animation: none !important; } }

@@ -11,7 +11,7 @@
    - por enquanto SÓ para o dono (CONFIG.adminEmail); para todo mundo: CONFIG.mascotPublic = true. */
 import { store } from './store.js';
 import { CONFIG } from '../config.js';
-import { sininho, setMood, act, say, lookAt, rigOf } from './sininho.js';
+import { sininho, setMood, act, say, lookAt, rigOf, reactNivel, reactErro } from './sininho.js';
 import { todayKey, addDays, diffDays, fmtTime } from './utils.js';
 import { personal } from './personal.js';
 import { itensAtrasados } from './views/atrasados.js';
@@ -342,10 +342,19 @@ function balao(line, ms) {
   hideT = setTimeout(() => { if (!box.matches(':hover')) { box.classList.remove('is-in'); btns.innerHTML = ''; } }, dura + 200);
   holdT = setTimeout(() => { if (!falando()) settle(); }, dura + 400);
 }
-function fala(line, gesto, tentativa = 0) {
+/* prioridade das reações: erro > nível > dia perfeito > concluiu > XP > criou > o resto.
+   Uma reação nova substitui a anterior, a não ser que a anterior seja mais importante e ainda esteja valendo. */
+const PRIO = { erro: 6, nivel: 5, perfeito: 4, done: 3, xp: 2, created: 1 };
+let atual = { p: -1, ate: 0, id: 0 };
+function fala(line, gesto, tentativa = 0, desde = Date.now(), id = 0) {
   if (!B || !line) return;
-  // algo aberto por cima (ficha, janela, teclado): espera e fala depois, em vez de falar escondido
-  if (blocked()) { if (tentativa < 40) setTimeout(() => fala(line, gesto, tentativa + 1), 1500); return; }
+  const p = line.p ?? 0;
+  if (!tentativa) {
+    if (p < atual.p && Date.now() < atual.ate) return;             // tem coisa mais importante sendo dita
+    atual = { p, ate: Date.now() + 4000, id: atual.id + 1 }; id = atual.id;
+  } else if (id !== atual.id) return;                              // outra reação já tomou o lugar
+  // algo aberto por cima (ficha, janela, teclado): espera e fala depois — vale por 4 s (~3 tentativas)
+  if (blocked()) { if (tentativa < 2 && Date.now() - desde < 4000) setTimeout(() => fala(line, gesto, tentativa + 1, desde, id), 1500); return; }
   ultima = line.t;
   if (line.k) lembrou(line.k, line.i);
   state('up');
@@ -355,6 +364,7 @@ function fala(line, gesto, tentativa = 0) {
   // roteiro: uma sequência de gestos enquanto fala (olha pros lados, desconfia, tapa a boca rindo…)
   (line.roteiro || []).forEach((r, i) => setTimeout(() => { if (B && falando()) act(el(), r); }, 900 + i * 1900));
   setTimeout(() => balao(line), 260);
+  atual.ate = Math.max(atual.ate, busyUntil || 0);
 }
 
 /* ---------- fingindo que dorme: o tapinha acorda, ele sente a dor e jura que não tava dormindo ---------- */
@@ -391,14 +401,14 @@ function settle() {
 /* ---------- vida própria: uma "cena" curta a cada poucos segundos, nunca a mesma duas vezes seguidas ---------- */
 const CENAS = [
   { g: 'olhaLados', w: 3 }, { g: 'pisca', w: 2 }, { g: 'pensa', w: 2 }, { g: 'riso', w: 1.5 }, { g: 'sim', w: 1 },
-  { g: 'pop', w: 1 }, { g: 'timido', w: 1.2 }, { g: 'tchau', w: 1 }, { g: 'pulo', w: 0.8 },
+  { g: 'pop', w: 1 }, { g: 'timido', w: 1.2 },
   { m: 'surpreso', g: 'pop', w: 0.8, volta: 1300 }, { m: 'amor', w: 0.8, volta: 2200 }, { m: 'desconfiado', g: 'olhaLados', w: 1, volta: 2000 },
-  { g: 'cinico', w: 1.2 }, { g: 'coca', w: 1.2 }, { g: 'sobrancelha', w: 1.3 }, { g: 'balanca', w: 1.4 }, { g: 'maoBoca', w: 0.9 }, { g: 'susto', w: 0.4 },
-  { m: 'desconfiado', g: 'cinico', w: 0.8, volta: 2200 }, { m: 'danca', w: 0.5, volta: 2600 },
-];
+  { g: 'cinico', w: 1.2 }, { g: 'coca', w: 1.2 }, { g: 'sobrancelha', w: 1.3 }, { g: 'balanca', w: 1.4 }, { g: 'maoBoca', w: 0.9 },
+  { m: 'desconfiado', g: 'cinico', w: 0.8, volta: 2200 },
+]; // parado, sem gesto grande (pulo, tchau, susto e dança ficam para quando algo acontece)
 function cena() {
   clearTimeout(cenaT);
-  cenaT = setTimeout(cena, R(4.5, 10) * 1000);
+  cenaT = setTimeout(cena, R(6, 11) * 1000);
   if (!B || document.hidden || calmo() || B.dataset.st === 'away' || falando() || blocked() || arr) return;
   const parado = (Date.now() - ultimoToque) / 1000, h = new Date().getHours();
   // sem mexer na tela há um tempo (ou tarde da noite): boceja e cochila um pouquinho
@@ -801,8 +811,10 @@ export function start() {
   B.querySelector('.snhbud__fig').addEventListener('click', onTap);
   arrastavel(B.querySelector('.snhbud__fig'));
   { const p = lePos(); if (p) { const L = limites(); encosta(p.side, cl(p.fy * innerHeight, L.y0, L.y1)); } }
-  const guarda = () => { if (B) B.classList.toggle('is-hidden', blocked()); };
-  B._mo = new MutationObserver(guarda); B._mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  let guardaT = 0;
+  const guardaJa = () => { guardaT = 0; if (B) B.classList.toggle('is-hidden', blocked()); };
+  const guarda = () => { if (!guardaT) guardaT = setTimeout(guardaJa, 150); }; // junta as mudanças em 150 ms
+  B._mo = new MutationObserver(guarda); B._mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'], characterData: false });
   document.addEventListener('focusin', guarda); document.addEventListener('focusout', () => setTimeout(guarda, 50));
   if (!window.__snhOuve) { window.__snhOuve = 1; ouvir(); }
   import('./stories.js').then((m) => { ST = m; const up = () => { if (!document.hidden) Promise.all([m.refreshFeed(), m.refreshVisitors()]).then(avisaVisita).catch(() => {}); }; up(); clearInterval(window.__stT); window.__stT = setInterval(up, 3 * 60e3); }).catch(() => {});
@@ -823,8 +835,10 @@ export function react(kind, o = {}) {
   if (kind === 'created') salvouAgora = Date.now();
   if (!B || blocked()) return;
   busyUntil = 0;
-  if (kind === 'done') return fala(o.perfect ? { k: 'perfeito', t: pick(['Dia 100%! Você zerou tudo! 🏆', 'Zerou o dia! Pode comemorar 🎉']), m: 'danca' } : o.late ? { t: outra(DONE_LATE), m: 'feliz' } : { t: outra(DONE), m: 'comemora' }, 'pulo');
-  if (kind === 'created') return fala({ t: outra(CREATED), m: 'feliz' }, 'sim');
+  if (kind === 'erro') { reactErro(el()); return fala({ t: 'Ops, não salvou. Tento de novo quando a internet voltar.', m: 'triste', p: PRIO.erro }, 'pop'); }
+  if (kind === 'nivel') { reactNivel(el()); return fala({ t: o.nivel ? `Nível ${o.nivel}! Subiu de nível 🎉` : 'Subiu de nível! 🎉', m: 'comemora', p: PRIO.nivel }, null); }
+  if (kind === 'done') return fala(o.perfect ? { k: 'perfeito', t: pick(['Dia 100%! Você zerou tudo! 🏆', 'Zerou o dia! Pode comemorar 🎉']), m: 'danca', p: PRIO.perfeito } : o.late ? { t: outra(DONE_LATE), m: 'feliz', p: PRIO.done } : { t: outra(DONE), m: 'comemora', p: PRIO.done }, 'pulo');
+  if (kind === 'created') return fala({ t: outra(CREATED), m: 'feliz', p: PRIO.created }, 'sim');
   if (kind === 'pedido') return fala({ t: pick([`Pedido enviado! Agora é torcer pra ${(o.nome || 'pessoa').split(' ')[0]} aceitar 🤞`, 'Mandei o convite voando! 🕊️ Já já chega no celular da pessoa.', 'Feito! Amizade a um toque de distância 🤝']), m: 'comemora', roteiro: ['balanca'] }, 'pulo');
   if (kind === 'story') return fala({ t: pick(['Postou story! Agora todo mundo vai ver que você fez 😎📸', 'XP em dobro na conta! Fotógrafo(a) profissional, hein 📸', 'Prova registrada! Ninguém pode dizer que você não fez 😏']), m: 'danca', roteiro: ['balanca'] }, 'pulo');
   if (kind === 'visitas') { try { localStorage.setItem(visKey, String(Date.now())); } catch { /* ok */ } return o.n ? fala({ t: pick([`Hmm… que que será que ${(o.nome || 'essa pessoa').split(' ')[0]} tava querendo, hein? 🤭`, `${(o.nome || 'Alguém').split(' ')[0]} passou por aqui… será que tá com saudade? 👀`, 'Olha quanta gente curiosa com a sua vida 😏', `${(o.nome || 'Alguém').split(' ')[0]} veio, olhou e não falou nada… típico de quem tá interessado 😏`, 'Esse povo vê tudo e finge que não viu 🙈 Mas eu vi.', 'Quer que eu fique de olho em quem voltar? Eu fico 🕵️']), m: 'desconfiado', roteiro: ['olhaLados', 'maoBoca'] }, 'sobrancelha') : fala({ t: 'Ninguém passou ainda… posta um story que o povo aparece 😉', m: 'feliz' }, 'pisca'); }
