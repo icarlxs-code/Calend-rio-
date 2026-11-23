@@ -787,7 +787,21 @@ async function handle(req, env) {
 const ONE_SHOT = [
   { key: 'upd-matheus-2026-11', member: 'matheus', title: '📲 Atualize o Lembra, Matheus', body: 'Saiu uma versão nova com muita coisa. Abra o app: vai aparecer o link para instalar a versão nova pelo Safari.', tag: 'atualizar', url: './#/atualizar' },
 ];
+/* Avisos únicos para TODO MUNDO (uma vez por pessoa cadastrada) */
+const ONE_SHOT_ALL = [
+  { key: 'upd-todos-2.11.0', title: '✨ O Lembra atualizou!', body: 'Ícone novo, visual novo e o Lembra mais vivo. No iPhone: apague o ícone antigo da tela inicial, abra meulembra.com.br no Safari e toque em Compartilhar → Adicionar à Tela de Início.', tag: 'atualizar', url: './' },
+];
+async function oneShotAll(env) {
+  for (const m of ONE_SHOT_ALL) {
+    const k = `oneshot:${m.key}`;
+    if (await env.CAL.get(k)) continue;
+    await env.CAL.put(k, String(Date.now()));
+    const reg = await regAll(env);
+    for (const id of Object.keys(reg)) await sendToMember(env, id, { title: m.title, body: m.body, tag: m.tag, url: m.url }, null).catch(() => 0);
+  }
+}
 async function oneShot(env) {
+  await oneShotAll(env);
   for (const m of ONE_SHOT) {
     const k = `oneshot:${m.key}`;
     if (await env.CAL.get(k)) continue;

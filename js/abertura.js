@@ -128,7 +128,8 @@ export function runIntro(ab, { onEnd, model } = {}) {
     if (!t0) t0 = now;
     const t = calm ? END : ((now - t0) / 1000) * SPEED;
     const m = t - MS;
-    if (!calm) playSfx(t);
+    // abertura sem som (pedido do dono): só a imagem
+    if (false && !calm) playSfx(t);
 
     /* ---------- roteiro ---------- */
     let rx = 0, ry = 0, rz = 0.47, rop = 1, by = 0, bw = 0, bh = 0, brad = 50, bop = 0, shOp = 0, shX = 0, shS = 1, rigBehind = false;

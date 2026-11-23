@@ -1,12 +1,12 @@
 {
-  "version": "2.10.0",
+  "version": "2.11.0",
   "date": "2026-11-23",
   "min": "2.2.0",
-  "title": "Cara nova, Lembra mais vivo",
+  "title": "Ícone novo e o Lembra mais vivo",
   "notes": [
-    "O que ficou pra trás aparece com nome: no Hoje, no balão do Lembra e numa tela própria com Feito e Pra hoje.",
-    "O Lembra se mexe de verdade: pisca, pensa, boceja, olha pra onde você toca e comenta o que você está vendo.",
-    "Ranking, ofensiva, Hoje, entrar e cadastro com o visual novo no laranja da marca; o mascote virou o símbolo.",
-    "Lembretes e avisos com frases variadas, sem repetir a mesma coisa todo dia."
+    "Ícone novo do app e das notificações.",
+    "Boca do Lembra redesenhada, mais suave; abertura sem som.",
+    "Ofensiva com animação mais calma e níveis que ficam mais bonitos com os dias.",
+    "O que ficou pra trás aparece com nome e dá pra resolver na hora."
   ]
 }
