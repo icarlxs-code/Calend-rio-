@@ -170,6 +170,8 @@ function render() {
   bindSwipes();
   bindStrip(view);
   if (store.user && !window.__snhTried) { window.__snhTried = 1; import('./mascote.js').then((m) => m.start()).catch(() => {}); }
+  // o Lembra acompanha em que tela a pessoa está (para falar do que ela está vendo)
+  window.dispatchEvent(new CustomEvent('lembra:tela', { detail: { space: personalMode ? 'personal' : 'work', tab: personalMode ? ui.ptab || 'p-hoje' : ui.tab, date: ui.date } }));
   if (personalMode) {
     const pq = view.querySelector('[data-form="pquick"] input');
     bindPersonal(view);
@@ -201,6 +203,7 @@ function setTab(tab) {
 
 /* ---------- ações (delegação de cliques) ---------- */
 const actions = {
+  atrasados: () => import('./views/atrasados.js').then((m) => m.openAtrasados()),
   tab: (b) => setTab(b.dataset.tab),
   space: (b) => switchSpace(b.dataset.space, b),
   'edit-profile': async () => (await import('./views/profile.js')).openProfile(),
@@ -1151,7 +1154,7 @@ function startApp() {
     if (hiddenAt && Date.now() - hiddenAt > 30 * 60e3) { askedThisOpen = false; window.__vipAskedNotif = false; setTimeout(askNotifications, 3000); }
   });
   startPresence();
-  personal.on(() => { if (ui.space === 'personal') rerenderAll(); });
+  personal.on(() => { if (ui.space === 'personal' || document.querySelector('.atrcard')) rerenderAll(); }); // o cartão "ficou pra trás" do Trabalho também mostra o Pessoal
   store.onDenied = (msg) => toast(msg, { ms: 5000 });
   store.onError = (err) => {
     const quota = err && /quota/i.test(String(err.name || err.message));

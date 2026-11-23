@@ -60,6 +60,11 @@ const EMO = {
 };
 export const MOODS = Object.keys(EMO);
 export const LIVE = []; // (compatibilidade)
+/* todos os bonecos vivos: quando a pessoa toca na tela, eles olham para onde ela tocou */
+const RIGS = new Set();
+if (typeof document !== 'undefined') document.addEventListener('pointerdown', (ev) => {
+  RIGS.forEach((r) => { if (r.visible && r.el.isConnected && !r.el.contains(ev.target) && !(EMO[r.mood] || {}).look) r.lookAt(ev.clientX, ev.clientY); });
+}, { passive: true, capture: true });
 
 /* ---------- um Sininho ---------- */
 class Rig {
@@ -74,7 +79,7 @@ class Rig {
     };
     this.pose = { l: 'baixo', r: 'baixo' }; this.mouth = 'aberta'; this.mood = '';
     this.q = []; this.t = 0; this.next = { idle: 0.6, blink: 1.5 + Math.random() * 2 }; this.loopAt = 0;
-    this.visible = true; this.dead = false; this.talk = 0;
+    this.visible = true; this.dead = false; this.talk = 0; RIGS.add(this);
     this.io = 'IntersectionObserver' in window ? new IntersectionObserver(([e]) => { this.visible = e.isIntersecting; }) : null;
     this.io && this.io.observe(el);
     this.resize(); this.setMood(el.dataset.snh || 'feliz', true);
@@ -83,7 +88,7 @@ class Rig {
     if (typeof window !== 'undefined' && window.__snhManual) { this.fake = 0; (window.__snhRigs = window.__snhRigs || []).push(this); this.last = 0; } // modo de teste: avançado à mão, quadro a quadro
     else this.raf = requestAnimationFrame(tick);
   }
-  stop() { this.dead = true; cancelAnimationFrame(this.raf); this.io && this.io.disconnect(); }
+  stop() { RIGS.delete(this); this.dead = true; cancelAnimationFrame(this.raf); this.io && this.io.disconnect(); }
   resize() {
     const dpr = Math.min(3, window.devicePixelRatio || 1), w = this.el.clientWidth || parseFloat(this.el.style.getPropertyValue('--s')) || 120;
     this.cv.width = Math.round(w * dpr); this.cv.height = Math.round(w * VIEW.h / VIEW.w * dpr); this.scale = this.cv.width / VIEW.w;
@@ -154,6 +159,34 @@ class Rig {
     } else if (name === 'sim') {
       [[0.06, 0], [-0.03, 0.14], [0.04, 0.28], [0, 0.42]].forEach(([v, t]) => this.at(t, () => { s.sq.t = v; }));
     } else if (name === 'pop') { s.sq.vel += 1.8; }
+    else if (name === 'pensa') {                                   // olha pra cima de lado, uma sobrancelha sobe, boca de canto
+      const m0 = this.mouth; s.px.t = 16; s.py.t = -14; s.bY.t = (e.brow[2] || 0) - 14; s.lean.t = (e.lean || 0) - 1.6; this.setMouth('canto');
+      this.at(1.7, () => { s.px.t = 0; s.py.t = 0; s.bY.t = e.brow[2]; s.lean.t = e.lean || 0; this.setMouth(m0); this.next.idle = this.t + 0.8; });
+      this.next.idle = this.t + 2;
+    } else if (name === 'boceja') {                                // espreguiça: braços sobem, olhos quase fecham, boca de "o"
+      const m0 = this.mouth, l0 = s.lid.t, back = e.arms;
+      s.lid.t = 0.55; this.setMouth('oo'); s.sq.t = -0.05; this.arms(['aberto', 30, 'aberto', -30]);
+      this.at(1.3, () => { s.lid.t = l0; this.setMouth(m0); s.sq.t = 0; this.arms(back); s.sq.vel += 1; });
+      this.next.idle = this.t + 1.8;
+    } else if (name === 'timido') {                                // fica vermelhinho e olha pra baixo
+      const m0 = this.mouth, b0 = s.blush.t; s.blush.t = 1; s.px.t = -12; s.py.t = 12; s.lean.t = (e.lean || 0) + 1.5; this.setMouth('fechada');
+      this.at(1.8, () => { s.blush.t = b0; s.px.t = 0; s.py.t = 0; s.lean.t = e.lean || 0; this.setMouth(m0); });
+      this.next.idle = this.t + 2.1;
+    } else if (name === 'pisca') {                                 // piscadinha marota com sorriso
+      const h0 = s.happy.t; s.happy.t = 1; s.bY.t = (e.brow[2] || 0) - 8; this.blink(true);
+      this.at(0.9, () => { s.happy.t = h0; s.bY.t = e.brow[2]; });
+    } else if (name === 'olhaLados') {                             // olha pra um lado, pro outro, e volta
+      [[-20, 0, 0], [20, 0, 0.55], [0, 0, 1.15]].forEach(([x, y, t]) => this.at(t, () => { s.px.t = x; s.py.t = y; }));
+      this.next.idle = this.t + 1.6;
+    }
+  }
+  /* olha para um ponto da tela (o toque da pessoa, um botão) */
+  lookAt(x, y, hold = 1.4) {
+    const r = this.el.getBoundingClientRect(); if (!r.width) return;
+    const dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height * 0.45), d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / (r.width * 1.5));
+    this.s.px.t = (dx / d) * 20 * k; this.s.py.t = (dy / d) * 13 * k;
+    this.s.lean.t += Math.max(-1.2, Math.min(1.2, dx / 300));
+    this.next.idle = this.t + hold;
   }
 
   /* vida própria */
@@ -331,6 +364,8 @@ export function sininho(mood = 'feliz', { size = 120, cls = '', label = 'Lembra'
 export function alive() { watch(); load(); document.querySelectorAll('[data-snh]').forEach(mount); }
 export function setMood(el, mood) { withRig(el, (r) => r.setMood(mood)); return Promise.resolve(); }
 export function act(el, name) { withRig(el, (r) => r.act(name === 'pop' ? 'pop' : name)); }
+export function lookAt(el, x, y, hold) { withRig(el, (r) => r.lookAt(x, y, hold)); }
+export const GESTOS = ['tchau', 'pulo', 'riso', 'nao', 'sim', 'pop', 'pensa', 'boceja', 'timido', 'pisca', 'olhaLados'];
 
 /* balão do app: o texto aparece digitado; o Sininho NÃO fala (sem boca mexendo, sem som),
    só reage com o corpo quando a mensagem chega, como o Duo faz no Duolingo */

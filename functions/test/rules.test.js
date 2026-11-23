@@ -17,7 +17,7 @@ test('lembrete 1h antes do Reels', () => {
   assert.equal(due[0].offset, 60);
   const m = reminderMessage(due[0].ev, 60, 'Pura Vida');
   assert.equal(m.title, 'Daqui a 1h: Reels · Pura Vida');
-  assert.match(m.body, /^18h — postar o Reels/);
+  assert.match(m.body, /18h/); assert.match(m.body, /postar o Reels/); // o texto varia por item (sempre com hora e o quê)
 });
 
 test('janela tolera atraso de alguns minutos, mas não repete depois', () => {
@@ -66,8 +66,9 @@ test('mensagens de mudança na agenda', () => {
 test('resumo do dia', () => {
   const evs = [ev({ time: '11:30', type: 'feed', companyId: 'a' }), ev({ time: '15:00', type: 'captacao', companyId: 'b' })];
   const m = dailyMessage('morning', 'Henrique', evs, (e) => ({ a: 'Café Aroma', b: 'Pura Vida' })[e.companyId]);
-  assert.equal(m.title, 'Bom dia, Henrique! Seu dia hoje');
-  assert.equal(m.body, '2 tarefas (1 post) · primeira: 11h30 Feed · Café Aroma · sai para Pura Vida às 15h');
+  assert.match(m.title, /Henrique/); // título varia (bom dia, café, plim…)
+  assert.ok(m.body.startsWith('2 tarefas (1 post) · primeira: 11h30 Feed · Café Aroma · sai para Pura Vida às 15h'));
+  assert.ok(!/undefined/.test(m.title + m.body));
   assert.equal(dailyMessage('morning', 'X', [], () => ''), null);
 });
 

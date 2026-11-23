@@ -4,7 +4,7 @@ import { store } from '../store.js';
 import { ui } from '../ui.js';
 import { TYPES, isPost, durationOf, typeStyle, WORK, ent, isMarketing, crew, todos } from '../constants.js';
 import {
-  esc, todayKey, addDays, startOfWeek, fromKey, toKey, fmtDayLong, fmtDayShort, relDay, fmtMonth,
+  esc, todayKey, addDays, diffDays, startOfWeek, fromKey, toKey, fmtDayLong, fmtDayShort, relDay, fmtMonth,
   WD_LETTER, WD_SHORT, dayLabel, fmtDuration, MONTHS_SHORT, MONTHS, toMin, nowMin, fmtTime, fmtCountdown, greeting, rgba, textOn,
 } from '../utils.js';
 import { icon } from '../icons.js';
@@ -13,6 +13,7 @@ import { dayInsights, nextUp } from '../insights.js';
 import { teamBoardCard } from './teamboard.js';
 import { professionFor } from '../../functions/catalog.js';
 import { dayBrief, dayBriefRows, freeTime } from '../planner.js';
+import { itensAtrasados } from './atrasados.js';
 
 /* ---------- elementos compartilhados ---------- */
 export function personSwitch() {
@@ -70,7 +71,7 @@ export function renderToday() {
     <div class="week">
       <div class="week__bar">
         <button class="iconbtn iconbtn--sm" data-action="week" data-n="-7" aria-label="Semana anterior">${icon('left', 18)}</button>
-        <span data-striplabel>${esc(weekLabel)}</span>
+        <span class="week__lbl">${icon('calendar', 16)}<span data-striplabel>${esc(weekLabel)}</span></span>
         <button class="iconbtn iconbtn--sm" data-action="week" data-n="7" aria-label="Próxima semana">${icon('right', 18)}</button>
       </div>
       <div class="week__days daystrip" data-strip data-sel="${date}">
@@ -155,15 +156,15 @@ export function renderToday() {
   } else {
     const groups = [
       { k: 'Manhã', icon: 'sun', items: evs.filter((e) => e.time && toMin(e.time) < 720) },
-      { k: 'Tarde', items: evs.filter((e) => e.time && toMin(e.time) >= 720 && toMin(e.time) < 1080) },
-      { k: 'Noite', items: evs.filter((e) => e.time && toMin(e.time) >= 1080) },
-      { k: 'Sem horário', items: evs.filter((e) => !e.time) },
+      { k: 'Tarde', icon: 'sun', items: evs.filter((e) => e.time && toMin(e.time) >= 720 && toMin(e.time) < 1080) },
+      { k: 'Noite', icon: 'moon', items: evs.filter((e) => e.time && toMin(e.time) >= 1080) },
+      { k: 'Sem horário', icon: 'clock', items: evs.filter((e) => !e.time) },
     ];
     const now = nowMin();
     let nowPlaced = date !== today;
     timeline = groups.filter((g) => g.items.length).map((g) => `
       <div class="tl-group">
-        <h3 class="tl-group__h">${g.k}<span>${g.items.length}</span></h3>
+        <h3 class="tl-group__h tl-group__h--${g.k === 'Manhã' ? 'manha' : g.k === 'Tarde' ? 'tarde' : g.k === 'Noite' ? 'noite' : 'livre'}"><i class="tl-group__ic">${icon(g.icon, 15)}</i>${g.k}<span>${g.items.length}</span></h3>
         ${g.items.map((e) => {
           let line = '';
           if (!nowPlaced && e.time && toMin(e.time) > now) {
@@ -205,6 +206,7 @@ export function renderToday() {
   <div class="page">
     ${store.demo ? demoBanner() : ''}
     ${next}
+    ${atrasCard()}
     <button class="brief" data-action="assistant">
       <span class="brief__ic">${icon('sparkle', 18)}</span>
       <div class="brief__body">
@@ -355,4 +357,16 @@ function companyBars(evs) {
   const byC = {};
   evs.forEach((e) => (byC[e.companyId] = (byC[e.companyId] || 0) + 1));
   return Object.entries(byC).slice(0, 4).map(([id]) => `<i style="background:${store.company(id)?.color || '#999'}"></i>`).join('');
+}
+
+/* o que ficou pra trás, com nome — um toque abre a lista com Feito / Pra hoje */
+function atrasCard() {
+  const L = itensAtrasados();
+  if (!L.length) return '';
+  const nomes = L.slice(0, 3).map((x) => `<li>${esc(x.title)}<small>${diffDays(x.date, todayKey()) <= 1 ? 'ontem' : `há ${diffDays(x.date, todayKey())} dias`}</small></li>`).join('');
+  return `<button class="atrcard" data-action="atrasados">
+    <span class="atrcard__ic">${icon('alert', 18)}</span>
+    <span class="atrcard__body"><b>${L.length === 1 ? '1 coisa ficou pra trás' : `${L.length} coisas ficaram pra trás`}</b><ul>${nomes}</ul>${L.length > 3 ? `<small class="atrcard__mais">e mais ${L.length - 3}</small>` : ''}</span>
+    <span class="atrcard__go">Resolver ${icon('right', 14)}</span>
+  </button>`;
 }

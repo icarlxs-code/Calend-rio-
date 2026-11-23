@@ -71,7 +71,7 @@ function renderHome() {
       <div class="phero__stats">
         <span>${icon('cal2', 14)}<b>${pending}</b> para hoje</span>
         ${streak().days >= 2 ? `<span>🔥<b>${streak().days}</b> dias seguidos</span>` : ''}
-        ${late.length ? `<span class="is-warn">${icon('alert', 14)}<b>${late.length}</b> atrasad${late.length > 1 ? 'os' : 'o'}</span>` : ''}
+        ${late.length ? `<button class="is-warn" data-action="atrasados">${icon('alert', 14)}<b>${late.length}</b> atrasad${late.length > 1 ? 'os' : 'o'} ›</button>` : ''}
         ${bdays.some((b) => diffDays(t, b.next) <= 7) ? `<span>${icon('cake', 14)}<b>${bdays.filter((b) => diffDays(t, b.next) <= 7).length}</b> aniversário${bdays.filter((b) => diffDays(t, b.next) <= 7).length > 1 ? 's' : ''} na semana</span>` : ''}
       </div>
     </div>

@@ -176,8 +176,19 @@ export function reminderMessage(ev, offset, company = '') {
         : `${title}${place}`.trim() || 'Já se organize para não pegar ninguém de surpresa.',
     };
   }
+  const k = hashStr(`${ev.id}|${offset}|${ev.date}`);
+  const tema = `${VERB[ev.type] || 'a tarefa'}${title ? ' ' + title : ''}`;
   if (offset > 0) {
-    return { title: `Daqui a ${dur(offset)}: ${what}`, body: `${at} — ${VERB[ev.type] || 'a tarefa'}${title ? ' ' + title : ''}${place}` };
+    // antes da hora: o título diz o essencial (quanto falta e o quê); o texto varia, com um toque de humor
+    const ANTES = [
+      `${at} — ${tema}${place}`,
+      `Plim! 🔔 Às ${at} tem ${tema}${place}. Quem se adianta não se atrasa 😉`,
+      `Às ${at}: ${tema}${place}. Já vai separando o que precisa.`,
+      `${tema} às ${at}${place}. Eu lembro, você arrasa 💪`,
+      `Contagem regressiva ⏳ ${tema} às ${at}${place}.`,
+      `Um toque do seu sino: ${tema} às ${at}${place} 🔔`,
+    ];
+    return { title: `Daqui a ${dur(offset)}: ${what}`, body: ANTES[k % ANTES.length] };
   }
   // na hora exata: pergunta se já foi feito
   if (offset === 0) {
@@ -185,10 +196,13 @@ export function reminderMessage(ev, offset, company = '') {
     if (isLong(ev) && !isPostType(ev.type)) {
       return { title: `${ASK(ev.type)} ${what}`, body: `Começa agora, às ${at}${title ? ' — ' + title : ''}${place}. Bom trabalho! Quando terminar, marque como feito ✓` };
     }
-    return {
-      title: `${ASK(ev.type)} ${what}`,
-      body: `Deu ${at}${title ? ' — ' + title : ''}. Se já resolveu, toque e marque como feito ✓`,
-    };
+    const AGORA = [
+      `Deu ${at}${title ? ' — ' + title : ''}. Se já resolveu, toque e marque como feito ✓`,
+      `É agora${title ? ': ' + title : ''}! Feito? Um toque e risca da lista ✓`,
+      `${at} em ponto${title ? ' — ' + title : ''}. Bateu o sino, bateu a hora 🔔`,
+      `Hora H${title ? ': ' + title : ''}. Quando terminar, marca como feito pra ganhar XP ✨`,
+    ];
+    return { title: `${ASK(ev.type)} ${what}`, body: AGORA[k % AGORA.length] };
   }
   return {
     title: `Atrasado: ${what}`,
@@ -228,7 +242,12 @@ export function dailyMessage(kind, name, events, companyOf) {
   const line = (e) => `${hm(e.time)} ${TYPE_LABEL[e.type]}${companyOf(e) ? ' · ' + companyOf(e) : ''}`;
   const parts = [`${sorted.length} tarefa${sorted.length > 1 ? 's' : ''} (${posts} post${posts === 1 ? '' : 's'})`, `primeira: ${line(first)}`];
   if (outs.length) parts.push(`sai para ${outs.map((e) => `${companyOf(e) || TYPE_LABEL[e.type]} às ${hm(e.time)}`).join(' e ')}`);
-  return kind === 'morning'
-    ? { title: `Bom dia, ${name}! Seu dia hoje`, body: parts.join(' · ') }
-    : { title: `${name}, amanhã você tem ${sorted.length} tarefa${sorted.length > 1 ? 's' : ''}`, body: parts.slice(1).join(' · ') };
+  const k = hashStr(`${kind}|${first.date}|${name}`), n = sorted.length;
+  if (kind === 'morning') {
+    const T = [`Bom dia, ${name}! Seu dia hoje`, `☀️ ${name}, o dia já tem roteiro`, `☕ Café e agenda, ${name}?`, `🔔 Plim! Bom dia, ${name}`];
+    const fim = ['', ' · Risca tudo e o dia fica 100% 🏆', ' · Um de cada vez, sem pressa', ' · Bora fazer valer'];
+    return { title: T[k % T.length], body: parts.join(' · ') + fim[(k >>> 3) % fim.length] };
+  }
+  const T = [`${name}, amanhã você tem ${n} tarefa${n > 1 ? 's' : ''}`, `🌙 Amanhã: ${n} na agenda`, `${name}, spoiler de amanhã: ${n} tarefa${n > 1 ? 's' : ''} 👀`, `Deixa o amanhã comigo, ${name}: ${n} tarefa${n > 1 ? 's' : ''}`];
+  return { title: T[k % T.length], body: parts.slice(1).join(' · ') };
 }

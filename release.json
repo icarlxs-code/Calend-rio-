@@ -1,11 +1,12 @@
 {
-  "version": "2.9.0",
-  "date": "2026-11-22",
+  "version": "2.10.0",
+  "date": "2026-11-23",
   "min": "2.2.0",
-  "title": "O Lembra chegou",
+  "title": "Cara nova, Lembra mais vivo",
   "notes": [
-    "O Lembra te acompanha no cadastro: ele pergunta, explica os erros e comemora cada etapa.",
-    "Ele avisa do que ficou para trás (inclusive no Pessoal) e leva direto para a tela certa.",
-    "Abertura sorteada entre 4 modelos e cores novas no laranja da marca."
+    "O que ficou pra trás aparece com nome: no Hoje, no balão do Lembra e numa tela própria com Feito e Pra hoje.",
+    "O Lembra se mexe de verdade: pisca, pensa, boceja, olha pra onde você toca e comenta o que você está vendo.",
+    "Ranking, ofensiva, Hoje, entrar e cadastro com o visual novo no laranja da marca; o mascote virou o símbolo.",
+    "Lembretes e avisos com frases variadas, sem repetir a mesma coisa todo dia."
   ]
 }

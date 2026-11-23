@@ -168,17 +168,19 @@ export function agendaMessages(p, br, st) {
   const out = [];
   const n = p.name || '';
   const nowMin = br.h * 60 + br.m;
+  // variações por assunto e por dia: o mesmo lembrete nunca chega com a mesma frase dois dias seguidos
+  const v = (key, list) => list[hashStr(`${key}|${br.date}`) % list.length];
   for (const it of p.today || []) {
     if (it.done || !it.time) continue;
     const [h, m] = it.time.split(':').map(Number);
     const diff = h * 60 + m - nowMin;
-    if (diff > 90 && diff < 480) out.push({ key: `up-${it.title}`, title: '📅 Mais tarde', body: `Hoje às ${hm(it.time)} tem ${it.title}. Já tá se organizando, ${n}?` });
+    if (diff > 90 && diff < 480) out.push({ key: `up-${it.title}`, title: v(`upt-${it.title}`, ['📅 Mais tarde', '⏳ Guarda esse horário', '🔔 Spoiler do seu dia']), body: v(`up-${it.title}`, [`Hoje às ${hm(it.time)} tem ${it.title}. Já tá se organizando, ${n}?`, `${it.title} às ${hm(it.time)}. Quem se adianta não se atrasa 😉`, `Às ${hm(it.time)}: ${it.title}. Eu toco o sino na hora, combinado? 🔔`, `${n}, anota aí na cabeça: ${it.title} às ${hm(it.time)}. O resto deixa comigo.`]) });
   }
   if ((p.today || []).some((it) => !it.done && !it.time)) {
     const it = p.today.find((x) => !x.done && !x.time);
-    out.push({ key: `td-${it.title}`, title: '📅 Não esquece hoje', body: `Você anotou “${it.title}” pra hoje. Já fez? Se fez, marca como feito 😉` });
+    out.push({ key: `td-${it.title}`, title: v(`tdt-${it.title}`, ['📅 Não esquece hoje', '🔔 Lembra?', '✍️ Tá na lista de hoje']), body: v(`td-${it.title}`, [`Você anotou “${it.title}” pra hoje. Já fez? Se fez, marca como feito 😉`, `“${it.title}” tá te esperando hoje. Riscar é a melhor parte ✔️`, `Lembra de “${it.title}”? Eu lembro. É meu nome 😅`, `Hoje é dia de “${it.title}”. Um toque e pronto ✨`]) });
   }
-  for (const it of (p.overdue || []).slice(0, 2)) out.push({ key: `od-${it.title}`, title: '📅 Ficou pra trás', body: `Ainda tá pendente: ${it.title}. Bora resolver hoje? Você consegue 💪` });
+  for (const it of (p.overdue || []).slice(0, 2)) out.push({ key: `od-${it.title}`, title: v(`odt-${it.title}`, ['📅 Ficou pra trás', '⏰ Atrasado não é perdido', '🔔 Toc toc']), body: v(`od-${it.title}`, [`Ainda tá pendente: ${it.title}. Bora resolver hoje? Você consegue 💪`, `${it.title} ficou pra trás. Que tal trazer pra frente hoje?`, `${it.title} ainda dá tempo! Resolve e tira isso da cabeça 😮‍💨`, `Quem é vivo sempre aparece… e ${it.title} também 😅 Bora?`]) });
   const lb = p.lastByCat || {}, nb = p.nextByCat || {};
   if (!nb.beleza) {
     const days = lb.beleza ? Math.round((Date.parse(br.date) - Date.parse(lb.beleza)) / 864e5) : null;
@@ -195,7 +197,7 @@ export function agendaMessages(p, br, st) {
   }
   if ((p.tomorrow || []).length && br.h >= 17) {
     const t = p.tomorrow[0];
-    out.push({ key: `tm-${t.title}`, title: '📅 Amanhã', body: `Amanhã tem ${t.title}${t.time ? ' às ' + hm(t.time) : ''}. Já deixa tudo encaminhado pra não correr 😉` });
+    out.push({ key: `tm-${t.title}`, title: v(`tmt-${t.title}`, ['📅 Amanhã', '🌙 Spoiler de amanhã', '👀 Amanhã tem']), body: v(`tm-${t.title}`, [`Amanhã tem ${t.title}${t.time ? ' às ' + hm(t.time) : ''}. Já deixa tudo encaminhado pra não correr 😉`, `${t.title}${t.time ? ' às ' + hm(t.time) : ''}, amanhã. Dorme tranquilo(a) que eu te lembro 🔔`, `Amanhã: ${t.title}${t.time ? ' (' + hm(t.time) + ')' : ''}. Separa hoje o que precisar e acorda leve.`]) });
   }
   // não repete o mesmo assunto antes do prazo ("every" em dias; padrão: 1 vez por dia)
   return out.filter((m) => {

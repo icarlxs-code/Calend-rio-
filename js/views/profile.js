@@ -8,7 +8,7 @@ import { store, saveMyProfile } from '../store.js';
 import { openSheet, sheetHead, toast, avatar } from '../components.js';
 import { icon } from '../icons.js';
 import { esc } from '../utils.js';
-import { sininho, alive } from '../sininho.js';
+import { sininho, alive, act } from '../sininho.js';
 import { mascotOn } from '../mascote.js';
 import { CONFIG } from '../../config.js';
 import { professionFor } from '../../functions/catalog.js';
@@ -70,15 +70,20 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
       const goal = [3, 7, 14, 30, 60, 100, 365].find((x) => x > off.days) || off.days + 100;
       const T = [['clock', 'No horário', onTime, '#34C759'], ['alert', 'Com atraso', late, '#FF9500'], ['calendar', 'Marcados', m.created || 0, '#0A84FF'], ['star', 'Dias 100%', m.perfectDays || 0, '#FFB800'],
         ['heart', 'Lembretes do Pessoal', m.personalDone || 0, '#FF2D55'], ['note', 'Bilhetes', m.notes || 0, '#AF52DE'], ['cal2', 'Dias usando o Lembra', m.activeDays || 0, '#5AC8FA'], ['refresh', 'Voltas por cima', m.comebacks || 0, '#30B0C7']];
+      const snh = mascotOn();
+      // cada número tem o Lembra espiando do canto, com a cara do que o número quer dizer
+      const PEEK = { 'No horário': ['feliz', '', 'olhaLados'], 'Com atraso': ['sono', '<i class="pn2__zz">z<i>z</i></i>', ''], 'Dias 100%': ['feliz', '<i class="pn2__conf"></i>', 'pisca'], 'Lembretes do Pessoal': ['amor', '', 'timido'], Bilhetes: ['desconfiado', '', 'pensa'] };
       return `<div class="ofs ofs--${lvlF}">
-        <div class="ofs__fire"><span class="fire"><i></i><i></i><i></i><i class="fire__core"></i></span></div>
-        ${mascotOn() ? `<button class="ofs__snh" data-replay-streak aria-label="Ver a comemoração da ofensiva">${sininho(off.today ? (off.days >= 7 ? 'danca' : 'comemora') : off.days ? 'triste' : 'feliz', { size: 62 })}</button>` : ''}
-        <div class="ofs__txt"><small>Ofensiva</small><b>${off.days} ${off.days === 1 ? 'dia' : 'dias'}</b><span>${fireName}</span></div>
-        <div class="ofs__week">${wk.map((d) => `<span class="${d.on ? 'is-on' : ''}${d.today ? ' is-today' : ''}"><i>${d.on ? icon('flame', 12) : ''}</i><small>${d.l}</small></span>`).join('')}</div>
-        <div class="ofs__goal"><span><i style="width:${Math.min(100, Math.round((off.days / goal) * 100))}%"></i></span><small>${off.today ? `Próxima meta: <b>${goal} dias</b>` : '<b>Abra o Lembra hoje</b> para não perder a ofensiva'} · recorde ${Math.max(off.best, m.bestStreak || 0)} dias</small></div>
+        <div class="ofs__head">
+          <div class="ofs__fire"><span class="fire"><i></i><i></i><i></i><i class="fire__core"></i></span></div>
+          <div class="ofs__txt"><b>${off.days} ${off.days === 1 ? 'dia' : 'dias'}</b><span>${fireName}</span></div>
+          ${snh ? `<button class="ofs__snh" data-replay-streak aria-label="Ver a comemoração da ofensiva">${sininho(off.today ? (off.days >= 7 ? 'danca' : 'feliz') : off.days ? 'triste' : 'acena', { size: 104 })}</button>` : ''}
+        </div>
+        <div class="ofs__week">${wk.map((d) => `<span class="${d.on ? 'is-on' : ''}${d.today ? ' is-today' : ''}"><i>${d.on ? icon('check', 14) : ''}</i><small>${d.l}</small></span>`).join('')}</div>
+        <div class="ofs__goal"><span><i style="width:${Math.max(4, Math.min(100, Math.round((off.days / goal) * 100)))}%"></i></span><small>${off.today ? `Próxima meta: <b>${goal} dias</b>` : '<b>Abra o Lembra hoje</b> para não perder a ofensiva'} · recorde ${Math.max(off.best, m.bestStreak || 0)} dias</small></div>
       </div>
-      <div class="xpbig"><span class="xpbig__ic">${icon('sparkles', 22)}</span><div><small>XP total</small><b>${fmt(L.xp)}</b></div><div class="xpbig__m"><small>Este mês</small><b>${fmt(G.monthXp())}</b></div><button class="btn btn--soft btn--sm" data-action="ranking">${icon('trophy', 14)} Ranking</button></div>
-      <div class="pnums2">${T.map(([ic, l, v, c]) => `<div class="pn2" style="--c:${c}"><span class="pn2__ic">${icon(ic, 18)}</span><b>${fmt(v)}</b><small>${esc(l)}</small></div>`).join('')}</div>`;
+      <div class="xpbig"><span class="xpbig__ic">${icon('sparkles', 22)}</span><div><small>XP total</small><b>${fmt(L.xp)}</b></div><div class="xpbig__m"><small>Este mês</small><b>${fmt(G.monthXp())}</b></div><button class="xpbig__rk" data-action="ranking">Ranking ${icon('right', 14)}</button></div>
+      <div class="pnums2">${T.map(([ic, l, v, c]) => { const pk = snh && PEEK[l]; return `<div class="pn2${pk ? ' has-peek' : ''}${l === 'Marcados' ? ' is-cal' : ''}" style="--c:${c}"><span class="pn2__ic">${icon(ic, 18)}</span><b>${fmt(v)}</b><small>${esc(l)}</small>${pk ? `<span class="pn2__peek" data-g="${pk[2]}">${sininho(pk[0], { size: 58 })}${pk[1]}</span>` : ''}${l === 'Marcados' ? `<span class="pn2__cal">${icon('calendar', 44)}</span>` : ''}</div>`; }).join('')}</div>`;
     };
     return `${sheetHead(esc((me.name || 'Perfil').split(' ')[0]), { left: '<button class="btn-text" data-close>Fechar</button>', right: '<button class="btn-text" data-edit>Editar</button>' })}
     <div class="prof">
@@ -121,6 +126,14 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
     onMount: (a) => {
       const el = a.el;
       alive();
+      // os Lembras dos números: um gesto calmo de vez em quando (piscar, olhar, pensar), cada um no seu tempo
+      clearInterval(a._peek);
+      a._peek = setInterval(() => {
+        if (!el.isConnected) return clearInterval(a._peek);
+        const all = [...el.querySelectorAll('.pn2__peek[data-g]:not([data-g=""])')];
+        const one = all[Math.floor(Math.random() * all.length)];
+        if (one) act(one.querySelector('[data-snh]'), one.dataset.g);
+      }, 2600);
       el.addEventListener('click', (ev) => { if (ev.target.closest('[data-replay-streak]')) import('../streak.js').then((m) => m.showStreak(Math.max(1, G.offensive().days))); });
       el.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { cur = b.dataset.tab; a.set(html()); el.querySelector('.prof__tabs')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); }));
       el.querySelectorAll('[data-cat]').forEach((b) => (b.onclick = () => { cat = b.dataset.cat; a.set(html()); }));

@@ -5,6 +5,8 @@ import { store, saveUserProfile } from '../store.js';
 import { openSheet, sheetHead, toast } from '../components.js';
 import { icon } from '../icons.js';
 import { esc } from '../utils.js';
+import { mascotOn } from '../mascote.js';
+import { sininho, alive } from '../sininho.js';
 
 const fmt = (n) => Number(n || 0).toLocaleString('pt-BR');
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -40,28 +42,35 @@ export async function openRanking({ kind = 'month' } = {}) {
         <div class="rkme__pos"><small>Sua posição</small><b>${fmt(me.pos)}º</b><span>de ${fmt(d.total)}</span></div>
         <div class="rkme__info"><b>${fmt(me.points)} XP</b><small>${cur === 'month' ? `ganhos em ${MONTHS[new Date().getMonth()]}` : `nível ${L.level} · ${esc(L.tier.name())}`}</small>
           ${d.above ? `<small class="rkme__next">Faltam <b>${fmt(d.above.points - me.points + 1)} XP</b> para passar ${esc(d.above.name)}</small>` : me.pos === 1 ? `<small class="rkme__next">${icon('crown', 13)} Você é o 1º lugar!</small>` : ''}</div>
-        ${off.days ? `<div class="rkme__fire">${flame(off.days)}<small>dias</small></div>` : ''}</div>`
+        ${off.days ? `<div class="rkme__fire">${icon('flame', 16)}<b>${off.days}</b><small>${off.days === 1 ? 'dia' : 'dias'}</small></div>` : ''}</div>`
       : `<div class="rkme rkme--out"><div class="rkme__info"><b>Você ainda não entrou ${cur === 'month' ? 'no ranking deste mês' : 'no ranking'}</b><small>Conclua um compromisso ou um lembrete para ganhar XP e aparecer aqui.</small></div></div>`;
     const row = (p) => `<div class="rkrow${p.uid === me?.uid ? ' is-me' : ''}"><span class="rkrow__pos">${fmt(p.pos)}</span>${face(p, 40)}
       <span class="rkrow__id"><b>${esc(p.name)}${p.vip ? ` <i class="rkvip">${icon('crown', 11)}</i>` : ''}</b><small>Nível ${p.level}${p.streak ? ' · ' : ''}${flame(p.streak)}</small></span><span class="rkrow__pts">${fmt(p.points)}<small>XP</small></span></div>`;
     const meOutsideTop = me && me.pos && me.pos > d.top.length;
+    const mes = MONTHS[new Date().getMonth()], dl = daysLeft();
+    const confete = '<span class="rkconf" aria-hidden="true">' + Array.from({ length: 14 }, (_, i) => `<i style="--i:${i};top:${(i * 37) % 70}px"></i>`).join('') + '</span>';
     return `${sheetHead('Ranking', { left: '<button class="btn-text" data-close>Fechar</button>' })}
     <div class="page page--sheet rk">
       ${tabs}
-      <p class="rkhint">${cur === 'month' ? `${icon('refresh', 13)} Quem mais ganhar XP em ${MONTHS[new Date().getMonth()]} fica no topo. Reinicia em ${daysLeft()} ${daysLeft() === 1 ? 'dia' : 'dias'}.` : `${icon('infinity', 13)} Todo o XP que cada pessoa já ganhou no Lembra, desde sempre.`}</p>
+      <div class="rkhero">
+        <div class="rkhero__fig">${mascotOn() ? sininho('comemora', { size: 112 }) + `<span class="rkhero__trofeu">${icon('trophy', 34)}</span>` : `<span class="rkhero__big">${icon('trophy', 64)}</span>`}</div>
+        <div class="rkhero__txt"><h3>${cur === 'month' ? `Quem mais ganhar XP em ${mes} fica no topo.` : 'Todo o XP que cada pessoa já ganhou, desde sempre.'}</h3>
+          ${cur === 'month' ? `<span class="rkpill">${icon('refresh', 13)} Reinicia em ${dl} ${dl === 1 ? 'dia' : 'dias'}</span>` : `<span class="rkpill">${icon('infinity', 13)} Ranking geral</span>`}</div>
+      </div>
       ${mine}
-      ${d.total ? podium : `<div class="rkempty">${icon('trophy', 40)}<b>Ninguém pontuou ainda ${cur === 'month' ? 'neste mês' : ''}</b><small>Seja a primeira pessoa do ranking!</small></div>`}
+      ${d.total ? `<div class="rkstage">${confete}${podium}</div>` : `<div class="rkempty">${icon('trophy', 40)}<b>Ninguém pontuou ainda ${cur === 'month' ? 'neste mês' : ''}</b><small>Seja a primeira pessoa do ranking!</small></div>`}
       ${rest.length ? `<div class="rklist">${rest.map(row).join('')}</div>` : ''}
       ${meOutsideTop ? `<div class="rklist rklist--me"><div class="rkgap">· · ·</div>${row(me)}</div>` : ''}
       <button class="rkleague" data-league>${icon('trophy', 18)}<span><b>Liga semanal com prêmios</b><small>Para assinantes do plano mensal: o 1º do mês ganha o mês seguinte grátis</small></span>${icon('right', 16)}</button>
       <label class="rkpriv"><input type="checkbox" data-hide ${store.profile?.rankHide ? 'checked' : ''}><span>Aparecer sem nome e sem foto (anônimo)</span></label>
-      <p class="fhelp">Como ganhar XP: concluir no horário +20 · atrasado +8 · lembrete do Pessoal +12 · marcar compromisso +5 · abrir o app no dia +10 · dia 100% +40 · cada emblema dá XP extra.</p>
+      <p class="rkhow">Como ganhar XP: concluir no horário +20 · atrasado +8 · lembrete do Pessoal +12 · marcar compromisso +5 · abrir o app no dia +10 · dia 100% +40 · cada emblema dá XP extra.</p>
     </div>`;
   };
   const a = openSheet({
     className: 'sheet--tall sheet--rk',
     html: html(),
     onMount: (x) => {
+      alive();
       x.el.querySelectorAll('[data-k]').forEach((b) => (b.onclick = () => { cur = b.dataset.k; x.set(html()); if (!data[cur]) load(cur, x); }));
       const lg = x.el.querySelector('[data-league]');
       if (lg) lg.onclick = async () => (await import('./league.js')).openLeague();
