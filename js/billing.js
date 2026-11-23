@@ -189,7 +189,7 @@ export function openPlans({ blocking = false } = {}) {
     <p class="paywall__err" data-err hidden></p>
     <p class="pw-fine">${icon('lock', 11)} Pagamento seguro pela Stripe. Cartão de crédito (renova sozinho até você cancelar) ou Pix no anual e no Fundadores (vale 12 meses, sem renovação automática). Cancele quando quiser em Ajustes → Gerenciar assinatura. Reembolso integral em até 7 dias. Preços em reais, com impostos.</p>
     <div class="pw-links">
-      <button data-paid>${icon('refresh', 13)} Já paguei? Verificar</button>
+      <button data-paid>${icon('refresh', 13)} Já paguei? Verificar</button>${window.Capacitor?.isNativePlatform?.() ? `<button data-restore>${icon('refresh', 13)} Restaurar compras</button>` : ''}
       ${blocking ? '<span>·</span><button data-pclose>Só olhar o app</button><span>·</span><button data-action="logout">Sair da conta</button>' : '<span>·</span><button data-pclose>Agora não</button>'}
     </div>
     <div class="paywall__cta">
@@ -257,6 +257,9 @@ export function openPlans({ blocking = false } = {}) {
     t.textContent = 'Abrindo o pagamento seguro…';
     try {
       const plan = finalPlan();
+      // dentro do app da App Store / Google Play: compra pela loja (regra das lojas); no site: Stripe
+      const L = await import('./loja.js');
+      if (L.nativo()) { await L.comprarNaLoja(plan); location.reload(); return; }
       const r = await api('/billing/checkout', { plan, returnUrl: location.href });
       if (!r.url) throw new Error(r.error || 'sem endereço');
       markBuying(plan);
@@ -271,6 +274,8 @@ export function openPlans({ blocking = false } = {}) {
   const close = w.querySelector('[data-pclose]');
   if (close) close.onclick = () => { w.classList.remove('is-open'); setTimeout(() => w.remove(), 250); };
   w.querySelector('[data-paid]').onclick = () => confirmPayment({ manual: true });
+  const rest = w.querySelector('[data-restore]');
+  if (rest) rest.onclick = async () => { try { await (await import('./loja.js')).restaurarCompras(); location.reload(); } catch (e) { err.textContent = e.message || 'Não consegui restaurar agora.'; err.hidden = false; } };
   const retry = w.querySelector('[data-retry]');
   if (retry) retry.onclick = async () => {
     retry.disabled = true;

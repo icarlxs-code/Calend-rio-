@@ -1,6 +1,7 @@
 /* Ranking mundial do Lembra: ESTE MÊS (zera todo dia 1º) e GERAL (XP desde sempre).
    Pódio com os 3 primeiros, a sua posição em destaque (ex.: 599º de 2.340) com os pontos,
    quanto falta para passar quem está logo acima e a lista de quem está no topo. */
+import { rankHidden, isTeen } from '../teen.js';
 import { store, saveUserProfile } from '../store.js';
 import { openSheet, sheetHead, toast } from '../components.js';
 import { icon } from '../icons.js';
@@ -62,7 +63,7 @@ export async function openRanking({ kind = 'month' } = {}) {
       ${rest.length ? `<div class="rklist">${rest.map(row).join('')}</div>` : ''}
       ${meOutsideTop ? `<div class="rklist rklist--me"><div class="rkgap">· · ·</div>${row(me)}</div>` : ''}
       <button class="rkleague" data-league>${icon('trophy', 18)}<span><b>Liga semanal com prêmios</b><small>Para assinantes do plano mensal: o 1º do mês ganha o mês seguinte grátis</small></span>${icon('right', 16)}</button>
-      <label class="rkpriv"><input type="checkbox" data-hide ${store.profile?.rankHide ? 'checked' : ''}><span>Aparecer sem nome e sem foto (anônimo)</span></label>
+      <label class="rkpriv"><input type="checkbox" data-hide ${rankHidden() ? 'checked' : ''}><span>Aparecer sem nome e sem foto (anônimo)${isTeen() ? ' · ligado por padrão para menores de 18' : ''}</span></label>
       <p class="rkhow">Como ganhar XP: concluir no horário +20 · atrasado +8 · lembrete do Pessoal +12 · marcar compromisso +5 · abrir o app no dia +10 · dia 100% +40 · cada emblema dá XP extra.</p>
     </div>`;
   };

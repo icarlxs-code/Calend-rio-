@@ -242,7 +242,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/lb/report': 20, '/lb/board': 40 };
+const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/lb/report': 20, '/lb/board': 40 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -395,6 +395,15 @@ async function handle(req, env) {
     const sent = await sendToMember(env, member, { title: `✨ Lembra ${v ? v + ' ' : ''}chegou`, body: 'Toque aqui para abrir: o app se atualiza sozinho em 2 segundos.', tag: 'atualizar', url: './' }).catch(() => 0);
     return reply(env, req, { ok: true, sent });
   }
+  // compra feita dentro do app da App Store / Google Play: o servidor confere o recibo com a loja antes de liberar.
+  // Fica desligada até existirem as contas de desenvolvedor e as chaves (APPLE_ISSUER_ID/APPLE_KEY_ID/APPLE_PRIVATE_KEY,
+  // GOOGLE_PLAY_SERVICE_ACCOUNT) — veja app-nativo/README.md. Nunca libera plano sem recibo validado.
+  if (url.pathname === '/billing/store-verify') {
+    const pl = clean(body.plataforma, 10);
+    const pronta = pl === 'ios' ? !!(env.APPLE_ISSUER_ID && env.APPLE_PRIVATE_KEY) : pl === 'android' ? !!env.GOOGLE_PLAY_SERVICE_ACCOUNT : false;
+    if (!pronta) return reply(env, req, { error: 'A compra pela loja ainda está sendo ativada. Tente de novo mais tarde ou fale com o suporte.' }, 503);
+    return reply(env, req, { error: 'Validação da loja ainda não configurada.' }, 501);
+  }
   if (url.pathname === '/billing/all') {
     if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
     return reply(env, req, { ok: true, byWs: await billingAll(env) });
@@ -536,7 +545,7 @@ async function handle(req, env) {
     };
     if (url.pathname === '/friends/card') {
       const photo = typeof body.photo === 'string' && body.photo.length < 90000 && /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(body.photo) ? body.photo : null;
-      const card = { name: clean(body.name, 40) || me.name, photo, color: /^#[0-9a-fA-F]{6}$/.test(body.color || '') ? body.color : '#7C5CFF', level: Math.max(0, Math.min(100, Math.round(Number(body.level) || 0))), xp: Math.max(0, Math.round(Number(body.xp) || 0)), tier: clean(body.tier, 30), since: Number(body.since) || null,
+      const card = { name: clean(body.name, 40) || me.name, photo, color: /^#[0-9a-fA-F]{6}$/.test(body.color || '') ? body.color : '#7C5CFF', level: Math.max(0, Math.min(100, Math.round(Number(body.level) || 0))), xp: Math.max(0, Math.round(Number(body.xp) || 0)), tier: clean(body.tier, 30), since: Number(body.since) || null, teen: body.teen === true,
         badges: (Array.isArray(body.badges) ? body.badges : []).filter((x) => typeof x === 'string' && /^[a-z0-9_-]{1,30}$/.test(x)).slice(0, 150), at: Date.now() };
       await env.CAL.put(`card:${meU}`, JSON.stringify(card));
       return reply(env, req, { ok: true });
@@ -582,6 +591,8 @@ async function handle(req, env) {
     const memberOf = (u) => 'u' + String(u).replace(/[^A-Za-z0-9]/g, '').slice(0, 24);
     const DAY = 864e5, now = Date.now();
     const vivos = (l) => l.filter((x) => now - x.at < DAY);
+    const brHora = () => new Date(Date.now() - 3 * 3600e3).getUTCHours();
+    const dormindo = async (u) => { const c = (await env.CAL.get(`card:${u}`, 'json')) || {}; const h = brHora(); return c.teen === true && (h >= 22 || h < 7); }; // modo dormir (menores)
     const isFriend = async (a, b) => a === b || (await getL(`friends:${a}`)).includes(b);
     if (url.pathname === '/friends/story-post') {
       const photo = typeof body.photo === 'string' && body.photo.length < 420000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(body.photo) ? body.photo : null;
@@ -595,7 +606,7 @@ async function handle(req, env) {
       await env.CAL.put(`storyimg:${id}`, photo, { expirationTtl: 24 * 3600 }); // a foto some sozinha em 24h (não fica guardada)
       const mine = await cardOf(meU), fr = await getL(`friends:${meU}`);
       const TIT = ['👀 Story novo no ar', '📸 Alguém postou agora', '🔥 Saiu story novo'];
-      await Promise.all(fr.slice(0, 200).map((u) => sendToMember(env, memberOf(u), { title: TIT[now % TIT.length], body: `${mine.name.split(' ')[0]} acabou de postar um story${body.title ? ` de “${clean(body.title, 40)}”` : ''}. Toque pra ver antes que suma!`, tag: `story-${meU}`, url: './#/stories' }).catch(() => 0)));
+      await Promise.all(fr.slice(0, 200).map(async (u) => (await dormindo(u)) ? 0 : sendToMember(env, memberOf(u), { title: TIT[now % TIT.length], body: `${mine.name.split(' ')[0]} acabou de postar um story${body.title ? ` de “${clean(body.title, 40)}”` : ''}. Toque pra ver antes que suma!`, tag: `story-${meU}`, url: './#/stories' }).catch(() => 0)));
       return reply(env, req, { ok: true, id });
     }
     if (url.pathname === '/friends/story-delete') {
@@ -639,7 +650,7 @@ async function handle(req, env) {
       const novo = [{ from: meU, at: now, n: (prev?.n || 0) + 1 }, ...l.filter((x) => x.from !== meU)].slice(0, 60);
       await env.CAL.put(`visits:${other}`, JSON.stringify(novo), { expirationTtl: 8 * 24 * 3600 });
       // gatilho de curiosidade: não diz quem foi (pra pessoa abrir o app); no máximo 1 aviso a cada 6h por visitante
-      if (!prev || now - prev.at > 6 * 3600e3) {
+      if ((!prev || now - prev.at > 6 * 3600e3) && !(await dormindo(other))) {
         const B = ['Alguém acabou de olhar o seu perfil 👀 Toque pra ver quem foi', 'Tem gente bisbilhotando o seu perfil 🤭 Quer saber quem?', 'Seu perfil recebeu uma visita agora. Curioso(a)? 👀'];
         await sendToMember(env, memberOf(other), { title: '👀 Visita no seu perfil', body: B[now % B.length], tag: 'visitas', url: './#/visitas' }).catch(() => 0);
       }

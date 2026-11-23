@@ -78,3 +78,28 @@ Legenda: **[OK]** pronto · **[RISCO]** pode dar problema · **[BLOQUEIO]** reje
 - Exclusão de conta apaga amigos/stories/visitas; página web `/excluir-conta/` — Apple 5.1.1(v), Google exclusão de conta.
 - Página `/suporte/` — Apple 1.5.
 - Termos e Privacidade 1.2 (amigos, stories 24 h, visitas 7 dias, mascote lendo bilhetes só no aparelho, provedores de IA).
+
+---
+
+## Rodada 1 — respostas recebidas e o que foi feito
+| Pergunta | Resposta | Feito |
+|---|---|---|
+| 1. Pagamento | Compra pela loja nos apps, Stripe no site | `js/loja.js` (compra + Restaurar compras), `/billing/store-verify` no servidor (só libera com recibo validado; liga quando as chaves existirem). |
+| 2. Idade | Igual ao Instagram | Mínimo 13; de 13 a 17: ranking anônimo por padrão, conteúdo só para amigos, modo dormir (22h–7h sem avisos sociais). Termos 6.2 e Privacidade 9. |
+| 3. Capacitor | Pode | Pasta `app-nativo/` (config, pacotes conferidos, cópia do site para dentro do app, passo a passo). |
+| 4. Contas de desenvolvedor | Ainda não | Passo 1 do checklist. |
+| 5. União Europeia | Fora | Anotado no checklist. |
+| 6. Conta de demonstração | Pode | Texto pronto; falta criar o e-mail `revisor.lembra@gmail.com`. |
+| 7. E-mail oficial | meulembra@gmail.com | Trocado no app e em todas as páginas. |
+| 8. Testadores | Tem | Mensagem-convite e cronograma em `LOJAS-TEXTOS.md`. |
+Também: botão **Denunciar** em cada resposta da IA + aviso "pode errar". Status atualizado: denúncia de IA **[OK]**.
+
+### Veredito (rodada 1)
+- **Apple: NÃO PRONTO** — falta gerar o app (Capacitor/Xcode), ativar a Compra no App com as chaves e criar a conta do revisor.
+- **Google: NÃO PRONTO** — falta gerar o .aab, ativar o Faturamento e cumprir o teste fechado de 14 dias.
+- O código do app em si está sem bloqueios conhecidos.
+
+### 3 maiores riscos que sobraram
+1. **Funcionalidade mínima (Apple 4.2):** reduzir com notificação nativa e câmera nativa no app empacotado (plugins já listados).
+2. **Moderação de stories:** hoje a retirada é automática após 2 denúncias e o dono recebe aviso; crie a rotina de olhar as denúncias todo dia.
+3. **Validação de recibos:** precisa ser ligada assim que as contas existirem; sem ela, a compra pela loja não libera o plano (falha segura).

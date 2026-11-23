@@ -1,0 +1,12 @@
+{
+  "appId": "br.com.meulembra.app",
+  "appName": "Lembra",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "ios": { "contentInset": "always", "limitsNavigationsToAppBoundDomains": true },
+  "android": { "allowMixedContent": false },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 0, "backgroundColor": "#FFFFFF" },
+    "PushNotifications": { "presentationOptions": ["badge", "sound", "alert"] }
+  }
+}

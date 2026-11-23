@@ -19,7 +19,7 @@ export const CONFIG = {
   legalAddress: '',
   // WhatsApp de atendimento (só números, com DDI e DDD), ex.: '5521999998888'. Aparece na página de apresentação e nos Ajustes.
   supportWhatsapp: '',
-  supportEmail: 'icarlxs@gmail.com',
+  supportEmail: 'meulembra@gmail.com', // e-mail oficial (lojas, privacidade, suporte)
   // versão dos Termos/Privacidade: ao mudar, o app pede o aceite de novo
   termsVersion: '1.2',
   termsDate: '23/11/2026',

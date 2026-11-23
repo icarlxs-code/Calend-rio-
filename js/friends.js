@@ -31,7 +31,7 @@ export async function publishCard() {
     const G = await import('./game.js');
     const st = G.state(), L = G.levelInfo();
     const me = store.member(store.me) || {};
-    const card = { name: me.name || '', photo: me.photo && me.photo.length < 90000 ? me.photo : null, color: me.color || '#7C5CFF', level: L.level, xp: L.xp, tier: L.tier.name(), badges: Object.keys(st.badges || {}),
+    const card = { name: me.name || '', photo: me.photo && me.photo.length < 90000 ? me.photo : null, color: me.color || '#7C5CFF', level: L.level, xp: L.xp, tier: L.tier.name(), badges: Object.keys(st.badges || {}), teen: (await import('./teen.js')).isTeen(),
       since: store.user.metadata?.creationTime ? Date.parse(store.user.metadata.creationTime) : null };
     const sig = JSON.stringify(card);
     if (sig === lastCard) return;

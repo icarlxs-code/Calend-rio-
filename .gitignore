@@ -6,3 +6,5 @@ prep.txt
 .wrangler/
 worker/deploy.txt
 emblemas-lembra.zip
+app-nativo/node_modules/
+app-nativo/www/

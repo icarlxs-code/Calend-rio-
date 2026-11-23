@@ -1,14 +1,14 @@
 {
-  "version": "2.11.0",
-  "build": "7p7fpqwi",
+  "version": "2.12.0",
+  "build": "dkdhuaey",
   "date": "2026-11-23",
   "min": "2.2.0",
-  "title": "Ícone novo e o Lembra mais vivo",
+  "title": "Stories, amigos e um Lembra mais esperto",
   "notes": [
-    "Ícone novo do app e das notificações.",
-    "Boca do Lembra redesenhada, mais suave; abertura sem som.",
-    "Ofensiva com animação mais calma e níveis que ficam mais bonitos com os dias.",
-    "O que ficou pra trás aparece com nome e dá pra resolver na hora."
+    "Poste a foto do que você concluiu (some em 24 h) e ganhe XP em dobro.",
+    "Veja quem passou no seu perfil e os stories dos amigos.",
+    "Emblemas e brasões novos.",
+    "O Lembra percebe o seu ritmo e lembra do que você anotou."
   ],
-  "builtAt": "2026-11-23T10:32:37.298Z"
+  "builtAt": "2026-11-23T10:48:59.187Z"
 }

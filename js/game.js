@@ -7,6 +7,7 @@
    - criar e concluir na mesma hora algo marcado para depois quase não rende XP;
    - limite por dia de XP por criar compromisso e por bilhete, e teto de XP por dia.
    Fica salvo na conta (users/{uid}.game): aparece igual em qualquer celular. */
+import { rankHidden } from './teen.js';
 import { store, saveProfileQuiet } from './store.js';
 import { todayKey, addDays, isStandalone } from './utils.js';
 import { personal, overdue } from './personal.js';
@@ -115,7 +116,7 @@ async function reportRank() {
     const me = store.member(store.me) || {};
     const off = offensive();
     S.c.bestOff = Math.max(S.c.bestOff || 0, off.days);
-    const body = { xp: S.xp, mxp: monthXp(), month: monthNow(), level: levelOf(S.xp), streak: off.days, name: (store.profile?.nickname || me.name || '').split(' ')[0], color: me.color, vip: !!(store.billing?.plan === 'lifetime' && store.billing?.vip), hide: !!store.profile?.rankHide };
+    const body = { xp: S.xp, mxp: monthXp(), month: monthNow(), level: levelOf(S.xp), streak: off.days, name: (store.profile?.nickname || me.name || '').split(' ')[0], color: me.color, vip: !!(store.billing?.plan === 'lifetime' && store.billing?.vip), hide: rankHidden() };
     const sig = JSON.stringify(body);
     if (sig === rankSig) return;
     const { api, server } = await import('./avisos.js');

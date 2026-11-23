@@ -91,7 +91,7 @@ function chatHtml() {
       ${pend.map((i) => `<div class="acard__row">${icon('calendar', 14)}<span>${esc(chat[i].text.slice(0, 160))}</span></div>`).join('')}
       <div class="acard__btns"><button class="btn btn--primary btn--sm" data-redo>Fazer agora</button><button class="btn btn--soft btn--sm" data-redo-skip>Ignorar</button></div></div>` : ''}
     <div class="chat">
-      ${chat.length ? chat.map((m, i) => `<div class="msg msg--${m.role}${m.error ? ' msg--err' : ''}">${md(m.text)}</div>${m.actions && m.actions.length ? actionsCard(m, i) : ''}`).join('')
+      ${chat.length ? `<p class="ia__aviso">Respostas geradas por inteligência artificial: podem errar, confira antes de confirmar.</p>` : ''}${chat.length ? chat.map((m, i) => `<div class="msg msg--${m.role}${m.error ? ' msg--err' : ''}">${md(m.text)}${m.role === 'assistant' && !m.error ? `<button class="msg__rep" data-rep="${i}" aria-label="Denunciar esta resposta">${icon('flag', 12)} Denunciar</button>` : ''}</div>${m.actions && m.actions.length ? actionsCard(m, i) : ''}`).join('')
         : isMarketing() ? `<div class="msg msg--assistant">Oi! Eu vejo e <b>mexo</b> na agenda de vocês. Peça o que quiser, por exemplo: “coloca captação na JG Garcia de segunda a sábado, das 7h ao meio-dia, até o fim do mês”, “passa o reels da Pura Vida para sexta 18h”, “marca cortar cabelo sábado 15h no meu pessoal”. Eu mostro o que vou fazer e você confirma.</div>`
         : `<div class="msg msg--assistant">Oi! Eu vejo e <b>mexo</b> na sua agenda. Peça o que quiser, por exemplo: “marca ${esc((TYPES[TYPE_ORDER[0]]?.label || 'reunião').toLowerCase())} amanhã às 14h”, “coloca ${esc((TYPES[TYPE_ORDER[1]]?.label || 'tarefa').toLowerCase())} toda segunda às 8h até o fim do mês”, “marca cortar cabelo sábado 15h no meu pessoal”. Eu mostro o que vou fazer e você confirma.</div>`}
       ${thinking ? `<div class="msg msg--assistant msg--typing"><i></i><i></i><i></i></div>` : ''}
@@ -214,6 +214,11 @@ export function openAssistant() {
     className: 'sheet--tall',
     html: html(),
     onMount: (a) => {
+      a.el.querySelectorAll('[data-rep]').forEach((b) => (b.onclick = async () => {
+        const m = chat[+b.dataset.rep]; if (!m) return;
+        try { const { api } = await import('../avisos.js'); await api('/friends/report', { ws: '', owner: 'ia', id: '', motivo: `Resposta da IA: ${String(m.text).slice(0, 150)}` }); } catch { /* ok */ }
+        b.textContent = 'Denunciado ✓'; b.disabled = true; toast('Obrigado! Vamos revisar essa resposta.');
+      }));
       const el = a.el;
       el.querySelector('[data-f="type"]').onchange = (e) => { st.type = e.target.value; a.set(html()); };
       el.querySelector('[data-f="date"]').onchange = (e) => { if (e.target.value) { st.date = e.target.value; a.set(html()); } };

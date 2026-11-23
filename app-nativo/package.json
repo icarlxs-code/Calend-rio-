@@ -1,0 +1,24 @@
+{
+  "name": "lembra-app-nativo",
+  "private": true,
+  "version": "2.12.0",
+  "description": "App do Lembra para App Store e Google Play (Capacitor) — usa o mesmo código do site",
+  "scripts": {
+    "web": "node ../scripts/build.mjs && node copiar-web.mjs",
+    "ios": "npm run web && npx cap sync ios && npx cap open ios",
+    "android": "npm run web && npx cap sync android && npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.6.2",
+    "@capacitor/ios": "8.6.2",
+    "@capacitor/android": "8.6.2",
+    "@capacitor/push-notifications": "8.1.3",
+    "@capacitor/camera": "8.2.6",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.4",
+    "@capgo/native-purchases": "8.9.17"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.2"
+  }
+}
