@@ -256,7 +256,7 @@ function especiais(c) {
   if (c.dow === 1 && c.h < 11) return { k: 'segunda', t: pick(['Segunda-feira… bora com calma ☕', 'Semana nova, agenda nova! 💪']), m: 'feliz' };
   return null;
 }
-const abre = (c) => { const e = especiais(c); return e && !(MEM.n || {})[e.k] ? e : melhor(falas(c)); };
+const abre = (c) => { const L = falas(c), urg = L.filter((x) => (x.u || 0) >= 2); if (urg.length) return melhor(urg); const e = especiais(c); return e && !(MEM.n || {})[e.k] ? e : melhor(L); }; // o urgente vem antes da frase do dia
 
 const DONE = ['Mandou bem!', 'Isso aí! Mais um riscado!', 'Arrasou!', 'Boa! Tô orgulhoso de você!', 'Uhuul! 🙌', 'Riscou! Que sensação boa, né?', 'Check! ✔️ Você é fera', 'Plim! 🔔 Mais um pra conta'];
 const DONE_LATE = ['Antes tarde do que nunca! 💪', 'Feito! O importante é não desistir.', 'Ufa! Resolvido 😮‍💨', 'Atrasou, mas não falhou! 🙌'];
