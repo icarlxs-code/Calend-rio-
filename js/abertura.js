@@ -267,6 +267,6 @@ export function runIntro(ab, { onEnd, model } = {}) {
     if (t >= END) { done = true; if (onEnd) onEnd(); return; }
     raf = requestAnimationFrame(frame);
   };
-  raf = requestAnimationFrame(frame);
+  frame(); // já aplica a posição do 1º instante agora: nenhum quadro mostra o boneco parado antes de começar
   return () => { done = true; cancelAnimationFrame(raf); };
 }
