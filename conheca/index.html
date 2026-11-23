@@ -55,7 +55,7 @@ section{padding:88px 0}
 .hero .rotl{font-weight:800;color:var(--ink)}#rot{color:var(--o3)}#rot::after{content:'|';color:var(--o1);animation:pisca 1s steps(1) infinite}
 @keyframes pisca{50%{opacity:0}}
 .hstage{position:relative;display:flex;justify-content:center}
-.hstage .snh{position:absolute;left:-70px;bottom:-30px;width:190px;z-index:3;filter:drop-shadow(0 18px 24px rgba(120,50,0,.3));animation:flutua 3.6s ease-in-out infinite}
+.hstage .snh{position:absolute;left:-80px;bottom:-24px;width:200px;z-index:3;filter:drop-shadow(0 18px 24px rgba(120,50,0,.3));animation:flutua 3.6s ease-in-out infinite}
 .hstage .bub{position:absolute;left:-90px;top:90px;z-index:4;max-width:220px;background:#fff;border-radius:20px;padding:12px 16px;font-weight:750;font-size:15px;line-height:1.3;box-shadow:0 14px 30px rgba(80,40,0,.16);animation:entra .6s .4s both}
 .hstage .bub small{display:block;font-weight:600;color:var(--mute);font-size:12px;margin-top:4px}
 @keyframes flutua{50%{transform:translateY(-12px) rotate(-3deg)}}
@@ -69,7 +69,7 @@ section{padding:88px 0}
 .mas{background:linear-gradient(180deg,#FFE7D2,var(--bg))}
 .mas .grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:40px;align-items:center}
 .mas .big{position:relative;display:flex;justify-content:center}
-.mas .big img{width:min(360px,80vw);filter:drop-shadow(0 30px 40px rgba(120,50,0,.28));animation:flutua 4s ease-in-out infinite}
+.mas .big img{width:min(320px,70vw);filter:drop-shadow(0 30px 40px rgba(120,50,0,.28));animation:flutua 4s ease-in-out infinite}
 .mas .big .falas{position:absolute;inset:0;pointer-events:none}
 .mas .big .f{position:absolute;background:#fff;border-radius:18px;padding:10px 14px;font-weight:750;font-size:14px;box-shadow:0 12px 26px rgba(80,40,0,.14);max-width:200px}
 .mas .big .f1{left:0;top:6%}.mas .big .f2{right:0;top:30%}.mas .big .f3{left:4%;bottom:12%}
@@ -125,6 +125,9 @@ section{padding:88px 0}
 .final img{width:150px;filter:drop-shadow(0 18px 24px rgba(80,20,0,.35));animation:flutua 3.6s ease-in-out infinite}
 .final h2{color:#fff;font-size:clamp(30px,5vw,46px);margin:14px auto;max-width:760px}.final p{color:#FFE7D6;font-size:18px;max-width:620px;margin:0 auto 26px}
 .final .cta{background:#fff;color:var(--o3)}.final .micro{justify-content:center;color:#FFE7D6}.final .micro span::before{color:#fff}
+.dono{background:#fff;padding:70px 0}.dono .wrap{display:flex;gap:30px;align-items:center;max-width:860px}.dono img{width:170px;flex:none;filter:drop-shadow(0 14px 20px rgba(120,50,0,.25))}
+.dono .q{font-size:clamp(19px,2.4vw,23px);line-height:1.45;color:var(--ink);font-weight:600;margin:14px 0 12px;letter-spacing:-.01em}.dono .who{color:var(--mute)}.dono .who b{color:var(--ink)}
+@media(max-width:700px){.dono .wrap{flex-direction:column;text-align:center}.dono img{width:130px}}
 footer{padding:28px 0;font-size:14px;color:var(--mute)}footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px}footer a{color:var(--mute)}
 .sticky{position:fixed;left:16px;right:16px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:60;display:none;transform:translateY(140%);transition:transform .3s}
 .sticky .cta{width:100%}.sticky.show{transform:none}@media(max-width:860px){.sticky{display:block}}
@@ -143,15 +146,15 @@ footer{padding:28px 0;font-size:14px;color:var(--mute)}footer .wrap{display:flex
   </div>
   <div class="hstage">
     <div class="ph"><img src="../media/lp/v2-hoje.jpg" alt="Tela Hoje do Lembra"></div>
-    <div class="bub">Psiu… “Retorno de aparelho — Júlia” começa em 58 min ⏰<small>o Lembra, na hora certa</small></div>
-    <img class="snh" src="../media/marca/mascote.webp" alt="O Lembra, mascote do app">
+    <div class="bub">Ficou pra trás: “Pagar o aluguel”. Resolvo com você? 🔔<small>o Lembra, quando você esquece</small></div>
+    <img class="snh" src="../media/lp/snh-acena.webp" alt="O Lembra, mascote do app">
   </div>
 </div></section>
 <div class="strip"><div class="wrap"><div><b>200+</b><span>profissões com agenda própria</span></div><div><b>105</b><span>emblemas pra conquistar</span></div><div><b>2×</b><span>XP quando você mostra que fez</span></div><div><b>0</b><span>anúncios. Nunca.</span></div></div></div>
 <section class="mas" id="mascote"><div class="wrap">
   <div class="head rv"><span class="eyebrow">Conheça o Lembra</span><h2>Ele não é um sininho qualquer.</h2><p>É o seu parceiro de agenda: lembra pelo nome, percebe o seu ritmo e tem personalidade de sobra.</p></div>
   <div class="grid">
-    <div class="big rv"><img src="../media/marca/mascote.webp" alt="Lembra acenando"><div class="falas"><span class="f f1">Ficou pra trás: “Pagar o aluguel”. Resolvo com você? 🔔</span><span class="f f2">Tá doido?! Quer me deixar tonto? 😵</span><span class="f f3">Alguém tá fofocando no seu perfil, hehe 🤭</span></div></div>
+    <div class="big rv"><img src="../media/lp/snh-desconfiado.webp" alt="Lembra desconfiado"><div class="falas"><span class="f f1">Psiu… a Júlia chega em 58 min ⏰</span><span class="f f2">Tá doido?! Quer me deixar tonto? 😵</span><span class="f f3">Alguém tá fofocando no seu perfil, hehe 🤭</span></div></div>
     <div class="cards">
       <div class="card rv"><div class="ic">⏰</div><h3>Avisa na hora certa</h3><p>Calcula quantos lembretes você precisa e quando, com base em como você esquece.</p></div>
       <div class="card rv d1"><div class="ic">🧠</div><h3>Lembra do seu ritmo</h3><p>Corta o cabelo a cada 15 dias? Ele percebe e te avisa antes de você lembrar.</p></div>
@@ -176,6 +179,12 @@ footer{padding:28px 0;font-size:14px;color:var(--mute)}footer .wrap{display:flex
   <div class="head rv"><span class="eyebrow">Para a sua profissão</span><h2>A agenda muda com o seu trabalho.</h2><p>Os nomes, os tipos de compromisso e as dicas se adaptam a mais de 200 profissões.</p></div>
   <div class="chips rv"><span>🦷 Dentista</span><span>💇 Cabeleireira</span><span>🏋️ Personal</span><span>⚖️ Advogado</span><span>🎂 Confeiteira</span><span>🩺 Enfermeira</span><span>🏠 Corretor</span><span>💅 Manicure</span><span>📸 Fotógrafo</span><span>🧠 Psicóloga</span><span>🔧 Técnico</span><span>📚 Professor</span><span>🚗 Motorista</span><span>💼 Consultor</span><span>+ 190 outras</span></div>
   <div class="priv rv"><span class="ic">🔒</span><div><b>E um cantinho só seu.</b><p>O modo Pessoal guarda aniversários, contas, cuidados e listas. Ninguém mais vê — nem o seu chefe.</p></div></div>
+</div></section>
+<section class="dono"><div class="wrap rv">
+  <img src="../media/lp/snh-amor.webp" alt="">
+  <div><span class="eyebrow">Por que o Lembra existe</span>
+  <p class="q">“Eu vivia esquecendo cliente, conta, aniversário e coisa que prometi pra alguém. As agendas que eu testava só anotavam — ninguém me cobrava. Então eu criei o Lembra: uma agenda que avisa na hora, cobra com jeitinho quando atrasa e comemora comigo cada coisa feita.”</p>
+  <p class="who"><b>Henrique</b> · criador do Lembra</p></div>
 </div></section>
 <section class="price" id="preco"><div class="wrap">
   <div class="head rv"><span class="eyebrow">Preço</span><h2>Menos que um compromisso perdido.</h2><p>Teste 7 dias com tudo liberado, sem cartão. Depois, escolha.</p></div>
@@ -202,7 +211,7 @@ footer{padding:28px 0;font-size:14px;color:var(--mute)}footer .wrap{display:flex
   </div>
 </div></section>
 <section class="final"><div class="wrap rv">
-  <img src="../media/marca/mascote.webp" alt="">
+  <img src="../media/lp/snh-comemora.webp" alt="">
   <h2>Deixa a memória comigo. Fica com a cabeça livre.</h2>
   <p>Configure em 2 minutos e teste 7 dias com tudo liberado, sem cartão.</p>
   <a class="cta" href="../#/cadastro" data-keep>Começar meu teste grátis →</a>
