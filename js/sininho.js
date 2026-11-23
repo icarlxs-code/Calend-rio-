@@ -56,6 +56,7 @@ const EMO = {
   desconfiado: { lid: 0.42, happy: 0, brow: [-9, 7, 4, 1], mouth: 'canto', arms: ['baixo', 0, 'baixo', 0], amp: 0.6, breath: 3.4, look: [18, 4], lean: -2.5 },
   triste: { lid: 0.12, happy: 0, brow: [17, -17, 6], mouth: 'tristinha', arms: ['baixo', -2, 'baixo', 2], amp: 0.5, breath: 4, look: [0, -8], sag: 0.03 },
   bravo: { lid: 0.22, happy: 0, brow: [-20, 20, 14], mouth: 'cerrado', arms: ['baixo', 22, 'baixo', -22], amp: 0, breath: 1.4, loop: 'tremer' },
+  tonto: { lid: 0.3, happy: 0, brow: [8, 12, 4, -8], mouth: 'canto', arms: ['baixo', 6, 'baixo', -2], amp: 0, breath: 3, sag: 0.02 },
   surpreso: { lid: 0, happy: 0, brow: [0, 0, -26], mouth: 'oo', arms: ['aberto', 8, 'aberto', -8], amp: 0.4, breath: 2.6, pupil: 0.82 },
 };
 export const MOODS = Object.keys(EMO);
@@ -75,7 +76,7 @@ class Rig {
       lean: S(0, 1.5, 0.78), bx: S(0, 1.3, 0.85), by: S(0, 3.2, 0.55), sq: S(0, 2.6, 0.42),
       aL: S(12, 3.6, 0.5), aR: S(-12, 3.6, 0.5), px: S(0, 5, 0.85), py: S(0, 5, 0.85), pz: S(1, 6, 0.7),
       lid: S(0, 16, 1), happy: S(0, 7, 0.9), bL: S(0, 5, 0.6), bR: S(0, 5, 0.6), bY: S(0, 5, 0.55), bYr: S(0, 5, 0.55),
-      fL: S(0, 5, 0.55), fR: S(0, 5, 0.55), mz: S(1, 9, 0.45), blush: S(0, 2.5, 1), sag: S(0, 2, 0.9), hand: S(0, 9, 0.6), wL: S(0, 18, 1), wR: S(0, 18, 1),
+      fL: S(0, 5, 0.55), fR: S(0, 5, 0.55), mz: S(1, 9, 0.45), blush: S(0, 2.5, 1), sag: S(0, 2, 0.9), hand: S(0, 9, 0.6), wL: S(0, 18, 1), wR: S(0, 18, 1), fxL: S(0, 5, 0.45), fxR: S(0, 5, 0.45),
     };
     this.pose = { l: 'baixo', r: 'baixo' }; this.mouth = 'aberta'; this.mood = '';
     this.q = []; this.t = 0; this.next = { idle: 0.6, blink: 1.5 + Math.random() * 2 }; this.loopAt = 0;
@@ -107,7 +108,7 @@ class Rig {
     s.blush.t = e.blush || 0; s.sag.t = e.sag || 0; s.pz.t = e.pupil || 1;
     s.px.t = e.look ? e.look[0] : 0; s.py.t = e.look ? e.look[1] : 0;
     s.lean.t = e.lean || 0; s.bx.t = 0; s.by.t = 0; s.fL.t = 0; s.fR.t = 0;
-    this.arms(e.arms);
+    if (!this.dr) this.arms(e.arms);                // no ar, os braços continuam abertos
     this.setMouth(e.mouth);
     if (!now) { s.sq.vel += 1.4; s.by.vel -= 120; } // "pulinho" de reação ao mudar
     if (now) Object.values(s).forEach((x) => { x.v = x.t; x.vel = 0; });
@@ -224,6 +225,12 @@ class Rig {
       const m0 = this.mouth; s.bYr.t = (e.brow[3] ?? e.brow[2]) - 22; s.bR.t = -8; s.bY.t = (e.brow[2] || 0) + 6; s.px.t = -10; this.setMouth('canto');
       this.at(1.3, () => { s.bYr.t = e.brow[3] ?? e.brow[2]; s.bR.t = e.brow[1]; s.bY.t = e.brow[2]; s.px.t = 0; this.setMouth(m0); });
       this.next.idle = this.t + 1.6;
+    } else if (name === 'revira') {                               // revira os olhos (deboche): pupilas fazem um arco por cima
+      const m0 = this.mouth; s.lid.t = 0.34; s.bYr.t = (e.brow[3] ?? e.brow[2]) - 16; s.bY.t = (e.brow[2] || 0) - 5; this.setMouth('canto'); s.lean.t = (e.lean || 0) - 2.2;
+      [[15, -4, 0], [10, -15, 0.16], [0, -18, 0.32], [-12, -14, 0.48], [-16, -5, 0.64], [-10, 0, 0.9], [0, 0, 1.3]].forEach(([x, y, t]) => this.at(t, () => { s.px.t = x; s.py.t = y; }));
+      this.at(0.6, () => { s.sq.vel += 0.9; });
+      this.at(1.4, () => { s.lid.t = e.lid; s.bY.t = e.brow[2]; s.bYr.t = e.brow[3] ?? e.brow[2]; this.setMouth(m0); s.lean.t = e.lean || 0; });
+      this.next.idle = this.t + 1.7;
     } else if (name === 'olhaLados') {                             // olha pra um lado, pro outro, e volta
       [[-20, 0, 0], [20, 0, 0.55], [0, 0, 1.15]].forEach(([x, y, t]) => this.at(t, () => { s.px.t = x; s.py.t = y; }));
       this.next.idle = this.t + 1.6;
@@ -238,9 +245,79 @@ class Rig {
     this.next.idle = this.t + hold;
   }
 
+  /* ---------- sendo carregado pelo dedo ----------
+     O app manda, a cada quadro: velocidade (vx, vy em px/s), aceleração (ax, ay em px/s²), giro do corpo (w em °/s)
+     e há quanto tempo o dedo está parado. Cada parte reage com a física de um corpo pendurado:
+     - olhos: olham para onde ele está sendo levado; parado no ar, olham para baixo (medo de altura);
+     - braços: abertos, se debatendo; ficam para trás do movimento e sobem quando ele desce (o ar empurra);
+     - pés: pendurados pelo peso, chutando o ar, também ficando para trás;
+     - corpo: achata quando acelera para cima, estica quando cai; boca de "o" e de grito com a velocidade. */
+  pega() {
+    const s = this.s;
+    this.clear(); this.front = null; this.tonto = null; s.hand.t = 0; s.wL.t = 0; s.wR.t = 0; s.happy.t = 0; s.blush.t = 0;
+    s.aL.set(8, 0.42); s.aR.set(8, 0.42); s.fL.set(7, 0.38); s.fR.set(7, 0.38); s.px.set(9, 0.72); s.py.set(9, 0.72);
+    if (this.pose.l !== 'aberto' || this.pose.r !== 'aberto') this.arms(['aberto', 40, 'aberto', -40]);
+    s.sq.vel -= 2.4; s.pz.t = 0.78; s.bY.t = -26; s.bYr.t = -26; this.setMouth('oo');   // susto de ser pego
+    this.dr = { vx: 0, vy: 0, ax: 0, ay: 0, w: 0, parado: 0 };
+  }
+  arrasta(d) { if (this.dr) Object.assign(this.dr, d); }
+  pendurado() {
+    const d = this.dr, s = this.s, t = this.t, cl = (v, a, b) => Math.max(a, Math.min(b, v));
+    const sp = Math.hypot(d.vx, d.vy), k = Math.min(1, sp / 1500), kv = Math.min(1, sp / 450);
+    if (sp > 90) { s.px.t = (d.vx / sp) * 21 * kv; s.py.t = (d.vy / sp) * 14 * kv + (1 - kv) * 9; }
+    else { s.px.t = Math.sin(t * 1.6) * 8; s.py.t = 11; }
+    s.pz.t = 1 - 0.3 * k - (d.vy > 600 ? 0.08 : 0);
+    const zz = d.parado > 5.5 ? Math.min(1, (d.parado - 5.5) / 1.5) : 0;   // seguro muito tempo: vai cochilando no dedo
+    s.lid.t = 0.6 * zz;
+    s.bL.t = 12 + 6 * k; s.bR.t = -12 - 6 * k; s.bY.t = -16 - 12 * k; s.bYr.t = s.bY.t;
+    const boca = d.vy > 850 || k > 0.62 ? 'grito' : k > 0.16 ? 'oo' : zz > 0.5 ? 'o' : d.parado > 1.2 ? 'tristinha' : 'o';
+    if (boca !== this.mouth) this.setMouth(boca);
+    const trail = cl(-d.vx * 0.022 - d.w * 0.1, -40, 40), sobe = cl(d.vy * 0.016 - d.ay * 0.0004, -22, 28);
+    const f = 2 * Math.PI * (4 + 2.8 * k), amp = (6 + 17 * k + (d.parado > 0.8 ? 7 : 0)) * (1 - 0.8 * zz);
+    s.aL.t = 36 + trail + sobe + Math.sin(t * f) * amp;
+    s.aR.t = -36 + trail - sobe + Math.sin(t * f + 2.1) * amp;
+    const kick = 12 + 22 * k, fk = 2 * Math.PI * (3.2 + 2.4 * k), base = cl(-50 + d.ay * 0.0009, -70, -24);
+    s.fL.t = cl(base + Math.sin(t * fk) * kick, -88, -12); s.fR.t = cl(base + Math.sin(t * fk + Math.PI) * kick, -88, -12);
+    const ft = cl(-d.vx * 0.05 - d.w * 0.35, -75, 75);
+    s.fxL.t = ft; s.fxR.t = ft * 0.85;
+    s.by.t = -70; s.bx.t = 0;
+    s.sq.t = cl(-d.ay / 90000, -0.12, 0.12) + cl((Math.abs(d.vx) - Math.abs(d.vy)) / 16000, -0.07, 0.07);
+    s.lean.t = cl(-d.w * 0.015, -4, 4);
+  }
+  /* largou: volta ao normal; as pupilas passam do ponto e balançam (inércia), e se foi muito sacudido fica tonto */
+  solta({ vx = 0, vy = 0, tonto = false } = {}) {
+    if (!this.dr) return;
+    const s = this.s, cl = (v, a, b) => Math.max(a, Math.min(b, v));
+    this.dr = null;
+    s.aL.set(3.6, 0.5); s.aR.set(3.6, 0.5); s.fL.set(5, 0.55); s.fR.set(5, 0.55); s.fxL.t = 0; s.fxR.t = 0;
+    const m = tonto ? 'tonto' : this.mood; this.mood = ''; this.setMood(m);
+    s.px.set(3.1, 0.16); s.py.set(3.1, 0.16);
+    s.px.vel += cl(vx * 0.07, -260, 260); s.py.vel += cl(vy * 0.07, -200, 200);
+    if (Math.abs(vx) + Math.abs(vy) < 200) { s.px.vel += 120; }        // mesmo solto devagar, o olho dá uma balançadinha
+    s.px.t = 0; s.py.t = 0; s.sq.vel += 2.4;
+    this.at(1.7, () => { s.px.set(5, 0.85); s.py.set(5, 0.85); });
+    if (tonto) { this.tonto = { a: this.t, ate: this.t + 3 }; this.next.idle = this.t + 3.2; }
+  }
+  /* bateu na beirada da tela voando */
+  bate(lado) { const s = this.s; s.sq.vel += 3.4; s.lean.vel += lado * 60; s.pz.t = 0.7; this.setMouth('dentes'); s.lid.t = 0.5; this.at(0.25, () => { s.lid.t = 0; }); }
+  /* anda de volta pro cantinho dele (passinhos) */
+  anda(dir, dur = 1.4) {
+    const s = this.s, e = EMO[this.mood], n = Math.max(2, Math.round(dur / 0.19));
+    for (let i = 0; i < n; i++) this.at(i * 0.19, () => { const k = i % 2; s.fL.t = k ? 42 : 0; s.fR.t = k ? 0 : 42; s.by.vel -= 70; s.lean.t = dir * 3 + (k ? 1.2 : -1.2); s.aL.t = 14 + (k ? 16 : -10); s.aR.t = -14 + (k ? 10 : -16); s.px.t = dir * 16; s.py.t = 0; });
+    this.at(n * 0.19, () => { s.fL.t = 0; s.fR.t = 0; s.lean.t = e.lean || 0; s.aL.t = e.arms[1]; s.aR.t = e.arms[3]; s.px.t = 0; s.sq.vel += 1.2; });
+    this.next.idle = this.t + n * 0.19 + 0.5;
+  }
+
   /* vida própria */
   idle() {
     const s = this.s, e = EMO[this.mood];
+    if (this.dr) { this.pendurado(); if (this.t >= this.next.blink) { this.blink(false); this.next.blink = this.t + 3 + Math.random() * 3; } return; }
+    if (this.tonto) {                                              // tonto: corpo bambo, cambaleando
+      const A = Math.min(1, Math.max(0, (this.tonto.ate - this.t) / 1.2));
+      s.lean.t = Math.sin(this.t * 4.1) * 3.4 * A; s.bx.t = Math.sin(this.t * 4.1 + 1.2) * 9 * A;
+      if (this.t >= this.next.blink) { this.blink(true); this.next.blink = this.t + 1.4 + Math.random(); }
+      return;
+    }
     if (this.t >= this.next.idle) {
       const amp = e.amp ?? 1;
       if (amp) {
@@ -292,9 +369,9 @@ class Rig {
     const sy = 1 - sq, sx = (1 + sq * 0.7) * X.body;
     // pés (no chão; só sobem nos pulos/passos)
     c.save(); c.translate(s.bx.v * 0.3, Math.min(0, s.by.v) * 0.85);
-    [['pe-l', s.fL.v, -1], ['pe-r', s.fR.v, 1]].forEach(([n, lift, side]) => {
+    [['pe-l', s.fL.v, -1, s.fxL.v], ['pe-r', s.fR.v, 1, s.fxR.v]].forEach(([n, lift, side, fx]) => {
       if (X.limbs <= 0.01) return;
-      const [x, y, w, h] = L[n]; c.save(); c.globalAlpha = X.limbs; c.translate(x + w / 2, y + h - (1 - X.limbs) * 120); c.scale(lerpN(0.4, 1, X.limbs), lerpN(0.2, 1, X.limbs)); c.rotate(side * lift * 0.004); c.translate(-(x + w / 2), -(y + h) - lift); img(n, x, y, w, h); c.restore();
+      const [x, y, w, h] = L[n]; c.save(); c.globalAlpha = X.limbs; c.translate(x + w / 2 + fx, y + h - (1 - X.limbs) * 120); c.scale(lerpN(0.4, 1, X.limbs), lerpN(0.2, 1, X.limbs)); c.rotate(side * lift * 0.004 + fx * 0.0035); c.translate(-(x + w / 2), -(y + h) - lift); img(n, x, y, w, h); c.restore();
     });
     c.restore();
     // corpo: inclina e achata a partir do apoio
@@ -323,6 +400,13 @@ class Rig {
     c.save(); c.translate(fx, fy);
     // bochechas
     if (s.blush.v > 0.02) { c.globalAlpha = 0.5 * s.blush.v; c.fillStyle = '#FF8E7A'; [[790, 640], [1150, 648]].forEach(([x, y]) => { c.beginPath(); c.ellipse(x, y, 46, 26, 0, 0, Math.PI * 2); c.fill(); }); c.globalAlpha = 1; }
+    // tontura: as pupilas giram em círculo, cada olho para um lado
+    const dz = { l: [0, 0], r: [0, 0] };
+    if (this.tonto) {
+      const tt = this.t - this.tonto.a, A = Math.min(1, tt / 0.25) * Math.min(1, Math.max(0, (this.tonto.ate - this.t) / 0.9));
+      if (this.t > this.tonto.ate) this.tonto = null;
+      else { const ph = tt * 2 * Math.PI * (1.9 - tt * 0.25); dz.l = [Math.cos(ph) * 18 * A, Math.sin(ph) * 12 * A]; dz.r = [Math.cos(Math.PI - ph) * 18 * A, Math.sin(Math.PI - ph) * 12 * A]; }
+    }
     // olhos
     ['l', 'r'].forEach((side) => {
       const fE = side === 'l' ? 'eyeL' : 'eyeR', fP = side === 'l' ? 'pupL' : 'pupR';
@@ -345,7 +429,7 @@ class Rig {
         img('olho-' + side, x, y, w, h);
         c.save(); c.beginPath(); c.ellipse(cx, cy, w / 2 - 3, h / 2 - 3, 0, 0, Math.PI * 2); c.clip();
         const [qx, qy, qw, qh] = L['pupila-' + side], z = s.pz.v * X.pupil;
-        const pcx = qx + qw / 2 + s.px.v + (side === 'l' ? 1 : -1) * X.pupilDx, pcy = qy + qh / 2 + s.py.v + X.pupilDy;
+        const pcx = qx + qw / 2 + s.px.v + dz[side][0] + (side === 'l' ? 1 : -1) * X.pupilDx, pcy = qy + qh / 2 + s.py.v + dz[side][1] + X.pupilDy;
         img('pupila-' + side, pcx - (qw * z) / 2, pcy - (qh * z) / 2, qw * z, qh * z);
         // pálpebra (piscar, sono, desconfiança)
         c.restore();
@@ -428,7 +512,7 @@ export function alive() { watch(); load(); document.querySelectorAll('[data-snh]
 export function setMood(el, mood) { withRig(el, (r) => r.setMood(mood)); return Promise.resolve(); }
 export function act(el, name) { withRig(el, (r) => r.act(name === 'pop' ? 'pop' : name)); }
 export function lookAt(el, x, y, hold) { withRig(el, (r) => r.lookAt(x, y, hold)); }
-export const GESTOS = ['tchau', 'pulo', 'riso', 'nao', 'sim', 'pop', 'pensa', 'boceja', 'timido', 'pisca', 'olhaLados', 'dor', 'cinico', 'maoBoca', 'susto', 'coca', 'balanca', 'sobrancelha', 'aponta', 'apontaEsq'];
+export const GESTOS = ['revira', 'tchau', 'pulo', 'riso', 'nao', 'sim', 'pop', 'pensa', 'boceja', 'timido', 'pisca', 'olhaLados', 'dor', 'cinico', 'maoBoca', 'susto', 'coca', 'balanca', 'sobrancelha', 'aponta', 'apontaEsq'];
 
 /* balão do app: o texto aparece digitado; o Sininho NÃO fala (sem boca mexendo, sem som),
    só reage com o corpo quando a mensagem chega, como o Duo faz no Duolingo */
@@ -544,3 +628,6 @@ export function vivo(el, { gestos = ['pisca', 'olhaLados', 'sobrancelha', 'pensa
   };
   setTimeout(tick, 1200 + Math.random() * 1500);
 }
+
+/* acesso ao boneco (para o arrasto do companheiro) */
+export function rigOf(el) { const r = el && el._rig; return r && !r.pending ? r : null; }

@@ -11,7 +11,7 @@
    - por enquanto SÓ para o dono (CONFIG.adminEmail); para todo mundo: CONFIG.mascotPublic = true. */
 import { store } from './store.js';
 import { CONFIG } from '../config.js';
-import { sininho, setMood, act, say, lookAt } from './sininho.js';
+import { sininho, setMood, act, say, lookAt, rigOf } from './sininho.js';
 import { todayKey, addDays, diffDays, fmtTime } from './utils.js';
 import { personal } from './personal.js';
 import { itensAtrasados } from './views/atrasados.js';
@@ -171,12 +171,22 @@ function falas(c) {
     const vis = ST.visitasCache().list; let vistos = 0; try { vistos = +localStorage.getItem(visKey) || 0; } catch { /* ok */ }
     const recentes = vis.filter((v) => v.at > vistos);
     if (recentes.length) {
+      const ini = (recentes[0].name || '?').trim().charAt(0).toUpperCase(), nv = recentes.length;
       const [i, t] = variante('visitas', [
+        'Alguém tá fofocando por aqui, hehe 🤭 Quer saber quem?',
+        'Psiu… alguém entrou no seu perfil e saiu de fininho 🐾',
+        'Tem gente curiosa com a sua vida… e eu sei quem é 😏',
+        `Adivinha quem passou no seu perfil? Dica: começa com “${ini}” 🤫`,
+        nv > 1 ? `${nv} pessoas espiaram seu perfil. Uma delas parece BEM interessada 👀` : 'Uma pessoa espiou seu perfil… e não foi a primeira vez, hein 👀',
+        'Se eu fosse você, eu olhava quem visitou… só digo isso 🤐',
+        'Alguém andou fuçando seu perfil. Não fui eu, juro 🙈',
+        'Ihhh… visita nova no seu perfil. Será que é quem você tá pensando? 💭',
+        'Fofoca quentinha: passaram no seu perfil faz pouco 🔥 Quer o nome?',
+        'A lista de quem te visitou some em 7 dias… melhor olhar antes que suma 👀',
         `Quer saber quem entrou no seu perfil pra ver o que você postou? 👀`,
-        `Viu quem tá bisbilhotando o seu perfil? ${recentes.length > 1 ? `Foram ${recentes.length} pessoas!` : 'Tem gente curiosa 🤭'}`,
-        `Psiu… alguém passou no seu perfil. Quer descobrir quem foi? 🕵️`,
+        `Viu quem tá bisbilhotando o seu perfil? ${nv > 1 ? `Foram ${nv} pessoas!` : 'Tem gente curiosa 🤭'}`,
       ]);
-      out.push({ k: 'visitas', i, t, m: 'desconfiado', roteiro: ['sobrancelha', 'cinico'], u: 1.9, acoes: [{ label: 'Quero saber', go: () => { try { localStorage.setItem(visKey, String(Date.now())); } catch { /* ok */ } return ST.openVisitors(); } }, { label: 'Nem ligo' }] });
+      out.push({ k: 'visitas', i, t, m: 'desconfiado', roteiro: ['olhaLados', 'maoBoca'], u: 1.9, acoes: [{ label: 'Quero saber', go: () => { try { localStorage.setItem(visKey, String(Date.now())); } catch { /* ok */ } return ST.openVisitors(); } }, { label: 'Nem ligo' }] });
     }
   }
   /* o próximo compromisso, quando está chegando */
@@ -287,7 +297,7 @@ let B = null, ultima = '', hideT = 0, spyT = 0, holdT = 0, busyUntil = 0, cenaT 
 const blocked = () => !!document.querySelector('.sheet-wrap.is-open, .paywall, .ficha, .photogate, .gx, .okfx, .stk, .stv, .snhpeek, .spaceveil') ||
   (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName));
 const el = () => B && B.querySelector('[data-snh]');
-function state(s, side) { if (!B) return; B.dataset.st = s; if (side) B.dataset.side = side; }
+function state(s, side) { if (!B) return; B.dataset.st = s; if (side && !livre) B.dataset.side = side; }
 const falando = () => Date.now() < busyUntil;
 
 /* o balão: texto digitado e, quando for o caso, botões de escolha */
@@ -353,7 +363,7 @@ function levaTapinha() {
 }
 /* volta a ficar quietinho no canto */
 function settle() {
-  if (!B || falando()) return;
+  if (!B || falando() || arr) return;
   B.querySelector('.snhbud__bub').classList.remove('is-in');
   setMood(el(), new Date().getHours() >= 23 || new Date().getHours() < 5 ? 'sono' : 'feliz');
   if (B.dataset.st === 'up') state('rest');
@@ -370,7 +380,7 @@ const CENAS = [
 function cena() {
   clearTimeout(cenaT);
   cenaT = setTimeout(cena, R(4.5, 10) * 1000);
-  if (!B || document.hidden || calmo() || B.dataset.st === 'away' || falando() || blocked()) return;
+  if (!B || document.hidden || calmo() || B.dataset.st === 'away' || falando() || blocked() || arr) return;
   const parado = (Date.now() - ultimoToque) / 1000, h = new Date().getHours();
   // sem mexer na tela há um tempo (ou tarde da noite): boceja e cochila um pouquinho
   if ((parado > 45 || h >= 23 || h < 5) && Math.random() < 0.45) { act(el(), 'boceja'); if (parado > 90) setMood(el(), 'sono'); return; }
@@ -385,8 +395,9 @@ function cena() {
 }
 
 /* ao tocar: fala o que mais importa agora (com ação quando faz sentido) */
-let toques = [];
+let toques = [], semClique = 0;
 function onTap() {
+  if (Date.now() - semClique < 450 || arr) return;
   if (fingindo || el()?.dataset.snh === 'sono') return levaTapinha();
   const now = Date.now();
   toques = toques.filter((t) => now - t < 3200); toques.push(now);
@@ -399,7 +410,7 @@ function onTap() {
 }
 
 /* sai andando e aparece de novo, às vezes espiando e às vezes com algo a dizer */
-function sai() { if (!B || falando()) return; state('away', pick(['l', 'r'])); }
+function sai() { if (!B || falando() || livre || arr) return; state('away', pick(['l', 'r'])); }
 function volta() {
   if (!B) return;
   fingindo = false;
@@ -414,7 +425,7 @@ function ciclo() {
   if (!B) return;
   if (B.dataset.st === 'away') { spyT = setTimeout(() => { volta(); ciclo(); }, R(15, 60) * 1000); return; }
   spyT = setTimeout(() => {
-    if (!B || document.hidden || blocked() || falando()) return ciclo();
+    if (!B || document.hidden || blocked() || falando() || livre || arr) return ciclo();
     if (Math.random() < 0.5) { // espia pela borda
       const side = pick(['l', 'r']); state('spy', side); setMood(el(), pick(['desconfiado', 'feliz', 'surpreso']));
       setTimeout(() => { if (Math.random() < 0.6) balao({ t: pick(SPY) }, 2600); else act(el(), pick(['sim', 'olhaLados', 'pisca'])); }, 900);
@@ -457,6 +468,294 @@ function ouvir() {
   }).observe(document.getElementById('sheets') || document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
 }
 
+/* ---------- arrastar: a pessoa leva o Lembra pra onde quiser ----------
+   Física de corpo pendurado no dedo (pêndulo cujo ponto de apoio é o dedo):
+     θ'' = (−aₓ·cos θ − (g − a_y)·sin θ) / L − c·θ'
+   θ = ângulo entre "apoio → centro de massa" e a vertical. Acelerar para a direita joga o corpo para a esquerda;
+   subir rápido "pesa" mais; descer rápido deixa ele quase sem peso (sensação de queda). Ao soltar com velocidade,
+   ele voa com atrito, quica nas bordas da tela e se endireita balançando (mola amortecida), e fica onde parou. */
+const POSK = 'lembra.snh.pos', FIG = 96, FIGH = Math.round(96 * 1080 / 1160);
+const G_PX = 2400, AMORT = 2.3;
+let livre = null, arr = null, rebelou = 0, mudancas = 0, solturas = [], deboche = false, ultDrag = '';
+const cl = (v, a, b) => Math.max(a, Math.min(b, v));
+let probe = null;
+const safe = () => {
+  if (!probe) { probe = document.createElement('div'); probe.style.cssText = 'position:fixed;left:0;top:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)'; document.body.appendChild(probe); }
+  const cs = getComputedStyle(probe); return [parseFloat(cs.paddingTop) || 0, parseFloat(cs.paddingBottom) || 0];
+};
+const limites = () => { const [st, sb] = safe(); return { x0: 2, x1: innerWidth - FIG - 2, y0: st + 36, y1: innerHeight - FIGH - 4 - sb }; };
+const cantoXY = () => { const [, sb] = safe(); return { x: innerWidth - 6 - FIG, y: innerHeight - sb - 76 - FIGH }; };
+const lePos = () => { try { const p = JSON.parse(localStorage.getItem(POSK) || 'null'); return p && p.fx >= 0 && p.fy >= 0 ? p : null; } catch { return null; } };
+const gravaPos = () => { try { if (livre) localStorage.setItem(POSK, JSON.stringify({ fx: livre.x / innerWidth, fy: livre.y / innerHeight })); else localStorage.removeItem(POSK); } catch { /* ok */ } };
+const rig = () => rigOf(el());
+function poeLivre(x, y, desde) {
+  if (!B) return;
+  livre = { x, y, em: desde || (livre && livre.em) || Date.now() };
+  B.classList.add('is-free'); B.style.left = `${Math.round(x * 10) / 10}px`; B.style.top = `${Math.round(y * 10) / 10}px`;
+  B.dataset.side = x + FIG / 2 < innerWidth / 2 ? 'l' : 'r';
+  B.classList.toggle('bub-baixo', y < 170);
+}
+function voltaCanto() {
+  livre = null; gravaPos();
+  if (!B) return;
+  B.classList.remove('is-free', 'bub-baixo'); B.style.left = B.style.top = ''; B.dataset.side = 'r';
+}
+const zona = (x, y) => { const cx = x + FIG / 2, cy = y + FIGH / 2, W = innerWidth, H = innerHeight;
+  return cy < H * 0.3 ? 'topo' : cy > H * 0.72 ? 'baixo' : cx < W * 0.3 ? 'esq' : cx > W * 0.7 ? 'dir' : 'meio'; };
+
+/* falas (muitas, para nunca soar repetido; cada grupo evita a última dita) */
+const F = {
+  pega: ['Opa! Me pegou! 😳', 'Ei ei ei! Cuidado comigo!', 'Uau! Tô voando?!', 'Calma, eu não sei voar! 😰', 'Pra onde você vai me levar? 👀', 'Segura firme, hein!', 'Ai, que friozinho na barriga!', 'Me levando pra passear? 🥹'],
+  meDeixa: ['Me deixa quieto, eu quero ficar aqui! 😫', 'Ah não… tava tão bom ali 😩', 'Psiu! Eu tava descansando!', 'Cinco minutinhos… só mais cinco 😴', 'Ninguém respeita o descanso de um sino 😤'],
+  deNovo: ['De novo?! Acabei de desfazer as malas! 🧳', 'Mal cheguei e já vou mudar?', 'Nem esquentei o lugar ainda! 😅'],
+  sacode: ['Tá doido?! Quer me deixar tonto? 😵', 'Para de me sacudir! Eu não sou chocalho!', 'Aaaah! Meu badalo tá batendo em tudo! 🔔', 'Socorroooo! 😱', 'Eu vou passar mal! 🤢', 'Isso é sequestro de sino!', 'Calmaaa! Devagaaaar!'],
+  cai: ['Tô caindooo! 😱', 'Freia! Freia! Freia!', 'Aaaaaah, que queda!', 'Meu estômago ficou lá em cima!', 'Me segura, me segura! 🙏'],
+  sobe: ['Tô subindo! Tô subindo! 🚀', 'Que alto! Não olha pra baixo…', 'Lá vou eu pras nuvens! ☁️', 'Ui, que elevador rápido!'],
+  lado: ['Pra lá não! Pra lá não!', 'Ida e volta? Eu não comprei essa passagem! 🎫', 'Uiii, que vento na cara! 💨', 'Que velocidade! Cadê o cinto? 😬'],
+  parado: ['Vai me segurar até quando? 😅', 'Não olha pra baixo… não olha pra baixo… 😰', 'Tá, e agora? Me põe em algum lugar!', 'Meu braço tá cansando… e é você que tá segurando 😂', 'Tenho medo de altura, sabia? 🥺'],
+  beira: ['Ei! Olha a beirada! 😱', 'Cuidado que aí acaba a tela!', 'Não me joga pra fora!'],
+  tonto: ['Fiquei tonto agora… 😵‍💫', 'Tô vendo três agendas… qual delas é a sua? 😵', 'O mundo tá girando ou sou eu?', 'Ugh… acho que vou tocar sozinho 🔔🤢', 'Me dá um minutinho… tô vendo estrelinha ✨', 'Calma que meu badalo ainda tá balançando…', 'Quem sou eu? Onde estou? Ah, sim: o Lembra 😵‍💫'],
+  jogou: ['Ei! Você me jogou?! 😤', 'Isso não é jeito de tratar um sino!', 'Uau, voei! Faz de novo? …Não, pera, não faz! 😅', 'Pouso perfeito! Nota 10 dos jurados 🙆', 'Eu sou sino, não bumerangue! 🪃'],
+  bateu: ['Ai! Bati a cabeça na parede! 🤕', 'Plim! 🔔 Isso foi eu batendo na borda…', 'Quem colocou essa parede aqui?! 😵'],
+  ue: ['Ué? Me pegou e soltou? 🤨', 'Hum? Foi sem querer?', 'Mudou de ideia rapidinho, hein 😏'],
+  ioio: ['De novo?! Eu tenho cara de ioiô? 🪀', 'Tá, já entendi que você gosta de mim 😳', 'Mais uma mudança e eu cobro frete! 🚚', 'Se continuar assim eu vou fazer academia de tanto ser carregado 💪'],
+  topo: ['Daqui de cima eu vejo tudo! 🦅', 'Vista privilegiada! Agora nada escapa 👀', 'Cobertura com vista pra sua agenda 😎', 'Lá de cima é mais fácil te vigiar… digo, cuidar 😇'],
+  baixo: ['Aqui embaixo é bem tranquilo 😌', 'Pertinho dos botões… dica, hein? 😉', 'Pé no chão, como deve ser 🦶', 'Aqui eu fico de olho no que você vai marcar ✍️'],
+  esq: ['Lado esquerdo, lado do coração 🧡', 'Cantinho novo, vida nova ✨', 'Gostei daqui. Sombra e água fresca 🌴'],
+  dir: ['Ok, lado direito. Sou um sino de direita… digo, do lado direito 😅', 'Aqui tá ótimo, obrigado 🙏', 'Bom lugar! Bem pertinho de você 🧡'],
+  meio: ['No meio de tudo! Eu adoro ser o centro das atenções 💅', 'Bem no meio da sua tela. Agora você não me esquece 😏', 'Centro da festa! 🎉'],
+  lugar: ['Hmm… gostei daqui. Vista boa 👀', 'Novo escritório! 🏢', 'Ok, me mudei. Avisa o correio 📮', 'Aqui tá bom. Pode deixar que eu cuido 🔔', 'Lugar novo, mesma memória de elefante 🐘'],
+  rebelde: ['Não… eu não vou ficar aqui onde você me colocou. 😤', 'Aqui? Nem pensar. Vou voltar pro meu cantinho! 😤', 'Não gostei. Tchau! 😤'],
+  casa: ['Aqui é o meu cantinho. 😌', 'Pronto. Lar, doce lar 🏠', 'Bem melhor. 😏'],
+  interrompe: ['Ei! Eu tava falando! 😤', 'Deixa eu terminar de falar, pô!', 'Que falta de educação, me pegar no meio da frase! 😒'],
+  madruga: ['Shhh… é madrugada, me carrega devagar 😴', 'A essa hora? Tá sem sono, né? 🌙', 'Psiu, não acorda os vizinhos! 🤫'],
+  dorme: ['Tá… vou tirar um cochilo aqui no seu dedo mesmo 😴', 'Zzz… me avisa quando chegar 💤', 'Já que não vai me soltar, vou dormir 😪'],
+  recorde: ['Recorde de velocidade! 🏎️💨', 'Eu quebrei a barreira do som? 🚀', 'Isso foi um foguete ou fui eu? 😵'],
+  mesmo: ['Ué, me tirou daqui pra me colocar aqui de novo? 🤔', 'Mudou… nada 😂', 'Fiz uma viagem pra lugar nenhum ✈️'],
+  debocha: ['Hum… tá bom, eu fico aqui. Mas só porque eu quero. 🙄', 'Tá, tá… fico. Mas é favor, hein? 😒', 'Ok. Mas fica registrado que foi ideia MINHA 🙄', 'Hmpf. Até que aqui não é tão ruim… mas não se acostuma 😒'],
+};
+const ultF = {};
+const fraseDe = (g) => { const L = F[g]; let t; do { t = pick(L); } while (L.length > 1 && t === ultF[g]); ultF[g] = t; return t; };
+function falaJa(g, ms = 1900, m) {
+  if (!B) return;
+  B.dataset.st = 'up';
+  if (m) setMood(el(), m);
+  busyUntil = 0; balao({ t: fraseDe(g) }, ms);
+  ultDrag = g;
+}
+
+function arrastavel(fig) {
+  fig.addEventListener('pointerdown', (ev) => {
+    if (!B || arr || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+    arr = { id: ev.pointerId, x0: ev.clientX, y0: ev.clientY, fx: ev.clientX, fy: ev.clientY, on: false, t0: performance.now() };
+  });
+  fig.addEventListener('pointermove', (ev) => {
+    if (!arr || ev.pointerId !== arr.id || arr.voo) return;
+    arr.fx = ev.clientX; arr.fy = ev.clientY;
+    if (!arr.on && Math.hypot(ev.clientX - arr.x0, ev.clientY - arr.y0) >= 8) comeca(fig, ev);
+    if (arr.on) ev.preventDefault();
+  });
+  const fim = (ev) => {
+    if (!arr || ev.pointerId !== arr.id || arr.voo) return;
+    if (arr.on) { termina(); return; }
+    // segurou parado e soltou sem arrastar: cochilo de mentirinha (como antes)
+    if (performance.now() - arr.t0 > 700 && ev.type === 'pointerup') { semClique = Date.now(); toques = []; fala({ t: 'Zzz… me acorda se precisar 😴', m: 'sono' }, 'boceja'); }
+    arr = null;
+  };
+  fig.addEventListener('pointerup', fim); fig.addEventListener('pointercancel', fim);
+  addEventListener('resize', () => { if (livre && !arr) { const L = limites(); poeLivre(cl(livre.x, L.x0, L.x1), cl(livre.y, L.y0, L.y1)); } });
+}
+
+function comeca(fig, ev) {
+  try { fig.setPointerCapture(ev.pointerId); } catch { /* ok */ }
+  const r = fig.getBoundingClientRect();
+  const x = r.left + r.width / 2 - FIG / 2, y = r.top + r.height / 2 - FIGH / 2;
+  const st = B.dataset.st, sd = B.dataset.side;
+  const rot0 = livre ? 0 : st === 'rest' ? (sd === 'l' ? 14 : -14) : st === 'spy' ? (sd === 'l' ? 62 : -62) : 0;
+  const ox = cl(arr.x0 - x, 6, FIG - 6), oy = cl(arr.y0 - y, 4, FIGH - 4);
+  // centro de massa (um pouco abaixo do meio do sino); se pegou por baixo, o corpo não vira de cabeça pra baixo
+  const cmx = FIG / 2 - ox, cmy = Math.max(22, FIGH * 0.56 - oy);
+  const L = Math.max(26, Math.hypot(cmx, cmy)), phi0 = Math.atan2(cmx, cmy) * 0.75;
+  const psi0 = (rot0 * Math.PI) / 180;
+  const hr = new Date().getHours();
+  const era = { falava: falando() && B.querySelector('.snhbud__bub').classList.contains('is-in'), madruga: hr >= 23 || hr < 5, antes: livre ? { x: livre.x, y: livre.y } : null, sono: fingindo || el()?.dataset.snh === 'sono', recente: livre && Date.now() - livre.em < 8000, antigo: livre && Date.now() - livre.em > 20 * 60e3 };
+  Object.assign(arr, { on: true, x, y, ox, oy, L, phi0, th: phi0 - psi0, om: 0, vx: 0, vy: 0, ax: 0, ay: 0, lt: performance.now(), quieto: performance.now(),
+    agito: 0, viradas: [], picoVir: 0, totVir: 0, sx: 0, sy: 0, dist: 0, era, falou: 0, beira: false, parou: false, bateu: false, vmax: 0 });
+  clearTimeout(hideT); clearTimeout(holdT); busyUntil = 0; fingindo = false; clearTimeout(fingeT);
+  B.querySelector('.snhbud__bub').classList.remove('is-in');
+  B.classList.add('is-drag'); poeLivre(x, y, livre?.em);
+  B.dataset.st = 'up';
+  fig.style.transformOrigin = `${ox}px ${oy}px`;
+  const rg = rig(); rg && rg.pega();
+  try { navigator.vibrate && navigator.vibrate(12); } catch { /* ok */ }
+  setTimeout(() => { if (arr && arr.on && !arr.falou) { arr.falou = performance.now(); falaJa(era.sono || era.antigo ? 'meDeixa' : era.falava ? 'interrompe' : era.madruga ? 'madruga' : era.recente ? 'deNovo' : 'pega', 1700); } }, 280);
+  requestAnimationFrame(passo);
+}
+
+/* um quadro de física */
+function passo(now) {
+  if (!arr || !B) return;
+  const fig = B.querySelector('.snhbud__fig');
+  const dt = cl((now - arr.lt) / 1000, 0.001, 0.034); arr.lt = now;
+  const Lm = limites();
+  let nx, ny;
+  if (!arr.voo) { // segue o dedo (pode passar um pouco da borda)
+    nx = cl(arr.fx - arr.ox, Lm.x0 - 26, Lm.x1 + 26); ny = cl(arr.fy - arr.oy, Lm.y0 - 30, Lm.y1 + 26);
+  } else {       // voando depois de solto: atrito do ar e quique nas bordas
+    const fr = Math.exp(-dt * 4.4); arr.gvx *= fr; arr.gvy *= fr;
+    nx = arr.x + arr.gvx * dt; ny = arr.y + arr.gvy * dt;
+    const quica = (lado) => { arr.bateu = true; const rg = rig(); rg && rg.bate(lado); try { navigator.vibrate && navigator.vibrate(14); } catch { /* ok */ } };
+    if (nx < Lm.x0) { nx = Lm.x0; if (arr.gvx < -120) quica(1); arr.gvx = -arr.gvx * 0.42; }
+    if (nx > Lm.x1) { nx = Lm.x1; if (arr.gvx > 120) quica(-1); arr.gvx = -arr.gvx * 0.42; }
+    if (ny < Lm.y0) { ny = Lm.y0; if (arr.gvy < -120) quica(0); arr.gvy = -arr.gvy * 0.42; }
+    if (ny > Lm.y1) { ny = Lm.y1; if (arr.gvy > 120) quica(0); arr.gvy = -arr.gvy * 0.42; }
+  }
+  // velocidade e aceleração do apoio (suavizadas: o dedo treme e os eventos chegam em ritmos diferentes)
+  const rvx = (nx - arr.x) / dt, rvy = (ny - arr.y) / dt, kv = 1 - Math.exp(-dt / 0.045), ka = 1 - Math.exp(-dt / 0.06);
+  const pvx = arr.vx, pvy = arr.vy;
+  arr.vx += (rvx - arr.vx) * kv; arr.vy += (rvy - arr.vy) * kv;
+  arr.ax += (cl((arr.vx - pvx) / dt, -26000, 26000) - arr.ax) * ka; arr.ay += (cl((arr.vy - pvy) / dt, -26000, 26000) - arr.ay) * ka;
+  arr.dist += Math.hypot(nx - arr.x, ny - arr.y); arr.x = nx; arr.y = ny;
+  const sp = Math.hypot(arr.vx, arr.vy); arr.vmax = Math.max(arr.vmax, sp);
+  if (!arr.voo) { arr.hist = (arr.hist || []).filter((h) => now - h[0] < 90); arr.hist.push([now, arr.vx, arr.vy, sp]); }
+  if (sp > 60) arr.quieto = now;
+  // pêndulo (preso no dedo) ou, depois de solto, endireitando como um joão-bobo
+  const n = 4, h = dt / n; let om0 = arr.om;
+  for (let i = 0; i < n; i++) {
+    let al;
+    if (!arr.voo) al = (-arr.ax * Math.cos(arr.th) - (G_PX - arr.ay) * Math.sin(arr.th)) / arr.L - AMORT * arr.om;
+    else { const ps = arr.phi0 - arr.th, w0 = 2 * Math.PI * 1.45; al = w0 * w0 * ps - 2 * 0.24 * w0 * arr.om - arr.ax * 0.0011; }
+    arr.om += al * h; arr.th += arr.om * h;
+    if (arr.th > 1.7) { arr.th = 1.7; arr.om *= -0.3; } if (arr.th < -1.7) { arr.th = -1.7; arr.om *= -0.3; }
+  }
+  const psi = arr.phi0 - arr.th, wdeg = (-(arr.om) * 180) / Math.PI;
+  // sacudida: conta as viradas bruscas de direção e o quanto ele balançou
+  // (só conta quando inverte o sentido no MESMO eixo: direita↔esquerda ou cima↔baixo)
+  if (!arr.voo) {
+    const gx = Math.abs(arr.vx) > 380 ? Math.sign(arr.vx) : 0, gy = Math.abs(arr.vy) > 480 ? Math.sign(arr.vy) : 0;
+    if (gx && arr.sx && gx !== arr.sx) { arr.viradas.push(now); arr.totVir++; }
+    if (gy && arr.sy && gy !== arr.sy) { arr.viradas.push(now); arr.totVir++; }
+    if (gx) arr.sx = gx; if (gy) arr.sy = gy;
+  }
+  arr.viradas = arr.viradas.filter((t) => now - t < 1500); arr.picoVir = Math.max(arr.picoVir, arr.viradas.length);
+  arr.agito += Math.abs(om0) * dt + (arr.viradas.length >= 2 ? dt * 1.2 : 0);
+  B.style.left = `${nx.toFixed(1)}px`; B.style.top = `${ny.toFixed(1)}px`;
+  if (!arr.voo) { B.dataset.side = nx + FIG / 2 < innerWidth / 2 ? 'l' : 'r'; B.classList.toggle('bub-baixo', ny < 170); }
+  fig.style.transform = calmo() ? '' : `rotate(${((psi * 180) / Math.PI).toFixed(2)}deg)`; // "reduzir movimento": arrasta sem balançar
+  const parado = (now - arr.quieto) / 1000;
+  const rg = rig();
+  if (rg && rg.dr) rg.arrasta({ vx: arr.vx, vy: arr.vy, ax: arr.ax, ay: arr.ay, w: wdeg, parado });
+  // o que ele fala enquanto é carregado (no máximo uma frase a cada ~2 s)
+  if (!arr.voo && arr.falou && arr.viradas.length >= 3 && ultDrag !== 'sacode' && now - arr.falou > 700) { arr.falou = now; falaJa('sacode', 1800); setMood(el(), 'bravo'); }
+  else if (!arr.voo && arr.falou && now - arr.falou > 2100) {
+    let g = '';
+    if (arr.viradas.length >= 3) g = 'sacode';
+    else if (!arr.beira && (nx < Lm.x0 + 2 || nx > Lm.x1 - 2 || ny > Lm.y1 - 2)) { g = 'beira'; arr.beira = true; }
+    else if (arr.vy > 950) g = 'cai';
+    else if (arr.vy < -950) g = 'sobe';
+    else if (Math.abs(arr.vx) > 1100) g = 'lado';
+    else if (parado > 1.8 && !arr.parou) { g = 'parado'; arr.parou = true; }
+    else if (parado > 5.5 && !arr.dormiu) { g = 'dorme'; arr.dormiu = true; }
+    if (g && !(g === ultDrag && g !== 'sacode')) { arr.falou = now; falaJa(g, 1700); if (g === 'sacode') { setMood(el(), 'bravo'); } }
+  }
+  // voo acabando: largou de vez
+  if (arr.voo) {
+    const gsp = Math.hypot(arr.gvx, arr.gvy);
+    if (rg && rg.dr && gsp < 240) rg.solta({ vx: arr.gvx * 3, vy: arr.gvy * 3, tonto: arr.tonto });
+    if (gsp < 14 && !arr.reagiu) { arr.reagiu = true; reage(arr); }
+    if (gsp < 14 && Math.abs(psi) < 0.012 && Math.abs(arr.om) < 0.06) return pousou();
+  }
+  requestAnimationFrame(passo);
+}
+
+function termina() {
+  arr.voo = true; semClique = Date.now();
+  const top = (arr.hist || []).reduce((m, h) => (h[3] > m[3] ? h : m), [0, arr.vx, arr.vy, Math.hypot(arr.vx, arr.vy)]);
+  arr.vx = top[1]; arr.vy = top[2];
+  arr.vtop = top[3];
+  const sp = top[3], escala = sp > 2600 ? 2600 / sp : 1;
+  arr.gvx = arr.vx * escala; arr.gvy = arr.vy * escala;
+  arr.durou = (performance.now() - arr.t0) / 1000;
+  arr.tonto = arr.picoVir >= 3 || arr.totVir >= 7;
+  arr.lancou = sp > 850;
+  const rg = rig();
+  if (rg && rg.dr && sp < 240) rg.solta({ vx: arr.vx, vy: arr.vy, tonto: arr.tonto });
+}
+
+/* terminou de se endireitar: tira a física e fica ali */
+function pousou() {
+  const a = arr; arr = null;
+  if (!B) return;
+  const fig = B.querySelector('.snhbud__fig');
+  fig.style.transform = ''; fig.style.transformOrigin = '';
+  B.classList.remove('is-drag');
+  if (!a.reagiu) reage(a);
+}
+/* o que ele acha da mudança (assim que para de voar) */
+function reage(a) {
+  if (!B) return;
+  const Lm = limites(), x = cl(a.x, Lm.x0, Lm.x1), y = cl(a.y, Lm.y0, Lm.y1);
+  const rg = rig(); if (rg && rg.dr) rg.solta({ tonto: a.tonto });
+  poeLivre(x, y, Date.now()); a.x = x; a.y = y; gravaPos();
+  const agora = Date.now(); mudancas++; solturas = solturas.filter((t) => agora - t < 30000); solturas.push(agora);
+  // o que ele acha da mudança
+  const fala2 = (g, m, gesto, ms) => { busyUntil = 0; B.dataset.st = 'up'; setTimeout(() => { if (!B || (arr && !arr.voo)) return; fala({ t: fraseDe(g), m }, gesto); }, ms); };
+  if (a.tonto) return fala2('tonto', 'tonto', null, 650);
+  if (a.bateu) return fala2('bateu', 'bravo', 'dor', 250);
+  if (a.lancou && a.vtop > 2300) return fala2('recorde', 'comemora', 'pulo', 300);
+  if (a.lancou) return fala2('jogou', 'surpreso', 'nao', 300);
+  if (a.durou < 0.45 && a.dist < 70) return fala2('ue', 'desconfiado', 'sobrancelha', 200);
+  if (solturas.length >= 3) return fala2('ioio', 'desconfiado', 'revira', 300);
+  if (a.era.antes && Math.hypot(x - a.era.antes.x, y - a.era.antes.y) < 36 && a.dist > 80) return fala2('mesmo', 'desconfiado', 'pensa', 300);
+  const longe = Math.hypot(x - cantoXY().x, y - cantoXY().y) > 120;
+  if (deboche || (rebelou && agora - rebelou < 10 * 60e3)) { // depois de ter se rebelado: aceita, revirando os olhos
+    rebelou = 0; deboche = false;
+    setTimeout(() => { if (B && !(arr && !arr.voo)) act(el(), 'revira'); }, 250);
+    return fala2('debocha', 'desconfiado', null, 1500);
+  }
+  if (longe && mudancas > 2 && !window.__semRebelde && agora - rebelou > 4 * 60e3 && Math.random() < 0.08) { // raro: "eu não vou ficar aqui"
+    busyUntil = 0; B.dataset.st = 'up';
+    setTimeout(() => { if (B && !(arr && !arr.voo)) fala({ t: fraseDe('rebelde'), m: 'bravo' }, 'nao'); }, 300);
+    setTimeout(() => { if (B && !arr && livre) andaPraCasa(); }, 2600);
+    return;
+  }
+  const z = zona(x, y);
+  fala2(Math.random() < 0.6 ? z : 'lugar', pick(['feliz', 'amor', 'acena']), pick(['sim', 'balanca', 'pisca', 'olhaLados']), 350);
+}
+
+/* rebeldia: sai andando de volta pro canto dele */
+function andaPraCasa() {
+  const fim = cantoXY(), ini = { ...livre }, d = Math.hypot(fim.x - ini.x, fim.y - ini.y), dur = Math.min(2.6, 0.8 + d / 380);
+  rebelou = Date.now(); deboche = true;
+  const rg = rig(); rg && rg.anda(Math.sign(fim.x - ini.x) || 1, dur);
+  setMood(el(), 'desconfiado');
+  const t0 = performance.now();
+  const f = (now) => {
+    if (!B || arr) return;
+    const k = Math.min(1, (now - t0) / 1000 / dur), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    poeLivre(ini.x + (fim.x - ini.x) * e, ini.y + (fim.y - ini.y) * e - Math.abs(Math.sin(k * Math.PI * dur * 2.6)) * 3);
+    if (k < 1) return requestAnimationFrame(f);
+    voltaCanto(); busyUntil = 0;
+    setTimeout(() => { if (B && !arr) fala({ t: fraseDe('casa'), m: 'desconfiado' }, 'cinico'); }, 350);
+  };
+  requestAnimationFrame(f);
+}
+
+/* alguém novo passou no perfil: ele conta na hora (sem dizer quem: dá a dica e deixa a curiosidade trabalhar) */
+const visAvK = 'lembra.visitasAvisadas';
+function avisaVisita() {
+  if (!B || !ST) return;
+  const list = ST.visitasCache().list || []; let vistos = 0, avisadas = 0;
+  try { vistos = +localStorage.getItem(visKey) || 0; avisadas = +localStorage.getItem(visAvK) || 0; } catch { /* ok */ }
+  const novas = list.filter((v) => v.at > Math.max(vistos, avisadas));
+  if (!novas.length) return;
+  try { localStorage.setItem(visAvK, String(Math.max(...novas.map((v) => v.at)))); } catch { /* ok */ }
+  const l = falas(ctx()).find((x) => x.k === 'visitas');
+  if (!l) return;
+  const tenta = (n = 0) => { if (!B) return; if (arr || falando() || blocked()) { if (n < 30) setTimeout(() => tenta(n + 1), 4000); return; } busyUntil = 0; fala(l, 'sobrancelha'); };
+  setTimeout(tenta, 1500);
+}
+
 /* ---------- API ---------- */
 export function start() {
   if (B || !mascotOn()) { if (B && !mascotOn()) stop(); return; }
@@ -467,23 +766,22 @@ export function start() {
   B.innerHTML = `<div class="snhbud__bub" role="status" aria-live="polite"><span></span><div class="snhbud__acoes"></div></div><button class="snhbud__fig" aria-label="Lembra, seu companheiro">${sininho('feliz', { size: 96 })}</button>`;
   document.body.appendChild(B);
   B.querySelector('.snhbud__fig').addEventListener('click', onTap);
-  let segurar;
-  B.querySelector('.snhbud__fig').addEventListener('pointerdown', () => { segurar = setTimeout(() => { toques = []; fala({ t: 'Zzz… me acorda se precisar 😴', m: 'sono' }, 'boceja'); }, 700); });
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => B.querySelector('.snhbud__fig').addEventListener(ev, () => clearTimeout(segurar)));
+  arrastavel(B.querySelector('.snhbud__fig'));
+  { const p = lePos(); if (p) { const L = limites(); poeLivre(cl(p.fx * innerWidth, L.x0, L.x1), cl(p.fy * innerHeight, L.y0, L.y1)); } }
   const guarda = () => { if (B) B.classList.toggle('is-hidden', blocked()); };
   B._mo = new MutationObserver(guarda); B._mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
   document.addEventListener('focusin', guarda); document.addEventListener('focusout', () => setTimeout(guarda, 50));
   if (!window.__snhOuve) { window.__snhOuve = 1; ouvir(); }
-  import('./stories.js').then((m) => { ST = m; const up = () => { if (!document.hidden) Promise.all([m.refreshFeed(), m.refreshVisitors()]).catch(() => {}); }; up(); clearInterval(window.__stT); window.__stT = setInterval(up, 3 * 60e3); }).catch(() => {});
+  import('./stories.js').then((m) => { ST = m; const up = () => { if (!document.hidden) Promise.all([m.refreshFeed(), m.refreshVisitors()]).then(avisaVisita).catch(() => {}); }; up(); clearInterval(window.__stT); window.__stT = setInterval(up, 3 * 60e3); }).catch(() => {});
   // só no modo de teste local (emuladores): ganchos para o robô de testes
-  try { if (localStorage.getItem('cal.emulator') === '1' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__lembra = { finge: () => { state('rest'); busyUntil = 0; fingeDormir(); }, toca: onTap, falas: () => falas(ctx()), estado: () => ({ st: B && B.dataset.st, humor: el()?.dataset.snh, fingindo, fala: B && B.querySelector('.snhbud__bub span')?.textContent }) }; } catch { /* ok */ }
+  try { if (localStorage.getItem('cal.emulator') === '1' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__lembra = { finge: () => { state('rest'); busyUntil = 0; fingeDormir(); }, toca: onTap, falas: () => falas(ctx()), livre: () => livre, solta: () => { voltaCanto(); }, rebelde: () => { if (livre) { busyUntil = 0; fala({ t: fraseDe('rebelde'), m: 'bravo' }, 'nao'); setTimeout(andaPraCasa, 2600); } }, estado: () => ({ st: B && B.dataset.st, humor: el()?.dataset.snh, fingindo, fala: B && B.querySelector('.snhbud__bub span')?.textContent }) }; } catch { /* ok */ }
   // chega dando oi, com o que mais importa agora
   setTimeout(() => { state('rest'); setTimeout(() => fala(abre(ctx()), 'tchau'), 900); }, 1200);
   ciclo(); cena();
 }
 export function stop() {
   if (!B) return;
-  B._mo && B._mo.disconnect(); B.remove(); B = null;
+  B._mo && B._mo.disconnect(); B.remove(); B = null; arr = null;
   clearTimeout(spyT); clearTimeout(hideT); clearTimeout(holdT); clearTimeout(cenaT);
   document.documentElement.classList.remove('snh-theme');
 }
@@ -496,7 +794,7 @@ export function react(kind, o = {}) {
   if (kind === 'created') return fala({ t: outra(CREATED), m: 'feliz' }, 'sim');
   if (kind === 'pedido') return fala({ t: pick([`Pedido enviado! Agora é torcer pra ${(o.nome || 'pessoa').split(' ')[0]} aceitar 🤞`, 'Mandei o convite voando! 🕊️ Já já chega no celular da pessoa.', 'Feito! Amizade a um toque de distância 🤝']), m: 'comemora', roteiro: ['balanca'] }, 'pulo');
   if (kind === 'story') return fala({ t: pick(['Postou story! Agora todo mundo vai ver que você fez 😎📸', 'XP em dobro na conta! Fotógrafo(a) profissional, hein 📸', 'Prova registrada! Ninguém pode dizer que você não fez 😏']), m: 'danca', roteiro: ['balanca'] }, 'pulo');
-  if (kind === 'visitas') { try { localStorage.setItem(visKey, String(Date.now())); } catch { /* ok */ } return o.n ? fala({ t: pick([`Hmm… que que será que ${(o.nome || 'essa pessoa').split(' ')[0]} tava querendo, hein? 🤭`, `${(o.nome || 'Alguém').split(' ')[0]} passou por aqui… será que tá com saudade? 👀`, 'Olha quanta gente curiosa com a sua vida 😏']), m: 'desconfiado', roteiro: ['olhaLados', 'maoBoca'] }, 'sobrancelha') : fala({ t: 'Ninguém passou ainda… posta um story que o povo aparece 😉', m: 'feliz' }, 'pisca'); }
+  if (kind === 'visitas') { try { localStorage.setItem(visKey, String(Date.now())); } catch { /* ok */ } return o.n ? fala({ t: pick([`Hmm… que que será que ${(o.nome || 'essa pessoa').split(' ')[0]} tava querendo, hein? 🤭`, `${(o.nome || 'Alguém').split(' ')[0]} passou por aqui… será que tá com saudade? 👀`, 'Olha quanta gente curiosa com a sua vida 😏', `${(o.nome || 'Alguém').split(' ')[0]} veio, olhou e não falou nada… típico de quem tá interessado 😏`, 'Esse povo vê tudo e finge que não viu 🙈 Mas eu vi.', 'Quer que eu fique de olho em quem voltar? Eu fico 🕵️']), m: 'desconfiado', roteiro: ['olhaLados', 'maoBoca'] }, 'sobrancelha') : fala({ t: 'Ninguém passou ainda… posta um story que o povo aparece 😉', m: 'feliz' }, 'pisca'); }
   if (kind === 'late') return fala({ t: 'Ih… esse passou da hora. Quer ver o que ficou pra trás?', m: 'triste', acoes: [{ label: 'Ver', go: A.atrasados }, { label: 'Depois' }] }, null);
 }
 export const active = () => !!B;

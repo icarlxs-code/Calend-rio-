@@ -3595,3 +3595,14 @@ body.has-stv .snhbud { display: none; }
 .sheet--fxl .agroup > .frow { border-radius: 20px; border: 1px solid var(--fx-line); background: var(--fx-card); box-shadow: 0 6px 18px rgba(80,40,0,.06); padding: 12px 14px; }
 .sheet--fxl .agroup > .frow::after, .sheet--fxl .agroup > .frow + .frow::before { display: none; }
 .sheet--fxl .atr__bub { background: var(--fx-card); border: 1px solid var(--fx-line); }
+/* Lembra solto: a pessoa escolhe onde ele fica (arrastando) */
+.snhbud.is-free { right: auto; bottom: auto; transform: none !important; transition: opacity .3s; }
+.snhbud.is-free[data-st="away"] { opacity: 0; }
+.snhbud.is-free.is-hidden { opacity: 0; }
+.snhbud__fig { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.snhbud.is-drag { transition: none !important; z-index: 9000; }
+.snhbud.is-drag .snhbud__fig { cursor: grabbing; filter: drop-shadow(0 16px 12px rgba(60, 20, 0, .28)); }
+.snhbud.bub-baixo .snhbud__bub { bottom: auto; top: calc(100% - 4px); transform-origin: 85% 0; }
+.snhbud.bub-baixo[data-side="l"] .snhbud__bub { transform-origin: 15% 0; }
+.snhbud.bub-baixo .snhbud__bub::after { bottom: auto; top: -6px; border-radius: 4px 0 0 0; }
+.snhbud.bub-baixo .snhbud__bub:not(.is-in) { transform: translateY(-8px) scale(.7); }

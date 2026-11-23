@@ -1,13 +1,13 @@
 {
-  "version": "2.13.0",
-  "build": "cftalp74",
+  "version": "2.14.0",
+  "build": "scszazw4",
   "date": "2026-11-23",
   "min": "2.2.0",
-  "title": "Amigos de cara nova",
+  "title": "Leve o Lembra pra onde quiser",
   "notes": [
-    "Tela de Amigos nova: quem está online agora, stories e convite em um toque.",
-    "Perfil do amigo com nível, barra de XP, emblemas e menu de opções.",
-    "O Lembra está mais vivo: olha pra onde você toca e aponta o que dá pra fazer."
+    "Arraste o Lembra pra qualquer canto da tela: ele fica onde você deixar.",
+    "Ele sente o movimento: balança, se debate, fica tonto se sacudir e reclama se for jogado.",
+    "E conta quando alguém passa no seu perfil… só não diz quem 🤫"
   ],
-  "builtAt": "2026-11-23T11:52:13.543Z"
+  "builtAt": "2026-11-23T12:30:31.271Z"
 }

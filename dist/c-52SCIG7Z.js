@@ -1,1 +1,0 @@
-var m=Object.defineProperty;var i=(a,e)=>{for(var o in e)m(a,o,{get:e[o],enumerable:!0})};var t=["Tela de Amigos nova: quem est\xE1 online agora, stories e convite em um toque.","Perfil do amigo com n\xEDvel, barra de XP, emblemas e menu de op\xE7\xF5es.","O Lembra est\xE1 mais vivo: olha pra onde voc\xEA toca e aponta o que d\xE1 pra fazer."];export{i as a,t as b};

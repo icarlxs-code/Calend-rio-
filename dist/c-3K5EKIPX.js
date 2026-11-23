@@ -1,0 +1,1 @@
+var n=Object.defineProperty;var s=(o,a)=>{for(var e in a)n(o,e,{get:a[e],enumerable:!0})};var l=["Arraste o Lembra pra qualquer canto da tela: ele fica onde voc\xEA deixar.","Ele sente o movimento: balan\xE7a, se debate, fica tonto se sacudir e reclama se for jogado.","E conta quando algu\xE9m passa no seu perfil\u2026 s\xF3 n\xE3o diz quem \u{1F92B}"];export{s as a,l as b};
