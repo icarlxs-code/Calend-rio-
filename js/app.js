@@ -170,6 +170,21 @@ function render() {
   bindSwipes();
   bindStrip(view);
   if (store.user && !window.__snhTried) { window.__snhTried = 1; import('./mascote.js').then((m) => m.start()).catch(() => {}); }
+  // stories dos amigos no topo do Hoje (Trabalho e Pessoal), como no Instagram/WhatsApp
+  if (store.user && store.mode === 'cloud' && (personalMode ? (ui.ptab || 'p-hoje') === 'p-hoje' : ui.tab === 'hoje')) {
+    import('./stories.js').then((m) => {
+      const pinta = () => {
+        const v = document.getElementById('view'); if (!v) return;
+        v.querySelector('.ststrip-wrap')?.remove();
+        const rows = m.feedCache().rows; if (!rows.some((r) => !r.me)) return;
+        const host = v.querySelector('.page'); if (!host) return;
+        host.insertAdjacentHTML('afterbegin', `<div class="ststrip-wrap">${m.storyStrip(rows)}</div>`);
+        m.bindStrip(host.querySelector('.ststrip-wrap'), pinta);
+      };
+      pinta();
+      if (Date.now() - m.feedCache().at > 3 * 60e3) m.refreshFeed().then(pinta);
+    }).catch(() => {});
+  }
   // o Lembra acompanha em que tela a pessoa está (para falar do que ela está vendo)
   window.dispatchEvent(new CustomEvent('lembra:tela', { detail: { space: personalMode ? 'personal' : 'work', tab: personalMode ? ui.ptab || 'p-hoje' : ui.tab, date: ui.date } }));
   if (personalMode) {
@@ -702,6 +717,8 @@ function openDeepLink(hash = location.hash, tries = 0) {
     if (store.solo && store.mode === 'cloud') checkBilling().then(() => { render(); import('./vip.js').then((v) => v.maybeShowVip()); }).catch(() => {});
     return true;
   }
+  if (/^#\/stories$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./stories.js').then((m) => m.openStoriesFeed()); return true; }
+  if (/^#\/visitas$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./stories.js').then((m) => m.openVisitors()); return true; }
   if (/^#\/amigos$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./friends.js').then((m) => m.openFriends()); return true; }
   if (/^#\/amigo\//.test(hash || '')) { import('./friends.js').then((m) => { m.captureFriendLink(hash); m.processFriendLink(); }); return true; }
   if (/^#\/ranking$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./views/ranking.js').then((m) => m.openRanking()); return true; }
@@ -1479,7 +1496,7 @@ navigator.serviceWorker?.addEventListener('message', (ev) => {
 window.addEventListener('hashchange', () => {
   // abriu um convite com o app já aberto
   if (/^#\/convite\//.test(location.hash)) { captureInvite(); return maybeAcceptInvite(); }
-  if (/^#\/((e|d|p)\/|suporte|ranking|vitalicio|amigos|amigo\/)/.test(location.hash)) return openDeepLink();
+  if (/^#\/((e|d|p)\/|suporte|ranking|vitalicio|amigos|amigo\/|stories|visitas)/.test(location.hash)) return openDeepLink();
   if (/^#\/(c|v)\//.test(location.hash)) location.reload();
 });
 

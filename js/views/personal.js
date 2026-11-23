@@ -1,5 +1,6 @@
 /* Modo Pessoal: um "outro app" dentro do Calendário. Visual, telas e menu próprios,
    mesmo login. Só o dono vê o que está aqui (nem o parceiro, nem o trabalho). */
+import { postStory } from '../stories.js';
 import { itemLook } from '../itemicons.js';
 import { okFx } from '../okfx.js';
 import {
@@ -357,6 +358,7 @@ export const personalActions = {
       const t = todayKey();
       const left = b.dataset.date === t ? occurrences(t, t).filter((o) => !o.done).length : null;
       toast(onDone({ el: at, left }), { action: 'Desfazer', onAction: () => toggleDone(personal.item(it.id), b.dataset.date) });
+      if (store.mode === 'cloud') setTimeout(() => toast('📸 Postar um story disso? XP em dobro!', { action: 'Postar', onAction: () => postStory({ title: it.title || '', ref: `p:${it.id}`, kind: 'p' }), ms: 6000 }), 2900);
     }
   },
   'p-new': (b) => {

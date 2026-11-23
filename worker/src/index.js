@@ -241,7 +241,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/lb/report': 20, '/lb/board': 40 };
+const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/visit': 30, '/friends/visitors': 20, '/lb/report': 20, '/lb/board': 40 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -475,6 +475,14 @@ async function handle(req, env) {
     const devices = await removeDevices(env, me.id, Object.keys(await getDevices(env, me.id)));
     await boardOf(env).remove(me.ws).catch(() => {});
     await Promise.all([`pitems:${me.id}`, `pprofile:${me.id}`, `psent:${me.id}`, `pc:${me.id}`, `co:${me.id}`, `seen:${me.id}`, `card:${me.ws}`].map((k) => env.CAL.delete(k)));
+    // amizades, stories e visitas: apaga as fotos (mesmo antes das 24 h), as visitas e tira a pessoa da lista dos amigos
+    try {
+      const sts = (await env.CAL.get(`stories:${me.ws}`, 'json')) || [];
+      await Promise.all(sts.map((x) => env.CAL.delete(`storyimg:${x.id}`)));
+      const frs = (await env.CAL.get(`friends:${me.ws}`, 'json')) || [];
+      for (const f of frs) { const l = (await env.CAL.get(`friends:${f}`, 'json')) || []; await env.CAL.put(`friends:${f}`, JSON.stringify(l.filter((x) => x !== me.ws))); }
+      await Promise.all([`stories:${me.ws}`, `visits:${me.ws}`, `friends:${me.ws}`, `freq:${me.ws}`].map((k) => env.CAL.delete(k)));
+    } catch { /* ok */ }
     const D = dueOf(env);
     await Promise.all([`per:${me.id}`, `amg:${me.id}`, `cch:${me.id}`, `rem:${me.ws}`].map((k) => D.del(k)));
     if (me.ws !== 'main') {
@@ -567,6 +575,77 @@ async function handle(req, env) {
       await env.CAL.put(`friends:${meU}`, JSON.stringify((await getL(`friends:${meU}`)).filter((x) => x !== other)));
       await env.CAL.put(`friends:${other}`, JSON.stringify((await getL(`friends:${other}`)).filter((x) => x !== meU)));
       return reply(env, req, { ok: true });
+    }
+    // ---------- stories (24h) e visitas ao perfil ----------
+    const memberOf = (u) => 'u' + String(u).replace(/[^A-Za-z0-9]/g, '').slice(0, 24);
+    const DAY = 864e5, now = Date.now();
+    const vivos = (l) => l.filter((x) => now - x.at < DAY);
+    const isFriend = async (a, b) => a === b || (await getL(`friends:${a}`)).includes(b);
+    if (url.pathname === '/friends/story-post') {
+      const photo = typeof body.photo === 'string' && body.photo.length < 420000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(body.photo) ? body.photo : null;
+      if (!photo) return reply(env, req, { error: 'Foto inválida. Tire a foto pela câmera do app.' }, 400);
+      if (body.camera !== true) return reply(env, req, { error: 'O story precisa ser uma foto tirada agora, pela câmera.' }, 400);
+      const id = Array.from(crypto.getRandomValues(new Uint8Array(12)), (x) => 'abcdefghijkmnpqrstuvwxyz23456789'[x % 32]).join('');
+      const list = vivos(await getL(`stories:${meU}`));
+      if (list.length >= 10) return reply(env, req, { error: 'Você já postou 10 stories hoje. Espere alguns sumirem.' }, 429);
+      list.push({ id, at: now, title: clean(body.title, 60), caption: clean(body.caption, 120), ref: clean(body.ref, 80), views: {} });
+      await env.CAL.put(`stories:${meU}`, JSON.stringify(list), { expirationTtl: 26 * 3600 });
+      await env.CAL.put(`storyimg:${id}`, photo, { expirationTtl: 24 * 3600 }); // a foto some sozinha em 24h (não fica guardada)
+      const mine = await cardOf(meU), fr = await getL(`friends:${meU}`);
+      const TIT = ['👀 Story novo no ar', '📸 Alguém postou agora', '🔥 Saiu story novo'];
+      await Promise.all(fr.slice(0, 200).map((u) => sendToMember(env, memberOf(u), { title: TIT[now % TIT.length], body: `${mine.name.split(' ')[0]} acabou de postar um story${body.title ? ` de “${clean(body.title, 40)}”` : ''}. Toque pra ver antes que suma!`, tag: `story-${meU}`, url: './#/stories' }).catch(() => 0)));
+      return reply(env, req, { ok: true, id });
+    }
+    if (url.pathname === '/friends/story-delete') {
+      const id = clean(body.id, 40), list = await getL(`stories:${meU}`);
+      if (!list.some((x) => x.id === id)) return reply(env, req, { error: 'Story não encontrado.' }, 404);
+      await env.CAL.put(`stories:${meU}`, JSON.stringify(list.filter((x) => x.id !== id)), { expirationTtl: 26 * 3600 });
+      await env.CAL.delete(`storyimg:${id}`);
+      return reply(env, req, { ok: true });
+    }
+    if (url.pathname === '/friends/stories') {
+      const fr = await getL(`friends:${meU}`);
+      const donos = [meU, ...fr.slice(0, 200)];
+      const rows = (await Promise.all(donos.map(async (u) => {
+        const l = vivos(await getL(`stories:${u}`)); if (!l.length) return null;
+        return { ...(await cardOf(u)), me: u === meU, stories: l.map((x) => ({ id: x.id, at: x.at, title: x.title, caption: x.caption, seen: !!x.views[meU], views: u === meU ? Object.keys(x.views).length : undefined })) };
+      }))).filter(Boolean);
+      // como no Instagram/WhatsApp: os seus primeiro, depois quem tem novidade, do mais recente ao mais antigo
+      rows.sort((a, b) => (b.me - a.me) || (a.stories.every((x) => x.seen) - b.stories.every((x) => x.seen)) || (Math.max(...b.stories.map((x) => x.at)) - Math.max(...a.stories.map((x) => x.at))));
+      return reply(env, req, { ok: true, rows });
+    }
+    if (url.pathname === '/friends/story-view') {
+      const owner = clean(body.owner, 64), id = clean(body.id, 40);
+      if (!(await isFriend(meU, owner))) return reply(env, req, { error: 'Só amigos veem os stories.' }, 403);
+      const list = await getL(`stories:${owner}`), st = list.find((x) => x.id === id && now - x.at < DAY);
+      const photo = st && (await env.CAL.get(`storyimg:${id}`));
+      if (!st || !photo) return reply(env, req, { error: 'Esse story já sumiu.' }, 404);
+      if (owner !== meU && !st.views[meU]) { st.views[meU] = now; await env.CAL.put(`stories:${owner}`, JSON.stringify(list), { expirationTtl: 26 * 3600 }); }
+      return reply(env, req, { ok: true, photo });
+    }
+    if (url.pathname === '/friends/story-viewers') {
+      const st = (await getL(`stories:${meU}`)).find((x) => x.id === clean(body.id, 40));
+      if (!st) return reply(env, req, { error: 'Story não encontrado.' }, 404);
+      const v = Object.entries(st.views).sort((a, b) => b[1] - a[1]).slice(0, 100);
+      return reply(env, req, { ok: true, viewers: await Promise.all(v.map(async ([u, at]) => ({ ...(await cardOf(u)), at }))) });
+    }
+    if (url.pathname === '/friends/visit') {
+      const other = clean(body.uid, 64);
+      if (other === meU || !(await isFriend(meU, other))) return reply(env, req, { ok: true });
+      const l = (await getL(`visits:${other}`)).filter((x) => now - x.at < 7 * DAY);
+      const prev = l.find((x) => x.from === meU);
+      const novo = [{ from: meU, at: now, n: (prev?.n || 0) + 1 }, ...l.filter((x) => x.from !== meU)].slice(0, 60);
+      await env.CAL.put(`visits:${other}`, JSON.stringify(novo), { expirationTtl: 8 * 24 * 3600 });
+      // gatilho de curiosidade: não diz quem foi (pra pessoa abrir o app); no máximo 1 aviso a cada 6h por visitante
+      if (!prev || now - prev.at > 6 * 3600e3) {
+        const B = ['Alguém acabou de olhar o seu perfil 👀 Toque pra ver quem foi', 'Tem gente bisbilhotando o seu perfil 🤭 Quer saber quem?', 'Seu perfil recebeu uma visita agora. Curioso(a)? 👀'];
+        await sendToMember(env, memberOf(other), { title: '👀 Visita no seu perfil', body: B[now % B.length], tag: 'visitas', url: './#/visitas' }).catch(() => 0);
+      }
+      return reply(env, req, { ok: true });
+    }
+    if (url.pathname === '/friends/visitors') {
+      const l = (await getL(`visits:${meU}`)).filter((x) => now - x.at < 7 * DAY);
+      return reply(env, req, { ok: true, visitors: await Promise.all(l.map(async (x) => ({ ...(await cardOf(x.from)), at: x.at, n: x.n }))) });
     }
     if (url.pathname === '/friends/list') {
       const [fr, rq] = [await getL(`friends:${meU}`), await getL(`freq:${meU}`)];

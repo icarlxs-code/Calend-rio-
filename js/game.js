@@ -510,3 +510,19 @@ export function levelRing(inner, size = 34) {
 export const badgeCount = () => Object.keys(load().badges).length;
 export { BADGES, RARITY, badgeArt, crest };
 export const iconFor = (b) => icon(b.icon || 'star', 16);
+
+/* ---------- story do compromisso: foto tirada na hora = XP em dobro; apagou a foto = perde só o bônus ---------- */
+export function storyXp(id, kind = 'w') {
+  load(); dayReset();
+  const v = kind === 'p' ? XP.personal : XP.onTime;
+  const got = gain(v, 'story 📸 XP em dobro');
+  S.sx = { ...(S.sx || {}), [id]: got };
+  settle();
+  return got;
+}
+export function storyXpOff(id) {
+  load();
+  const v = (S.sx || {})[id] || 0;
+  if (v) { S.xp = Math.max(0, S.xp - v); addMonth(-v); delete S.sx[id]; settle(); }
+  return v;
+}

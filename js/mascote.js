@@ -77,6 +77,9 @@ function ctx() {
   return { nome, h, dow, t, pend, late, feitos, pessoal, cabelo, feitoPessoal, prox, memo, amanha, primeiro: nome ? `, ${nome}` : '' };
 }
 
+/* stories e visitas (o Lembra fofoca com você sobre os amigos) */
+let ST = null;
+const visKey = 'lembra.visitasVistas';
 /* ---------- ações reais (os botões do balão) ---------- */
 const A = {
   agendar: (date = todayKey()) => import('./views/event.js').then((m) => m.openEventEditor({ date })),
@@ -134,6 +137,30 @@ function falas(c) {
     if (a.abrir) import('./views/personal.js').then((m) => m.openPersonalEditor(null, a.abrir));
     if (a.resposta) setTimeout(() => fala({ t: a.resposta.t, m: a.resposta.m }, a.resposta.gesto || 'sim'), a.abrir ? 1600 : 450);
   } })) })); } catch { /* ok */ }
+  /* amigos: story novo e visitas no perfil (gatilho de curiosidade) */
+  if (ST) {
+    const novos = ST.feedCache().rows.filter((r) => !r.me && r.stories.some((x) => !x.seen));
+    if (novos.length) {
+      const r = novos[0], st = r.stories.find((x) => !x.seen), n1 = r.name.split(' ')[0];
+      const [i, t] = variante('story', [
+        `Tu viu que ${n1} ${st.title ? `fez “${st.title}”` : 'concluiu um compromisso'}? Postou até story! Quer ver? 👀`,
+        `Psiu… ${n1} postou story agora há pouco. Bora espiar antes que suma? 🤭`,
+        `${n1} tá mostrando serviço: story novo no ar 📸 Quer ver?`,
+        novos.length > 1 ? `${novos.length} amigos postaram story hoje. Você vai ficar de fora? 👀` : `Fofoca fresquinha: ${n1} postou story 🤫 Quer ver?`,
+      ]);
+      out.push({ k: 'story', i, t, m: 'desconfiado', roteiro: ['olhaLados', 'maoBoca'], u: 2.1, acoes: [{ label: 'Quero ver', go: () => ST.openViewer(r.uid) }, { label: 'Depois' }] });
+    }
+    const vis = ST.visitasCache().list; let vistos = 0; try { vistos = +localStorage.getItem(visKey) || 0; } catch { /* ok */ }
+    const recentes = vis.filter((v) => v.at > vistos);
+    if (recentes.length) {
+      const [i, t] = variante('visitas', [
+        `Quer saber quem entrou no seu perfil pra ver o que você postou? 👀`,
+        `Viu quem tá bisbilhotando o seu perfil? ${recentes.length > 1 ? `Foram ${recentes.length} pessoas!` : 'Tem gente curiosa 🤭'}`,
+        `Psiu… alguém passou no seu perfil. Quer descobrir quem foi? 🕵️`,
+      ]);
+      out.push({ k: 'visitas', i, t, m: 'desconfiado', roteiro: ['sobrancelha', 'cinico'], u: 1.9, acoes: [{ label: 'Quero saber', go: () => { try { localStorage.setItem(visKey, String(Date.now())); } catch { /* ok */ } return ST.openVisitors(); } }, { label: 'Nem ligo' }] });
+    }
+  }
   /* o próximo compromisso, quando está chegando */
   if (c.prox) {
     const { e, min } = c.prox, T = q(e.title), em = min < 60 ? `${min} min` : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`;
@@ -239,7 +266,7 @@ const outra = (L) => pick(L.filter((x) => x !== ultima));
 
 /* ---------- o companheiro na tela ---------- */
 let B = null, ultima = '', hideT = 0, spyT = 0, holdT = 0, busyUntil = 0, cenaT = 0, ultimoGesto = '';
-const blocked = () => !!document.querySelector('.sheet-wrap.is-open, .paywall, .ficha, .photogate, .gx, .okfx, .stk, .snhpeek, .spaceveil') ||
+const blocked = () => !!document.querySelector('.sheet-wrap.is-open, .paywall, .ficha, .photogate, .gx, .okfx, .stk, .stv, .snhpeek, .spaceveil') ||
   (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName));
 const el = () => B && B.querySelector('[data-snh]');
 function state(s, side) { if (!B) return; B.dataset.st = s; if (side) B.dataset.side = side; }
@@ -429,6 +456,7 @@ export function start() {
   B._mo = new MutationObserver(guarda); B._mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
   document.addEventListener('focusin', guarda); document.addEventListener('focusout', () => setTimeout(guarda, 50));
   if (!window.__snhOuve) { window.__snhOuve = 1; ouvir(); }
+  import('./stories.js').then((m) => { ST = m; const up = () => { if (!document.hidden) Promise.all([m.refreshFeed(), m.refreshVisitors()]).catch(() => {}); }; up(); clearInterval(window.__stT); window.__stT = setInterval(up, 3 * 60e3); }).catch(() => {});
   // só no modo de teste local (emuladores): ganchos para o robô de testes
   try { if (localStorage.getItem('cal.emulator') === '1' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__lembra = { finge: () => { state('rest'); busyUntil = 0; fingeDormir(); }, toca: onTap, falas: () => falas(ctx()), estado: () => ({ st: B && B.dataset.st, humor: el()?.dataset.snh, fingindo, fala: B && B.querySelector('.snhbud__bub span')?.textContent }) }; } catch { /* ok */ }
   // chega dando oi, com o que mais importa agora
@@ -448,6 +476,8 @@ export function react(kind, o = {}) {
   busyUntil = 0;
   if (kind === 'done') return fala(o.perfect ? { k: 'perfeito', t: pick(['Dia 100%! Você zerou tudo! 🏆', 'Zerou o dia! Pode comemorar 🎉']), m: 'danca' } : o.late ? { t: outra(DONE_LATE), m: 'feliz' } : { t: outra(DONE), m: 'comemora' }, 'pulo');
   if (kind === 'created') return fala({ t: outra(CREATED), m: 'feliz' }, 'sim');
+  if (kind === 'story') return fala({ t: pick(['Postou story! Agora todo mundo vai ver que você fez 😎📸', 'XP em dobro na conta! Fotógrafo(a) profissional, hein 📸', 'Prova registrada! Ninguém pode dizer que você não fez 😏']), m: 'danca', roteiro: ['balanca'] }, 'pulo');
+  if (kind === 'visitas') { try { localStorage.setItem(visKey, String(Date.now())); } catch { /* ok */ } return o.n ? fala({ t: pick([`Hmm… que que será que ${(o.nome || 'essa pessoa').split(' ')[0]} tava querendo, hein? 🤭`, `${(o.nome || 'Alguém').split(' ')[0]} passou por aqui… será que tá com saudade? 👀`, 'Olha quanta gente curiosa com a sua vida 😏']), m: 'desconfiado', roteiro: ['olhaLados', 'maoBoca'] }, 'sobrancelha') : fala({ t: 'Ninguém passou ainda… posta um story que o povo aparece 😉', m: 'feliz' }, 'pisca'); }
   if (kind === 'late') return fala({ t: 'Ih… esse passou da hora. Quer ver o que ficou pra trás?', m: 'triste', acoes: [{ label: 'Ver', go: A.atrasados }, { label: 'Depois' }] }, null);
 }
 export const active = () => !!B;
