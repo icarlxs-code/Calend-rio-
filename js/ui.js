@@ -22,6 +22,7 @@ export const ui = {
   monthSel: todayKey(),
   monthCompany: null,
   showAllTips: false,
+  showTypes: false,
 };
 
 export function saveUi() {

@@ -363,7 +363,7 @@ function fala(line, gesto, tentativa = 0, desde = Date.now(), id = 0) {
   if (g) setTimeout(() => act(el(), g), 220);
   // roteiro: uma sequência de gestos enquanto fala (olha pros lados, desconfia, tapa a boca rindo…)
   (line.roteiro || []).forEach((r, i) => setTimeout(() => { if (B && falando()) act(el(), r); }, 900 + i * 1900));
-  setTimeout(() => balao(line), 260);
+  setTimeout(() => { balao(line); window.__snhGuarda && window.__snhGuarda(); setTimeout(() => window.__snhGuarda && window.__snhGuarda(), busyUntil - Date.now() + 300); }, 260);
   atual.ate = Math.max(atual.ate, busyUntil || 0);
 }
 
@@ -455,11 +455,9 @@ function ciclo() {
   if (B.dataset.st === 'away') { spyT = setTimeout(() => { volta(); ciclo(); }, R(15, 60) * 1000); return; }
   spyT = setTimeout(() => {
     if (!B || document.hidden || blocked() || falando() || arr) return ciclo();
-    if (Math.random() < 0.5) { // espia pela borda
-      const side = pick(['l', 'r']); state('spy', side); setMood(el(), pick(['desconfiado', 'feliz', 'surpreso']));
-      setTimeout(() => { if (Math.random() < 0.6) balao({ t: pick(SPY) }, 2600); else act(el(), pick(['sim', 'olhaLados', 'pisca'])); }, 900);
-      setTimeout(() => { if (B && B.dataset.st === 'spy') { act(el(), 'tchau'); setTimeout(() => { busyUntil = 0; sai(); ciclo(); }, 1100); } }, R(3600, 5200));
-    } else { sai(); ciclo(); }
+    // não espia mais pelas laterais (cobria o conteúdo): só um gesto pequeno no cantinho dele, ou sai um pouco
+    if (Math.random() < 0.5) { act(el(), pick(['sim', 'olhaLados', 'pisca'])); ciclo(); }
+    else { sai(); ciclo(); }
   }, R(20, 60) * 1000);
 }
 
@@ -812,7 +810,9 @@ export function start() {
   arrastavel(B.querySelector('.snhbud__fig'));
   { const p = lePos(); if (p) { const L = limites(); encosta(p.side, cl(p.fy * innerHeight, L.y0, L.y1)); } }
   let guardaT = 0;
-  const guardaJa = () => { guardaT = 0; if (B) B.classList.toggle('is-hidden', blocked()); };
+  // no Hoje, com o Foco na tela, ele fica escondido (não cobre nada) — mas aparece quando tem algo a dizer
+  const guardaJa = () => { guardaT = 0; if (B) B.classList.toggle('is-hidden', blocked() || (document.body.classList.contains('foco-visivel') && !falando())); };
+  window.__snhGuarda = guardaJa;
   const guarda = () => { if (!guardaT) guardaT = setTimeout(guardaJa, 150); }; // junta as mudanças em 150 ms
   B._mo = new MutationObserver(guarda); B._mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'], characterData: false });
   document.addEventListener('focusin', guarda); document.addEventListener('focusout', () => setTimeout(guarda, 50));

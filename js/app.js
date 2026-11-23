@@ -169,7 +169,7 @@ function render() {
   document.documentElement.classList.toggle('is-locked', locked);
   // em Ajustes o plano já aparece em "Seu plano": sem a faixa repetida
   const tb = locked ? lockBanner() : ui.tab === 'ajustes' && !personalMode ? '' : trialBanner();
-  if (tb) (view.querySelector('.page') || view).insertAdjacentHTML('afterbegin', tb);
+  if (tb) { const fo = view.querySelector('.page > .foco'); if (fo) fo.insertAdjacentHTML('afterend', tb); else (view.querySelector('.page') || view).insertAdjacentHTML('afterbegin', tb); } // no Hoje: abaixo do Foco
   bindSwipes();
   bindStrip(view);
   if (store.user && !window.__snhTried) { window.__snhTried = 1; import('./mascote.js').then((m) => m.start()).catch(() => {}); setTimeout(() => import('./cache.js').then((m) => m.aqueceEmblemas()), 6000); }
@@ -182,15 +182,27 @@ function render() {
         const fc = m.feedCache(), rows = fc.rows;
         const tem = rows.some((r) => !r.me && r.stories.some((x) => !x.seen)) || fc.pedidos > 0;
         v.querySelectorAll('.iconbtn--friends').forEach((b) => b.classList.toggle('is-dot', tem));
-        if (!rows.some((r) => !r.me)) return;
-        const host = v.querySelector('.page'); if (!host) return;
-        host.insertAdjacentHTML('afterbegin', `<div class="ststrip-wrap">${m.storyStrip(rows)}</div>`);
+        if (personalMode) {
+          if (!rows.some((r) => !r.me)) return;
+          const host = v.querySelector('.page'); if (!host) return;
+          host.insertAdjacentHTML('afterbegin', `<div class="ststrip-wrap">${m.storyStrip(rows)}</div>`);
+          return m.bindStrip(host.querySelector('.ststrip-wrap'), pinta);
+        }
+        // Hoje do Trabalho: stories SEMPRE no topo (antes da semana), com "Convidar" no fim
+        const host = v.querySelector('header.hdr'); if (!host) return;
+        host.insertAdjacentHTML('beforeend', `<div class="ststrip-wrap">${m.storyStrip(rows, { convidar: true, dot: tem })}</div>`);
         m.bindStrip(host.querySelector('.ststrip-wrap'), pinta);
       };
       pinta();
       if (Date.now() - m.feedCache().at > 3 * 60e3) m.refreshFeed().then(pinta);
     }).catch(() => {});
   }
+  // Foco visível no Hoje: o mascote do canto não cobre nada (some enquanto o Foco está na tela)
+  window.__focoIO?.disconnect(); document.body.classList.remove('foco-visivel');
+  const fo = !personalMode && ui.tab === 'hoje' && view.querySelector('.foco');
+  if (fo && 'IntersectionObserver' in window) { window.__focoIO = new IntersectionObserver(([e]) => document.body.classList.toggle('foco-visivel', e.isIntersecting)); window.__focoIO.observe(fo); }
+  // conta sem nenhum lembrete: uma vez, um balão sobre o + da barra
+  if (fo && !store.state.events.length) { try { if (!localStorage.getItem('lembra.coachFab')) { localStorage.setItem('lembra.coachFab', '1'); setTimeout(coachFab, 1400); } } catch { /* ok */ } }
   // o Lembra acompanha em que tela a pessoa está (para falar do que ela está vendo)
   window.dispatchEvent(new CustomEvent('lembra:tela', { detail: { space: personalMode ? 'personal' : 'work', tab: personalMode ? ui.ptab || 'p-hoje' : ui.tab, date: ui.date } }));
   if (personalMode) {
@@ -327,6 +339,15 @@ const actions = {
   'open-day': (b) => {
     ui.date = b.dataset.k;
     setTab('hoje');
+  },
+  'toggle-types': () => { ui.showTypes = !ui.showTypes; render(); },
+  'new-event-preset': (b) => openEventEditor({ date: b.dataset.date || null, time: b.dataset.time || null, title: b.dataset.title || '' }),
+  'adiar-1h': async (b) => {
+    const e = store.event(b.dataset.id); if (!e) return;
+    if (!e.time) return openEventEditor({ id: e.id }); // sem horário: escolhe no editor
+    const m = Math.min(23 * 60 + 59, toMin(e.time) + 60), t = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    await store.upsert('events', { ...e, time: t });
+    toast(`Adiado para ${t}`);
   },
   'toggle-tips': () => {
     ui.showAllTips = !ui.showAllTips;
@@ -486,6 +507,15 @@ document.addEventListener('submit', async (ev) => {
 /* ---------- gestos: deslizar semana/mês ---------- */
 /* ---------- faixa contínua de dias (rola sem parar, vira o mês sozinha) ---------- */
 const cellW = (strip) => (strip.firstElementChild ? strip.firstElementChild.getBoundingClientRect().width : 1) || 1;
+function coachFab() {
+  const fab = document.querySelector('.tabbar__fab'); if (!fab || document.querySelector('.coachfab')) return;
+  const r = fab.getBoundingClientRect(), b = document.createElement('button');
+  b.className = 'coachfab'; b.type = 'button'; b.textContent = 'Ou toque no + quando quiser';
+  b.style.left = `${r.left + r.width / 2}px`; b.style.top = `${r.top - 12}px`;
+  document.body.appendChild(b);
+  const sai = () => { b.classList.add('is-out'); setTimeout(() => b.remove(), 300); };
+  b.onclick = sai; setTimeout(sai, 6500);
+}
 function stripLeftDay(strip) {
   return strip.dataset.left || null; // posição guardada (não lê no meio de uma animação)
 }
@@ -503,6 +533,9 @@ function bindStrip(view) {
     if (w < 10 && tries < 60) return requestAnimationFrame(() => place(tries + 1));
     strip.style.scrollBehavior = 'auto';
     strip.scrollLeft = idx * w;
+    // o dia escolhido tem que aparecer (antes, no dia 23 a faixa podia mostrar 7–13): centraliza nele
+    const sel = days.indexOf(strip.dataset.sel), vis = Math.max(1, Math.floor(strip.clientWidth / w));
+    if (sel >= 0 && (sel < idx || sel >= idx + vis)) { idx = Math.max(0, sel - Math.floor(vis / 2)); strip.dataset.left = days[idx]; strip.scrollLeft = idx * w; }
     requestAnimationFrame(() => (ready = true));
   };
   place();
@@ -528,7 +561,7 @@ function bindStrip(view) {
       const i = Math.round(strip.scrollLeft / cellW(strip));
       if (days[i]) strip.dataset.left = days[i];
       const mid = days[Math.min(days.length - 1, i + 3)];
-      if (label && mid) label.textContent = `${M[+mid.slice(5, 7) - 1]} de ${mid.slice(0, 4)}`;
+      if (label && mid) label.textContent = `${M[+mid.slice(5, 7) - 1]}${+mid.slice(0, 4) !== new Date().getFullYear() ? ` de ${mid.slice(0, 4)}` : ''}`;
     });
     clearTimeout(t);
     t = setTimeout(() => {

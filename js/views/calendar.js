@@ -14,6 +14,7 @@ import { teamBoardCard } from './teamboard.js';
 import { professionFor } from '../../functions/catalog.js';
 import { dayBrief, dayBriefRows, freeTime } from '../planner.js';
 import { itensAtrasados } from './atrasados.js';
+import { sininho } from '../sininho.js';
 
 /* ---------- elementos compartilhados ---------- */
 export function personSwitch() {
@@ -47,14 +48,15 @@ export function renderToday() {
   const center = ui.stripCenter || date;
   const stripFrom = addDays(startOfWeek(center), -42);
   const week = Array.from({ length: 126 }, (_, i) => addDays(stripFrom, i));
-  const weekLabel = (() => { const d = fromKey(center); const m = MONTHS[d.getMonth()]; return `${m.charAt(0).toUpperCase() + m.slice(1)} de ${d.getFullYear()}`; })();
+  const weekLabel = (() => { const d = fromKey(center); const m = MONTHS[d.getMonth()]; return `${m.charAt(0).toUpperCase() + m.slice(1)}${d.getFullYear() !== new Date().getFullYear() ? ` de ${d.getFullYear()}` : ''}`; })();
 
+  // topo compacto: "Hoje" + a data; a saudação vai para o Foco
   const header = `
-  <header class="hdr">
+  <header class="hdr hdr--hoje">
     <div class="hdr__row">
       <div class="hdr__titles">
-        <p class="hdr__eyebrow">${date === today ? `${greeting()}${me ? ', ' + esc(me.name) : ''}` : esc(fmtDayLong(date))}</p>
-        <h1>${esc(relDay(date))}${date === today ? `<span class="hdr__date">${esc(fmtDayShort(date))}</span>` : ''}</h1>
+        <h1>${esc(relDay(date))}</h1>
+        <p class="hdr__sub">${esc(date === today ? fmtDayShort(date) : fmtDayLong(date))}</p>
         ${(!isMarketing() && WORK.profession) || store.shared || Object.keys(store.profile?.teams || {}).length ? `<div class="hdr__chips">
           ${!isMarketing() && WORK.profession ? `<button class="profchip" data-action="ficha">${icon(WORK.badge || 'briefcase', 13)} ${esc(professionFor(WORK.profession, store.profile?.pronoun))}</button>` : ''}
           ${store.shared || Object.keys(store.profile?.teams || {}).length ? `<button class="wschip" data-action="share">${icon('users', 13)} ${store.shared ? `Agenda de ${esc(store.shared.ownerName)}` : 'Minha agenda'} ${icon('down', 12)}</button>` : ''}
@@ -62,19 +64,15 @@ export function renderToday() {
       </div>
       <div class="hdr__actions">
         ${date !== today ? `<button class="chip chip--accent" data-action="go-today">Hoje</button>` : ''}
-        <button class="iconbtn iconbtn--personal" data-action="space" data-space="personal" aria-label="Ir para o Pessoal">${icon('heart', 19)}</button>
-        ${store.mode === 'cloud' && store.solo ? `<button class="iconbtn iconbtn--friends" data-action="friends" aria-label="Amigos e stories">${icon('users', 19)}<i class="iconbtn__dot"></i></button>` : ''}
+        <button class="hdr__pessoal" data-action="space" data-space="personal" aria-label="Ir para o Pessoal">${icon('heart', 15)} Pessoal</button>
         <button class="iconbtn iconbtn--ai" data-action="assistant" aria-label="Assistente">${icon('sparkle', 20)}</button>
         <button class="iconbtn iconbtn--me" data-action="profile" aria-label="Seu perfil e conquistas">${me ? meRing(me.id, 32) : icon('user', 20)}</button>
       </div>
     </div>
     ${personSwitch()}
-    <div class="week">
-      <div class="week__bar">
-        <button class="iconbtn iconbtn--sm" data-action="week" data-n="-7" aria-label="Semana anterior">${icon('left', 18)}</button>
-        <span class="week__lbl">${icon('calendar', 16)}<span data-striplabel>${esc(weekLabel)}</span></span>
-        <button class="iconbtn iconbtn--sm" data-action="week" data-n="7" aria-label="Próxima semana">${icon('right', 18)}</button>
-      </div>
+  </header>`;
+  // semana compacta: só os dias (rola) e o mês embaixo (abre o Calendário)
+  const weekHtml = `<div class="week week--c">
       <div class="week__days daystrip" data-strip data-sel="${date}">
         ${week.map((k) => {
           const d = fromKey(k);
@@ -88,25 +86,17 @@ export function renderToday() {
           </button>`;
         }).join('')}
       </div>
-    </div>
-  </header>`;
+      <button class="week__mes" data-action="tab" data-tab="mes"><span data-striplabel>${esc(weekLabel)}</span></button>
+    </div>`;
 
-  // Resumo
+  // contas do dia (usadas no Foco): feitos, total e os tipos (chips recolhidos)
   const counts = {};
   evs.forEach((e) => (counts[e.type] = (counts[e.type] || 0) + 1));
   const done = evs.filter((e) => e.status === 'feito').length;
   const pct = evs.length ? Math.round((done / evs.length) * 100) : 0;
-  const summary = evs.length
-    ? `<div class="summary">
-        <div class="summary__progress">
-          <div class="ring" style="--p:${pct}"><span>${pct}%</span></div>
-          <div><strong>${done} de ${evs.length}</strong><small>${done === evs.length ? 'Dia 100% concluído 🏆' : evs.length - done === 1 && date === today ? 'Falta só 1 para fechar o dia' : 'concluídos'}</small>${streak().days >= 2 ? `<span class="streak">🔥 ${streak().days} dias seguidos</span>` : ''}</div>
-        </div>
-        <div class="summary__types">
+  const typesHtml = `<div class="summary__types">
           ${Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([t, n]) => `<span class="tcount tbadge--${t}"${typeStyle(t)}>${icon(TYPES[t].icon, 13)}${TYPES[t].label} <b>${n}</b></span>`).join('')}
-        </div>
-      </div>`
-    : '';
+        </div>`;
 
   // Equipe no dia (onde cada um estará)
   const team = ui.person === 'all' && store.team.length > 1 ? `<section class="block">
@@ -114,28 +104,43 @@ export function renderToday() {
       <div class="team">${store.team.map((m) => teamCol(m, date)).join('')}</div>
     </section>` : '';
 
-  // Próximo
-  let next = '';
-  if (date === today) {
-    const n = nextUp(ui.person);
-    if (n) {
-      const c = store.company(n.companyId);
-      const mins = toMin(n.time) - nowMin();
-      const color = c?.color || '#555';
-      next = `<button class="next" style="--cc:${color};--cc-soft:${rgba(color, 0.12)}" data-action="open-event" data-id="${n.id}">
-        <div class="next__label">${icon('bell', 14)} ${mins > 0 ? 'Próximo · ' + fmtCountdown(mins) : 'Acontecendo agora'}</div>
-        <div class="next__row">
-          ${logoOrType(c, n.type, 44)}
-          <div class="next__txt">
-            <strong>${[fmtTime(n.time), esc(TYPES[n.type].label), c ? esc(c.name) : ''].filter(Boolean).join(' · ')}</strong>
-            <span>${esc(n.title || '')}</span>
-          </div>
-          ${avatars(n.assignees, 26)}
-        </div>
-        ${n.location ? `<div class="next__loc">${icon('pin', 13)} ${esc(n.location)}</div>` : ''}
-      </button>`;
-    }
-  }
+  // ---------- FOCO: uma coisa em destaque, uma ação principal ----------
+  const atras = date === today ? itensAtrasados() : [];
+  const nUp = date === today ? nextUp(ui.person) : null;
+  const pend1 = date === today && !nUp ? evs.find((e) => e.status !== 'feito') : null;
+  const alvo = nUp || pend1;
+  const totalGeral = store.state.events.length;
+  const dias = streak().days;
+  const amanha = addDays(today, 1);
+  const prim = (attrs, label) => `<button class="foco__go" ${attrs}>${label}</button>`;
+  const sec = (attrs, label) => `<button class="foco__sec" ${attrs}>${label}</button>`;
+  let F;
+  if (atras.length) F = { mood: 'desconfiado', lbl: 'Ficou pra trás', tit: atras.length === 1 ? '1 ficou pra trás' : `${atras.length} ficaram pra trás`, sub: atras.slice(0, 2).map((x) => x.title).join(' · '), acts: prim('data-action="atrasados"', 'Resolver') };
+  else if (!evs.length) F = { mood: 'acena', lbl: 'Comece por aqui', tit: `O que você não pode esquecer ${date === today ? 'hoje' : relDay(date).toLowerCase()}?`, sub: 'Eu te aviso na hora certa.', vazio: true, acts: prim(`data-action="new-event" data-date="${date}"`, `${icon('plus', 18)} Criar meu 1º lembrete`) };
+  else if (date !== today) F = { mood: 'feliz', lbl: fmtDayLong(date), tit: `${evs.length} ${evs.length === 1 ? 'lembrete' : 'lembretes'}`, sub: done ? `${done} já ${done === 1 ? 'feito' : 'feitos'}` : '', acts: prim(`data-action="new-event" data-date="${date}"`, `${icon('plus', 18)} Adicionar`) };
+  else if (alvo) {
+    const mins = alvo.time ? toMin(alvo.time) - nowMin() : null, c = store.company(alvo.companyId);
+    F = { mood: 'feliz', lbl: nUp ? (mins > 0 ? `Próximo · ${fmtCountdown(mins)}` : 'Acontecendo agora') : `${greeting()}${me ? ', ' + me.name : ''}`,
+      tit: `${alvo.time ? fmtTime(alvo.time) + ' · ' : ''}${alvo.title || TYPES[alvo.type]?.label || ''}`, sub: [TYPES[alvo.type]?.label, c ? c.name : '', alvo.location || ''].filter(Boolean).join(' · '),
+      acts: prim(`data-action="toggle-done" data-id="${alvo.id}"`, `${icon('check', 18)} Concluir`) + sec(`data-action="adiar-1h" data-id="${alvo.id}"`, 'Adiar 1 h') };
+  } else F = { mood: 'comemora', lbl: `${greeting()}${me ? ', ' + me.name : ''}`, tit: 'Dia 100%! 🏆', sub: 'Tudo feito. Que tal deixar amanhã pronto?', acts: prim(`data-action="new-event" data-date="${amanha}"`, 'Planejar amanhã') };
+  const atalhos = F.vazio ? `<div class="foco__atalhos">
+      <button data-action="new-event-preset" data-title="Tomar remédio" data-time="08:00" data-date="${date}">💊 Tomar remédio <b>08:00</b></button>
+      <button data-action="new-event-preset" data-title="Pagar uma conta" data-date="${date === today ? amanha : date}">💸 Pagar uma conta <b>${date === today ? 'amanhã' : ''}</b></button>
+      <button data-action="new-event-preset" data-title="Aniversário de alguém" data-date="${date}">🎂 Aniversário de alguém</button>
+    </div>` : '';
+  const prog = evs.length ? `<button class="foco__prog" data-action="toggle-types" aria-expanded="${!!ui.showTypes}">
+      <span>${done} de ${evs.length} ${date === today ? 'hoje' : ''}</span><i class="foco__bar"><b style="width:${pct}%"></b></i>${dias >= 1 ? `<span>🔥 ${dias} ${dias === 1 ? 'dia' : 'dias'}</span>` : ''}
+    </button>${ui.showTypes ? typesHtml : ''}` : '';
+  const foco = `<section class="foco" aria-label="Em foco">
+      <div class="foco__snh"><i class="foco__blob"></i>${sininho(F.mood, { size: 72 })}</div>
+      <p class="foco__lbl">${esc(F.lbl)}</p>
+      <h2 class="foco__tit">${esc(F.tit)}</h2>
+      ${F.sub ? `<p class="foco__sub">${esc(F.sub)}</p>` : ''}
+      ${atalhos}
+      <div class="foco__acts">${F.acts}</div>
+      ${prog}
+    </section>`;
 
   // Dicas e alertas
   const warnCount = insights.filter((i) => i.level === 'warn').length;
@@ -151,7 +156,8 @@ export function renderToday() {
 
   // Linha do tempo
   let timeline;
-  if (!evs.length) {
+  if (!evs.length && !totalGeral) timeline = '';
+  else if (!evs.length) {
     timeline = emptyState('Dia livre', ui.person === 'all' ? 'Nada agendado para este dia.' : `Nada agendado para ${store.member(ui.person)?.name}.`,
       `<button class="btn btn--primary" data-action="new-event" data-date="${date}">${icon('plus', 18)} Adicionar</button>`);
   } else {
@@ -165,14 +171,14 @@ export function renderToday() {
     let nowPlaced = date !== today;
     timeline = groups.filter((g) => g.items.length).map((g) => `
       <div class="tl-group">
-        <h3 class="tl-group__h tl-group__h--${g.k === 'Manhã' ? 'manha' : g.k === 'Tarde' ? 'tarde' : g.k === 'Noite' ? 'noite' : 'livre'}"><i class="tl-group__ic">${icon(g.icon, 15)}</i>${g.k}<span>${g.items.length}</span></h3>
+        <h3 class="tl-group__h tl-group__h--txt">${g.k}</h3>
         ${g.items.map((e) => {
           let line = '';
           if (!nowPlaced && e.time && toMin(e.time) > now) {
             nowPlaced = true;
             line = `<div class="nowline"><span>Agora · ${fmtTime(`${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`)}</span></div>`;
           }
-          return line + eventCard(e, { highlight: flagged });
+          return line + (alvo && e.id === alvo.id ? `<div class="tl-next">${eventCard(e, { highlight: flagged })}</div>` : eventCard(e, { highlight: flagged }));
         }).join('')}
       </div>`).join('');
     if (!nowPlaced && date === today) timeline += `<div class="nowline nowline--end"><span>Agora · ${fmtTime(`${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`)} · fim da agenda</span></div>`;
@@ -203,35 +209,25 @@ export function renderToday() {
     </div>
   </section>`;
 
+  // equipe: quem está como hoje, numa linha pequena no título da agenda
+  const teamRow = store.team.length > 1 ? `<span class="agteam">${dayBriefRows(date, ui.person).map((r) => {
+      const left = r.total - r.done, st = !r.total ? '' : r.late ? 'is-late' : !left ? 'is-ok' : 'is-on';
+      return `<span class="agteam__p ${st}" title="${esc(r.name)}: ${!r.total ? 'nada marcado' : r.late ? `${r.late} atrasada(s)` : !left ? 'fez tudo' : `${left} para fazer`}">${avatar(r.id, 20)}</span>`;
+    }).join('')}</span>` : '';
+  const semNada = !totalGeral; // conta nova: só o Foco (sem "Dia livre", dicas e bilhetes)
   return `${header}
+  ${weekHtml}
   <div class="page">
+    ${foco}
     ${store.demo ? demoBanner() : ''}
-    ${next}
-    ${atrasCard()}
-    <button class="brief" data-action="assistant">
-      <span class="brief__ic">${icon('sparkle', 18)}</span>
-      <div class="brief__body">
-        ${dayBriefRows(date, ui.person).map((r) => {
-          const left = r.total - r.done;
-          const status = !r.total ? 'nada marcado hoje'
-            : r.late ? `${r.late} atrasad${r.late > 1 ? 'as' : 'a'}`
-            : !left ? 'fez tudo ✓'
-            : `${left} para fazer`;
-          const cls = !r.total ? '' : r.late ? ' is-late' : !left ? ' is-ok' : '';
-          return `<div class="brow">${avatar(r.id, 22)}<b>${esc(r.name)}</b><span class="brow__st${cls}">${esc(status)}</span>${r.next && !r.late ? `<small class="brow__next">· próximo às ${esc(r.next.split(' · ')[0])}</small>` : ''}</div>`;
-        }).join('')}
-      </div>
-      ${icon('right', 18, 'muted')}
-    </button>
-    ${team}
-    ${teamBoardCard()}
     <section class="block">
-      <h2 class="block__title">${icon('clock', 16)} Agenda ${store.team.length < 2 ? 'do dia' : ui.person === 'all' ? `da ${crew()}` : 'de ' + esc(store.member(ui.person)?.name || '')}</h2>
-      ${summary}
+      <h2 class="block__title agtitle">${store.team.length < 2 ? (date === today ? 'Agenda de hoje' : 'Agenda do dia') : ui.person === 'all' ? `Agenda da ${crew()}` : 'Agenda de ' + esc(store.member(ui.person)?.name || '')}${teamRow}</h2>
       ${timeline}
     </section>
-    ${tips}
-    ${notesHtml}
+    ${team}
+    ${teamBoardCard()}
+    ${semNada ? '' : tips}
+    ${semNada ? '' : notesHtml}
   </div>`;
 }
 

@@ -3993,3 +3993,68 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .stk__glow { filter: none; background: radial-gradient(circle, rgba(255, 120, 40, .42) 0%, rgba(255, 120, 40, .18) 38%, transparent 66%); animation: stkGlowOp 2.4s ease-in-out infinite; }
 @keyframes stkGlowOp { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .stk__glow, .stk__card, .stk.is-in .stk__card, .stk__anim.is-idle .stk__spr { animation: none !important; } }
+
+/* ===== 2.24 — Hoje mais simples: um foco, uma ação principal ===== */
+:root, :root[data-space] { --blob-1: #FFE3CC; --o-500: #E85A0C; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]), :root[data-space]:not([data-theme="light"]) { --blob-1: #4A2A17; --o-500: #FF7A2E; } }
+:root[data-theme="dark"], :root[data-theme="dark"][data-space] { --blob-1: #4A2A17; --o-500: #FF7A2E; }
+/* topo compacto */
+.hdr--hoje h1 { font-size: 28px; line-height: 1.04; display: block; }
+.hdr--hoje .hdr__sub { margin: 2px 0 0; font-size: 13px; font-weight: 700; color: var(--text-3); }
+.hdr__pessoal { display: inline-flex; align-items: center; gap: 5px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line-2); background: none; color: var(--text); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.hdr__pessoal .ic { color: #E0245E; }
+.hdr--hoje .ststrip-wrap { margin: 12px calc(-1 * var(--gutter)) 0; }
+.hdr--hoje .chip--accent, .chip--accent { background: var(--surface-3); color: var(--accent); }
+/* "Convidar" no fim dos stories */
+.ststrip__inv { position: relative; }
+.ststrip__invc { width: 64px; height: 64px; margin-top: 3px; border-radius: 50%; border: 2px dashed var(--line-2); display: grid; place-items: center; color: var(--accent); }
+.ststrip__inv .iconbtn__dot { position: absolute; top: 6px; right: 8px; width: 12px; height: 12px; border-radius: 50%; background: #FF3B30; box-shadow: 0 0 0 2px var(--bg); display: none; }
+.ststrip__inv.is-dot .iconbtn__dot { display: block; }
+/* semana compacta: sem cartão, sem setas; o mês embaixo abre o Calendário */
+.week--c, [data-space="work"] .week--c { margin: 8px 0 0; padding: 0 calc(var(--gutter) - 4px); background: none; border-radius: 0; box-shadow: none; }
+:root[data-space] .week--c .wday.is-sel { background: var(--surface-3); box-shadow: none; }
+:root[data-space] .week--c .wday.is-sel .wday__l, :root[data-space] .week--c .wday.is-sel .wday__n, :root[data-space] .week--c .wday.is-sel.is-today .wday__n { color: var(--accent); background: none; }
+.week__mes { display: inline-flex; align-items: center; gap: 4px; margin: 4px 0 0 4px; padding: 4px 6px; border: 0; background: none; color: var(--accent); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.week__mes::after { content: '▾'; font-size: 11px; }
+/* Foco */
+.foco { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 18px 18px 14px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.foco__snh { position: relative; width: 72px; height: 68px; margin-bottom: 2px; }
+.foco__blob { position: absolute; inset: 6px -4px -4px -6px; border-radius: 46% 54% 52% 48% / 55% 45% 55% 45%; background: var(--blob-1); }
+.foco__snh .snh { position: relative; }
+.foco__lbl { margin: 0; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .12em; color: var(--accent); }
+.foco__tit { margin: 0; font-size: 22px; font-weight: 900; line-height: 1.15; letter-spacing: -.01em; color: var(--text); }
+.foco__sub { margin: 0; font-size: 14px; color: var(--text-2); }
+.foco__acts { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.foco__go { flex: 1 1 auto; min-height: 54px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 20px; border: 0; border-radius: 999px; background: var(--ink); color: var(--ink-on); font: inherit; font-size: 19px; font-weight: 800; box-shadow: var(--shadow-pill); cursor: pointer; }
+.foco__go:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--o-700); }
+.foco__sec { flex: 0 1 auto; min-height: 54px; padding: 0 18px; border: 1px solid var(--line-2); border-radius: 999px; background: none; color: var(--text); font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; }
+.foco__atalhos { display: grid; gap: 8px; margin-top: 8px; }
+.foco__atalhos button { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 48px; padding: 0 14px; border: 0; border-radius: 16px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 15px; font-weight: 800; text-align: left; cursor: pointer; }
+.foco__atalhos b { font-weight: 800; color: var(--text-3); font-size: 13px; }
+.foco__prog { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 4px 0; border: 0; background: none; color: var(--text-2); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.foco__bar { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.foco__bar b { display: block; height: 100%; border-radius: 999px; background: var(--o-500); }
+.foco .summary__types { display: flex; flex-wrap: wrap; gap: 6px; }
+/* agenda */
+.agtitle { display: flex; align-items: center; gap: 8px; }
+.agteam { display: inline-flex; margin-left: auto; }
+.agteam__p { margin-left: -6px; border-radius: 50%; box-shadow: 0 0 0 2px var(--bg); position: relative; }
+.agteam__p.is-late::after, .agteam__p.is-ok::after, .agteam__p.is-on::after { content: ''; position: absolute; right: -1px; bottom: -1px; width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 0 2px var(--bg); }
+.agteam__p.is-late::after { background: #D70015; } .agteam__p.is-ok::after { background: #1E9E46; } .agteam__p.is-on::after { background: var(--o-500); }
+.tl-group__h--txt { font-size: 12px; font-weight: 800; color: var(--text-3); text-transform: none; letter-spacing: 0; margin: 0 0 6px 4px; }
+.tl-next .ecard { background: var(--surface-2); }
+/* só o + da barra e o primário do Foco são laranja cheios */
+.foco ~ .block .empty .btn--primary, .foco ~ .block .iconbtn--accent { background: var(--surface-3); color: var(--accent); box-shadow: none; }
+/* balão de primeira vez sobre o + */
+.coachfab { position: fixed; z-index: 120; translate: -50% -100%; padding: 10px 14px; border: 0; border-radius: 16px; background: var(--text); color: var(--bg); font: inherit; font-size: 14px; font-weight: 800; box-shadow: var(--shadow); transition: opacity .25s; }
+.coachfab::after { content: ''; position: absolute; left: 50%; bottom: -6px; translate: -50% 0; border: 7px solid transparent; border-bottom: 0; border-top-color: var(--text); }
+.coachfab.is-out { opacity: 0; }
+/* mascote: sem balão vertical na lateral */
+.snhbud[data-st="spy"] .snhbud__bub { display: none; }
+/* AA (2.24): dia escolhido e linha "Agora" legíveis no claro e no escuro */
+:root, :root[data-space] { --accent-strong: #9E3907; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]), :root[data-space]:not([data-theme="light"]) { --accent-strong: var(--accent); } }
+:root[data-theme="dark"], :root[data-theme="dark"][data-space] { --accent-strong: var(--accent); }
+:root[data-space] .week--c .wday.is-sel .wday__l, :root[data-space] .week--c .wday.is-sel .wday__n, :root[data-space] .week--c .wday.is-sel.is-today .wday__n { color: var(--accent-strong); }
+.nowline span { background: var(--sel-bg); color: var(--sel-on); }
+.tbadge--outro { color: var(--text-2); }

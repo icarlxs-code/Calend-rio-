@@ -101,7 +101,7 @@ const lembraKey = () => `lembra.storyLembra.${APP_VERSION}`;
 // visto uma vez, some (volta só quando tiver novidade nova); e como todo story, some em 24 h mesmo sem ver
 const lembraVisto = () => { try { if (localStorage.getItem(lembraKey()) === '1') return true; const k = lembraKey() + '.desde', d = Number(localStorage.getItem(k)); if (!d) { localStorage.setItem(k, String(Date.now())); return false; } return Date.now() - d > 24 * 3600e3; } catch { return true; } };
 export const meuStory = () => feed.rows.find((r) => r.me && r.stories.length) || null;
-export function storyStrip(rows = feed.rows, { comMeu = true, lembra = true } = {}) {
+export function storyStrip(rows = feed.rows, { comMeu = true, lembra = true, convidar = false, dot = false } = {}) {
   const meus = rows.find((r) => r.me && r.stories.length);
   const itens = rows.filter((r) => !r.me && r.stories.length);
   const novos = itens.filter((r) => r.stories.some((x) => !x.seen)), vistos = itens.filter((r) => !r.stories.some((x) => !x.seen)); // quem tem story novo vem primeiro
@@ -111,6 +111,7 @@ export function storyStrip(rows = feed.rows, { comMeu = true, lembra = true } = 
     ${!lembraVisto() ? lb : ''}
     ${novos.map((r) => `<button class="ststrip__it" data-st-owner="${esc(r.uid)}" role="listitem">${face(r, 60)}<i class="ststrip__ring"></i><small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
     ${vistos.map((r) => `<button class="ststrip__it" data-st-owner="${esc(r.uid)}" role="listitem">${face(r, 60)}<i class="ststrip__ring is-seen"></i><small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
+    ${convidar ? `<button class="ststrip__it ststrip__inv${dot ? ' is-dot' : ''}" data-action="friends" role="listitem" aria-label="Amigos e convites"><span class="ststrip__invc">${icon('plus', 24)}</span><i class="iconbtn__dot"></i><small>Convidar</small></button>` : ''}
   </div>`;
 }
 export function bindStrip(el, onChange) {
@@ -314,7 +315,7 @@ if (typeof window !== 'undefined') window.addEventListener('lembra:concluiu', (e
   if (Date.now() - ultimoToque > 10000) return;          // concluído em outro aparelho: aqui não convida
   if (Date.now() - ultConvite < 20000) return;            // várias de uma vez: um convite só
   ultConvite = Date.now();
-  setTimeout(() => quandoLivre(() => convidaStory(d)), 900);
+  setTimeout(() => quandoLivre(() => convidaStory(d)), 2100); // depois da comemoração do Lembra (~1,2 s de reação antes)
 });
 const tituloDe = (ref) => {
   const [k, id] = ref.split(':');   // e:id | p:id | p:id:data (lembrete que repete: cada dia vale uma foto)

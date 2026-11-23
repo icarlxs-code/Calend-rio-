@@ -144,7 +144,7 @@ async function deleteEvent(id, api) {
 }
 
 /* ======================== EDITOR ======================== */
-export function openEventEditor({ id = null, date = null, companyId = null, type = null, time = null, assignees = null } = {}) {
+export function openEventEditor({ id = null, date = null, companyId = null, type = null, time = null, assignees = null, title = '' } = {}) {
   const existing = id ? store.event(id) : null;
   if (existing && !store.canEdit('events', existing)) { store._denied('events', existing); return; }
   const companies = store.companiesSorted();
@@ -156,7 +156,7 @@ export function openEventEditor({ id = null, date = null, companyId = null, type
         id: uid('e_'),
         type: defType,
         companyId: companyId || (ui.monthCompany || (companies.length === 1 ? companies[0].id : null)),
-        title: '',
+        title: title || '',
         date: date || (ui.tab === 'mes' ? ui.monthSel : ui.date) || todayKey(),
         time: time || TYPES[defType].best[0] || '12:00',
         duration: ['shoot', 'meeting', 'work', 'other'].includes(TYPES[defType].kind) ? TYPES[defType].dur : null,
