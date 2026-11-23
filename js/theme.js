@@ -42,4 +42,4 @@ export function applyProfTheme() {
 :root[data-space="work"][data-theme="dark"]{${dark}}`;
 }
 /* fundo do topo do iPhone (barra de hora/bateria) no modo Trabalho */
-export const workBarColor = () => (isDark() ? '#1A0E08' : '#FFF6EE');
+export const workBarColor = () => (isDark() ? '#0A0A0A' : '#FFF6EE');

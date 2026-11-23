@@ -1,9 +1,10 @@
 {
-  "version": "2.24.0",
+  "version": "2.24.1",
   "date": "2026-11-23",
   "min": "2.22.0",
   "title": "Hoje mais simples",
   "notes": [
+    "Modo noturno preto de verdade, com o laranja do Lembra.",
     "A tela Hoje ficou mais simples: stories no topo, semana compacta e o próximo lembrete em destaque.",
     "O Lembra se mexe com mais jeito e gasta menos bateria.",
     "App com a cara nova do Lembra: creme, laranja e fonte Nunito.",

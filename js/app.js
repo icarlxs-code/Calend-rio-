@@ -63,7 +63,7 @@ function shell() {
     </nav>`;
 }
 /* Cor da barra de status do iPhone (hora/bateria) acompanha o app */
-const SPACE_BAR = { work: ['#FFF6EE', '#1A0E08'], personal: ['#FFF6EE', '#1A0E08'] };
+const SPACE_BAR = { work: ['#FFF6EE', '#0A0A0A'], personal: ['#FFF6EE', '#0A0A0A'] };
 function setBarColor(light, dark = light) {
   // tema escolhido à mão (Claro/Escuro) vale para as duas situações do celular
   const forced = document.documentElement.dataset.theme;
