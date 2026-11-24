@@ -1,9 +1,10 @@
 {
-  "version": "2.24.2",
-  "date": "2026-11-23",
+  "version": "2.24.3",
+  "date": "2026-11-24",
   "min": "2.22.0",
   "title": "Hoje mais simples",
   "notes": [
+    "Arrastar o Lembra ficou liso: ele cola no seu dedo, sem atraso.",
     "O Lembra não some mais da tela quando você arrasta ele.",
     "Modo noturno preto de verdade, com o laranja do Lembra.",
     "A tela Hoje ficou mais simples: stories no topo, semana compacta e o próximo lembrete em destaque.",

@@ -517,10 +517,18 @@ const lePos = () => { try { const p = JSON.parse(localStorage.getItem(POSK) || '
 const gravaPos = () => { try { if (livre) localStorage.setItem(POSK, JSON.stringify({ side: livre.side, fy: livre.y / innerHeight })); else localStorage.removeItem(POSK); } catch { /* ok */ } };
 const rig = () => rigOf(el());
 const bordaX = (side) => (side === 'l' ? 6 : innerWidth - 6 - FIG);
+/* move só com transform (placa de vídeo): nada de recalcular a página a cada quadro */
+function mover(x, y) { B.style.left = '0px'; B.style.top = '0px'; B.style.setProperty('transform', `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`, 'important'); }
+// ao soltar: troca a posição do arrasto (transform) pela da borda sem animar esse instante (senão ele "deslizava" pelo lugar errado)
+const soltaMove = () => {
+  if (!B || !B.style.getPropertyValue('transform')) return;
+  B.style.transition = 'none'; B.style.removeProperty('transform'); void B.offsetWidth;
+  requestAnimationFrame(() => requestAnimationFrame(() => { if (B) B.style.transition = ''; }));
+};
 /* enquanto está sendo carregado: posição livre na tela */
 function pos(x, y) {
   if (!B) return;
-  B.style.left = `${Math.round(x * 10) / 10}px`; B.style.top = `${Math.round(y * 10) / 10}px`;
+  mover(x, y);
   B.dataset.side = x + FIG / 2 < innerWidth / 2 ? 'l' : 'r';
   B.classList.toggle('bub-baixo', y < 170);
 }
@@ -528,13 +536,13 @@ function pos(x, y) {
 function encosta(side, y, desde) {
   if (!B) return;
   livre = { side, y, em: desde || (livre && livre.em) || Date.now() };
-  B.classList.add('is-free'); B.style.left = ''; B.style.top = `${Math.round(y)}px`; B.dataset.side = side;
+  soltaMove(); B.classList.add('is-free'); B.style.left = ''; B.style.top = `${Math.round(y)}px`; B.dataset.side = side;
   B.classList.toggle('bub-baixo', y < 170);
 }
 function voltaCanto() {
   livre = null; gravaPos();
   if (!B) return;
-  B.classList.remove('is-free', 'is-drag', 'bub-baixo'); B.style.left = B.style.top = ''; B.dataset.side = 'r';
+  soltaMove(); B.classList.remove('is-free', 'is-drag', 'bub-baixo'); B.style.left = B.style.top = ''; B.dataset.side = 'r';
 }
 const zona = (side, y) => { const cy = y + FIGH / 2, H = innerHeight; return cy < H * 0.3 ? 'topo' : cy > H * 0.72 ? 'baixo' : side === 'l' ? 'esq' : 'dir'; };
 
@@ -588,8 +596,8 @@ function arrastavel(fig) {
   fig.addEventListener('pointermove', (ev) => {
     if (!arr || ev.pointerId !== arr.id || arr.voo) return;
     arr.fx = ev.clientX; arr.fy = ev.clientY;
-    if (!arr.on && Math.hypot(ev.clientX - arr.x0, ev.clientY - arr.y0) >= 8) comeca(fig, ev);
-    if (arr.on) ev.preventDefault();
+    if (!arr.on && Math.hypot(ev.clientX - arr.x0, ev.clientY - arr.y0) >= 4) comeca(fig, ev);
+    if (arr.on) { ev.preventDefault(); const Lm = limites(); mover(cl(arr.fx - arr.ox, Lm.x0 - 26, Lm.x1 + 26), cl(arr.fy - arr.oy, Lm.y0 - 30, Lm.y1 + 26)); } // segue o dedo na hora, sem esperar o próximo quadro
   });
   const fim = (ev) => {
     if (!arr || ev.pointerId !== arr.id || arr.voo) return;
@@ -676,7 +684,7 @@ function passo(now) {
   }
   arr.viradas = arr.viradas.filter((t) => now - t < 1500); arr.picoVir = Math.max(arr.picoVir, arr.viradas.length);
   arr.agito += Math.abs(om0) * dt + (arr.viradas.length >= 2 ? dt * 1.2 : 0);
-  B.style.left = `${nx.toFixed(1)}px`; B.style.top = `${ny.toFixed(1)}px`;
+  mover(nx, ny);
   if (!arr.voo || arr.enc) { B.dataset.side = arr.enc ? arr.enc.side : nx + FIG / 2 < innerWidth / 2 ? 'l' : 'r'; B.classList.toggle('bub-baixo', ny < 170); }
   fig.style.transform = calmo() ? '' : `rotate(${((psi * 180) / Math.PI).toFixed(2)}deg)`; // "reduzir movimento": arrasta sem balançar
   const parado = (now - arr.quieto) / 1000;

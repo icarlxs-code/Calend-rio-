@@ -4072,3 +4072,7 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 /* imagem do ranking/ofensiva em tons de cinza no escuro (o véu preto sobre laranja ficava marrom) */
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sheet--rk, :root:not([data-theme="light"]) .ofs, :root:not([data-theme="light"]) .ofs--f3 { background-blend-mode: normal, luminosity; } }
 :root[data-theme="dark"] .sheet--rk, :root[data-theme="dark"] .ofs, :root[data-theme="dark"] .ofs--f3 { background-blend-mode: normal, luminosity; }
+/* arrasto liso: sem filtro pesado e movido só pela placa de vídeo */
+.snhbud.is-drag { will-change: transform; }
+.snhbud.is-drag .snhbud__fig { filter: none; will-change: transform; }
+.snhbud__fig canvas { touch-action: none; }
