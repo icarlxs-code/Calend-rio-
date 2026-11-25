@@ -13,7 +13,7 @@ export function occursOn(it, day) {
   if (r === 'none') return day === it.date;
   if (r === 'daily') return true;
   if (r === 'yearly') return day.slice(5) === it.date.slice(5);
-  if (r === 'monthly') { const [y, m] = day.split('-').map(Number); return +day.slice(8) === Math.min(+it.date.slice(8), new Date(y, m, 0).getDate()); }
+  if (r === 'monthly') { const [y, m] = day.split('-').map(Number); return +day.slice(8) === Math.min(it.diaMes || +it.date.slice(8), new Date(y, m, 0).getDate()); }
   if (r === 'weekly') return de(day).getDay() === de(it.date).getDay();
   if (r === 'biweekly') return Math.round((de(day) - de(it.date)) / 864e5) % 14 === 0;
   return false;
@@ -21,7 +21,7 @@ export function occursOn(it, day) {
 const WD = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 /** a regra em palavras: "todo dia 7h30", "toda segunda 9h", "todo dia 5 · 10h" */
 export function selo(it) {
-  const h = hm(it.time), d = it.date ? de(it.date) : null, w = d ? WD[d.getDay()] : '', n = it.date ? +it.date.slice(8) : 0;
+  const h = hm(it.time), d = it.date ? de(it.date) : null, w = d ? WD[d.getDay()] : '', n = it.diaMes || (it.date ? +it.date.slice(8) : 0);
   switch (it.repeat) {
     case 'daily': return `todo dia${h ? ` ${h}` : ''}`;
     case 'weekly': return `${/o$|domingo|sábado/.test(w) ? 'todo' : 'toda'} ${w}${h ? ` ${h}` : ''}`;

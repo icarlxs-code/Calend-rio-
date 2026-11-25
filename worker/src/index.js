@@ -189,9 +189,9 @@ export function splitActions(raw) {
   const m = /<acoes>\s*([\s\S]*?)\s*(?:<\/acoes>|$)/i.exec(text) || /```json\s*(\[[\s\S]*?\])\s*```/i.exec(text);
   if (m) {
     try {
-      const j = JSON.parse(m[1].replace(/^[^\[{]*/, '').replace(/[^\]}]*$/, ''));
+      const cru = m[1].replace(/^[^\[{]*/, '').replace(/[^\]}]*$/, ''); let j; try { j = JSON.parse(cru); } catch { j = JSON.parse(cru.replace(/,\s*([\]}])/g, '$1')); }
       actions = (Array.isArray(j) ? j : [j]).filter((a) => a && typeof a === 'object' && typeof a.acao === 'string').slice(0, 20).map((a) => (Array.isArray(a.ids) ? { ...a, ids: a.ids.filter((x) => typeof x === 'string').slice(0, 101) } : a));
-    } catch { /* sem ações válidas */ }
+    } catch { return { answer: 'Não consegui montar a ação. Pode repetir?', actions: [] }; }
     text = text.replace(m[0], '').trim();
   }
   return { answer: text.replace(/<\/?acoes>/gi, '').trim() || (actions.length ? 'Pronto, confira e confirme abaixo 👇' : ''), actions };

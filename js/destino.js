@@ -3,8 +3,10 @@
 import { parseQuick } from './personal.js';
 
 const sem = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-const PERGUNTA = /\?\s*$|^(onde|quando|quant[oa]s?|o que|oque|qual|quais|como|quem|por que|porque|cad[eê]|tem |tenho (algo|alguma|algum|o que)|estou livre|me (diz|diga|fala|explica|mostra|ajuda)|analis|resum|organiz|planej|suger|oi\b|ola\b|bom dia|boa (tarde|noite)|obrigad|valeu|sim\b|nao\b|ok\b)/;
-const MEXE = /\b(mud[ae]r?|mov[ae]r?|remarc\w*|adi[ae]r?|pass[ae] (o|a|os|as)\b|troc[ae]r?|apag\w*|exclu\w*|delet\w*|cancel\w*|remov\w*|tir[ae] (o|a|os|as)\b|conclu\w*|marc(a|ar|que) como (feit|pronto|conclu)\w*)\b/;
+const PERGUNTA = /\?\s*$|^(onde|quando|quant[oa]s?|o que|oque|qual|quais|como|quem|por que|porque|cad[eê]|tem |tenho (algo|alguma|algum|o que)|estou livre|to livre|to ocupad|estou ocupad|me (diz|diga|fala|explica|mostra|ajuda)|analis|resum|organiz|planej|suger|oi\b|ola\b|bom dia|boa (tarde|noite)|obrigad|valeu|sim\b|nao\b|ok\b)/;
+const DESFAZ = /^(desfaz(er|e)?|desfaca|volta (como|tudo)|nao era isso|cancela isso|desfaz isso)\b[\s\w]*[.! ]*$/;
+const SO_VERBO = /^(desmarc\w*|cancel\w*|tira|tire|apag\w*|remov\w*|exclu\w*)[.! ]*$/;
+const MEXE = /\b(desmarc\w*|(tir|apag)[ae] tudo|na verdade|muda (pra|para|o|a)\b|mud[ae]r?|mov[ae]r?|remarc\w*|adi[ae]r?|pass[ae] (o|a|os|as)\b|troc[ae]r?|apag\w*|exclu\w*|delet\w*|cancel\w*|remov\w*|tir[ae] (o|a|os|as)\b|conclu\w*|marc(a|ar|que) como (feit|pronto|conclu)\w*)\b/;
 const VARIOS = /\b(tod[oa]s? (os|as|dia|dias|segunda|terca|quarta|quinta|sexta|sabado|domingo|semana|mes)|toda semana|todo mes|de segunda a|ate (o|a|dia|fim)|segundas|tercas|quartas|quintas|sextas)\b/;
 const NA_AGENDA = /\b(na|no|para a|pra|pro) (minha |meu )?(agenda|calendario)\b|\bagend(a|ar|e|ei)\b(?! de\b)/;
 const NA_NOTA = /\b(nas?|em|uma|nos?|como|so) (minhas? |meus? )?(notas?|anotac(ao|oes)|bilhetes?)\b/;
@@ -13,9 +15,11 @@ const VERBO = /^(por favor,?\s+|entao,?\s+)?(me |pode |voce pode |quero |queria 
 const TRAB = /\b(reuniao|cliente|empresa|trabalho|escritorio|captacao|gravacao|reels|feed|stories|post\b|entrega|projeto|proposta|orcamento|aula|plantao|visita tecnica|obra)\b/;
 const PESS = /\b(medic[oa]|dentista|consulta|exame|psic\w*|psiq\w*|neuro\w*|terapia|cabel\w*|barb\w*|unha|academia|treino|aniversario|mae|pai|filh[oa]|vo\b|vovo|mercado|casa|igreja|culto|missa|namorad\w*|espos[oa]|marido|remedio|viagem|pessoal)\b/;
 
-/** null = é conversa (pergunta, mudança, pedido repetido): vai para a IA. */
+/** { intencao } = desfazer ou pergunta curta; null = é conversa (pergunta, mudança, pedido repetido): vai para a IA. */
 export function entende(raw, espaco = 'personal') {
   const texto = String(raw || '').replace(/\s+/g, ' ').trim(), s = sem(texto);
+  if (DESFAZ.test(s)) return { intencao: 'desfazer' };
+  if (SO_VERBO.test(s)) return { intencao: 'qual', verbo: s.replace(/[.! ]+$/, '') };
   if (texto.length < 3 || texto.length > 160 || PERGUNTA.test(s) || MEXE.test(s) || VARIOS.test(s) || /\n/.test(raw.trim())) return null;
   const limpo = texto.replace(/,?\s*(por favor|pfv|pf)\.?$/i, '');
   const q = parseQuick(limpo.replace(/\b(na|no|nas|nos|em|como|só|so)\s+(minhas?\s+|meus?\s+)?(agenda|calend[aá]rio|notas?|anota[cç][aã]o|anota[cç][oõ]es|bilhetes?)(\s+(de|do)\s+trabalho|\s+pessoal)?\b/gi, ' '));

@@ -6,20 +6,9 @@ import { todayKey, addDays, fmtDayLong, fromKey, WEEKDAYS } from './utils.js';
 import { routine } from './planner.js';
 import { toast } from './components.js';
 
-const MKT_PRESETS = [
-  { label: 'Organize meu dia', q: 'Analise a agenda de hoje e me diga, em ordem, o que fazer e quando. Aponte conflitos e onde dá para ganhar tempo livre.' },
-  { label: 'Melhores horários da semana', q: 'Sugira os melhores horários para os posts desta semana de cada empresa, sem conflitar com as captações e respeitando o expediente e o almoço.' },
-  { label: 'Equilibrar a dupla', q: 'A carga de trabalho entre Henrique e Matheus está equilibrada nos próximos 7 dias? Sugira trocas concretas de responsável.' },
-  { label: 'Ideias de conteúdo', q: 'Para cada empresa, sugira 3 ideias de posts (feed, reels e stories) para a próxima semana, com legenda curta.' },
-];
-/* Atalhos do assistente com a cara da profissão da pessoa */
-const GEN_PRESETS = [
-  { label: 'Organize meu dia', q: 'Analise a minha agenda de hoje e me diga, em ordem, o que fazer e quando. Aponte conflitos e onde dá para ganhar tempo livre.' },
-  { label: 'Como está minha semana?', q: 'Resuma os meus compromissos dos próximos 7 dias, aponte os dias mais cheios e onde tenho tempo livre.' },
-  { label: 'O que está atrasado?', q: 'Liste o que ficou atrasado ou sem marcar como feito e sugira quando resolver cada coisa.' },
-  { label: 'Dicas para minha rotina', q: 'Com base na minha profissão e na minha agenda, me dê 3 dicas práticas para organizar melhor a semana e não esquecer nada.' },
-];
-export const presets = () => (isMarketing() ? MKT_PRESETS : GEN_PRESETS);
+/* atalhos fixos do assistente */
+const DIA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+export function presets() { const d = new Date().getDay(), alvo = d >= 5 ? 1 : 5; return [{ label: 'O que tenho hoje?', q: 'O que tenho hoje?' }, { label: '+ Criar lembrete', escreve: 'Lembrar de ' }, { label: `Estou livre ${DIA[alvo]}?`, q: `Estou livre ${DIA[alvo]}?` }]; }
 
 const who = (ids = []) => ids.map((id) => store.member(id)?.name).filter(Boolean).join(' e ') || 'sem responsável';
 

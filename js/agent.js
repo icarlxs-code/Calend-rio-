@@ -149,13 +149,14 @@ export function planAction(a) {
   }
   if (kind === 'pessoal') {
     const dates = expandDates(a);
-    const date = dates[0] || todayKey();
+    const date = dates[0] || todayKey(), dm = Number.isInteger(a.dia_mes) && a.dia_mes > 28 && a.dia_mes < 32 ? a.dia_mes : 0;
+    const ate = isDate(a.ate) ? a.ate : isDate(a.until) ? a.until : null;
     const cat = CATS[a.categoria] ? a.categoria : guessCat(a.titulo || '');
     const rep = ['none', 'daily', 'weekly', 'monthly', 'yearly'].includes(a.repetir) ? a.repetir : cat === 'aniversario' ? 'yearly' : 'none';
     const title = String(a.titulo || '').slice(0, 120);
     if (!title) return { ok: false, text: 'Faltou dizer o que anotar no Pessoal.' };
-    return { ok: true, text: `Anotar no seu Pessoal: “${title}” · ${dayLabel(date)}${T(a.inicio || a.hora) ? ' às ' + fmtTime(T(a.inicio || a.hora)) : ''}${rep !== 'none' ? ' · repete' : ''}`,
-      run: async () => { savePersonal({ title, date, time: T(a.inicio || a.hora), cat, repeat: rep, note: String(a.descricao || '').slice(0, 500), remind: 'auto' }); return 1; } };
+    return { ok: true, text: `Anotar no seu Pessoal: “${title}” · ${dayLabel(date)}${T(a.inicio || a.hora) ? ' às ' + fmtTime(T(a.inicio || a.hora)) : ''}${rep === 'monthly' ? ` · todo dia ${a.dia_mes || +date.slice(8)}` : rep !== 'none' ? ' · repete' : ''}${ate && rep !== 'none' ? ` até ${ate.split('-').reverse().join('/')}` : ''}`, novo: true, titulo: title, quando: `${rep === 'monthly' ? `Todo dia ${a.dia_mes || +date.slice(8)}` : dayLabel(date)}${ate && rep !== 'none' ? ` · até ${ate.split('-').reverse().join('/')}` : T(a.inicio || a.hora) ? ' · ' + fmtTime(T(a.inicio || a.hora)) : ''}`,
+      run: async () => { savePersonal({ title, date, time: T(a.inicio || a.hora), cat, repeat: rep, ...(ate && rep !== 'none' ? { until: ate } : {}), ...(dm && rep === 'monthly' ? { diaMes: dm } : {}), note: String(a.descricao || '').slice(0, 500), remind: 'auto' }); return 1; } };
   }
   if (kind === 'anotacao' || kind === 'anotação') {
     const text = String(a.texto || a.titulo || '').slice(0, 500);
@@ -178,7 +179,7 @@ export function planAction(a) {
 
 /* ---------- o plano mostrado é o plano executado ---------- */
 /** congela as ações: o que aparece no cartão é exatamente o que será feito */
-export function congela(acoes) { return acoes.map((a) => { try { const p = planAction(a); return { a, ok: !!p.ok, text: p.text, warn: p.warn || '', apaga: p.apaga || null }; } catch { return { a, ok: false, text: 'Não entendi uma das ações.', warn: '', apaga: null }; } }); }
+export function congela(acoes) { return acoes.map((a) => { try { const p = planAction(a); return { a, ok: !!p.ok, text: p.text, warn: p.warn || '', apaga: p.apaga || null, ...(p.novo ? { novo: true, titulo: p.titulo, quando: p.quando } : {}) }; } catch { return { a, ok: false, text: 'Não entendi uma das ações.', warn: '', apaga: null }; } }); }
 const chaveApaga = (L) => (L || []).map((x) => `${x.id}|${x.title}|${x.date}|${x.time}`).sort().join('~');
 /** a agenda mudou desde que o cartão apareceu? */
 export function mudou(plano) { return congela(plano.map((x) => x.a)).some((n, i) => n.ok !== plano[i].ok || n.text !== plano[i].text || chaveApaga(n.apaga) !== chaveApaga(plano[i].apaga)); }

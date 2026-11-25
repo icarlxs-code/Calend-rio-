@@ -12,6 +12,7 @@ import { planAction, congela, mudou, executa, desfaz, quantosApaga, pedeSegunda 
 import { avisaApagado, listaHtml } from '../lixeira.js';
 import { novoLote } from '../lixeira-core.js';
 import { entende } from '../destino.js';
+import { entendeConta, respostaConta } from '../contas.js';
 import { personal, savePersonal, removePersonal, addMemo, guessCat } from '../personal.js';
 import { hasPro } from '../billing.js';
 import { okFx } from '../okfx.js';
@@ -57,12 +58,15 @@ function actionsCard(m, i) {
   const plans = m.plan;
   const okCount = plans.filter((p) => p.ok).length;
   const st = m.actStatus || 'pending';
-  return `<div class="acard acard--${st === 'undone' ? 'cancelled' : st}">
-    <div class="acard__head">${icon(st === 'done' ? 'check' : 'sparkle', 15)} ${st === 'done' ? 'Feito na agenda' : st === 'undone' ? 'Desfeito' : st === 'cancelled' ? 'Cancelado' : 'Vou fazer na agenda:'}</div>
-    ${plans.map((p) => `<div class="acard__row${p.ok ? '' : ' is-bad'}">${icon(p.ok ? 'calendar' : 'alert', 14)}<span>${esc(p.text)}${p.warn && st === 'pending' ? `<small>${esc(p.warn)}</small>` : ''}</span>${p.apaga ? '<em class="apaga">APAGA</em>' : ''}</div>${p.apaga && st === 'pending' ? listaHtml(p.apaga) : ''}`).join('')}
-    ${st === 'pending' && okCount ? `<div class="acard__btns"><button class="btn btn--primary btn--sm" data-act-ok="${i}">Confirmar</button><button class="btn btn--soft btn--sm" data-act-no="${i}">Cancelar</button></div>` : ''}
-    ${(st === 'done' || st === 'undone') && m.actResult ? `<small class="acard__res">${esc(m.actResult)}</small>` : ''}
-    ${st === 'done' && m.undo ? `<button class="btn-text btn-text--sm" data-act-undo="${i}">Desfazer</button>` : ''}
+  const apaga = quantosApaga(plans), novos = plans.filter((p) => p.ok && !p.apaga).length;
+  if (st === 'done' || st === 'undone' || st === 'cancelled') {
+    const L = plans.filter((p) => p.ok);
+    return `<details class="acard is-fim acard--${st}"><summary><span class="acard__ok">${icon(st === 'done' ? 'check' : 'x', 17)}</span><b>${st === 'done' ? esc(m.actResult || 'Pronto') : st === 'undone' ? esc(m.actResult || 'Desfeito') : 'Nada foi alterado'}</b>${st === 'done' && m.undo ? `<button class="acard__undo" data-act-undo="${i}">Desfazer</button>` : ''}</summary>${st === 'cancelled' ? '' : L.map((p) => `<div class="acard__row">${icon(p.apaga ? 'trash' : 'check', 15)}<span>${esc(p.text)}</span></div>`).join('')}${(m.result || []).filter((r) => !r.ok).map((r) => `<div class="acard__row"><span>${esc(r.title)}: ficou de fora</span></div>`).join('')}</details>`;
+  }
+  return `<div class="acard">
+    <div class="acard__head"><b>${apaga && !novos ? 'Apagar estes?' : plans.some((p) => /^(Mover|Alterar)/.test(p.text)) ? 'Posso mudar?' : 'Quer que eu crie?'}</b><small>${okCount} ${okCount === 1 ? 'item' : 'itens'}</small></div>
+    ${plans.map((p) => `<div class="acard__row${p.ok ? '' : ' is-bad'}">${p.ok ? `<span class="acard__ic">${icon(p.apaga ? 'trash' : 'calendar', 17)}</span>` : icon('alert', 16)}<span><b>${esc(p.titulo || p.text)}</b>${p.quando ? `<small class="is-q">${esc(p.quando)}</small>` : ''}${p.warn ? `<small>${esc(p.warn)}</small>` : ''}</span>${p.apaga ? '<em class="apaga">APAGA</em>' : p.novo ? '<em class="novo">Novo</em>' : ''}</div>${p.apaga ? listaHtml(p.apaga) : ''}`).join('')}
+    ${okCount ? `<div class="acard__btns"><button class="btn btn--primary" data-act-ok="${i}">Confirmar</button><button class="btn btn--soft" data-act-no="${i}">Agora não</button></div>` : ''}
   </div>`;
 }
 /* Agenda ou nota? A pessoa escolhe antes de qualquer coisa ser guardada */
@@ -117,11 +121,11 @@ const ERR = {
 };
 function errText(e) {
   if (e?.code === 'local') return 'O assistente precisa da sincronização na nuvem ligada.';
-  if (e?.code === 'no-server') return 'O assistente ainda não foi ligado no servidor. Falta publicar o servidor gratuito (veja o README).';
+  if (e?.code === 'no-server') return 'O assistente está fora do ar agora. Sua agenda continua aqui.';
   if (e?.status) return e.message;
   if (e?.code in ERR) return ERR[e.code] || e.message;
   if (e?.code === 'functions/not-found' || e?.code === 'functions/internal' && !/assistente|Claude/.test(e.message || '')) {
-    return 'O assistente ainda não foi ligado no servidor. Falta publicar o servidor com a chave do Claude (veja o README, seção 5).';
+    return 'O assistente está fora do ar agora. Sua agenda continua aqui.';
   }
   return e?.message || 'Não consegui falar com o assistente.';
 }
@@ -140,25 +144,20 @@ function pendingOrders() {
 function chatHtml() {
   const pend = inAppChat && !thinking ? pendingOrders() : [];
   return `<section class="block" data-chat>
-    <h2 class="block__title">${icon('sparkle', 16)} Fale com o assistente</h2>
     ${pend.length ? `<div class="acard"><div class="acard__head">${icon('alert', 15)} Pedidos que ficaram sem fazer</div>
       ${pend.map((i) => `<div class="acard__row">${icon('calendar', 14)}<span>${esc(chat[i].text.slice(0, 160))}</span></div>`).join('')}
       <div class="acard__btns"><button class="btn btn--primary btn--sm" data-redo>Fazer agora</button><button class="btn btn--soft btn--sm" data-redo-skip>Ignorar</button></div></div>` : ''}
-    <div class="chat">
-      ${chat.length ? `<p class="ia__aviso">Respostas geradas por inteligência artificial: podem errar, confira antes de confirmar.</p>` : ''}${chat.length ? chat.map((m, i) => `<div class="msg msg--${m.role}${m.error ? ' msg--err' : ''}">${md(m.text)}${m.role === 'assistant' && !m.error && !m.escolha ? `<button class="msg__rep" data-rep="${i}" aria-label="Denunciar esta resposta">${icon('flag', 12)} Denunciar</button>` : ''}</div>${m.escolha ? escolhaCard(m, i) : ''}${m.actions && m.actions.length ? actionsCard(m, i) : ''}`).join('')
-        : isMarketing() ? `<div class="msg msg--assistant">Oi! Eu vejo e <b>mexo</b> na agenda de vocês. Peça o que quiser, por exemplo: “coloca captação na JG Garcia de segunda a sábado, das 7h ao meio-dia, até o fim do mês”, “passa o reels da Pura Vida para sexta 18h”, “marca cortar cabelo sábado 15h no meu pessoal”. Eu mostro o que vou fazer e você confirma.</div>`
-        : `<div class="msg msg--assistant">Oi! Eu vejo e <b>mexo</b> na sua agenda. Peça o que quiser, por exemplo: “marca ${esc((TYPES[TYPE_ORDER[0]]?.label || 'reunião').toLowerCase())} amanhã às 14h”, “coloca ${esc((TYPES[TYPE_ORDER[1]]?.label || 'tarefa').toLowerCase())} toda segunda às 8h até o fim do mês”, “marca cortar cabelo sábado 15h no meu pessoal”. Eu mostro o que vou fazer e você confirma.</div>`}
+    <div class="chat" aria-live="polite">
+      ${true ? `<p class="ia__aviso">IA pode errar · nada muda sem você confirmar</p>` : ''}${chat.length ? chat.map((m, i) => `<div class="msg msg--${m.role}${m.error ? ' msg--err' : ''}" data-i="${i}">${md(m.text)}${m.chips ? `<span class="msg__chips">${m.chips.map((c) => `<i>${esc(c)}</i>`).join('')}</span>` : ''}</div>${m.escolha ? escolhaCard(m, i) : ''}${m.actions && m.actions.length ? actionsCard(m, i) : ''}`).join('')
+        : `<div class="assist-oi"><img src="assets/mascot/3d/acena.webp" alt="" width="132" height="132"><b>Oi! Como posso ajudar?</b><p>Peça do seu jeito: “dentista amanhã às 15h”, “o que tenho sexta?”, “apaga a reunião de segunda”.</p></div>`}
       ${thinking ? `<div class="msg msg--assistant msg--typing"><i></i><i></i><i></i></div>` : ''}
     </div>
-    <div class="presets">${presets().map((p, i) => `<button class="preset" data-preset="${i}">${esc(p.label)}</button>`).join('')}</div>
+    <div class="assist-pe"><div class="presets">${presets().map((p, i) => `<button class="preset" data-preset="${i}">${esc(p.label)}</button>`).join('')}</div>
     <form class="chat__form" data-chatform onsubmit="return false">
-      <textarea class="input" rows="1" name="q" placeholder="Marque, anote ou pergunte…" ${thinking ? 'disabled' : ''}></textarea>
-      <button class="iconbtn iconbtn--accent" type="submit" aria-label="Enviar" ${thinking ? 'disabled' : ''}>${icon('right', 20)}</button>
+      <textarea class="input" rows="1" name="q" placeholder="Pergunte ou peça…" aria-label="Mensagem para o assistente" ${thinking ? 'disabled' : ''}></textarea>
+      <button class="iconbtn iconbtn--accent" type="submit" aria-label="Enviar" ${thinking ? 'disabled' : ''}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg></button>
     </form>
-    <div class="chat__foot">
-      ${chat.length ? `<button class="btn-text btn-text--sm" data-clearchat>Limpar conversa</button>` : '<span></span>'}
-      <button class="btn-text btn-text--sm" data-extclaude>Abrir no app do Claude</button>
-    </div>
+    ${inAppChat ? '' : '<button class="btn-text btn-text--sm" data-extclaude>Abrir no app do Claude</button>'}</div>
   </section>`;
 }
 
@@ -193,6 +192,7 @@ export function weekProblems(person = 'all') {
 
 export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {}) {
   const pro = hasPro();
+  let modo = '';
   const st = { type: 'feed', date: ui.date >= todayKey() ? ui.date : todayKey(), q: '' };
   const html = () => {
     const t = todayKey();
@@ -200,16 +200,7 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
     const r = routine();
     const week = Array.from({ length: 7 }, (_, i) => addDays(t, i));
     const slotDraft = { id: '__probe', type: st.type, date: st.date, assignees: [] };
-    return `
-    ${sheetHead('Assistente')}
-    <div class="page page--sheet">
-      ${!pro ? '' : `<div class="assist-hero">
-        <span class="assist-hero__ic">${icon('sparkle', 22)}</span>
-        <div><strong>Analisando ${store.team.length > 1 ? 'a agenda de vocês' : 'a sua agenda'}</strong><p>Funciona sozinho, sem internet. Confere conflitos, tempo livre e os melhores horários sempre que algo muda.</p></div>
-      </div>`}
-
-      ${chatHtml()}
-      ${!pro ? '' : `
+    return modo === 'analise' ? `${sheetHead('Análise da agenda', { left: '<button class="btn-text" data-voltachat>Voltar</button>' })}<div class="page page--sheet">      ${!pro ? '<p class="fhelp">A análise faz parte do plano Profissional.</p>' : `
       <section class="block">
         <h2 class="block__title">${icon('today', 16)} Hoje</h2>
         <div class="card">${dayBrief(t).map((l) => `<p>${esc(l)}</p>`).join('')}</div>
@@ -262,21 +253,17 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
         </div>
       </section>`}
 
-    </div>`;
+</div>` : `<header class="assist-top"><button class="iconbtn" data-close aria-label="Voltar">${icon('left', 22)}</button><img src="assets/mascot/3d/joia.webp" alt="" width="46" height="46"><span><b>Lembra</b><small>Seu assistente da agenda</small></span><button class="iconbtn" data-opc aria-label="Opções">${icon('dots', 22)}</button></header>${chatHtml()}`;
   };
 
   const api = openSheet({
-    className: 'sheet--tall',
+    className: 'sheet--tall sheet--assist',
     html: html(),
     onMount: (a) => {
-      a.el.querySelectorAll('[data-rep]').forEach((b) => (b.onclick = async () => {
-        const m = chat[+b.dataset.rep]; if (!m) return;
-        try { const { api } = await import('../avisos.js'); await api('/friends/report', { ws: '', owner: 'ia', id: '', motivo: `Resposta da IA: ${String(m.text).slice(0, 150)}` }); } catch { /* ok */ }
-        b.textContent = 'Denunciado ✓'; b.disabled = true; toast('Obrigado! Vamos revisar essa resposta.');
-      }));
+      a.el.querySelector('[data-opc]')?.addEventListener('click', () => opcoes(a)); a.el.querySelector('[data-voltachat]')?.addEventListener('click', () => { modo = ''; a.set(html()); });
       const el = a.el;
-      if (pro) el.querySelector('[data-f="type"]').onchange = (e) => { st.type = e.target.value; a.set(html()); };
-      if (pro) el.querySelector('[data-f="date"]').onchange = (e) => { if (e.target.value) { st.date = e.target.value; a.set(html()); } };
+      if (modo === 'analise' && pro) el.querySelector('[data-f="type"]').onchange = (e) => { st.type = e.target.value; a.set(html()); };
+      if (modo === 'analise' && pro) el.querySelector('[data-f="date"]').onchange = (e) => { if (e.target.value) { st.date = e.target.value; a.set(html()); } };
       el.querySelectorAll('[data-new]').forEach((b) => (b.onclick = async () => {
         const [who, time] = b.dataset.new.split('|');
         const { openEventEditor } = await import('./event.js');
@@ -286,12 +273,18 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
         q = (q || '').trim();
         if (!q || thinking) return;
         // "desfaz" / "volta como estava": o último que o assistente fez nesta conversa
-        if (/^(desfaz(er|e|)?|desfa[cç]a|volta como (estava|era)|desfaz isso|volta tudo)[.! ]*$/i.test(q)) {
-          const u = [...chat].reverse().find((m) => m.undo);
-          chat.push({ role: 'user', text: q }); if (u) await desfazMsg(u, null); chat.push({ role: 'assistant', text: u ? u.actResult : 'Não tenho nada recente para desfazer.' }); saveChat(); redrawChat(a); return;
+        const x0 = entende(q, ui.space === 'personal' ? 'personal' : 'work');
+        if (x0 && x0.intencao === 'desfazer') {
+          const u = [...chat].reverse().find((m) => m.undo || (m.escStatus === 'feito' && m.desfaz)); chat.push({ role: 'user', text: q });
+          if (u && u.undo) await desfazMsg(u, null); else if (u) await desfazEscolha(u);
+          chat.push({ role: 'assistant', text: u ? u.actResult || 'Desfeito. Nada ficou guardado.' : 'Não tem nada pra desfazer agora.' }); saveChat(); redrawChat(a); return;
         }
+        if (x0 && x0.intencao === 'qual') { chat.push({ role: 'user', text: q }, { role: 'assistant', text: `O que você quer ${/^desmarc/.test(x0.verbo) ? 'desmarcar' : /^cancel/.test(x0.verbo) ? 'cancelar' : 'tirar'}?` }); saveChat(); redrawChat(a); return; }
+        // conta de empréstimo ou parcela: quem faz é o app, nunca a IA
+        const conta = entendeConta(q, todayKey());
+        if (conta) { const r = respostaConta(conta); chat.push({ role: 'user', text: q }, { role: 'assistant', text: r.texto, chips: r.chips, actions: r.acoes, actStatus: 'pending' }); saveChat(); redrawChat(a); return; }
         // coisa para guardar: pergunta o lugar (ou vai direto quando a pessoa já disse)
-        const x = entende(q, ui.space === 'personal' ? 'personal' : 'work');
+        const x = x0;
         if (x) {
           const m = { role: 'assistant', text: x.dito ? 'Certo!' : 'Onde eu guardo isso?', escolha: x };
           chat.push({ role: 'user', text: q }, m);
@@ -324,7 +317,7 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
           const so = actions.length === 1 ? actions[0] : null;
           if (so && /^(pessoal|anota[cç][aã]o|bilhete)$/i.test(so.acao || '') && (!so.repetir || so.repetir === 'none') && !so.datas) { // a IA não decide sozinha entre agenda e nota
             const e2 = entende(q.slice(0, 160).replace(/\?+$/, ''), 'personal') || {};
-            chat.push({ role: 'assistant', text: 'Onde eu guardo isso?', escolha: { texto: so.texto || so.titulo || q, titulo: so.titulo || e2.titulo || so.texto || q, data: so.data || e2.data || null, hora: so.inicio || so.hora || e2.hora || null, cat: so.categoria, espaco: 'personal' } });
+            chat.push({ role: 'assistant', text: text || 'Onde eu guardo isso?', escolha: { texto: so.texto || so.titulo || q, titulo: so.titulo || e2.titulo || so.texto || q, data: so.data || e2.data || null, hora: so.inicio || so.hora || e2.hora || null, cat: so.categoria, espaco: 'personal' } });
             thinking = false; saveChat(); redrawChat(a);
             return;
           }
@@ -336,17 +329,28 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
         saveChat();
         redrawChat(a);
       };
-      bindChat(a, send);
+      if (modo !== 'analise') bindChat(a, send); else a.send = send;
     },
   });
+  /* ⋯ do cabeçalho */
+  function opcoes(a) {
+    const o = openSheet({ className: 'sheet--solid', html: `${sheetHead('Assistente', { left: '<button class="btn-text" data-close>Fechar</button>' })}<div class="page page--sheet"><div class="agroup"><button class="frow" data-o="an">${icon('today', 18)}<span class="frow__id"><b>Análise da agenda</b><small>Conflitos, tempo livre e melhores horários</small></span></button><button class="frow" data-o="ia">${icon('sparkle', 18)}<span class="frow__id"><b>Ajustes de IA</b></span></button>${chat.length ? `<button class="frow is-danger" data-o="li">${icon('trash', 18)}<span class="frow__id"><b>Limpar conversa</b><small>Sua agenda não muda</small></span></button>` : ''}</div></div>`, onMount: (x) => x.el.querySelectorAll('[data-o]').forEach((b) => (b.onclick = async () => { o.close(); const k = b.dataset.o; if (k === 'an') { modo = 'analise'; a.set(html()); } if (k === 'ia') (await import('../ia-consent.js')).pedeIa({ motivo: 'usar o assistente' }); if (k === 'li' && (await confirmDialog({ title: 'Limpar a conversa?', text: 'Só as mensagens daqui. Sua agenda não muda.', ok: 'Limpar' }))) { chat = []; saveChat(); redrawChat(a); } })) });
+  }
+  async function denuncia(i) {
+    const m = chat[i]; if (!m || m.role !== 'assistant' || m.error) return;
+    if (!(await confirmDialog({ title: 'Denunciar esta resposta?', text: 'O começo do texto vai para a nossa revisão.', ok: 'Denunciar' }))) return;
+    try { const { api } = await import('../avisos.js'); await api('/friends/report', { ws: '', owner: 'ia', id: '', motivo: `Resposta da IA: ${String(m.text).slice(0, 150)}` }); } catch { /* ok */ }
+    toast('Obrigado! Vamos revisar essa resposta.');
+  }
   function redrawChat(a) {
     const box = a.el.querySelector('[data-chat]');
     if (!box) return;
     box.outerHTML = chatHtml();
     bindChat(a, a.send);
     const c = a.el.querySelector('.chat');
-    if (c) c.lastElementChild?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (c) c.scrollTo({ top: c.scrollHeight, behavior: 'smooth' });
   }
+  async function desfazEscolha(m) { const d = m.desfaz || {}; if (d.pessoal) removePersonal(d.pessoal, { via: 'assistente' }); if (d.trab) await store.removeMany('events', [d.trab], { via: 'assistente' }); if (m.notaLote) { const { restauraLote } = await import('../lixeira.js'); await restauraLote(m.notaLote); m.notaLote = null; } m.escStatus = 'cancelado'; m.desfaz = null; }
   async function desfazMsg(m, a) {
     if (!m || !m.undo) return;
     const n = await desfaz(m.undo); m.undo = null; m.actStatus = 'undone'; m.actResult = n ? 'Desfeito: voltou como estava.' : 'Não deu para desfazer: já saiu da lixeira.';
@@ -355,7 +359,8 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
   function bindChat(a, send) {
     a.send = send;
     const el = a.el;
-    el.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => send(presets()[+b.dataset.preset].q)));
+    el.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => { const p = presets()[+b.dataset.preset]; if (!p.escreve) return send(p.q); const t = el.querySelector('[data-chatform]').q; t.value = p.escreve; t.focus(); t.setSelectionRange(t.value.length, t.value.length); }));
+    el.querySelectorAll('.msg--assistant[data-i]').forEach((n) => { let t = 0; n.addEventListener('pointerdown', () => { t = setTimeout(() => denuncia(+n.dataset.i), 650); }); ['pointerup', 'pointermove', 'pointercancel', 'pointerleave'].forEach((e) => n.addEventListener(e, () => clearTimeout(t))); });
     el.querySelectorAll('[data-act-ok]').forEach((b) => (b.onclick = async () => {
       const m = chat[+b.dataset.actOk];
       if (!m || m.actStatus !== 'pending') return;
@@ -378,7 +383,7 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
     esco('nota', (m) => guarda(m, 'nota'));
     esco('dia', (m, b) => { m.escolha.data = b.dataset.d; return guarda(m, 'agenda'); });
     esco('data', (m, b) => { if (!b.value) return null; m.escolha.data = b.value; return guarda(m, 'agenda'); });
-    esco('undo', async (m) => { const d = m.desfaz || {}; if (d.pessoal) removePersonal(d.pessoal, { via: 'assistente' }); if (d.trab) await store.removeMany('events', [d.trab], { via: 'assistente' }); if (m.notaLote) { const { restauraLote } = await import('../lixeira.js'); await restauraLote(m.notaLote); m.notaLote = null; } m.escStatus = 'cancelado'; m.desfaz = null; });
+    esco('undo', (m) => desfazEscolha(m));
     el.querySelectorAll('[data-act-undo]').forEach((b) => (b.onclick = () => { b.disabled = true; desfazMsg(chat[+b.dataset.actUndo], a); }));
     const redo = el.querySelector('[data-redo]');
     if (redo) redo.onclick = () => {
@@ -413,17 +418,11 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
       e.preventDefault();
       send(ta.value);
     };
-    const clr = el.querySelector('[data-clearchat]');
-    if (clr) clr.onclick = () => {
-      chat = [];
-      saveChat();
-      redrawChat(a);
-    };
-    el.querySelector('[data-extclaude]').onclick = () => askClaude(ta.value.trim() || 'Analise a agenda e me diga o que é mais importante agora.');
+    const ext = el.querySelector('[data-extclaude]'); if (ext) ext.onclick = () => askClaude(ta.value.trim() || 'Analise a agenda e me diga o que é mais importante agora.');
   }
   if (pergunta) setTimeout(() => {
     if (!agenda) return api.send(pergunta);
-    const x = entende(pergunta, 'personal') || { texto: pergunta, titulo: pergunta.slice(0, 120), data: null, hora: null, espaco: 'personal' };
+    const e0 = entende(pergunta, 'personal'), x = (e0 && !e0.intencao && e0) || { texto: pergunta, titulo: pergunta.slice(0, 120), data: null, hora: null, espaco: 'personal' };
     chat.push({ role: 'user', text: pergunta }, { role: 'assistant', text: 'Vamos colocar na agenda:', escolha: { ...x, nota } }); saveChat(); redrawChat(api);
   }, 380);
   api.refresh = () => {
