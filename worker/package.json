@@ -2,7 +2,14 @@
   "name": "calendario-servidor",
   "private": true,
   "type": "module",
-  "scripts": { "test": "node --test test/*.test.js" },
-  "dependencies": { "@anthropic-ai/sdk": "1.4.0" },
-  "devDependencies": { "wrangler": "4.157.0" }
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.4.0"
+  },
+  "devDependencies": {
+    "http_ece": "^1.2.0",
+    "wrangler": "4.157.0"
+  }
 }

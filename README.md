@@ -173,3 +173,8 @@ firestore.rules       regras de segurança do Firebase
 
 O app publicado fica em `dist/`: um arquivo só, com nome versionado, gerado a partir de `js/` com `npm install && npm run build`. **Rode o build depois de mudar qualquer coisa em `js/` ou no `config.js`.**
 Para testar no computador: `npx http-server .` e abrir `http://localhost:8080`.
+
+## Como conferir as regras publicadas do Firestore
+1. Abra o console do Firebase, projeto do Lembra, Firestore Database, aba Regras.
+2. Copie tudo o que está lá para um arquivo e compare com `firestore.rules` deste repositório (as duas devem ser iguais, linha a linha).
+3. Se estiverem diferentes, não publique por cima sem rodar antes os testes de regra (`Testes` no GitHub Actions ou `firebase emulators:exec --only firestore`).

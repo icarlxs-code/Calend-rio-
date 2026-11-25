@@ -98,7 +98,7 @@ export async function loteDiario(env, now = Date.now()) {
   const msgs = pedido(c), ent = JSON.stringify(msgs).length / 3.5 * RATE[0];
   if (st.n + ent + 1400 * RATE[1] > TETO) { st.fim = 1; await env.CAL.put(key, JSON.stringify(st), { expirationTtl: 3 * 86400 }); return { parou: 'teto', ...st }; }
   let txt = '';
-  try { const r = await env.AI.run(MODELO, { messages: msgs, max_tokens: 1400, temperature: 0.95 }); txt = String(r?.response || ''); } catch (e) { console.log('lote', e.message); if (/limite/.test(e.message)) st.fim = 1; await env.CAL.put(key, JSON.stringify(st), { expirationTtl: 3 * 86400 }); return { parou: 'ia', ...st }; }
+  try { const r = await (env.AI.para ? env.AI.para('lotes') : env.AI).run(MODELO, { messages: msgs, max_tokens: 1400, temperature: 0.95 }); txt = String(r?.response || ''); } catch (e) { console.log('lote', e.message); if (/limite/.test(e.message)) st.fim = 1; await env.CAL.put(key, JSON.stringify(st), { expirationTtl: 3 * 86400 }); return { parou: 'ia', ...st }; }
   st.n = Math.round(st.n + ent + (txt.length / 3.5) * RATE[1]);
   const ja = [...BANCO.categorias[c.cat].map((f) => f.texto), ...(env.FRASES.atual().extra[c.cat] || []).map((f) => f.texto)].map(palavras);
   let n = 0;

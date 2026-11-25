@@ -43,7 +43,11 @@ const entry = files.find((f) => /\/a-[^/]+\.js$/.test(f));
 const version = entry.match(/a-([^.]+)\.js$/)[1].slice(0, 8).toLowerCase();
 
 const idxPath = resolve(root, 'index.html');
-const preload = files.filter((f) => f.endsWith('.js')).map((f) => `<link rel="modulepreload" href="${f}">`).join('\n  ');
+/* só o que a primeira tela precisa (o resto vem sob demanda, e o service worker guarda) */
+const critico = new Set(), O = result.metafile.outputs, chave = (f) => Object.keys(O).find((k) => relative(root, resolve(root, k)).replace(/\\/g, '/') === f);
+const entra = (f) => { if (critico.has(f)) return; critico.add(f); for (const i of O[chave(f)]?.imports || []) if (i.kind === 'import-statement') entra(relative(root, resolve(root, i.path)).replace(/\\/g, '/')); };
+entra(entry);
+const preload = [...critico].filter((f) => f.endsWith('.js')).map((f) => `<link rel="modulepreload" href="${f}">`).join('\n  ');
 writeFileSync(idxPath, readFileSync(idxPath, 'utf8')
   .replace(/\/\*APP\*\/'[^']*'\/\*APP\*\//, `/*APP*/'./${entry}'/*APP*/`)
   .replace(/<!--PRELOAD-->[\s\S]*?<!--\/PRELOAD-->/, `<!--PRELOAD-->\n  ${preload}\n  <!--/PRELOAD-->`));
@@ -52,6 +56,9 @@ writeFileSync(idxPath, readFileSync(idxPath, 'utf8')
 const ab = await build({ entryPoints: [resolve(root, 'js/abertura.js')], bundle: true, format: 'esm', write: false, metafile: true, logLevel: 'silent', outdir: resolve(root, '.x') });
 const abertura = Object.keys(ab.metafile.inputs).map((f) => relative(root, resolve(process.cwd(), f)).replace(/\\/g, '/')).filter((f) => /^(js|functions|config)/.test(f));
 const fontes = readdirSync(resolve(root, 'media/fonts')).filter((f) => f.endsWith('.woff2')).map((f) => `media/fonts/${f}`);
+/* estilos menores (mesma ordem, mesmo conteúdo) */
+for (const c of ['app', 'arte', 'motion', 'marca', 'social']) { const r = await build({ stdin: { contents: readFileSync(resolve(root, `css/${c}.css`), 'utf8'), loader: 'css' }, minify: true, write: false, target: ['safari15'], legalComments: 'none', logLevel: 'error', bundle: false }); writeFileSync(resolve(root, `css/${c}.min.css`), r.outputFiles[0].text); }
+writeFileSync(idxPath, readFileSync(idxPath, 'utf8').replace(/href="css\/(app|arte|motion|marca|social)\.css"/g, 'href="css/$1.min.css"'));
 const swPath = resolve(root, 'sw.js');
 writeFileSync(swPath, readFileSync(swPath, 'utf8')
   .replace(/\/\*CACHE\*\/'[^']*'\/\*CACHE\*\//, `/*CACHE*/'cal-${version}'/*CACHE*/`)
@@ -79,7 +86,7 @@ writeFileSync(resolve(root, 'index.html'), /<!--OG-->[\s\S]*?<!--\/OG-->/.test(i
 
 /* version.json: o app confere ao abrir/voltar (atualiza sozinho) e o Painel do dono compara com a versão de cada pessoa */
 writeFileSync(resolve(root, 'version.json'), JSON.stringify({
-  version: release.version, build: version, date: release.date || '', min: release.min || '',
+  version: release.version, build: version, date: new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10), min: release.min || '',
   title: release.title || '', notes: Array.isArray(release.notes) ? release.notes.slice(0, 12) : [], builtAt: new Date().toISOString(),
 }, null, 2) + '\n');
 

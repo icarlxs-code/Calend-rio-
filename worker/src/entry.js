@@ -9,29 +9,11 @@ import { makeKv, makeDue } from './kvsql.js';
 import { sqlBoard } from './leaderboard.js';
 import { makeSocial } from './social.js';
 import { makeFrases } from './lote.js';
+import { iaComCota, COTAS, PESSOA } from './cota.js';
 import { verifyIdToken } from './auth.js';
 import { NET } from './webpush.js';
 
 const HUB = 'lembra';
-/* IA grátis (10 mil "neurônios" por dia): estimativa por chamada, com reserva para o assistente */
-const RATE = { big: [0.0267, 0.205], small: [0.0041, 0.035] };
-function limitedAI(ai, kv, cap) {
-  if (!ai) return ai;
-  return {
-    async run(model, input, opts) {
-      const day = new Date().toISOString().slice(0, 10), key = `ai-neurons:${day}`;
-      const used = Number(await kv.get(key)) || 0;
-      if (used >= cap) throw new Error('limite diário da IA grátis atingido');
-      const r = await ai.run(model, input, opts);
-      const [ri, ro] = /70b|3\.3/.test(model) ? RATE.big : RATE.small;
-      const inTok = JSON.stringify(input?.messages || input || '').length / 3.5;
-      const outTok = String(r?.response || '').length / 3.5;
-      await kv.put(key, String(Math.round(used + inTok * ri + outTok * ro)), { expirationTtl: 3 * 86400 });
-      return r;
-    },
-  };
-}
-
 export class Hub extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
@@ -48,8 +30,9 @@ export class Hub extends DurableObject {
       AVISA: (u, o) => { const t = JSON.stringify(o); for (const w of ctx.getWebSockets(u)) { try { w.send(t); } catch { /* fechou */ } } },
       VISIVEL: (u) => ctx.getWebSockets(u).some((w) => { try { return !!w.deserializeAttachment()?.vis; } catch { return false; } }) };
     try { ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong')); } catch { /* ok */ }
-    this.http = { ...base, AI: limitedAI(env.AI, this.kv, 9500) };   // assistente: quase tudo
-    this.bg = { ...base, AI: limitedAI(env.AI, this.kv, 6000) };     // mensagens automáticas: até 6.000
+    const cotas = { cotas: { ask: Number(env.IA_ASK) || COTAS.ask, amigo: Number(env.IA_AMIGO) || COTAS.amigo, lotes: Number(env.IA_LOTES) || COTAS.lotes }, pessoaMax: Number(env.IA_PESSOA) || PESSOA };
+    this.http = { ...base, AI: iaComCota(env.AI, this.kv, 'ask', cotas) };
+    this.bg = { ...base, AI: iaComCota(env.AI, this.kv, 'amigo', cotas) };
     this.bg.USAGE = this.http.USAGE = base.USAGE = { date: '', amigo: { sent: 0, ai: 0 }, coach: { sent: 0, ai: 0 } };
     this.running = false;
     ctx.blockConcurrencyWhile(async () => {

@@ -49,17 +49,19 @@ export async function askFree(env, { question, history, context, me, today }) {
     .map((h) => ({ role: h.role, content: h.text.slice(0, 2000) }));
   while (turns.length && turns[0].role !== 'user') turns.shift();
   const messages = [
-    { role: 'system', content: `${SYSTEM}\n\n${calendarHelp(today)}\nQuem pergunta: ${me.name}.\nDados atuais da agenda:\n${context}` },
+    { role: 'system', content: `${SYSTEM}\n\n${calendarHelp(today)}\nQuem pergunta: ${me.name}.\nDados atuais da agenda:\n${String(context || '').slice(0, 12000)}` },
     ...turns,
     { role: 'user', content: question },
   ];
   let lastErr;
-  for (const model of MODELS) {
+  const ia = env.AI.para ? env.AI.para('ask', me.id) : env.AI, acao = /\b(marc|coloc|agend|cri[ae]|lan[cç]|mud|mov|remarc|passa|apag|exclu|tir|anot|desmarc|cancel|conclu)/i.test(question);
+  for (const model of question.length < 120 && !acao ? [...MODELS].reverse() : MODELS) {
     try {
-      const out = await env.AI.run(model, { messages, max_tokens: 1400, temperature: 0.2 });
+      const out = await ia.run(model, { messages, max_tokens: 700, temperature: 0.2 });
       const text = String(out?.response || '').trim();
       if (text) return text;
     } catch (e) {
+      if (e.status === 429) throw e;
       lastErr = e;
       console.log('IA grátis falhou', model, e.message);
     }

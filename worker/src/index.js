@@ -18,6 +18,7 @@ import { getDevices, removeDevices, addDevice, upgradeSubs } from './devices.js'
 import { runTick, planReminders, planPersonal, seedPerson, upgradeLegacy, usageMeter } from './tick.js';
 import { dueOf } from './kvsql.js';
 import { rodaFutebol, guardaTime, tiraTime, proximos, ligado as futebolLigado } from './futebol.js';
+import { porHora, usoIA } from './cota.js';
 import { brNow, fusoOk } from './coach.js';
 import { meuId, trocaId, limpaId, esqueceAchado, guardaCodigos } from './achar.js';
 import { regGet, regPut, regDel, regAll, idOfWs } from './registry.js';
@@ -1094,7 +1095,7 @@ async function handle(req, env) {
     const aiMsgs = (u.amigo?.ai || 0) + (u.coach?.ai || 0);
     return reply(env, req, {
       ok: true, lembretes: u.lembretes || 0, pessoais: u.pessoais || 0, amigo: u.amigo, coach: u.coach,
-      fila: await dueOf(env).size(), banco: env.METER || null, relogio: env.RUNS || null, neuronios: Number(await env.CAL.get(`ai-neurons:${new Date().toISOString().slice(0, 10)}`)) || 0,
+      fila: await dueOf(env).size(), banco: env.METER || null, relogio: env.RUNS || null, neuronios: (await usoIA(env.CAL)).total, ia: await usoIA(env.CAL),
       // estimativa: cada mensagem escrita pela IA gasta ~40 "neurônios" de 10.000 grátis por dia
       iaPercent: Math.min(100, Math.round((aiMsgs * 40) / 10000 * 100)),
     });
@@ -1138,9 +1139,10 @@ async function handle(req, env) {
   if (url.pathname === '/ask') {
     if (!env.ANTHROPIC_API_KEY && !env.AI) return reply(env, req, { error: 'A IA do assistente ainda não foi ligada no servidor.' }, 412);
     // com chave da Anthropic usa o Claude; sem chave, a IA grátis do Cloudflare
+    if (!(await porHora(env.CAL, me.id))) return reply(env, req, { error: 'Muitas perguntas nesta hora. Daqui a pouco volta 😉' }, 429);
     const ask = env.ANTHROPIC_API_KEY ? (await import('./claude.js')).askClaude : (await import('./freeai.js')).askFree;
     try {
-      const raw = await ask(env, { question: clean(body.question, 2000), history: body.history, context: clean(body.context, 60000), me, today: clean(body.today, 10) });
+      const raw = await ask(env, { question: clean(body.question, 2000), history: body.history, context: clean(body.context, 12000), me, today: clean(body.today, 10) });
       const { answer, actions } = splitActions(raw);
       return reply(env, req, { answer, actions });
     } catch (e) {
