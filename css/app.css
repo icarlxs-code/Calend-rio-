@@ -1244,6 +1244,7 @@ html:not(.intro-done) .tabbar { opacity: 0; }
 .brow__next { font-size: 12.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 /* trava a largura: a faixa de dias nunca pode alargar a página (Safari do iPhone) */
 html, body { overflow-x: hidden; max-width: 100%; }
+@supports (overflow: clip) { html, body { overflow-x: clip; } } /* com "hidden" o body virava uma área de rolagem própria e o Chrome novo não rolava a tela com o dedo */
 #app, .view, .hdr, .week { max-width: 100%; min-width: 0; }
 .week { overflow: hidden; }
 .daystrip { width: 100%; max-width: 100%; min-width: 0; contain: inline-size; }

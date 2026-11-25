@@ -62,4 +62,4 @@ if (raiz) new MutationObserver(() => {
 }).observe(raiz, { childList: true });
 const antes = (el) => (pronto() ? LM.antes(el) : null);
 const concluir = (s) => { if (s) LM.concluir(s).catch(() => {}); };
-window.__motion = { pronto, antes, concluir, trocar, mundo, chuva: (...a) => LM.chuva(...a), agendado: LM.agendado, guardar, excluido: sai('excluido'), adiado: sai('adiado'), concluido, voarXp };
+window.__motion = { direto: LM.direto, pronto, antes, concluir, trocar, mundo, chuva: (...a) => LM.chuva(...a), agendado: LM.agendado, guardar, excluido: sai('excluido'), adiado: sai('adiado'), concluido, voarXp };

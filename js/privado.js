@@ -1,7 +1,7 @@
 /* Privado: lista de conversas e a conversa (texto, foto, áudio, resposta de story).
    Tudo some em 24 h; nada fica guardado no aparelho. */
 import { store } from './store.js';
-import { openSheet, sheetHead, toast, confirmDialog } from './components.js';
+import { openSheet, openSheets, sheetHead, toast, confirmDialog } from './components.js';
 import { icon } from './icons.js';
 import { esc } from './utils.js';
 import { boneco3d } from './cena.js';
@@ -224,8 +224,8 @@ export async function openConversa(uid, prev = {}) {
     // toques na lista
     let tL = 0, ult = 0, ultId = '', px = 0, py = 0, arr = null;
     const de = (e) => { const b = e.target.closest('[data-m]'); return b && todas().find((m) => m.id === b.dataset.m); };
-    l.addEventListener('pointerdown', (e) => { const m = de(e); if (!m) return; px = e.clientX; py = e.clientY; arr = { m, el: e.target.closest('.bol'), d: 0 }; tL = setTimeout(() => { tL = 0; arr = null; opcoes(m); }, 430); });
-    l.addEventListener('pointermove', (e) => { if (!arr) return; const dx = e.clientX - px, dy = e.clientY - py; if (Math.abs(dx) > 8 || Math.abs(dy) > 8) clearTimeout(tL); if (Math.abs(dx) > 8) semSelecao(); if (Math.abs(dy) > 24 && arr.d < 10) { solta(); return; } if (dx > 10) { arr.d = Math.min(70, dx * 0.6); arr.el.style.transform = `translateX(${arr.d}px)`; } });
+    l.addEventListener('pointerdown', (e) => { const m = de(e); if (!m) return; px = e.clientX; py = e.clientY; arr = { m, el: e.target.closest('.bol'), d: 0, so: !e.target.closest('.bol__c') || (e.pointerType === 'touch' && e.clientX <= 30) }; tL = setTimeout(() => { tL = 0; arr = null; opcoes(m); }, 430); });
+    l.addEventListener('pointermove', (e) => { if (!arr) return; const dx = e.clientX - px, dy = e.clientY - py; if (Math.abs(dx) > 8 || Math.abs(dy) > 8) clearTimeout(tL); if (Math.abs(dx) > 8) semSelecao(); if (Math.abs(dy) > 24 && arr.d < 10) { solta(); return; } if (dx > 10 && !arr.so) { arr.d = Math.min(70, dx * 0.6); arr.el.style.transform = `translateX(${arr.d}px)`; } });
     const solta = () => { clearTimeout(tL); if (arr) { arr.el.style.transform = ''; if (arr.d > 44 && !arr.m.envio && arr.m.tipo !== 'apagada') { resp = arr.m; mostraResp(); vib(10); $('[data-txt]').focus(); } } arr = null; };
     ['pointerup', 'pointercancel', 'pointerleave'].forEach((n) => l.addEventListener(n, solta));
     l.addEventListener('contextmenu', (e) => { const m = de(e); if (m) { e.preventDefault(); clearTimeout(tL); opcoes(m); } });
@@ -259,6 +259,9 @@ export async function openConversa(uid, prev = {}) {
     if (e.t === 'dig' && e.de === uid) { digT = Date.now() + 4500; digV = e.v; D.online = Date.now(); pinta(); setTimeout(() => pinta(), 4700); }
     if (e.t === 'ligou') traz();
   });
+  // voltar (seta ou deslizando): se não há nada atrás, mostra a lista de conversas
+  a.aoVoltar = () => setTimeout(() => { if (!openSheets().length) import('./mensagens.js').then((m) => m.openMensagens()); }, 30);
+  a.el.addEventListener('click', (e) => { if (e.target.closest('.conv__top [data-close]')) a.aoVoltar(); }, true);
   conversaAberta(uid); pinta(true); traz();
   sonda = setInterval(() => { if (document.hidden) return; encaixa(); if (!aoVivo()) traz(); else status(); }, 6000);
   return a;

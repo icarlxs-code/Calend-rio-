@@ -145,6 +145,35 @@ function syncWork() {
   applySpaceMeta(ui.space === 'personal');
   return true;
 }
+const htmlDaAba = (personalMode) => (personalMode ? renderPersonalSpace() : ui.tab === 'mes' ? renderMonth() : ui.tab === 'empresas' ? renderCompanies() : ui.tab === 'ajustes' ? renderSettings() : renderToday());
+function poeFaixa(view, personalMode) {
+  // em Ajustes o plano já aparece em "Seu plano": sem a faixa repetida
+  const tb = !hasAccess() ? lockBanner() : ui.tab === 'ajustes' && !personalMode ? '' : trialBanner();
+  const soGratis = /trialbar--free/.test(tb), inicio = personalMode ? (ui.ptab || 'p-hoje') === 'p-hoje' : ui.tab === 'hoje';
+  if (soGratis) { if (inicio) view.querySelector('.page')?.insertAdjacentHTML('beforeend', tb); } // aviso que não é urgente: só no fim do início
+  else if (tb) { const fo = view.querySelector('.page > .foco'); if (fo) fo.insertAdjacentHTML('afterend', tb); else (view.querySelector('.page') || view).insertAdjacentHTML('afterbegin', tb); } // no Hoje: abaixo do Foco
+}
+/* ---------- deslizar o dedo entre as abas ---------- */
+const abaAtual = () => (ui.space === 'personal' ? (ui.ptab === 'p-notas' ? 'p-listas' : ui.ptab || 'p-hoje') : ui.tab);
+/* a tela vizinha montada do mesmo jeito que a de verdade, sem mudar nada do app */
+function previaDaAba(id) {
+  const pessoal = ui.space === 'personal', era = pessoal ? ui.ptab : ui.tab, d = document.createElement('div');
+  try {
+    if (pessoal) ui.ptab = id; else ui.tab = id;
+    d.innerHTML = htmlDaAba(pessoal); poeFaixa(d, pessoal); recolhe(d, pessoal);
+    const S = window.__stories, rows = S && store.user && store.mode === 'cloud' && (id === 'hoje' || id === 'p-hoje') ? S.feedCache().rows : null;
+    if (rows && id === 'hoje') d.querySelector('header.hdr')?.insertAdjacentHTML('beforeend', `<div class="ststrip-wrap">${S.storyStrip(rows, { convidar: true })}</div>`);
+    if (rows && id === 'p-hoje' && rows.some((r) => !r.me)) d.querySelector('.page')?.insertAdjacentHTML('afterbegin', `<div class="ststrip-wrap">${S.storyStrip(rows)}</div>`);
+  } catch (e) { console.warn('prévia', e); } finally { if (pessoal) ui.ptab = era; else ui.tab = era; }
+  d.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'));
+  return d;
+}
+import('./deslizar.js').then((m) => m.ligaDeslizar({
+  lista: () => [...document.querySelectorAll('.tabbar .tabbar__btn')].map((b) => b.dataset.tab), atual: abaAtual, previa: previaDaAba,
+  vive: () => { import('./sininho.js').then((s) => s.alive()); document.querySelectorAll('.dz__lado [data-strip]').forEach((s) => { const on = s.querySelector('.is-on, .is-sel, [aria-current]'); if (on) s.scrollLeft = Math.floor(on.offsetLeft / s.clientWidth) * s.clientWidth; }); },
+  marca: (id) => document.querySelectorAll('.tabbar__btn').forEach((b) => b.classList.toggle('is-on', b.dataset.tab === id)),
+  vai: (id) => { const go = () => { if (ui.space === 'personal') ui.ptab = id; else ui.tab = id; saveUi(); ui.stripReset = true; render(); window.scrollTo(0, 0); }; if (window.__motion?.direto) window.__motion.direto(id, go); else go(); },
+})).catch((e) => console.warn('deslizar', e));
 function render() {
   // proteção: se a abertura não terminou por algum motivo, termina aqui (o fundo branco dela nunca fica preso na tela)
   clearTimeout(window.__introGuard);
@@ -166,8 +195,7 @@ function render() {
   if (oldStrip && !ui.stripReset) ui.stripLeft = stripLeftDay(oldStrip);
   ui.stripReset = false;
   const personalMode = ui.space === 'personal';
-  const html = personalMode ? renderPersonalSpace() : ui.tab === 'mes' ? renderMonth() : ui.tab === 'empresas' ? renderCompanies() : ui.tab === 'ajustes' ? renderSettings() : renderToday();
-  view.innerHTML = html;
+  view.innerHTML = htmlDaAba(personalMode);
   document.querySelectorAll('.tabbar__btn').forEach((b) => b.classList.toggle('is-on', b.dataset.tab === (personalMode ? (ui.ptab === 'p-notas' ? 'p-listas' : ui.ptab || 'p-hoje') : ui.tab)));
   window.scrollTo(0, scroll);
   const ni = view.querySelector('[data-form="note"] input');
@@ -176,11 +204,7 @@ function render() {
   // faixa do teste grátis (contagem regressiva) ou de conta sem plano (tudo travado)
   const locked = !hasAccess();
   document.documentElement.classList.toggle('is-locked', locked);
-  // em Ajustes o plano já aparece em "Seu plano": sem a faixa repetida
-  const tb = locked ? lockBanner() : ui.tab === 'ajustes' && !personalMode ? '' : trialBanner();
-  const soGratis = /trialbar--free/.test(tb), inicio = personalMode ? (ui.ptab || 'p-hoje') === 'p-hoje' : ui.tab === 'hoje';
-  if (soGratis) { if (inicio) view.querySelector('.page')?.insertAdjacentHTML('beforeend', tb); } // aviso que não é urgente: só no fim do início
-  else if (tb) { const fo = view.querySelector('.page > .foco'); if (fo) fo.insertAdjacentHTML('afterend', tb); else (view.querySelector('.page') || view).insertAdjacentHTML('afterbegin', tb); } // no Hoje: abaixo do Foco
+  poeFaixa(view, personalMode);
   recolhe(view, personalMode);
   bindSwipes();
   bindStrip(view);
@@ -188,6 +212,7 @@ function render() {
   // stories dos amigos no topo do Hoje (Trabalho e Pessoal), como no Instagram/WhatsApp
   if (store.user && store.mode === 'cloud' && (personalMode ? (ui.ptab || 'p-hoje') === 'p-hoje' : ui.tab === 'hoje')) {
     import('./stories.js').then((m) => {
+      window.__stories = m;
       const pinta = () => {
         const v = document.getElementById('view'); if (!v) return;
         v.querySelector('.ststrip-wrap')?.remove();
