@@ -1,9 +1,12 @@
 {
-  "version": "2.25.1",
+  "version": "2.26.0",
   "date": "2026-11-24",
   "min": "2.22.0",
-  "title": "Movimento mais suave",
+  "title": "Lembra mais simples",
   "notes": [
+    "Telas mais limpas: uma coisa em destaque por vez, e o resto a um toque.",
+    "Nova passagem entre Trabalho e Pessoal, com o Lembra trocando a maleta pelo coração.",
+    "Ajustes organizados por assunto.",
     "Trocas de tela mais suaves: o Lembra pula de uma aba para a outra e traz a página com ele. Para desligar: Ajustes → Aparência → Animações.",
     "Arrastar o Lembra ficou liso: ele cola no seu dedo, sem atraso.",
     "O Lembra não some mais da tela quando você arrasta ele.",

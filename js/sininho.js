@@ -80,7 +80,9 @@ function loop(now) {
   if (typeof document !== 'undefined' && document.hidden) return;
   if (now - lastLoop >= 1000 / 60 - 1.5) {
     lastLoop = now;
-    RIGS.forEach((r) => { if (!r.el.isConnected) return r.stop(); if (precisa(r)) r.frame(now); });
+    // durante uma troca de tela quem se mexe é o Lembra da transição: os outros esperam (o quadro fica livre para o movimento)
+    const viaja = document.documentElement.classList.contains('lm-viajando');
+    RIGS.forEach((r) => { if (!r.el.isConnected) return r.stop(); if (!precisa(r)) return; if (viaja) { r.last = now; return; } r.frame(now); });
   }
   for (const r of RIGS) if (precisa(r)) { rafId = requestAnimationFrame(loop); return; }
 }

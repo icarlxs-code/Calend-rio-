@@ -113,3 +113,10 @@ export function achievement() {
   soft(a, 1318.51, t + 0.38, 1.4, 0.03); // mi agudo, segura
   soft(a, 1975.53, t + 0.46, 0.9, 0.012); // brilho bem leve
 }
+
+/* passo entre as abas: uma nota da mesma escala para cada lugar (pentatônica), bem baixinha */
+export function passo(i = 0) {
+  const a = audio();
+  if (!a) return;
+  note(a, [523.25, 587.33, 659.25, 783.99][i % 4], a.currentTime + 0.01, 0.22, 0.03);
+}

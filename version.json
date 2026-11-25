@@ -1,10 +1,13 @@
 {
-  "version": "2.25.1",
-  "build": "6pv6q3nc",
+  "version": "2.26.0",
+  "build": "swzccdrt",
   "date": "2026-11-24",
   "min": "2.22.0",
-  "title": "Movimento mais suave",
+  "title": "Lembra mais simples",
   "notes": [
+    "Telas mais limpas: uma coisa em destaque por vez, e o resto a um toque.",
+    "Nova passagem entre Trabalho e Pessoal, com o Lembra trocando a maleta pelo coração.",
+    "Ajustes organizados por assunto.",
     "Trocas de tela mais suaves: o Lembra pula de uma aba para a outra e traz a página com ele. Para desligar: Ajustes → Aparência → Animações.",
     "Arrastar o Lembra ficou liso: ele cola no seu dedo, sem atraso.",
     "O Lembra não some mais da tela quando você arrasta ele.",
@@ -13,10 +16,7 @@
     "O Lembra se mexe com mais jeito e gasta menos bateria.",
     "App com a cara nova do Lembra: creme, laranja e fonte Nunito.",
     "Ranking liberado pra todo mundo durante o grátis (até 31/12/2026).",
-    "Quem chega pelo convite já cai em “Criar conta”.",
-    "“Perto de você” agora é opcional: você liga se quiser.",
-    "Painel da equipe: cargos (Suporte, Moderação, Marketing, Dados, Financeiro, RH, Produto, Administração), cada um vê só o que precisa.",
-    "Tudo grátis até 31 de dezembro de 2026, inclusive o assistente com IA."
+    "Quem chega pelo convite já cai em “Criar conta”."
   ],
-  "builtAt": "2026-11-25T02:03:11.528Z"
+  "builtAt": "2026-11-25T03:02:52.399Z"
 }

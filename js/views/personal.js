@@ -7,7 +7,7 @@ import {
   personal, CATS, REPEATS, LIST_PRESETS, occurrences, overdue, savePersonal, removePersonal, toggleDone, parseQuick,
   doneOn, birthdays, phraseOfDay, quoteOfDay, addMemo, guessCat, newList, addEntry, toggleEntry, removeEntry, clearDone, savePrefs, LIST_ICONS, listIcon,
 } from '../personal.js';
-import { openSheet, sheetHead, toast, confirmDialog, avatar, meRing } from '../components.js';
+import { modoSwitch, openSheet, sheetHead, toast, confirmDialog, avatar, meRing } from '../components.js';
 import { isMarketing } from '../constants.js';
 import { icon } from '../icons.js';
 import { store } from '../store.js';
@@ -40,7 +40,8 @@ const row = (it, date, done, { showDate = false } = {}) => {
   </div>`;
 };
 const section = (title, html, extra = '') => `<section class="block"><h2 class="block__title">${title}${extra}</h2>${html}</section>`;
-const emptyCard = (ic, title, text, g = ['#C78BFF', '#7C5CFF']) => `<div class="pempty">${tile(ic, g, 52)}<h3>${esc(title)}</h3><p>${esc(text)}</p></div>`;
+const HUMOR = { sun: 'feliz', cake: 'comemora', sparkles: 'acena', listcheck: 'acena', note: 'feliz' };
+const emptyCard = (ic, title, text) => `<div class="pempty"><span class="vazio__fig">${sininho(HUMOR[ic] || 'acena', { size: 96 })}</span><h3>${esc(title)}</h3><p>${esc(text)}</p></div>`;
 
 const header = (eyebrow, title, right = '') => `
   <header class="phdr">
@@ -49,7 +50,7 @@ const header = (eyebrow, title, right = '') => `
       <div class="phdr__actions">${right}</div>
     </div>
   </header>`;
-const workBtn = `<button class="iconbtn iconbtn--work" data-action="space" data-space="work" aria-label="Ir para o Trabalho">${icon('briefcase', 19)}</button>`;
+const workBtn = modoSwitch('personal');
 
 /* ---------- Hoje ---------- */
 function renderHome() {
@@ -66,27 +67,20 @@ function renderHome() {
   ${header(`${icon('lock', 11)} Só você vê`, `${esc(greeting())}${firstName() ? ', ' + esc(firstName()) : ''}`, `${workBtn}${store.mode === 'cloud' && store.solo ? `<button class="iconbtn iconbtn--friends" data-action="friends" aria-label="Amigos e stories">${icon('users', 19)}<i class="iconbtn__dot"></i></button>` : ''}<button class="iconbtn iconbtn--ai" data-action="assistant" aria-label="Assistente">${icon('sparkle', 19)}</button><button class="iconbtn iconbtn--me" data-action="profile" aria-label="Seu perfil e conquistas">${store.me ? meRing(store.me, 32) : icon('user', 20)}</button>`)}
   <div class="page ppage">
     ${personal.error === 'rules' ? `<div class="palert">${tile('alert', ['#FF8A7A', '#E5341F'], 36)}<div><strong>O Pessoal ainda não está liberado na nuvem</strong><small>O que você anota não fica salvo. No Firebase: Firestore → Regras → cole as regras novas → Publicar. Depois feche e abra o app.</small></div></div>` : personal.error === 'net' ? `<div class="palert">${tile('alert', ['#FFB547', '#FF7A1A'], 36)}<div><strong>Sem conexão com a nuvem</strong><small>Confira a internet. O que você anotar aparece quando a conexão voltar.</small></div></div>` : ''}
-    <div class="phero">
-      <p class="phero__date">${esc(fmtDayLong(t))}</p>
-      ${(() => { const q = quoteOfDay(t); return `<p class="phero__phrase">“${esc(q.t)}”</p><p class="phero__author">— ${esc(q.a)}</p>`; })()}
-      <div class="phero__stats">
-        <span>${icon('cal2', 14)}<b>${pending}</b> para hoje</span>
-        ${streak().days >= 2 ? `<span>🔥<b>${streak().days}</b> dias seguidos</span>` : ''}
-        ${late.length ? `<button class="is-warn" data-action="atrasados">${icon('alert', 14)}<b>${late.length}</b> atrasad${late.length > 1 ? 'os' : 'o'} ›</button>` : ''}
-        ${bdays.some((b) => diffDays(t, b.next) <= 7) ? `<span>${icon('cake', 14)}<b>${bdays.filter((b) => diffDays(t, b.next) <= 7).length}</b> aniversário${bdays.filter((b) => diffDays(t, b.next) <= 7).length > 1 ? 's' : ''} na semana</span>` : ''}
-      </div>
-    </div>
-
     <form class="pquick" data-form="pquick" onsubmit="return false">
       ${icon('sparkle', 18)}
       <input name="q" placeholder="Anote: “cortar cabelo amanhã 15h”" autocomplete="off" enterkeyhint="done" maxlength="160">
       <button class="pquick__go" aria-label="Anotar">${icon('plus', 18)}</button>
     </form>
-    <div class="pchips">${quickCats.map((k) => `<button class="pchip" data-action="p-new" data-cat="${k}">${catTile(k, 24)}${esc(CATS[k].label)}</button>`).join('')}</div>
-    ${forYou()}
-
+    ${late.length || bdays.some((b) => diffDays(t, b.next) <= 7) ? `<div class="phero__stats">
+        <span>${icon('cal2', 14)}<b>${pending}</b> para hoje</span>
+        ${streak().days >= 2 ? `<span>🔥<b>${streak().days}</b> dias seguidos</span>` : ''}
+        ${late.length ? `<button class="is-warn" data-action="atrasados">${icon('alert', 14)}<b>${late.length}</b> atrasad${late.length > 1 ? 'os' : 'o'} ›</button>` : ''}
+        ${bdays.some((b) => diffDays(t, b.next) <= 7) ? `<span>${icon('cake', 14)}<b>${bdays.filter((b) => diffDays(t, b.next) <= 7).length}</b> aniversário${bdays.filter((b) => diffDays(t, b.next) <= 7).length > 1 ? 's' : ''} na semana</span>` : ''}
+      </div>` : ''}
     ${late.length ? section('<span style="color:var(--danger)">Ficou pra trás</span>', `<div class="plist">${late.map((it) => row(it, it.date, false, { showDate: true })).join('')}</div>`) : ''}
     ${section('Hoje', today.length ? `<div class="plist">${today.map((o) => row(o.item, o.date, o.done)).join('')}</div>` : emptyCard('sun', 'Dia livre', 'Nada anotado pra hoje. Aproveita ou anota algo acima.', ['#FFD25A', '#FF9F1A']))}
+    <div class="pchips pchips--ini">${quickCats.slice(0, 4).map((k) => `<button class="pchip" data-action="p-new" data-cat="${k}">${catTile(k, 24)}${esc(CATS[k].label)}</button>`).join('')}</div>
     ${tomorrow.length ? section('Amanhã', `<div class="plist">${tomorrow.map((o) => row(o.item, o.date, o.done)).join('')}</div>`) : ''}
     ${week.length ? section('Próximos dias', `<div class="plist">${week.map((o) => row(o.item, o.date, o.done, { showDate: true })).join('')}</div>`) : ''}
 
@@ -101,13 +95,18 @@ function renderHome() {
     }).join('')}</div>`) : ''}
 
     ${lists.length ? section('Listas', `<div class="pgrid">${lists.slice(0, 4).map(listCard).join('')}</div>`, `<button class="btn-text btn-text--sm" data-action="ptab" data-tab="p-listas">Ver todas</button>`) : ''}
+    ${forYou()}
+    <div class="phero">
+      <p class="phero__date">${esc(fmtDayLong(t))}</p>
+      ${(() => { const q = quoteOfDay(t); return `<p class="phero__phrase">“${esc(q.t)}”</p><p class="phero__author">— ${esc(q.a)}</p>`; })()}
+    </div>
     <div style="height:28px"></div>
   </div>`;
 }
 
 /* "Feito para você": sugestões calculadas pela ficha (idade, identidade, dificuldades, rotina) */
 function forYou() {
-  const list = suggestions(6);
+  const list = suggestions(2);
   if (!list.length) return '';
   return `<section class="block foryou">
     <h2 class="block__title"><span class="ptitle">${tile('sparkles', ['#C78BFF', '#7C5CFF'], 26)}Feito para você</span></h2>

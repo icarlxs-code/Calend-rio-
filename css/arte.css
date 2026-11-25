@@ -1,0 +1,121 @@
+/* Lembra · direção de arte
+   1 foco por tela · 1 botão principal · 3 tamanhos de botão (44, 48, 56) · 3 raios (14, 20, pílula) · grade de 4/8
+   Carregado depois do app.css. Cores sempre pelas variáveis do app (claro e escuro). */
+:root { --r-s: 14px; --r-m: 20px; --r-g: 24px; --esp: 24px; }
+
+/* ---- botões: mesma altura, mesma forma ---- */
+.btn { min-height: 48px; padding-inline: 20px; border-radius: var(--r-m); display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; }
+.btn--primary, .foco__go { min-height: 56px; border-radius: var(--r-m); font-size: 17px; font-weight: 800; letter-spacing: 0; }
+.btn.btn--sm { min-height: 44px; height: 44px; padding: 0 16px; font-size: 15px; border-radius: var(--r-s); }
+.foco__sec { min-height: 56px; border-radius: var(--r-m); font-size: 16px; }
+.foco__acts { flex-wrap: nowrap; gap: 10px; align-items: stretch; }
+.foco__go { flex: 1 1 0; } .foco__sec { flex: 0 0 auto; padding: 0 16px; white-space: nowrap; }
+.iconbtn { width: 44px; height: 44px; border-radius: 50%; display: inline-grid; place-items: center; flex: none; }
+.iconbtn--me { width: 44px; height: 44px; }
+.chip, .pchip { min-height: 44px; border-radius: 999px; }
+.seg { border-radius: var(--r-s); } .seg__btn { min-height: 44px; border-radius: 11px; }
+.pseg button { min-height: 44px; }
+.ecard__check, .prow__check { position: relative; width: 36px; height: 36px; }
+.ecard__check::after, .prow__check::after { content: ''; position: absolute; inset: -8px; } /* área de toque maior que o desenho */
+.pquick__go { width: 44px; height: 44px; border-radius: 50%; }
+.switch:checked { background: var(--accent); }
+.btn-text { min-height: 44px; display: inline-flex; align-items: center; }
+.sheet__head .btn--primary { min-height: 44px; height: 44px; padding: 0 18px; border-radius: var(--r-s); font-size: 15px; }
+.tabbar__fab { border-radius: 18px; }
+
+/* ---- cabeçalho: uma linha só, tudo alinhado ao centro ---- */
+.hdr { border-bottom: 0; }
+.hdr__row, .phdr__row { align-items: center; min-height: 56px; }
+.hdr h1, .phdr h1, .hdr--hoje h1 { font-size: 28px; line-height: 1.1; }
+.hdr__eyebrow, .phdr__eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--text-2); }
+.hdr h1 .hdr__date { font-size: 16px; font-weight: 700; margin-left: 8px; color: var(--text-2); }
+.hdr__actions, .phdr__actions { gap: 8px; align-items: center; }
+
+/* ---- chave Trabalho | Pessoal ---- */
+.modo { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; width: 88px; height: 44px; padding: 4px; border: 0; border-radius: 999px; background: var(--surface-3); color: var(--text-2); flex: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.modo__op { position: relative; display: grid; place-items: center; }
+.modo__pino { position: absolute; left: 4px; top: 4px; width: 40px; height: 36px; border-radius: 999px; background: var(--ink); box-shadow: 0 2px 0 rgba(120, 40, 0, .35); }
+.modo--personal .modo__pino { transform: translateX(40px); }
+.modo--work .modo__op:nth-of-type(1), .modo--personal .modo__op:nth-of-type(2) { color: var(--ink-on); }
+
+/* ---- hoje ---- */
+.page > .block { margin-top: 0; }
+.week .week__mes { display: none; } /* a aba Calendário já leva ao mês */
+.foco { padding: 20px; border-radius: var(--r-g); gap: 4px; padding-right: 112px; min-height: 132px; }
+.foco__snh { position: absolute; right: 20px; top: 20px; width: 80px; height: 80px; margin: 0; }
+.foco__acts, .foco__prog, .foco__atalhos, .foco .summary__types { margin-right: -92px; }
+.foco__acts { margin-top: 18px; }
+.foco__lbl { font-size: 13px; letter-spacing: .02em; text-transform: none; font-weight: 800; }
+.foco__tit { font-size: 23px; overflow-wrap: anywhere; }
+.foco__prog { min-height: 44px; margin-top: 6px; margin-bottom: -8px; }
+.block__title { font-size: 18px; font-weight: 800; letter-spacing: -.01em; text-transform: none; color: var(--text); }
+.block__title > .ic:first-child { display: none; }
+.block .seg { margin: 0 0 12px; }
+.agfim { margin: 4px 2px; color: var(--text-2); font-size: 15px; }
+.tl-group__h { font-size: 14px; color: var(--text-2); }
+/* cartão de compromisso: hora, título, e só */
+.ecard { border-radius: var(--r-m); }
+.ecard__top .tbadge { font-size: 0; gap: 0; padding: 5px; border-radius: 50%; background: none; }
+.ecard__company { font-size: 13px; color: var(--text-2); }
+.ecard__title { font-size: 16px; }
+.ecard__time small { opacity: .75; }
+.ecard__late { text-transform: none; font-weight: 700; background: none; color: var(--danger); padding: 0; font-size: 13px; }
+/* dobras: o que é secundário fica a um toque */
+.dobra { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; margin-top: 8px; padding: 0 16px; border: 0; border-radius: var(--r-m); background: none; color: var(--text-2); font: inherit; font-size: 15px; text-align: left; cursor: pointer; }
+.dobra b { font-weight: 800; } .dobra > .ic { margin-left: auto; transition: transform .22s cubic-bezier(.16, 1, .3, 1); }
+.dobra[aria-expanded="true"] > .ic { transform: rotate(180deg); }
+.dobra__ok { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--ok); color: #fff; }
+.dobra--mais { background: var(--surface-2); color: var(--text); margin: 0; }
+.dobra--mais small { color: var(--text-2); font-size: 14px; } .dobra--mais em { margin-left: auto; min-width: 24px; padding: 2px 7px; border-radius: 99px; background: var(--danger); color: #fff; font: 800 13px/1.5 inherit; font-style: normal; text-align: center; }
+.dobra--mais em + .ic { margin-left: 4px; }
+
+/* ---- calendário ---- */
+.chips-scroll { scrollbar-width: none; }
+.page > .seg { margin-top: 0; }
+
+/* ---- empresas: uma linha por empresa ---- */
+.colist { display: grid; gap: 10px; }
+.cocard { padding: 12px 14px; border-radius: var(--r-m); background: var(--surface); border-top: 0; }
+.cocard::before { display: none; }
+.cocard__top { display: flex; align-items: center; gap: 12px; margin: 0; }
+.cocard__name { flex: 1; min-width: 0; }
+.cocard__name small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: var(--text-2); }
+.cocard__n { min-width: 26px; padding: 3px 8px; border-radius: 99px; background: var(--surface-3); color: var(--text); font: 800 13px/1.4 inherit; font-style: normal; text-align: center; }
+
+/* ---- pessoal ---- */
+.ppage .phero { margin-top: 0; padding: 16px 18px; border-radius: var(--r-m); box-shadow: none; }
+.phero__date { display: none; } .phero__phrase { font-size: 16px; line-height: 1.35; font-weight: 700; } .phero__author { font-size: 13px; }
+.pchips--ini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; overflow: visible; padding: 0; }
+.pchips--ini .pchip { justify-content: flex-start; min-height: 48px; border-radius: var(--r-s); }
+.phero__stats { margin: 10px 0 0; }
+.pempty, .empty { border-radius: var(--r-g); padding: 24px 20px; }
+.vazio__fig { display: grid; place-items: center; width: 96px; height: 96px; margin: 0 auto 8px; }
+.pmemocard, .plistcard, .prow, .pmonth, .month { border-radius: var(--r-m); }
+
+/* ---- ajustes: sanfona ---- */
+.page > .acc + .acc { margin-top: -14px; }
+.acc > .block__title { display: flex; align-items: center; min-height: 56px; margin: 0; padding: 0 16px; border-radius: var(--r-m); background: var(--surface); box-shadow: var(--shadow); font-size: 16px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.acc > .block__title > .ic:first-child { display: block; margin-right: 12px; color: var(--accent); }
+.acc > .block__title > .ic:last-child { margin-left: auto; color: var(--text-2); transition: transform .22s cubic-bezier(.16, 1, .3, 1); }
+.acc.is-open > .block__title > .ic:last-child { transform: rotate(180deg); }
+.acc:not(.is-open) > :not(.block__title) { display: none !important; }
+.acc.is-open > :not(.block__title) { animation: abre .26s cubic-bezier(.16, 1, .3, 1); margin-top: 10px; }
+@keyframes abre { from { opacity: 0; transform: translateY(-6px); } }
+.acc > .block__title:focus-visible, .modo:focus-visible, .dobra:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* faixa do período grátis: discreta, no fim do início */
+.trialbar--free { margin-top: 0; box-shadow: none; }
+@media (max-width: 350px) { .foco__acts { flex-wrap: wrap; } .foco__sec { flex: 1 0 auto; } .hdr__actions, .phdr__actions { gap: 6px; } }
+@media (prefers-reduced-motion: reduce) { .acc.is-open > :not(.block__title) { animation: none; } .dobra > .ic, .acc > .block__title > .ic:last-child { transition: none; } }
+/* acertos de alinhamento */
+.hdr h1 { white-space: nowrap; } .hdr h1 .hdr__date { display: inline; }
+.phdr h1 { font-size: 26px; }
+.acc > .block__title { justify-content: flex-start; text-align: left; }
+.acc > .block__title > .ptitle { margin: 0; }
+.page > .pchips--ini, .pchips--ini { margin: -8px 0 0; padding: 0; width: 100%; }
+.pchips:not(.pchips--ini) { flex-wrap: wrap; overflow: visible; row-gap: 8px; margin-inline: 0; padding-inline: 0; }
+.dobra { margin-top: 0; }
+.page > div[style*="height:28px"] { display: none; }
+.hdr h1 { display: flex; align-items: baseline; }
+.hdr--hoje h1 { display: block; }
+.hdr h1 .hdr__date { margin-left: 0; display: block; } .hdr:not(.hdr--hoje) h1 { display: block; }

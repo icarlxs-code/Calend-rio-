@@ -1,4 +1,5 @@
 /* Componentes visuais reutilizáveis + folhas (sheets), toasts e diálogos */
+import { sininho } from './sininho.js';
 import { store } from './store.js';
 import { TYPES, STATUS, durationOf, isMarketing, WORK } from './constants.js';
 import { esc, initials, rgba, textOn, fmtTime, toMin, fromMin, nowMin, todayKey } from './utils.js';
@@ -119,8 +120,11 @@ export function eventCard(e, { showDate = false, compact = false, highlight = []
   </article>`;
 }
 
-export function emptyState(title, text, actionHtml = '') {
-  return `<div class="empty">${icon('sparkle', 28)}<h3>${esc(title)}</h3><p>${esc(text)}</p>${actionHtml}</div>`;
+/* Chave Trabalho | Pessoal: mesmo lugar e mesmo tamanho nos dois modos */
+export const modoSwitch = (space) => `<button class="modo modo--${space}" data-action="space" data-space="${space === 'work' ? 'personal' : 'work'}" aria-label="${space === 'work' ? 'Ir para o Pessoal' : 'Ir para o Trabalho'}"><i class="modo__pino"></i><span class="modo__op">${icon('briefcase', 18)}</span><span class="modo__op">${icon('heart', 18)}</span></button>`;
+
+export function emptyState(title, text, actionHtml = '', mood = 'acena') {
+  return `<div class="empty"><span class="vazio__fig">${sininho(mood, { size: 96 })}</span><h3>${esc(title)}</h3><p>${esc(text)}</p>${actionHtml}</div>`;
 }
 
 /* ---------- Folhas (bottom sheets) ---------- */

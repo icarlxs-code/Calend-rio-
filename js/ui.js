@@ -23,6 +23,9 @@ export const ui = {
   monthCompany: null,
   showAllTips: false,
   showTypes: false,
+  showMais: false,
+  showFeitos: false,
+  acc: {},
 };
 
 export function saveUi() {

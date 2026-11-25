@@ -8,7 +8,7 @@ import {
   WD_LETTER, WD_SHORT, dayLabel, fmtDuration, MONTHS_SHORT, MONTHS, toMin, nowMin, fmtTime, fmtCountdown, greeting, rgba, textOn,
 } from '../utils.js';
 import { icon } from '../icons.js';
-import { meRing, avatar, avatars, logo, eventCard, emptyState, typeBadge, whoText, timeRange, logoOrType } from '../components.js';
+import { modoSwitch, meRing, avatar, avatars, logo, eventCard, emptyState, typeBadge, whoText, timeRange, logoOrType } from '../components.js';
 import { dayInsights, nextUp } from '../insights.js';
 import { teamBoardCard } from './teamboard.js';
 import { professionFor } from '../../functions/catalog.js';
@@ -64,12 +64,11 @@ export function renderToday() {
       </div>
       <div class="hdr__actions">
         ${date !== today ? `<button class="chip chip--accent" data-action="go-today">Hoje</button>` : ''}
-        <button class="hdr__pessoal" data-action="space" data-space="personal" aria-label="Ir para o Pessoal">${icon('heart', 15)} Pessoal</button>
+        ${modoSwitch('work')}
         <button class="iconbtn iconbtn--ai" data-action="assistant" aria-label="Assistente">${icon('sparkle', 20)}</button>
         <button class="iconbtn iconbtn--me" data-action="profile" aria-label="Seu perfil e conquistas">${me ? meRing(me.id, 32) : icon('user', 20)}</button>
       </div>
     </div>
-    ${personSwitch()}
   </header>`;
   // semana compacta: só os dias (rola) e o mês embaixo (abre o Calendário)
   const weekHtml = `<div class="week week--c">
@@ -120,7 +119,7 @@ export function renderToday() {
   else if (date !== today) F = { mood: 'feliz', lbl: fmtDayLong(date), tit: `${evs.length} ${evs.length === 1 ? 'lembrete' : 'lembretes'}`, sub: done ? `${done} já ${done === 1 ? 'feito' : 'feitos'}` : '', acts: prim(`data-action="new-event" data-date="${date}"`, `${icon('plus', 18)} Adicionar`) };
   else if (alvo) {
     const mins = alvo.time ? toMin(alvo.time) - nowMin() : null, c = store.company(alvo.companyId);
-    F = { mood: 'feliz', lbl: nUp ? (mins > 0 ? `Próximo · ${fmtCountdown(mins)}` : 'Acontecendo agora') : `${greeting()}${me ? ', ' + me.name : ''}`,
+    F = { id: alvo.id, mood: 'feliz', lbl: nUp ? (mins > 0 ? `Próximo · ${fmtCountdown(mins)}` : 'Acontecendo agora') : `${greeting()}${me ? ', ' + me.name : ''}`,
       tit: `${alvo.time ? fmtTime(alvo.time) + ' · ' : ''}${alvo.title || TYPES[alvo.type]?.label || ''}`, sub: [TYPES[alvo.type]?.label, c ? c.name : '', alvo.location || ''].filter(Boolean).join(' · '),
       acts: prim(`data-action="toggle-done" data-id="${alvo.id}"`, `${icon('check', 18)} Concluir`) + sec(`data-action="adiar-1h" data-id="${alvo.id}"`, 'Adiar 1 h') };
   } else F = { mood: 'comemora', lbl: `${greeting()}${me ? ', ' + me.name : ''}`, tit: 'Dia 100%! 🏆', sub: 'Tudo feito. Que tal deixar amanhã pronto?', acts: prim(`data-action="new-event" data-date="${amanha}"`, 'Planejar amanhã') };
@@ -135,7 +134,7 @@ export function renderToday() {
   const foco = `<section class="foco" aria-label="Em foco">
       <div class="foco__snh"><i class="foco__blob"></i>${sininho(F.mood, { size: 72 })}</div>
       <p class="foco__lbl">${esc(F.lbl)}</p>
-      <h2 class="foco__tit">${esc(F.tit)}</h2>
+      <h2 class="foco__tit"${F.id ? ` data-action="open-event" data-id="${F.id}"` : ''}>${esc(F.tit)}</h2>
       ${F.sub ? `<p class="foco__sub">${esc(F.sub)}</p>` : ''}
       ${atalhos}
       <div class="foco__acts">${F.acts}</div>
@@ -168,7 +167,10 @@ export function renderToday() {
       { k: 'Sem horário', icon: 'clock', items: evs.filter((e) => !e.time) },
     ];
     const now = nowMin();
+    const emFoco = !atras.length && date === today && alvo ? alvo.id : ''; // já está no cartão de cima: não repete
     let nowPlaced = date !== today;
+    groups.forEach((g) => { g.items = g.items.filter((e) => e.status !== 'feito' && e.id !== emFoco); });
+    const feitos = evs.filter((e) => e.status === 'feito');
     timeline = groups.filter((g) => g.items.length).map((g) => `
       <div class="tl-group">
         <h3 class="tl-group__h tl-group__h--txt">${g.k}</h3>
@@ -181,7 +183,9 @@ export function renderToday() {
           return line + (alvo && e.id === alvo.id ? `<div class="tl-next">${eventCard(e, { highlight: flagged })}</div>` : eventCard(e, { highlight: flagged }));
         }).join('')}
       </div>`).join('');
-    if (!nowPlaced && date === today) timeline += `<div class="nowline nowline--end"><span>Agora · ${fmtTime(`${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`)} · fim da agenda</span></div>`;
+    if (!timeline && evs.length > feitos.length) timeline = '<p class="agfim">Depois disso, seu dia está livre.</p>';
+    if (feitos.length) timeline += `<button class="dobra" data-action="ui-toggle" data-k="showFeitos" aria-expanded="${!!ui.showFeitos}"><span class="dobra__ok">${icon('check', 14)}</span><b>${feitos.length} ${feitos.length === 1 ? 'concluído' : 'concluídos'}</b>${icon('down', 16)}</button>${ui.showFeitos ? feitos.map((e) => eventCard(e)).join('') : ''}`;
+    if (false) timeline += `<div class="nowline nowline--end"><span>Agora · ${fmtTime(`${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`)} · fim da agenda</span></div>`;
   }
 
   // Bilhetes: hora em que foi escrito (e o dia, se não foi hoje)
@@ -221,13 +225,12 @@ export function renderToday() {
     ${foco}
     ${store.demo ? demoBanner() : ''}
     <section class="block">
-      <h2 class="block__title agtitle">${store.team.length < 2 ? (date === today ? 'Agenda de hoje' : 'Agenda do dia') : ui.person === 'all' ? `Agenda da ${crew()}` : 'Agenda de ' + esc(store.member(ui.person)?.name || '')}${teamRow}</h2>
+      <h2 class="block__title agtitle">${store.team.length < 2 ? (date === today ? 'Agenda de hoje' : 'Agenda do dia') : ui.person === 'all' ? `Agenda da ${crew()}` : 'Agenda de ' + esc(store.member(ui.person)?.name || '')}</h2>
+      ${personSwitch()}
       ${timeline}
     </section>
-    ${team}
-    ${teamBoardCard()}
-    ${semNada ? '' : tips}
-    ${semNada ? '' : notesHtml}
+    ${semNada ? '' : `<section class="block mais"><button class="dobra dobra--mais" data-action="ui-toggle" data-k="showMais" aria-expanded="${!!ui.showMais}"><b>Mais do dia</b><small>${[store.team.length > 1 ? 'equipe' : '', 'dicas', notes.length ? `${notes.length} ${notes.length === 1 ? 'bilhete' : 'bilhetes'}` : 'bilhetes'].filter(Boolean).join(' · ')}</small>${warnCount ? `<em>${warnCount}</em>` : ''}${icon('down', 18)}</button></section>
+    ${ui.showMais ? `${team}${teamBoardCard()}${tips}${notesHtml}` : ''}`}
   </div>`;
 }
 
@@ -303,20 +306,11 @@ export function renderMonth() {
         <button class="iconbtn" data-action="month" data-n="1" aria-label="Próximo mês">${icon('right', 20)}</button>
       </div>
     </div>
-    ${personSwitch()}
   </header>
   <div class="page">
     <div class="chips-scroll">
       <button class="chip${!ui.monthCompany ? ' is-on' : ''}" data-action="month-company" data-id="">${todos()}</button>
       ${companies.map((c) => `<button class="chip chip--co${ui.monthCompany === c.id ? ' is-on' : ''}" style="--cc:${c.color}" data-action="month-company" data-id="${c.id}">${logo(c, 18, 5)}${esc(c.name)}</button>`).join('')}
-    </div>
-
-    <div class="mstats">
-      ${isMarketing() ? `<div><b>${posts}</b><span>posts</span></div>
-      <div><b>${shoots}</b><span>captações</span></div>` : `<div><b>${monthEvs.length}</b><span>compromissos</span></div>
-      <div><b>${monthEvs.filter((e) => TYPES[e.type]?.onSite).length}</b><span>fora de casa</span></div>`}
-      ${isMarketing() ? `<div><b>${meetings}</b><span>reuniões</span></div>` : `<div><b>${monthEvs.filter((e) => e.status === 'pendente' && e.date < todayKey()).length}</b><span>atrasados</span></div>`}
-      <div><b>${monthEvs.filter((e) => e.status === 'feito').length}/${monthEvs.length}</b><span>concluídos</span></div>
     </div>
 
     <div class="month" data-swipe="month">
@@ -334,6 +328,7 @@ export function renderMonth() {
       </div>
     </div>
 
+    ${personSwitch()}
     <section class="block">
       <div class="block__row">
         <h2 class="block__title">${esc(dayLabel(sel))}</h2>
@@ -343,10 +338,16 @@ export function renderMonth() {
         : emptyState('Nada neste dia', 'Toque no + para agendar.', `<button class="btn btn--soft" data-action="new-event" data-date="${sel}">${icon('plus', 16)} Novo evento</button>`)}
     </section>
 
-    ${companies.length ? `<section class="block">
-      <h2 class="block__title">Legenda</h2>
-      <div class="legend">${companies.map((c) => `<span><i style="background:${c.color}"></i>${esc(c.name)}</span>`).join('')}</div>
-    </section>` : ''}
+    <section class="block"><h2 class="block__title">Resumo do mês</h2>
+    <div class="mstats">
+      ${isMarketing() ? `<div><b>${posts}</b><span>posts</span></div>
+      <div><b>${shoots}</b><span>captações</span></div>` : `<div><b>${monthEvs.length}</b><span>compromissos</span></div>
+      <div><b>${monthEvs.filter((e) => TYPES[e.type]?.onSite).length}</b><span>fora de casa</span></div>`}
+      ${isMarketing() ? `<div><b>${meetings}</b><span>reuniões</span></div>` : `<div><b>${monthEvs.filter((e) => e.status === 'pendente' && e.date < todayKey()).length}</b><span>atrasados</span></div>`}
+      <div><b>${monthEvs.filter((e) => e.status === 'feito').length}/${monthEvs.length}</b><span>concluídos</span></div>
+    </div>
+    </section>
+}
   </div>`;
 }
 

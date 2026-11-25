@@ -50,4 +50,5 @@ function voarXp(el) {
       .finished.then(() => { if (p.isConnected) LM.pula(p); }).catch(() => {});
   }, 950);
 }
-window.__motion = { pronto, trocar, agendado: LM.agendado, guardar, excluido: sai('excluido'), adiado: sai('adiado'), concluido, voarXp };
+const mundo = (...a) => LM.mundo(...a);
+window.__motion = { pronto, trocar, mundo, agendado: LM.agendado, guardar, excluido: sai('excluido'), adiado: sai('adiado'), concluido, voarXp };

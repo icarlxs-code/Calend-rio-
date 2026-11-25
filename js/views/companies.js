@@ -28,21 +28,15 @@ export function renderCompanies() {
     <div class="colist">
       ${list.map((c) => {
         const week = store.eventsBetween(ws, we, { companyId: c.id });
-        const posts = week.filter((e) => isPost(e.type)).length;
-        const shoots = week.filter((e) => e.type === 'captacao').length;
         const next = store.state.events
           .filter((e) => e.companyId === c.id && e.date >= t && e.status !== 'feito')
           .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0];
         return `<button class="cocard" style="--cc:${c.color};--cc-soft:${rgba(c.color, 0.1)}" data-action="open-company" data-id="${c.id}">
           <div class="cocard__top">
             ${logo(c, 48)}
-            <div class="cocard__name"><strong>${esc(c.name)}</strong>${c.instagram ? `<small>${icon('insta', 12)} @${esc(c.instagram)}</small>` : ''}</div>
+            <div class="cocard__name"><strong>${esc(c.name)}</strong><small>${next ? `<b>${esc(relDay(next.date))}${next.time ? ' ' + next.time : ''}</b> · ${esc(next.title || TYPES[next.type].label)}` : 'Nada agendado'}</small></div>${week.length ? `<em class="cocard__n" title="nesta semana">${week.length}</em>` : ''}
             ${icon('right', 18, 'muted')}
           </div>
-          <div class="cocard__stats">
-            ${isMarketing() ? `<span><b>${posts}</b> posts</span><span><b>${shoots}</b> captaç${shoots === 1 ? 'ão' : 'ões'}</span>` : `<span><b>${week.length}</b> compromisso${week.length === 1 ? '' : 's'}</span>`}<span class="muted">nesta semana</span>
-          </div>
-          ${next ? `<div class="cocard__next">${icon(TYPES[next.type].icon, 14)} <b>${esc(relDay(next.date))}${next.time ? ' ' + next.time : ''}</b> · ${esc(TYPES[next.type].label)} — ${esc(next.title || '')}</div>` : `<div class="cocard__next muted">Nada agendado</div>`}
         </button>`;
       }).join('')}
     </div>

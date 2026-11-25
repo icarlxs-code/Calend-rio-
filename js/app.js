@@ -87,6 +87,12 @@ function applySpaceMeta(personalMode) {
 function switchSpace(space, from) {
   if (ui.space === space || document.querySelector('.spaceveil')) return;
   document.querySelectorAll('.sheet-wrap.is-open [data-close]').forEach((b) => b.click());
+  const M = window.__motion;
+  if (M && M.pronto()) {
+    chime(space);
+    M.mundo(space, from, () => { ui.space = space; saveUi(); shell(); render(); window.scrollTo(0, 0); document.getElementById('view')?.querySelectorAll('.page').forEach((n) => { n.style.animation = 'none'; }); }, setBarColor, SPACE_BAR[space]);
+    return;
+  }
   const veil = document.createElement('div');
   veil.className = `spaceveil spaceveil--${space}`;
   // o círculo nasce do botão tocado
@@ -169,7 +175,10 @@ function render() {
   document.documentElement.classList.toggle('is-locked', locked);
   // em Ajustes o plano já aparece em "Seu plano": sem a faixa repetida
   const tb = locked ? lockBanner() : ui.tab === 'ajustes' && !personalMode ? '' : trialBanner();
-  if (tb) { const fo = view.querySelector('.page > .foco'); if (fo) fo.insertAdjacentHTML('afterend', tb); else (view.querySelector('.page') || view).insertAdjacentHTML('afterbegin', tb); } // no Hoje: abaixo do Foco
+  const soGratis = /trialbar--free/.test(tb), inicio = personalMode ? (ui.ptab || 'p-hoje') === 'p-hoje' : ui.tab === 'hoje';
+  if (soGratis) { if (inicio) view.querySelector('.page')?.insertAdjacentHTML('beforeend', tb); } // aviso que não é urgente: só no fim do início
+  else if (tb) { const fo = view.querySelector('.page > .foco'); if (fo) fo.insertAdjacentHTML('afterend', tb); else (view.querySelector('.page') || view).insertAdjacentHTML('afterbegin', tb); } // no Hoje: abaixo do Foco
+  recolhe(view, personalMode);
   bindSwipes();
   bindStrip(view);
   if (store.user && !window.__snhTried) { window.__snhTried = 1; import('./mascote.js').then((m) => m.start()).catch(() => {}); setTimeout(() => import('./cache.js').then((m) => m.aqueceEmblemas()), 6000); }
@@ -222,6 +231,20 @@ function lockBanner() {
     <span class="trialbar__go">${checking ? '…' : 'Liberar'}</span>
   </button>`;
 }
+/* Ajustes: cada assunto vira uma linha que abre (uma tela curta, nada se perde) */
+function recolhe(view, pessoal) {
+  if (pessoal ? ui.ptab !== 'p-ajustes' : ui.tab !== 'ajustes') return;
+  view.querySelectorAll('.page > .block').forEach((s) => {
+    const h = s.querySelector(':scope > .block__title');
+    if (!h || s.querySelector('.plan, .plans, .vipcard')) return;
+    const k = (pessoal ? 'p:' : 'w:') + h.textContent.trim();
+    s.classList.add('acc');
+    s.classList.toggle('is-open', !!ui.acc[k]);
+    h.dataset.action = 'acc'; h.dataset.k = k; h.setAttribute('role', 'button'); h.tabIndex = 0; h.setAttribute('aria-expanded', !!ui.acc[k]); h.setAttribute('data-allow-locked', '');
+    h.insertAdjacentHTML('beforeend', icon('down', 18));
+  });
+}
+document.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-action="acc"]')) { e.preventDefault(); e.target.click(); } });
 function rerenderAll() {
   render();
   openSheets().forEach((s) => s.refresh && s.refresh());
@@ -338,6 +361,8 @@ const actions = {
     ui.date = b.dataset.k;
     setTab('hoje');
   },
+  'ui-toggle': (b) => { ui[b.dataset.k] = !ui[b.dataset.k]; render(); },
+  acc: (b) => { const k = b.dataset.k; ui.acc[k] = !ui.acc[k]; const s = b.closest('.acc'); s.classList.toggle('is-open', ui.acc[k]); b.setAttribute('aria-expanded', !!ui.acc[k]); },
   'toggle-types': () => { ui.showTypes = !ui.showTypes; render(); },
   'new-event-preset': (b) => openEventEditor({ date: b.dataset.date || null, time: b.dataset.time || null, title: b.dataset.title || '' }),
   'adiar-1h': async (b) => {

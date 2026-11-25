@@ -3,6 +3,7 @@
    mesmo enquanto o app monta a tela). Nada de clonar a tela nem redesenhar o mascote a cada quadro. */
 import { mascoteParado } from './mascote.js';
 import { som } from './sons.js';
+import { passo } from '../sound.js';
 
 const SAI = 'cubic-bezier(.4,0,.2,1)', ENTRA = 'cubic-bezier(.16,1,.3,1)', ARCO = 'cubic-bezier(.33,0,.2,1)';
 /** menos movimento: preferência do aparelho ou Ajustes → Animações */
@@ -39,6 +40,7 @@ export function aquecer() {
 }
 
 /* ---------- 1 · troca de página ---------- */
+const ORDEM_SOM = ['hoje', 'mes', 'empresas', 'ajustes'].concat(['p-hoje', 'p-agenda', 'p-listas', 'p-ajustes']);
 let vez = 0, pendente = 0, vivas = [], fimT = 0, ultimaAba = '';
 const ORDEM = ['hoje', 'p-hoje', 'mes', 'p-agenda', 'p-listas', 'p-notas', 'empresas', 'ajustes', 'p-ajustes'];
 const toca = (el, q, o) => { const a = el.animate(q, { easing: ENTRA, fill: 'both', ...o }); vivas.push(a); return a; };
@@ -97,7 +99,7 @@ export function trocar(aba, fazer, origem) {
         if (pg) toca(pg, [{ transform: `translate3d(${dir * 26}px, 0, 0)` }, { transform: 'translate3d(0, 0, 0)' }], { duration: 460, fill: 'backwards' });
       }
     }
-    som('toque');
+    passo(Math.max(0, ORDEM_SOM.indexOf(aba)));
   }, 90);
 }
 /** tocou na aba em que já está (ou a animação foi desligada): cancela o que estiver no ar e faz */
@@ -149,4 +151,54 @@ export async function anelDeFeito(r) {
   n.className = 'lm-anel'; Object.assign(n.style, { left: x - 44 + 'px', top: y - 44 + 'px' }); c.appendChild(n);
   await anima(n, [{ transform: 'scale(.3)', opacity: 0.9 }, { transform: 'scale(1)', opacity: 0 }], { duration: 620 });
   c.remove();
+}
+
+/* ---------- 4 · Trabalho <-> Pessoal ----------
+   A cor nasce do botão e cobre a tela; o Lembra chega com o objeto do mundo novo (maleta ou coração),
+   dá meia-volta trocando um pelo outro e a cortina sobe levando ele junto. Só transform e opacity. */
+const OBJ = {
+  work: '<svg viewBox="0 0 64 64"><rect x="6" y="20" width="52" height="36" rx="9" fill="#8A3B12"/><path d="M23 20v-4a6 6 0 0 1 6-6h6a6 6 0 0 1 6 6v4" fill="none" stroke="#8A3B12" stroke-width="6"/><path d="M6 34h52" stroke="#5E2407" stroke-width="5"/><rect x="26" y="29" width="12" height="11" rx="4" fill="#FFC23D"/></svg>',
+  personal: '<svg viewBox="0 0 64 64"><path d="M32 57C10 42 5 31 5 22 5 13 12 7 19 7c6 0 10 3 13 8 3-5 7-8 13-8 7 0 14 6 14 15 0 9-5 20-27 35Z" fill="#FF4F6D"/><path d="M15 20c0-4 3-6 6-6" stroke="#fff" stroke-opacity=".75" stroke-width="5" stroke-linecap="round" fill="none"/></svg>',
+};
+export async function mundo(space, from, trocaTela, cor = () => {}, barra = []) {
+  vez++; para();
+  const c = document.createElement('div');
+  c.className = `spaceveil lm-mundo lm-mundo--${space}`;
+  c.innerHTML = `<div class="lm-cortina"><i class="lm-onda"></i></div><div class="lm-tinta"></div><div class="lm-cena"><div class="lm-cena__sombra"></div><div class="lm-cena__x"><img class="lm-cena__a" alt="" src="${figura('voa')}"><img class="lm-cena__b" alt="" src="${figura(space === 'personal' ? 'amor' : 'joia')}"></div><span class="lm-cena__de">${OBJ[space === 'work' ? 'personal' : 'work']}</span><span class="lm-cena__para">${OBJ[space]}</span><b>${space === 'personal' ? 'Pessoal' : 'Trabalho'}</b><small>${space === 'personal' ? 'Só você vê' : 'Bora resolver'}</small></div>`;
+  document.body.appendChild(c);
+  document.documentElement.classList.add('lm-viajando');
+  const q = (s) => c.querySelector(s), tinta = q('.lm-tinta'), cortina = q('.lm-cortina'), cena = q('.lm-cena'), boneco = q('.lm-cena__x');
+  const [x, y] = from ? meio(from) : [innerWidth / 2, 60], R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)) + 30;
+  let trocou = false;
+  const troca = () => { if (!trocou) { trocou = true; trocaTela(); } };
+  const fim = setTimeout(() => { troca(); c.remove(); document.documentElement.classList.remove('lm-viajando'); cor(...barra); }, 3200); // segurança
+  try {
+    Object.assign(tinta.style, { left: x - 60 + 'px', top: y - 60 + 'px' });
+    try { navigator.vibrate && navigator.vibrate(8); } catch { /* ok */ }
+    cortina.style.opacity = 0;
+    setTimeout(() => cor(space === 'personal' ? '#FF6B1A' : '#5E2407'), 200);
+    anima(boneco, [{ transform: 'translate3d(0, 90px, 0) scale(.5)', opacity: 0 }, { transform: 'translate3d(0, -18px, 0) scale(1.03, 1.05)', opacity: 1, offset: 0.55 }, { transform: 'translate3d(0, 0, 0) scale(1.05, .95)', offset: 0.78 }, { transform: 'none', opacity: 1 }], { duration: 560, delay: 170, easing: 'cubic-bezier(.3,.6,.3,1)' });
+    anima(q('.lm-cena__sombra'), [{ transform: 'scale(.3)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }], { duration: 420, delay: 300 });
+    anima(q('.lm-cena__de'), [{ transform: 'translate3d(0, 60px, 0) scale(.4)', opacity: 0 }, { transform: 'none', opacity: 1, offset: 0.45 }, { transform: 'scale(1)', opacity: 1, offset: 0.68 }, { transform: 'translate3d(-46px, -34px, 0) rotate(-50deg) scale(.3)', opacity: 0 }], { duration: 760, delay: 200 });
+    await anima(tinta, [{ transform: 'scale(.05)', opacity: 1 }, { transform: `scale(${R / 60})`, opacity: 1 }], { duration: 400, easing: 'cubic-bezier(.5,0,.2,1)' });
+    cortina.style.opacity = 1; tinta.remove();
+    await espera(60);
+    troca(); // a tela nova é montada escondida atrás da cor: nenhum engasgo aparece
+    await espera(30);
+    // meia-volta: troca o objeto do mundo
+    const giro = { duration: 440, easing: 'cubic-bezier(.45,0,.2,1)' };
+    anima(q('.lm-cena__a'), [{ transform: 'scaleX(1)', opacity: 1 }, { transform: 'scaleX(.02)', opacity: 1, offset: 0.5 }, { transform: 'scaleX(.02)', opacity: 0, offset: 0.51 }, { opacity: 0, transform: 'scaleX(.02)' }], giro);
+    anima(q('.lm-cena__b'), [{ transform: 'scaleX(.02)', opacity: 0 }, { transform: 'scaleX(.02)', opacity: 0, offset: 0.49 }, { transform: 'scaleX(.02)', opacity: 1, offset: 0.5 }, { transform: 'scaleX(1)', opacity: 1 }], giro);
+    anima(q('.lm-cena__para'), [{ transform: 'translate3d(40px, 20px, 0) rotate(50deg) scale(.2)', opacity: 0 }, { transform: 'scale(1.12)', opacity: 1, offset: 0.65 }, { transform: 'none', opacity: 1 }], { duration: 460, delay: 170 });
+    anima(q('.lm-cena b'), [{ transform: 'translate3d(0, 14px, 0)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 320, delay: 190 });
+    await anima(q('.lm-cena small'), [{ transform: 'translate3d(0, 12px, 0)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 320, delay: 270 });
+    await espera(160);
+    cor(...barra);
+    const nova = document.getElementById('view');
+    if (nova) passageiro(nova, [{ opacity: 0.2 }, { opacity: 1 }], { duration: 460 });
+    const barraAbas = document.querySelector('.tabbar');
+    if (barraAbas) passageiro(barraAbas, [{ transform: 'translate3d(0, 110px, 0)' }, { transform: 'none' }], { duration: 520, delay: 120 });
+    anima(cena, [{ transform: 'none', opacity: 1 }, { transform: `translate3d(0, ${-innerHeight * 0.75}px, 0)`, opacity: 1 }], { duration: 560, easing: 'cubic-bezier(.6,0,.25,1)' });
+    await anima(cortina, [{ transform: 'none' }, { transform: 'translate3d(0, -118%, 0)' }], { duration: 600, easing: 'cubic-bezier(.6,0,.2,1)' });
+  } finally { clearTimeout(fim); troca(); cor(...barra); c.remove(); document.documentElement.classList.remove('lm-viajando'); }
 }
