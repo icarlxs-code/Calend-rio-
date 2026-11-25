@@ -1,11 +1,12 @@
 /* Jogos do time do coração. Só funciona com o segredo FOOTBALL_API_KEY (API-Football) ou FOOTBALL_DATA_TOKEN
    (football-data.org) no servidor. Sem segredo: não chama nada e não avisa nada. Nenhum escudo é baixado.
    Uma busca por dia (até 6 chamadas); se falhar, usa a tabela guardada. Só avisa quem ligou, só do time da pessoa. */
+import { brNow } from './coach.js';
 import { porTime, timeDoNome } from '../../functions/times.js';
 const H = 3600e3, BR = -3 * H;
 export const diaBR = (ms) => new Date(ms + BR).toISOString().slice(0, 10);
 export const horaBR = (ms) => new Date(ms + BR).toISOString().slice(11, 16);
-const minBR = (ms) => { const [h, m] = horaBR(ms).split(':').map(Number); return h * 60 + m; };
+const minBR = (ms, tz) => { const b = brNow(ms, tz); return b.h * 60 + b.m; }, diaDe = (ms, tz) => brNow(ms, tz).date;
 const LIGAS = [71, 72, 73, 13, 11]; // Série A, Série B, Copa do Brasil, Libertadores, Sul-Americana
 const limpa = (s, n = 60) => String(s || '').replace(/[<>{}\u0000-\u001f]/g, '').trim().slice(0, n);
 
@@ -44,22 +45,22 @@ const FR = {
   perto: ['Falta pouco: {time} x {rival}, às {hora}.', 'Daqui a pouco tem {time} x {rival}, às {hora}. Dá tempo de se ajeitar.', 'Aquecimento: {time} x {rival} começa às {hora}.'],
 };
 const h32 = (s) => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
-export function recado(j, timeId, momento, quem = '') {
+export function recado(j, timeId, momento, quem = '', tz) {
   const t = porTime(timeId); if (!t || !FR[momento] || (j.c !== timeId && j.f !== timeId)) return null;
-  const rival = j.c === timeId ? j.fora : j.casa, L = FR[momento], S = { time: t.nome, rival, hora: horaBR(j.at).replace(':', 'h').replace(/h00$/, 'h') };
+  const rival = j.c === timeId ? j.fora : j.casa, L = FR[momento], S = { time: t.nome, rival, hora: (({ h, m }) => `${h}:${String(m).padStart(2, '0')}`)(brNow(j.at, tz)).replace(':', 'h').replace(/h00$/, 'h') };
   const txt = L[h32(`${quem}${j.id}${momento}`) % L.length].replace(/\{(\w+)\}/g, (_, k) => S[k] || '');
   if (!rival || /[{}]/.test(txt)) return null;
   return { title: `⚽ ${{ vespera: 'Amanhã tem', dia: 'Hoje tem', perto: 'Já já tem' }[momento]} ${t.nome}`, body: txt, tag: `fut-${j.id}`, url: './#/hoje' };
 }
 const mm = (s, p) => (/^\d{2}:\d{2}$/.test(s || '') ? +s.slice(0, 2) * 60 + +s.slice(3) : p);
 /** qual aviso cabe agora (ou nenhum): véspera às 18h, no dia às 9h e perto do jogo; nunca enquanto a pessoa dorme */
-export function momentoDe(j, now, { wake, sleep } = {}) {
-  const m = minBR(now), w = Math.max(mm(wake, 480), 420); let s = Math.min(mm(sleep, 1350), 1350); if (s <= w) s = 1350;
+export function momentoDe(j, now, { wake, sleep, tz } = {}) {
+  const m = minBR(now, tz), w = Math.max(mm(wake, 480), 420); let s = Math.min(mm(sleep, 1350), 1350); if (s <= w) s = 1350;
   if (m < w || m >= s || now >= j.at) return null;
   const falta = j.at - now, manha = Math.max(540, w);
   if (falta <= 2 * H && falta > 1.25 * H) return 'perto';
-  if (diaBR(now) === diaBR(j.at) && falta > 2 * H && m >= manha && m < manha + 120) return 'dia';
-  if (diaBR(now + 864e5) === diaBR(j.at) && m >= 1080 && m < 1200) return 'vespera';
+  if (diaDe(now, tz) === diaDe(j.at, tz) && falta > 2 * H && m >= manha && m < manha + 120) return 'dia';
+  if (diaDe(now + 864e5, tz) === diaDe(j.at, tz) && m >= 1080 && m < 1200) return 'vespera';
   return null;
 }
 /* guarda o time só de quem ligou os avisos (desligou = apaga) */
@@ -87,10 +88,10 @@ export async function rodaFutebol(env, now, send, max = 6) {
   for (const [quem, time] of jogos.length ? Object.entries(gente) : []) {
     const meus = jogos.filter((j) => j.c === time || j.f === time); if (!meus.length) continue;
     if (n >= max) { sobrou = true; break; }
-    const pf = (await env.CAL.get(`pprofile:${quem}`, 'json'))?.prefs || {}, sent = (await env.CAL.get(`fut:env:${quem}`, 'json')) || {};
+    const pp = (await env.CAL.get(`pprofile:${quem}`, 'json')) || {}, pf = { ...(pp.prefs || {}), tz: pp.tz }, sent = (await env.CAL.get(`fut:env:${quem}`, 'json')) || {};
     for (const j of meus) {
       const mo = momentoDe(j, now, pf), k = `${j.id}:${mo}`; if (!mo || sent[k]) continue;
-      const msg = recado(j, time, mo, quem); if (!msg) continue;
+      const msg = recado(j, time, mo, quem, pp.tz); if (!msg) continue;
       sent[k] = now; for (const [a, t] of Object.entries(sent)) if (t < now - 5 * 864e5) delete sent[a];
       await env.CAL.put(`fut:env:${quem}`, JSON.stringify(sent)); await send(env, quem, msg, 'futebol'); n++;
     }

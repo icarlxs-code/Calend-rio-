@@ -1,6 +1,7 @@
 /* Espaço Pessoal: privado de cada pessoa. Fica em pessoal/{uid}/itens na nuvem
    (só o dono lê e escreve) e não se mistura com o calendário de trabalho.
    Tipos de documento: compromisso/lembrete (padrão), lista ("list") e preferências ("prefs"). */
+import { occursOn } from './inicio-pessoal.js';
 import { marca, desmarca, novoLote, apagado, conteudo, vencido } from './lixeira-core.js';
 import { ehRemedio, tituloSeguro, avisoRemedio } from '../functions/remedio.js';
 import { iaOk } from './ia-consent.js';
@@ -154,18 +155,7 @@ export const clearDone = (list) => apagaEntradas(list.id, (e) => e.done, 'lote')
 export function restoreEntries(pares) { let n = 0; const por = {}; pares.forEach(([l, e]) => (por[l] = por[l] || new Set()).add(e)); for (const [lid, S] of Object.entries(por)) { const l = items.find((x) => x.id === lid); if (!l) continue; savePersonal({ ...l, entries: l.entries.map((e) => (S.has(e.id) && apagado(e) && !vencido(e) ? (n++, conteudo(e)) : e)) }); } return n; }
 
 /* ---------- compromissos e repetições ---------- */
-export function occursOn(it, day) {
-  if (!it.date || day < it.date) return false;
-  if (it.until && day > it.until) return false;
-  const r = it.repeat || 'none';
-  if (r === 'none') return day === it.date;
-  if (r === 'daily') return true;
-  if (r === 'yearly') return day.slice(5) === it.date.slice(5);
-  if (r === 'monthly') return day.slice(8) === it.date.slice(8);
-  if (r === 'weekly') return fromKey(day).getDay() === fromKey(it.date).getDay();
-  if (r === 'biweekly') return Math.round((fromKey(day) - fromKey(it.date)) / 864e5) % 14 === 0;
-  return false;
-}
+export { occursOn };
 export const doneOn = (it, day) => (it.repeat && it.repeat !== 'none' ? (it.doneDates || []).includes(day) : !!it.done);
 
 /* Lista de { item, date, done } entre duas datas, em ordem */
@@ -446,7 +436,7 @@ function voice(it, stage, date) {
 const TITLES = { m60: 'Daqui a 1 hora', m30: 'Daqui a 30 min', m20: 'Daqui a 20 min', m0: 'É agora!', after: 'E aí? 👀' };
 
 /* ---------- avisos no celular (só para o dono) ---------- */
-const at = (date, time) => Date.parse(`${date}T${time}:00-03:00`);
+const at = (date, time) => new Date(`${date}T${time}:00`).getTime();
 const hm = (t) => t.replace(/^0/, '').replace(':00', 'h').replace(':', 'h');
 /* emoji do aviso: o do assunto (💇 cabelo, 💡 conta de luz…) e, se não reconhecer, o da categoria */
 export const emojiOf = (it) => itemLook(it.title || '', it.note || '')?.emoji || (CATS[it.cat] || CATS.lembrete).emoji;
@@ -514,7 +504,7 @@ export function personalProfile() {
     if (it.date >= t && !it.done) { if (!nextByCat[it.cat] || it.date < nextByCat[it.cat]) nextByCat[it.cat] = it.date; }
   }
   const p = personal.prefs;
-  return {
+  return { tz: fusoDoAparelho(),
     date: t,
     ia: iaOk(),
     prefs: { nudges: p.nudges, water: p.water, meals: p.meals, faith: p.faith, freq: p.freq, wake: p.wake, sleep: p.sleep, lunch: p.lunch, tone: p.tone, pronoun: p.pronoun || store.profile?.pronoun,
@@ -530,6 +520,7 @@ export function personalProfile() {
   };
 }
 
+export const fusoDoAparelho = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { return ''; } };
 let timer = null, lastSig = '';
 export function syncPersonalSchedule() {
   if (store.mode !== 'cloud' || !server() || !personal.ready) return;

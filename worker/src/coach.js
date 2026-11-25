@@ -4,11 +4,18 @@ const MODELS = ['@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/meta/llama-3.1-
 const KINDS = ['cobranca', 'ideia', 'trend', 'ideia', 'motivacao', 'cliente', 'trend'];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
-/* Hora de Brasília */
-export function brNow(now = Date.now()) {
-  const d = new Date(now - 3 * 3600e3);
-  return { h: d.getUTCHours(), m: d.getUTCMinutes(), date: d.toISOString().slice(0, 10), wd: d.getUTCDay() };
+/* Relógio da pessoa: segue o fuso do aparelho dela (Brasília só quando ainda não sabemos) */
+export const TZ0 = 'America/Sao_Paulo';
+const FMT = new Map();
+export function fusoOk(tz) { if (typeof tz !== 'string' || !tz || tz.length > 60) return false; try { if (!FMT.has(tz)) { if (FMT.size > 400) FMT.clear(); FMT.set(tz, new Intl.DateTimeFormat('en-CA', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })); } return true; } catch { return false; } }
+export function brNow(now = Date.now(), tz = TZ0) {
+  if (!fusoOk(tz)) tz = TZ0; fusoOk(tz);
+  const o = {}; for (const p of FMT.get(tz).formatToParts(new Date(now))) o[p.type] = p.value;
+  const date = `${o.year}-${o.month}-${o.day}`;
+  return { h: +o.hour % 24, m: +o.minute, date, wd: new Date(`${date}T12:00:00Z`).getUTCDay() };
 }
+/** data e hora no relógio da pessoa → instante */
+export function instante(date, hm, tz = TZ0) { const alvo = Date.parse(`${date}T${hm}:00Z`); let t = alvo; for (let i = 0; i < 2; i++) { const b = brNow(t, tz), visto = Date.parse(`${b.date}T${String(b.h).padStart(2, '0')}:${String(b.m).padStart(2, '0')}:00Z`); t += alvo - visto; } return t; }
 
 /* Datas comemorativas próximas (até 45 dias) */
 const DATES = [
@@ -135,19 +142,19 @@ function chooseCompany(list) {
 /* Dicas de trabalho para UMA pessoa (o relógio chama só quando é a vez dela).
    Estado por pessoa em co:{id} (próximo horário e últimas mensagens); pedido de teste em cof:{id}. */
 const OPEN = 8 * 60 + 30, CLOSE = 21 * 60 + 30;
-export function coachNextOpen(now = Date.now()) {
-  const br = brNow(now), mins = br.h * 60 + br.m;
+export function coachNextOpen(now = Date.now(), tz = TZ0) {
+  const br = brNow(now, tz), mins = br.h * 60 + br.m;
   const wait = mins < OPEN ? OPEN - mins : 1440 - mins + OPEN;
   return now + wait * 60e3 + Math.floor(Math.random() * 40) * 60e3; // cada pessoa num minuto diferente
 }
 export async function coachOne(env, sendToMember, m, now = Date.now(), cache = {}, usage = null) {
-  const br = brNow(now);
+  const tz = (await env.CAL.get(`pprofile:${m.id}`, 'json'))?.tz || TZ0, br = brNow(now, tz);
   const mins = br.h * 60 + br.m;
   const key = `co:${m.id}`;
   const st = { recent: [], ...((await env.CAL.get(key, 'json')) || {}) };
   const force = Number(await env.CAL.get(`cof:${m.id}`)) || 0;
   if (force && force > (st.forced || 0)) { st.next = 0; st.forced = force; }
-  if (mins < OPEN || mins > CLOSE) return { sent: 0, nextAt: Math.max(st.next || 0, coachNextOpen(now)) };
+  if (mins < OPEN || mins > CLOSE) return { sent: 0, nextAt: Math.max(st.next || 0, coachNextOpen(now, tz)) };
   if ((st.next || 0) > now) return { sent: 0, nextAt: st.next };
   const today = `${br.date} (${['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][br.wd]})`;
   const ctxKey = m.ctxKey || 'coach-ctx';
@@ -173,8 +180,8 @@ export async function coachOne(env, sendToMember, m, now = Date.now(), cache = {
   await env.CAL.put(key, JSON.stringify(st));
   if (usage) usage('coach', !!msg.byAI);
   const sent = await sendToMember(env, m.id, { title: msg.title, body: msg.body, tag: 'coach', url: './' }, 'coach');
-  const close = Date.parse(`${br.date}T21:30:00-03:00`);
-  return { sent, nextAt: st.next > close ? coachNextOpen(close + 60e3) : st.next };
+  const close = instante(br.date, '21:30', tz);
+  return { sent, nextAt: st.next > close ? coachNextOpen(close + 60e3, tz) : st.next };
 }
 
 /* Compatível com a versão antiga (todo mundo de uma vez): usada nos testes */

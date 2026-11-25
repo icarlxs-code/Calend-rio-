@@ -21,9 +21,10 @@ import * as push from '../avisos.js';
 import { usagePlaceholder, fillUsage } from '../usage.js';
 import { onDone, streak } from '../reward.js';
 import { suggestions, addSuggestion, hideSuggestion, forYouLead } from '../foryou.js';
+import { agruparInicio } from '../inicio-pessoal.js';
 import { sininho, greetLine, interactive, say, alive, vivo } from '../sininho.js';
 import { offensive } from '../game.js';
-import { esc, todayKey, addDays, dayLabel, fmtTime, fromKey, toKey, diffDays, greeting, fmtDayLong, monthKey, addMonths, fmtMonth, WD_LETTER, MONTHS } from '../utils.js';
+import { esc, todayKey, addDays, dayLabel, fmtTime, fromKey, toKey, diffDays, greeting, fmtDayLong, monthKey, addMonths, fmtMonth, fmtDayShort, WD_SHORT, WD_LETTER, MONTHS } from '../utils.js';
 
 const firstName = () => store.member(store.me)?.name || '';
 /* Ícone profissional num bloco em degradê (estilo iOS) */
@@ -34,13 +35,13 @@ const itemTile = (it, size = 40) => { const l = it.cat !== 'aniversario' && item
 const listTile = (l, size = 40) => { const k = listIcon(l); return tile(k, LIST_ICONS[k].g, size); };
 
 /* ---------- peças ---------- */
-const row = (it, date, done, { showDate = false } = {}) => {
+const row = (it, date, done, { showDate = false, selo = '' } = {}) => {
   const c = CATS[it.cat] || CATS.lembrete;
   const age = it.cat === 'aniversario' && it.birthYear ? ` · faz ${+date.slice(0, 4) - it.birthYear} anos` : '';
   const when = showDate ? `${dayLabel(date)}${it.time ? ' · ' + fmtTime(it.time) : ''}` : it.time ? fmtTime(it.time) : 'Qualquer hora';
   return `<div class="prow${done ? ' is-done' : ''}" style="--pc:${c.color}" data-action="p-open" data-id="${it.id}" data-date="${date}">
     ${itemTile(it, 40)}
-    <div class="prow__body"><strong>${esc(it.title)}</strong><small>${esc(when)}${esc(age)}${it.repeat && it.repeat !== 'none' ? ` · ${icon('repeat', 11)}` : ''}${it.note ? ' · ' + esc(it.note.slice(0, 40)) : ''}</small></div>
+    <div class="prow__body"><strong>${esc(it.title)}</strong><small>${esc(when)}${esc(age)}${it.repeat && it.repeat !== 'none' && !selo ? ` · ${icon('repeat', 11)}` : ''}${it.note ? ' · ' + esc(it.note.slice(0, 40)) : ''}</small>${selo ? seloHtml(selo) : ''}</div>
     <button class="prow__check${done ? ' is-on' : ''}" data-action="p-done" data-id="${it.id}" data-date="${date}" aria-label="${done ? 'Desmarcar' : 'Feito'}">${icon('check', 15)}</button>
   </div>`;
 };
@@ -58,13 +59,28 @@ const header = (eyebrow, title, right = '', modo = false) => `
   </header>`;
 const workBtn = modoSwitch('personal');
 
+/* ---------- grupos do Início: cada coisa uma vez só ---------- */
+const diaCurto = (k) => fmtDayShort(k).toLowerCase();
+const grupo = (t, lado, html) => `<section class="block pgrupo"><h2 class="pgrupo__t">${t}<small>${esc(lado)}</small></h2>${html}</section>`;
+const calma = (t, rot = []) => `<p class="pcalma">${rot.slice(0, 3).map((r) => itemTile(r.item, 28)).join('')}<span>${esc(t)}</span></p>`;
+const seloHtml = (s) => `<span class="pselo">${icon('repeat', 13)} ${esc(s)}</span>`;
+const bola = (it, date, on) => `<button class="prow__check${on ? ' is-on' : ''}" data-action="p-done" data-id="${it.id}" data-date="${date}" aria-label="${on ? 'Desmarcar' : 'Feito'}">${icon('check', 15)}</button>`;
+function rotina(R) {
+  if (!R.length) return ''; const n = R.filter((r) => r.feitoHoje).length, mais = R.length > 4 && !ui.rotinaTudo, L = mais ? R.slice(0, 4) : R;
+  return `<div class="protina"><div class="protina__h"><span>Rotina diária</span><b>${n} de ${R.length} feita${R.length > 1 ? 's' : ''}</b></div>${L.map((r) => `<div class="protina__l${r.feitoHoje ? ' is-done' : ''}" style="--pc:${(CATS[r.item.cat] || CATS.lembrete).color}" data-action="p-open" data-date="${r.date}" data-id="${r.item.id}">${itemTile(r.item, 34)}<span><strong>${esc(r.item.title)}</strong>${seloHtml(r.selo)}</span>${bola(r.item, r.date, r.feitoHoje)}</div>`).join('')}${mais ? `<button class="protina__m" data-action="p-rotina">+${R.length - 4} na rotina ›</button>` : ''}</div>`;
+}
+function destaque(o) {
+  const it = o.item, n = diffDays(todayKey(), o.date), d = fromKey(o.date);
+  return `<div class="pdest" data-action="p-open" data-id="${it.id}" data-date="${o.date}"><span class="pdest__d"><small>${WD_SHORT[d.getDay()]}</small><b>${d.getDate()}</b></span><span class="pdest__c"><em>${n === 1 ? 'Amanhã' : `Em ${n} dias`}</em><strong>${esc(it.title)}</strong><small>${itemTile(it, 24)} ${esc([it.time ? fmtTime(it.time) : 'Qualquer hora', it.note ? it.note.slice(0, 40) : ''].filter(Boolean).join(' · '))}</small></span>${bola(it, o.date, o.done)}</div>`;
+}
+const lista = (L, dest) => `${dest && L.includes(dest) ? destaque(dest) : ''}${L.filter((o) => o !== dest).length ? `<div class="plist">${L.filter((o) => o !== dest).map((o) => row(o.item, o.date, o.done, { ...o, showDate: true })).join('')}</div>` : ''}`;
+
 /* ---------- Hoje ---------- */
 function renderHome() {
   const t = todayKey();
   const late = overdue();
-  const today = occurrences(t, t);
-  const tomorrow = occurrences(addDays(t, 1), addDays(t, 1));
-  const week = occurrences(addDays(t, 2), addDays(t, 7));
+  const G = agruparInicio(personal.events, new Date());
+  const today = [...G.rotina.map((r) => ({ item: r.item, date: t, done: r.feitoHoje })), ...G.hoje];
   const bdays = birthdays().filter((b) => diffDays(t, b.next) <= 45).slice(0, 8);
   const pending = today.filter((o) => !o.done).length;
   const lists = personal.lists;
@@ -86,11 +102,12 @@ function renderHome() {
         ${bdays.some((b) => diffDays(t, b.next) <= 7) ? `<span>${icon('cake', 14)}<b>${bdays.filter((b) => diffDays(t, b.next) <= 7).length}</b> aniversário${bdays.filter((b) => diffDays(t, b.next) <= 7).length > 1 ? 's' : ''} na semana</span>` : ''}
       </div>` : ''}
     ${late.length ? section('<span style="color:var(--danger)">Ficou pra trás</span>', `<div class="plist">${late.map((it) => row(it, it.date, false, { showDate: true })).join('')}</div>`) : ''}
-    ${section('Hoje', today.length ? `<div class="plist">${today.map((o) => row(o.item, o.date, o.done)).join('')}</div>` : '<p class="agfim">Nada por aqui. Escreva no campo acima ou toque num atalho.</p>')}
-    <div class="pchips pchips--ini">${quickCats.slice(0, 4).map((k) => `<button class="pchip" data-action="p-new" data-cat="${k}">${catTile(k, 24)}${esc(CATS[k].label)}</button>`).join('')}</div>
-    ${tomorrow.length ? section('Amanhã', `<div class="plist">${tomorrow.map((o) => row(o.item, o.date, o.done)).join('')}</div>`) : ''}
-    ${week.length ? section('Próximos dias', `<div class="plist">${week.map((o) => row(o.item, o.date, o.done, { showDate: true })).join('')}</div>`) : ''}
+    ${grupo('Hoje', diaCurto(t), `${rotina(G.rotina)}${G.hoje.length ? `<div class="plist">${G.hoje.map((o) => row(o.item, o.date, o.done, o)).join('')}</div>` : G.rotina.length ? '' : calma('Nada por aqui. Escreva no campo acima ou toque num atalho.')}`)}
+    ${grupo('Amanhã', G.amanha.length ? diaCurto(addDays(t, 1)) : G.rotina.length ? 'só a rotina, dia livre' : 'dia livre', G.amanha.length ? lista(G.amanha, G.destaque) : '')}
+    ${grupo('Esta semana', `até ${diaCurto(addDays(t, 7))}`, G.semana.length ? lista(G.semana, G.destaque) : calma('Nada marcado ainda.'))}
+    ${G.depois.length ? grupo('Depois', `a partir de ${diaCurto(addDays(t, 8))}`, `${lista(G.depois)}${G.maisDepois ? `<button class="btn-text" data-action="ptab" data-tab="p-agenda">Ver na Agenda ›</button>` : ''}`) : ''}
 
+    <div class="pchips pchips--ini">${quickCats.slice(0, 4).map((k) => `<button class="pchip" data-action="p-new" data-cat="${k}">${catTile(k, 24)}${esc(CATS[k].label)}</button>`).join('')}</div>
     ${bdays.length ? section(`<span class="ptitle">${tile('cake', CATS.aniversario.g, 26)}Aniversários chegando</span>`, `<div class="pbdays">${bdays.map((b) => {
       const d = diffDays(t, b.next);
       return `<button class="pbday" data-action="p-open" data-id="${b.item.id}" data-date="${b.next}">
@@ -336,6 +353,7 @@ export function bindPersonal(view) {
 }
 
 export const personalActions = {
+  'p-rotina': () => { ui.rotinaTudo = true; window.__calRender && window.__calRender(); },
   ptab: (b) => {
     const tab = b.dataset.tab, go = () => { ui.ptab = tab; saveUi(); window.__calRender && window.__calRender(); window.scrollTo(0, 0); };
     if (window.__motion) window.__motion.trocar(tab, go, b, (ui.ptab || 'p-hoje') === tab); else go();

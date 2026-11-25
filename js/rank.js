@@ -29,7 +29,7 @@ export function rankEvent(before, after) {
   if (!before && (after.createdBy || store.me) === store.me) rankAct('create', after.id);
   else if (before && before.status !== 'feito' && after.status === 'feito') {
     // no horário = concluiu até 30 min depois do fim previsto (vale mais pontos)
-    const start = after.time ? Date.parse(`${after.date}T${after.time}:00-03:00`) : Date.parse(`${after.date}T23:59:00-03:00`);
+    const start = after.time ? new Date(`${after.date}T${after.time}:00`).getTime() : new Date(`${after.date}T23:59:00`).getTime();
     const end = start + (Number(after.duration) || 60) * 60e3;
     rankAct('done', after.id, { ontime: Date.now() <= end + 30 * 60e3 });
   }

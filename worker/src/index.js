@@ -18,6 +18,7 @@ import { getDevices, removeDevices, addDevice, upgradeSubs } from './devices.js'
 import { runTick, planReminders, planPersonal, seedPerson, upgradeLegacy, usageMeter } from './tick.js';
 import { dueOf } from './kvsql.js';
 import { rodaFutebol, guardaTime, tiraTime, proximos, ligado as futebolLigado } from './futebol.js';
+import { brNow, fusoOk } from './coach.js';
 import { meuId, trocaId, limpaId, esqueceAchado, guardaCodigos } from './achar.js';
 import { regGet, regPut, regDel, regAll, idOfWs } from './registry.js';
 import { boardOf } from './leaderboard.js';
@@ -208,6 +209,7 @@ export function cleanProfile(p, me) {
     name: me.name,
     ia: p.ia === true, // a pessoa autorizou a IA no app (sem isso, só frases prontas)
     date: day(p.date),
+    ...(fusoOk(p.tz) ? { tz: p.tz } : {}),
     prefs: {
       nudges: P.nudges !== false, water: P.water !== false, meals: P.meals !== false, faith: P.faith !== false, freq: ['alta', 'normal', 'calma'].includes(P.freq) ? P.freq : 'normal',
       // horários da ficha (janela das mensagens do dia) e o tom que a pessoa escolheu
@@ -660,8 +662,8 @@ async function handle(req, env) {
     const vivos = (l) => l.filter((x) => now < (x.fim || x.at + DAY));
     const marcaOnline = async () => { const k = `ls:${meU}`, v = +(await env.CAL.get(k)) || 0; if (now - v > 90e3) await env.CAL.put(k, String(now), { expirationTtl: 30 * 864e2 }); };
     const vistoEm = async (u) => (env.VISIVEL && env.VISIVEL(u) ? now : +(await env.CAL.get(`ls:${u}`)) || 0);
-    const brHora = () => new Date(Date.now() - 3 * 3600e3).getUTCHours();
-    const dormindo = async (u) => { const c = (await env.CAL.get(`card:${u}`, 'json')) || {}; const h = brHora(); return c.teen === true && (h >= 22 || h < 7); }; // modo dormir (menores)
+    const horaDe = async (u) => brNow(Date.now(), (await env.CAL.get(`pprofile:${memberOf(u)}`, 'json'))?.tz).h;
+    const dormindo = async (u) => { const c = (await env.CAL.get(`card:${u}`, 'json')) || {}; if (c.teen !== true) return false; const h = await horaDe(u); return h >= 22 || h < 7; }; // modo dormir (menores)
     const isFriend = async (a, b) => a === b || (await getL(`friends:${a}`)).includes(b);
     // curtir, comentar, repostar e conversas privadas
     const soc = await socialRoute({ env, meU, path: url.pathname, body, now, getL, cardOf, isFriend, vivos, memberOf, dormindo, send: (m, msg) => sendToMember(env, m, msg) });
@@ -1020,7 +1022,7 @@ async function handle(req, env) {
     // guarda: última abertura, horários em que costuma abrir, por onde abriu (aviso ou ícone), sequência e permissão de avisos
     const now = Date.now(), raw = await env.CAL.get(`seen:${me.id}`);
     let sn = {}; try { sn = raw && raw.startsWith('{') ? JSON.parse(raw) : { last: Number(raw) || 0 }; } catch { sn = {}; }
-    const h = new Date(now - 3 * 3600e3).getUTCHours();
+    const h = brNow(now, (await env.CAL.get(`pprofile:${me.id}`, 'json'))?.tz).h;
     sn.hours = Array.isArray(sn.hours) && sn.hours.length === 24 ? sn.hours : Array(24).fill(0);
     if (now - (sn.last || 0) > 30 * 60e3) sn.hours[h] = Math.min(999, sn.hours[h] + 1);
     sn.last = now; sn.opens = (sn.opens || 0) + 1;
@@ -1059,6 +1061,7 @@ async function handle(req, env) {
       const { updatedAt: u0, ...oldProf } = old || {};
       // grava se mudou ou a cada 3h (o "hoje" do servidor se baseia nesse resumo)
       if (!old || JSON.stringify(oldProf) !== JSON.stringify(prof) || Date.now() - (u0 || 0) > 3 * 3600e3) {
+        if (!prof.tz && old?.tz) prof.tz = old.tz; // sem fuso válido: vale o último
         await env.CAL.put(`pprofile:${me.id}`, JSON.stringify({ ...prof, updatedAt: Date.now() }));
         // primeiro resumo (ou mudou a rotina): o amigo recalcula logo
         if (!old || JSON.stringify(old.prefs) !== JSON.stringify(prof.prefs)) await dueOf(env).set(`amg:${me.id}`, Date.now());

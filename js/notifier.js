@@ -18,7 +18,7 @@ const nowSP = () => {
   return { date: todayKey(), minutes: d.getHours() * 60 + d.getMinutes() };
 };
 // horário de Brasília (sem horário de verão desde 2019)
-const epoch = (date, time) => Date.parse(`${date}T${time}:00-03:00`);
+const epoch = (date, time) => new Date(`${date}T${time}:00`).getTime();
 const active = () => store.mode === 'cloud' && !!server() && !!store.me;
 
 /* ---------- aviso imediato (parceiro e o próprio celular) ---------- */

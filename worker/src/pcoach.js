@@ -4,7 +4,7 @@
 import { GENERICO, semNome, ehRemedio } from '../../functions/remedio.js';
 import { bloqueado, medico } from './filtro.js';
 import { proxima, daAgenda, slotsDe, turnoDe, feCrista, introducao, inicia } from './vivo.js';
-import { brNow } from './coach.js';
+import { brNow, TZ0 } from './coach.js';
 import { pickMind, pickFaith, mindBrief, hashStr, RELIGIONS } from './mind.js';
 
 /* Paráfrases próprias do Lembra (não são citações de nenhuma tradução). */
@@ -257,7 +257,7 @@ export function anchorsFor(w) {
 /* Escolhe a próxima mensagem de uma pessoa. Retorna { msg, state } ou null. Função pura (testável). */
 const agoraDe = (p, br) => { const w = dayWindow(p.prefs || {}), L = spanOf(w); return { turno: turnoDe(relOf(br.h * 60 + br.m, w), L), wd: br.wd, chave: `${br.date}T${String(br.h).padStart(2, '0')}` }; };
 export function nextNudge(p, st, now, rand = Math.random) {
-  const br = brNow(now);
+  const tz = p.tz || TZ0, br = brNow(now, tz);
   const prefs = { nudges: true, water: true, meals: true, faith: true, freq: 'normal', ...(p.prefs || {}) };
   const pid = p.uid || p.name || 'x'; // identidade da pessoa: a sequência de mensagens é só dela
   const fam = prefs.religion ? (RELIGIONS[prefs.religion] || {}).fam : null;
@@ -317,7 +317,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
     // avisos de RETORNO (sequência em risco / caiu no ranking) furam a fila: não esperam o próximo horário sorteado
     const sn0 = p.seen || {}, today0 = br.date;
     const usual0 = Array.isArray(sn0.hours) && sn0.hours.some((x) => x > 0) ? sn0.hours.indexOf(Math.max(...sn0.hours)) : 19;
-    const opened0 = p.seenAt && new Date(p.seenAt - 3 * 3600e3).toISOString().slice(0, 10) === today0;
+    const opened0 = p.seenAt && brNow(p.seenAt, tz).date === today0;
     const prio = prefs.nudges && now - (st.lastAny || 0) >= 20 * 60e3 && (
       ((sn0.streak || 0) >= 2 && !opened0 && ((br.h >= usual0 && br.h <= usual0 + 2) || br.h >= 19) && st.streakDay !== today0)
       || (p.rank && p.rank.pos && st.rankPos && st.rankWeek === p.rank.week && p.rank.pos > st.rankPos && st.rankDay !== today0));
@@ -334,7 +334,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
     // RETORNO (como no Duolingo): no horário em que a pessoa costuma abrir, usa o que mais importa para ela
     const sn = p.seen || {}, today = br.date;
     const usual = Array.isArray(sn.hours) && sn.hours.some((x) => x > 0) ? sn.hours.indexOf(Math.max(...sn.hours)) : 19;
-    const openedToday = p.seenAt && new Date(p.seenAt - 3 * 3600e3).toISOString().slice(0, 10) === today;
+    const openedToday = p.seenAt && brNow(p.seenAt, tz).date === today;
     const nearUsual = br.h >= usual && br.h <= usual + 2;
     if ((sn.streak || 0) >= 2 && !openedToday && (nearUsual || br.h >= 19) && st.streakDay !== today) options.push(['streak', 12]);
     if (p.rank && p.rank.pos && st.rankPos && p.rank.pos > st.rankPos && st.rankDay !== today) options.push(['rank', 11]);
@@ -471,10 +471,11 @@ export function dadosDaArte(msg, pid, br, turno) {
 }
 
 export async function amigoOne(env, sendToMember, m, now = Date.now(), rankInfo = null, usage = null) {
-  const br = brNow(now);
-  const clock = br.h * 60 + br.m;
   const key = `pc:${m.id}`;
   const st = { ...((await env.CAL.get(key, 'json')) || {}) };
+  let prof = st.tz && st.win && now - (st.winAt || 0) < 3 * 3600e3 ? undefined : await env.CAL.get(`pprofile:${m.id}`, 'json');
+  const tz = (prof ? prof.tz : st.tz) || TZ0, br = brNow(now, tz);
+  const clock = br.h * 60 + br.m;
   let changed = false;
   const force = Number(await env.CAL.get(`pcf:${m.id}`)) || 0;
   if (force && force > (st.forcedAt || 0)) { st.next = 0; st.forcedAt = force; changed = true; }
@@ -488,9 +489,10 @@ export async function amigoOne(env, sendToMember, m, now = Date.now(), rankInfo 
       return { sent: 0, nextAt: amigoNextAt(st, now) };
     }
   }
-  const prof = await env.CAL.get(`pprofile:${m.id}`, 'json');
+  if (prof === undefined) prof = await env.CAL.get(`pprofile:${m.id}`, 'json');
   if (!prof) { if (changed) await env.CAL.put(key, JSON.stringify(st)); return { sent: 0, nextAt: null }; } // ainda não abriu o app novo
   if (!fresh) { st.win = dayWindow(prof.prefs || {}); st.winAt = now; changed = true; }
+  if (st.tz !== (prof.tz || TZ0)) { st.tz = prof.tz || TZ0; changed = true; }
   // resumo de outro dia (a pessoa não abriu o app hoje): ajusta "hoje" e "amanhã"
   const seenRaw = await env.CAL.get(`seen:${m.id}`);
   let sn = {}; try { sn = seenRaw && seenRaw.startsWith('{') ? JSON.parse(seenRaw) : { last: Number(seenRaw) || 0 }; } catch { sn = {}; }
@@ -530,7 +532,7 @@ export async function amigoOne(env, sendToMember, m, now = Date.now(), rankInfo 
 export function amigoNextAt(st, now = Date.now()) {
   const MIN = 60e3, CAP = 30 * MIN;
   if (!st || !st.win) return now + CAP;
-  const br = brNow(now), clock = br.h * 60 + br.m;
+  const br = brNow(now, st.tz || TZ0), clock = br.h * 60 + br.m;
   const w = st.win, L = spanOf(w), mins = relOf(clock, w);
   if (mins > L) return now + (((w.start - clock + 1440) % 1440) || 1440) * MIN + 30e3; // começo da próxima janela
   const at = (rel) => now + (rel - mins) * MIN;
