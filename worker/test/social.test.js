@@ -172,3 +172,30 @@ test('aviso no celular: não mostra o texto, não apita com o app aberto, nem pa
   await call('/friends/msg-send', BIA, { com: CIC, txt: 'segredo' });
   assert.ok(eventos.some(([u, o]) => u === CIC && o.t === 'msg' && !JSON.stringify(o).includes('segredo')), 'o recado em tempo real não leva o texto');
 });
+
+test('visualização única: só quem recebe abre, uma vez, e a mídia some do banco; menor não usa', async () => {
+  amizade(ANA, DUDA);
+  const antes = env.SOCIAL.conta().midia;
+  const { id, at } = (await call('/friends/msg-send', ANA, { com: DUDA, tipo: 'foto', midia: FOTO, w: 3, h: 4, unica: true })).data;
+  assert.equal((await call('/friends/msg-media', ANA, { com: DUDA, id, at, abrir: true })).status, 404, 'quem mandou não reabre');
+  assert.equal((await call('/friends/msg-media', DUDA, { com: ANA, id, at })).status, 404, 'versão antiga não consome sem querer');
+  assert.equal((await call('/friends/msg-media', DUDA, { com: ANA, id, at, abrir: true })).data.v, FOTO);
+  assert.equal((await call('/friends/msg-media', DUDA, { com: ANA, id, at, abrir: true })).status, 404, 'segunda vez');
+  assert.equal(env.SOCIAL.conta().midia, antes, 'mídia apagada');
+  assert.ok((await call('/friends/msg-list', ANA, { com: DUDA })).data.msgs.find((m) => m.id === id).vista > 0);
+  amizade(ANA, TEO);
+  assert.equal((await call('/friends/msg-send', ANA, { com: TEO, tipo: 'foto', midia: FOTO, w: 3, h: 4, unica: true })).status, 403);
+});
+test('fixar, arquivar e trancar: só para mim, até 5 fixadas, só amigos; arquivada não conta', async () => {
+  const org = (u, o) => call('/friends/msg-organiza', u, o);
+  assert.deepEqual((await org(DUDA, { com: ANA, campo: 'fix', on: true })).data.cfg.fix, [ANA]);
+  assert.equal((await org(DUDA, { com: 'naoAmigo000000001', campo: 'tra', on: true })).status, 403);
+  await call('/friends/msg-send', ANA, { com: DUDA, txt: 'oi' });
+  const c1 = (await call('/friends/convs', DUDA)).data; assert.ok(c1.total > 0);
+  const c2 = (await org(DUDA, { com: ANA, campo: 'arq', on: true })).data.cfg; assert.deepEqual([c2.arq, c2.fix], [[ANA], []], 'arquivou: solta do topo');
+  assert.equal((await call('/friends/convs', DUDA)).data.total, 0);
+  assert.deepEqual((await call('/friends/convs', ANA)).data.cfg, { fix: [], arq: [], tra: [] }, 'o outro lado não muda');
+  for (let i = 0; i < 5; i++) { const u = `fixo${i}Uid00000001`; amizade(BIA, u); await org(BIA, { com: u, campo: 'fix', on: true }); }
+  amizade(BIA, 'fixo9Uid00000001'); assert.equal((await org(BIA, { com: 'fixo9Uid00000001', campo: 'fix', on: true })).status, 400);
+  await call('/account/delete', DUDA); assert.ok(!kv.has(`convcfg:${DUDA}`));
+});

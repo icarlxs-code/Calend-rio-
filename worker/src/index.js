@@ -508,7 +508,7 @@ async function handle(req, env) {
       if (env.FRASES) env.FRASES.apagaPessoa(me.id);
       await env.CAL.delete(`vh:${me.id}`);
       await tiraTime(env, me.id); await esqueceAchado(env, me.ws);
-      await Promise.all([`mudo:${me.ws}`, `mcfg:${me.ws}`].map((k) => env.CAL.delete(k)));
+      await Promise.all([`mudo:${me.ws}`, `mcfg:${me.ws}`, `convcfg:${me.ws}`].map((k) => env.CAL.delete(k)));
       const frs = (await env.CAL.get(`friends:${me.ws}`, 'json')) || [];
       for (const f of frs) { const l = (await env.CAL.get(`friends:${f}`, 'json')) || []; await env.CAL.put(`friends:${f}`, JSON.stringify(l.filter((x) => x !== me.ws))); }
       await Promise.all([`stories:${me.ws}`, `visits:${me.ws}`, `friends:${me.ws}`, `freq:${me.ws}`, `ls:${me.ws}`, `blocks:${me.ws}`].map((k) => env.CAL.delete(k)));

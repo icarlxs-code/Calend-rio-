@@ -42,7 +42,11 @@ let meu = '';
 export async function meuId() { if (!meu) meu = (await call('/friends/id')).id || ''; return meu; }
 export async function trocaMeuId(novo) { meu = (await call('/friends/id', { novo })).id; return meu; }
 
-export function abreAchar({ onDone, inicial = '' } = {}) {
+export async function procura(e) {
+  const F = await import('./friends.js');
+  return call('/friends/achar', e.tipo === 'tel' ? { tel: (await Promise.all(e.tels.map(F.hashTel))).filter(Boolean) } : e.tipo === 'email' ? { mail: await F.hashMail(e.email) } : { id: e.id });
+}
+export function abreAchar({ onDone, inicial = '', conversa = false } = {}) {
   let pede = '', vez = 0;
   return openSheet({ className: 'sheet--achar', html: `<div class="achar">
       <header class="achar__top"><button class="btn-text" data-close>Fechar</button><h2>Achar alguém</h2><span></span></header>
@@ -66,8 +70,7 @@ export function abreAchar({ onDone, inicial = '' } = {}) {
       const minha = ++vez; res.innerHTML = '<div class="fx__load"><i></i><i></i><i></i></div>';
       try {
         const F = await import('./friends.js');
-        const corpo = e.tipo === 'tel' ? { tel: (await Promise.all(e.tels.map(F.hashTel))).filter(Boolean) } : e.tipo === 'email' ? { mail: await F.hashMail(e.email) } : { id: e.id };
-        const r = await call('/friends/achar', corpo); if (minha !== vez || x.closed) return;
+        const r = await procura(e); if (minha !== vez || x.closed) return;
         if (r.self) { nada('Esse é você 😄'); return; }
         if (!r.row) {
           nada('Não achei ninguém assim. A pessoa pode não ter colocado isso no perfil ou preferiu não ser encontrada.', `<button class="btn btn--soft btn--block" data-conv>${icon('share', 16)} Mandar convite</button>`);
@@ -75,7 +78,7 @@ export function abreAchar({ onDone, inicial = '' } = {}) {
         }
         const c = r.row;
         res.innerHTML = `<button class="fxrow achar__row" data-pp><span class="fxava"><span class="fxava__in">${c.photo ? `<img src="${esc(c.photo)}" alt="">` : `<span style="background:${esc(c.color || '#7C5CFF')}">${esc((c.name || '?').charAt(0))}</span>`}</span></span><span class="fxrow__id"><b>${esc(c.name)}</b><small>${c.rel === 'amigo' ? 'Vocês já são amigos' : c.rel === 'enviado' ? 'Pedido enviado' : c.rel === 'recebido' ? 'Quer ser seu amigo' : esc(c.job || `Nível ${c.level || 0}`)}</small></span><span class="fx__ver">Ver</span></button>`;
-        q('[data-pp]').onclick = () => { x.close(); F.openPublicProfile(c.uid).then(() => onDone && onDone()); };
+        q('[data-pp]').onclick = () => { x.close(); if (conversa && c.rel === 'amigo') { import('./privado.js').then((P) => P.openConversa(c.uid, c)); return; } F.openPublicProfile(c.uid).then(() => onDone && onDone()); };
       } catch (er) { if (minha === vez) nada(er.message || 'Não consegui agora.'); }
     };
     const comDdd = () => { const d = dv.value.replace(/\D/g, ''); if (!DDDS.has(d)) { nada('Esse DDD não existe. Confira.'); return; } const e = entende(d + pede); if (e.tipo === 'tel') inp.value = d + pede; busca(e); };

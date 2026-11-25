@@ -57,7 +57,7 @@ export function makeSocial(sql, meter = {}) {
         const l = lado(c, u), outro = l === 'a' ? c.b : c.a, limpo = Math.max(corte, c['c' + l]);
         const r = q('SELECT * FROM msg WHERE par = ? AND at > ? ORDER BY at DESC LIMIT 1', c.par, limpo)[0];
         const n = q('SELECT COUNT(*) AS n FROM (SELECT 1 FROM msg WHERE par = ? AND at > ? AND de <> ? LIMIT 100)', c.par, Math.max(limpo, c['l' + l]), u)[0].n;
-        return r ? { uid: outro, ult: r.at, meu: r.de === u, tipo: r.tipo, txt: (r.txt || '').slice(0, 90), novas: n, visto: c['l' + (l === 'a' ? 'b' : 'a')] >= r.at } : null;
+        return r ? { uid: outro, ult: r.at, meu: r.de === u, tipo: r.tipo, txt: (r.txt || '').slice(0, 90), novas: n, unica: !!(J(r.meta) || {}).unica, visto: c['l' + (l === 'a' ? 'b' : 'a')] >= r.at } : null;
       }).filter(Boolean);
     },
     /** o autor apaga para os dois: some o texto e a mídia na hora */
@@ -73,8 +73,16 @@ export function makeSocial(sql, meter = {}) {
       q('UPDATE msg SET reac = ? WHERE par = ? AND at = ? AND id = ?', JSON.stringify(m), r.par, r.at, r.id); escreve();
       return m;
     },
-    midia(u, o, at, id, now = Date.now()) {
+    midia(u, o, at, id, now = Date.now(), abrir = false) {
       const r = api.acha(u, o, at, id); if (!r || r.at <= now - DIA) return null;
+      const mt = J(r.meta) || {};
+      if (mt.unica) { // visualização única: só quem recebeu abre, uma vez, e a mídia é apagada na mesma hora
+        if (!abrir || r.de === u || mt.vista) return null;
+        const x = q('SELECT v FROM midia WHERE id = ?', r.id)[0]; if (!x) return null;
+        q('DELETE FROM midia WHERE id = ?', r.id);
+        q('UPDATE msg SET meta = ? WHERE par = ? AND at = ? AND id = ?', JSON.stringify({ ...mt, vista: now }), r.par, r.at, r.id); escreve(2);
+        return x.v;
+      }
       const m = q('SELECT v FROM midia WHERE id = ?', r.id)[0]; return m ? m.v : null;
     },
     /** limpa a conversa só para quem pediu */
@@ -201,12 +209,24 @@ export async function socialRoute(c) {
 
   // ---------- conversas ----------
   if (!/^\/friends\/(msg-|convs$)/.test(path)) return null;
+  const organizado = async (u) => { const o = (await CAL.get(`convcfg:${u}`, 'json')) || {}; return { fix: o.fix || [], arq: o.arq || [], tra: o.tra || [] }; };
   const S = env.SOCIAL; if (!S) return erro('As mensagens ainda não estão disponíveis.', 503);
   if (path === '/friends/convs') {
     const l = S.conversas(meU, now), mudos = await getL(`mudo:${meU}`), amigos = await getL(`friends:${meU}`);
     const rows = await Promise.all(l.map(async (x) => { const k = await cardOf(x.uid); return { ...x, name: k.name, photo: k.photo, color: k.color, amigo: amigos.includes(x.uid), mudo: mudos.includes(x.uid), online: env.VISIVEL && env.VISIVEL(x.uid) ? now : 0 }; }));
-    const cfg = (await CAL.get(`mcfg:${meU}`, 'json')) || {};
-    return [{ ok: true, convs: rows.map((r) => (cfg.semLido ? { ...r, visto: false } : r)), total: rows.reduce((a, x) => a + (x.mudo ? 0 : x.novas), 0), semLido: !!cfg.semLido }];
+    const cfg = (await CAL.get(`mcfg:${meU}`, 'json')) || {}, org = await organizado(meU);
+    return [{ ok: true, convs: rows.map((r) => (cfg.semLido ? { ...r, visto: false } : r)), total: rows.reduce((a, x) => a + (x.mudo || org.arq.includes(x.uid) ? 0 : x.novas), 0), cfg: org, semLido: !!cfg.semLido }];
+  }
+  if (path === '/friends/msg-organiza') {
+    const u = texto(body.com, 64), campo = ['fix', 'arq', 'tra'].includes(body.campo) ? body.campo : '';
+    if (!campo || !/^[A-Za-z0-9]{6,64}$/.test(u) || u === meU) return erro('Conversa inválida.');
+    const g = await organizado(meU); g[campo] = g[campo].filter((x) => x !== u);
+    if (body.on === true) {
+      if (!(await getL(`friends:${meU}`)).includes(u)) return erro('Só conversas com amigos.', 403);
+      if (campo === 'fix' && g.fix.length >= 5) return erro('Você pode fixar até 5 conversas.');
+      g[campo].push(u); g[campo] = g[campo].slice(-200); if (campo === 'arq') g.fix = g.fix.filter((x) => x !== u); if (campo === 'fix') g.arq = g.arq.filter((x) => x !== u);
+    }
+    await CAL.put(`convcfg:${meU}`, JSON.stringify(g)); return [{ ok: true, cfg: g }];
   }
   if (path === '/friends/msg-config') { await CAL.put(`mcfg:${meU}`, JSON.stringify({ semLido: body.semLido === true })); return [{ ok: true, semLido: body.semLido === true }]; }
   const com = texto(body.com, 64);
@@ -219,7 +239,7 @@ export async function socialRoute(c) {
     if (!body.antes) { const ate = S.leu(meU, com); if (ate && !esconde) avisa(com, { t: 'lida', de: meU, ate }); if (ate) avisa(meU, { t: 'li', com }); }
     return [{ ok: true, msgs: r.msgs, mais: !!r.mais, lidoAte: esconde ? 0 : r.lidoAte, amigo, com: { uid: com, name: k.name, photo: k.photo, color: k.color, teen: k.teen }, online: amigo && env.VISIVEL && env.VISIVEL(com) ? now : amigo ? +(await CAL.get(`ls:${com}`)) || 0 : 0, mudo: (await getL(`mudo:${meU}`)).includes(com) }];
   }
-  if (path === '/friends/msg-media') { const v = S.midia(meU, com, body.at, body.id, now); return v ? [{ ok: true, v }] : erro('Isso já sumiu.', 404); }
+  if (path === '/friends/msg-media') { const v = S.midia(meU, com, body.at, body.id, now, body.abrir === true); if (v && body.abrir === true) avisa(com, { t: 'mudou', de: meU }); return v ? [{ ok: true, v }] : erro('Isso já sumiu.', 404); }
   if (path === '/friends/msg-del') { if (!S.apaga(meU, com, body.at, body.id)) return erro('Não dá mais para apagar.', 404); avisa(com, { t: 'mudou', de: meU }); return [{ ok: true }]; }
   if (path === '/friends/msg-clear') { S.limpaPara(meU, com, now); return [{ ok: true }]; }
   if (path === '/friends/msg-mute') { const m = (await getL(`mudo:${meU}`)).filter((x) => x !== com); if (body.on === true) m.push(com); await CAL.put(`mudo:${meU}`, JSON.stringify(m.slice(-200))); return [{ ok: true, mudo: body.on === true }]; }
@@ -242,6 +262,10 @@ export async function socialRoute(c) {
       meta.dur = Math.round(dur * 10) / 10;
       meta.onda = (Array.isArray(body.onda) ? body.onda : []).slice(0, 44).map((x) => Math.max(0, Math.min(100, Math.round(Number(x) || 0))));
     }
+    if (midia && body.unica === true) {
+      if ((await cardOf(meU)).teen || (await cardOf(com)).teen) return erro('Visualização única não fica disponível para menores de 18 anos.', 403);
+      meta.unica = true;
+    }
     if (midia && !gastaMidia(meU)) return erro('Você já mandou muitas fotos e áudios hoje. Amanhã libera de novo.', 429);
     if (tipo === 'story') {
       const owner = texto(body.owner, 64), id = texto(body.id, 40), l = await lista(owner), st = l.find((x) => x.id === id);
@@ -249,10 +273,12 @@ export async function socialRoute(c) {
       if (!txt) return erro('Escreva a resposta.');
       meta.st = { owner, id };
     }
-    if (body.resp && body.resp.id) { const r = S.acha(meU, com, body.resp.at, body.resp.id); if (r && r.tipo !== 'apagada') meta.resp = { id: r.id, at: r.at, de: r.de, tipo: r.tipo, txt: (r.txt || '').slice(0, 90) }; }
+    if (body.resp && body.resp.id) { const r = S.acha(meU, com, body.resp.at, body.resp.id); if (r && r.tipo !== 'apagada') meta.resp = { id: r.id, at: r.at, de: r.de, tipo: r.tipo, txt: (J(r.meta) || {}).unica ? '' : (r.txt || '').slice(0, 90) }; }
     const r = S.envia(meU, com, { id: novoId(), tipo, txt, meta: Object.keys(meta).length ? meta : null, midia }, now);
     avisa(com, { t: 'msg', de: meU }); avisa(meU, { t: 'eu', com });
-    if (!(env.VISIVEL && env.VISIVEL(com)) && !(await getL(`mudo:${com}`)).includes(meU)) {
+    const org = await organizado(com);
+    if (!(env.VISIVEL && env.VISIVEL(com)) && !(await getL(`mudo:${com}`)).includes(meU) && !org.arq.includes(meU)) {
+      if (org.tra.includes(meU)) { await push(com, { title: '🔒 Nova mensagem', body: 'Em uma conversa trancada.', tag: 'msg-trancada', url: './#/privado' }); return [{ ok: true, ...r }]; }
       const n = await nome1();
       await push(com, { title: n, body: tipo === 'foto' ? '📷 Te mandou uma foto' : tipo === 'audio' ? '🎤 Te mandou um áudio' : tipo === 'story' ? '💬 Respondeu ao seu story' : '💬 Te mandou uma mensagem', tag: `msg-${meU}`, url: `./#/privado/${meU}` });
     }

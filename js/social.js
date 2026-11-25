@@ -23,16 +23,25 @@ export const falta = (at) => { const m = Math.max(0, Math.round((at + 864e5 - Da
 /* ---------- eventos ---------- */
 const ouv = new Set();
 export const ouvir = (fn) => { ouv.add(fn); return () => ouv.delete(fn); };
-const emite = (e) => ouv.forEach((f) => { try { f(e); } catch (x) { console.warn('social', x); } });
+export const emite = (e) => ouv.forEach((f) => { try { f(e); } catch (x) { console.warn('social', x); } });
 
 /* ---------- conversas (memória) ---------- */
-let C = { lista: [], total: 0, at: 0, semLido: false }, emTroca = null, relogio = 0;
+const CFG0 = { fix: [], arq: [], tra: [] };
+let C = { lista: [], total: 0, at: 0, semLido: false, cfg: CFG0 }, emTroca = null, relogio = 0;
 export const conversas = () => C;
+/** fixar, arquivar, trancar ou silenciar */
+export async function organiza(com, campo, on) {
+  if (campo === 'mudo') { await call('/friends/msg-mute', { com, on }); const c = C.lista.find((x) => x.uid === com); if (c) c.mudo = on; }
+  else { const r = await call('/friends/msg-organiza', { com, campo, on }); C = { ...C, cfg: { ...CFG0, ...r.cfg } }; }
+  emite({ t: 'convs' }); atualiza(true);
+}
+/** tira qualquer seleção azul que o iPhone tenha aberto ao segurar */
+export const semSelecao = () => { try { const s = getSelection(); if (s && s.rangeCount && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName || '')) s.removeAllRanges(); } catch { /* ok */ } };
 export function atualiza(forca = false) {
   if (!podeSocial()) return Promise.resolve(C);
   if (emTroca) return emTroca;
   if (!forca && Date.now() - C.at < 4000) return Promise.resolve(C);
-  emTroca = call('/friends/convs').then((r) => { C = { lista: r.convs || [], total: r.total || 0, at: Date.now(), semLido: !!r.semLido }; pinta(); emite({ t: 'convs' }); return C; }).catch(() => C).finally(() => { emTroca = null; });
+  emTroca = call('/friends/convs').then((r) => { C = { lista: r.convs || [], total: r.total || 0, at: Date.now(), semLido: !!r.semLido, cfg: { ...CFG0, ...(r.cfg || {}) } }; pinta(); emite({ t: 'convs' }); return C; }).catch(() => C).finally(() => { emTroca = null; });
   return emTroca;
 }
 const logo = () => { clearTimeout(relogio); relogio = setTimeout(() => atualiza(true), 350); };
