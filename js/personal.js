@@ -489,6 +489,7 @@ export function personalProfile() {
     ia: iaOk(),
     prefs: { nudges: p.nudges, water: p.water, meals: p.meals, faith: p.faith, freq: p.freq, wake: p.wake, sleep: p.sleep, lunch: p.lunch, tone: p.tone, pronoun: p.pronoun || store.profile?.pronoun,
       nickname: p.nickname, age: p.age, religion: p.religion, motivation: p.motivation, perDay: p.perDay, waterEvery: p.waterEvery, mind: p.mind },
+    likes: store.profile?.likes || [], goals: store.profile?.goal ? [store.profile.goal] : [],
     work: store.profile?.profession ? { profession: store.profile.profession, goal: GOAL_TEXT[store.profile.goal] || '' } : null,
     today: occurrences(t, t).map(ev),
     tomorrow: occurrences(addDays(t, 1), addDays(t, 1)).map(ev),

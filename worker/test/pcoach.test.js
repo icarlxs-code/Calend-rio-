@@ -11,8 +11,8 @@ test('fora do horário não manda nada', () => {
 });
 
 test('bom dia com versículo e quantidade do dia', () => {
-  const r = nextNudge(prof, {}, at('07:35'), () => 0.3);
-  assert.match(r.msg.title, /Bom dia, Henrique/);
+  const r = nextNudge({ ...prof, prefs: { religion: 'catolica' } }, {}, at('07:35'), () => 0.3);
+  assert.equal(r.msg.kind, 'morning'); assert.equal(r.msg.cat, 'manha');
   assert.match(r.msg.body, /—/); // versículo com referência
   assert.match(r.msg.body, /1 coisa anotada/);
   assert.ok(r.state.done.morning);
@@ -30,7 +30,7 @@ test('respeita o intervalo entre mensagens', () => {
   const st = { day: '2026-11-20', done: { morning: true }, next: at('10:00') + 3600e3, nextWater: at('10:30'), lastAny: at('09:30') };
   assert.equal(nextNudge(prof, st, at('10:00')), null);
   // água volta 1h depois da última
-  assert.match(nextNudge(prof, st, at('10:31'), () => 0.4).msg.title, /Água/);
+  assert.equal(nextNudge(prof, st, at('10:31'), () => 0.4).msg.kind, 'water');
 });
 
 test('desligado nas preferências não manda', () => {
@@ -41,7 +41,7 @@ test('mensagens da agenda: pendência, aniversário, lista; cabelo já marcado n
   const br = { h: 10, m: 0, date: '2026-11-20', wd: 5 };
   const msgs = agendaMessages(prof, br, {}).map((m) => m.body).join(' | ');
   assert.match(msgs, /Pagar conta de luz/);
-  assert.match(msgs, /Maria faz aniversário em 2 dias/);
+  assert.match(msgs, /Maria/);
   assert.match(msgs, /Mercado/);
   assert.match(msgs, /Cortar cabelo/); // mais tarde hoje
   assert.doesNotMatch(msgs, /agendar um corte/);
@@ -85,13 +85,13 @@ import { humanize } from '../src/pcoach.js';
 test('IA escreve a mensagem como amigo e mantém o versículo exato', async () => {
   const env = { AI: { run: async (_m, o) => { assert.match(o.messages[0].content, /melhor amigo/); return { response: '{"title":"Bom dia, campeão ☀️","body":"Hoje é teu dia, Henrique. Vai com fé!"}' }; } } };
   const br = { h: 7, m: 40, date: '2026-11-20', wd: 5 };
-  const r = await humanize(env, { kind: 'morning', verse: ['Tudo posso naquele que me fortalece.', 'Filipenses 4:13'] }, { name: 'Henrique', today: [], ia: true }, [], br);
+  const r = await humanize(env, { kind: 'agenda', fact: 'Cortar cabelo', verse: ['Tudo posso naquele que me fortalece.', 'Filipenses 4:13'] }, { name: 'Henrique', today: [], ia: true }, [], br);
   assert.equal(r.title, 'Bom dia, campeão ☀️');
   assert.match(r.body, /Vai com fé!\n“Tudo posso naquele que me fortalece.” — Filipenses 4:13/);
   assert.equal(await humanize({ AI: { run: async () => ({ response: 'sem json' }) } }, { kind: 'water' }, { name: 'H', ia: true }, [], br), null);
   // sem o consentimento da pessoa, nada vai para a IA
   let chamou = false;
-  assert.equal(await humanize({ AI: { run: async () => { chamou = true; return { response: '{}' }; } } }, { kind: 'morning' }, { name: 'H' }, [], br), null);
+  assert.equal(await humanize({ AI: { run: async () => { chamou = true; return { response: '{}' }; } } }, { kind: 'agenda', fact: 'x' }, { name: 'H' }, [], br), null);
   assert.equal(chamou, false);
 });
 test('um dia inteiro sem IA: quase nenhuma mensagem repetida', () => {
@@ -105,28 +105,28 @@ test('um dia inteiro sem IA: quase nenhuma mensagem repetida', () => {
 });
 test('mensagens começam às 7h20', () => {
   assert.equal(nextNudge(prof, {}, at('07:19')), null);
-  assert.match(nextNudge(prof, {}, at('07:20'), () => 0.3).msg.title, /Bom dia/);
+  assert.match(nextNudge(prof, {}, at('07:20'), () => 0.3).msg.kind, /morning/);
 });
 
 test('intervalos aleatórios: nunca menos de 25 min e sem ritmo fixo; títulos por tipo', () => {
   let st = {}; const times = []; const titles = new Set();
   for (let t = at('07:00'); t <= at('22:30'); t += 60e3) {
     const r = nextNudge({ name: 'Henrique', prefs: {}, today: [] }, st, t);
-    if (r) { st = r.state; times.push(t); titles.add(r.msg.title.split(' ')[0]); }
+    if (r) { st = r.state; times.push(t); titles.add(r.msg.kind); }
   }
   const gaps = times.slice(1).map((t, i) => (t - times[i]) / 60e3);
   assert.ok(Math.min(...gaps) >= 20, `menor intervalo ${Math.min(...gaps)}`);
   const avg = gaps.reduce((a, b) => a + b, 0) / gaps.length;
   const sd = Math.sqrt(gaps.reduce((a, b) => a + (b - avg) ** 2, 0) / gaps.length);
   assert.ok(sd >= 7 && new Set(gaps).size >= gaps.length * 0.45, 'intervalos variados');
-  assert.ok(titles.has('💧') && titles.has('☀️'));
+  assert.ok(titles.has('water') && titles.has('morning'));
 });
 
 test('janela do dia vem da ficha: quem acorda 5h recebe o bom dia 5h30; quem dorme 21h não recebe depois de 20h45', async () => {
   const { dayWindow, inWindow, anchorsFor } = await import('../src/pcoach.js');
   const cedo = { name: 'Ana', prefs: { wake: '05:00', sleep: '21:00', lunch: '11:00' }, today: [] };
   assert.equal(nextNudge(cedo, {}, at('05:20')), null);
-  assert.match(nextNudge(cedo, {}, at('05:30'), () => 0.3).msg.title, /Bom dia/);
+  assert.match(nextNudge(cedo, {}, at('05:30'), () => 0.3).msg.kind, /morning/);
   assert.equal(nextNudge(cedo, { day: '', next: 0 }, at('20:50'), () => 0.3), null);
   // almoço da ficha (11h): o lembrete de comer vem entre 10h40 e 11h40
   const lunch = anchorsFor(dayWindow(cedo.prefs)).find((a) => a.key === 'lunch');

@@ -190,7 +190,8 @@ export function splitActions(raw) {
 }
 
 /* Resumo da agenda pessoal usado pelas mensagens de ânimo (só títulos, datas e categorias) */
-function cleanProfile(p, me) {
+const LIKES_OK = new Set('leitura esporte corrida musica cozinhar series games natureza viagem arte danca pets moda estudar amigos familia igreja meditacao jardinagem voluntariado'.split(' ')); // a mesma lista da ficha
+export function cleanProfile(p, me) {
   const arr = (a, n) => (Array.isArray(a) ? a.slice(0, n) : []);
   const ev = (x) => ({ title: clean(x?.title, 80), cat: clean(x?.cat, 20), time: /^\d{2}:\d{2}$/.test(x?.time || '') ? x.time : null, done: !!x?.done });
   const day = (d) => (/^\d{4}-\d{2}-\d{2}$/.test(d || '') ? d : null);
@@ -221,6 +222,8 @@ function cleanProfile(p, me) {
         focus: (Array.isArray(P.mind.focus) ? P.mind.focus : []).filter((t) => /^[a-z_]{2,20}$/.test(t)).slice(0, 10),
       } } : {}),
     },
+    likes: (Array.isArray(p.likes) ? p.likes : []).filter((x) => LIKES_OK.has(x)).slice(0, 20),
+    goals: (Array.isArray(p.goals) ? p.goals : []).filter((x) => typeof x === 'string' && /^[a-z_]{3,20}$/.test(x)).slice(0, 4),
     work: p.work && typeof p.work === 'object' ? { profession: clean(p.work.profession, 80), goal: clean(p.work.goal, 80) } : null,
     today: arr(p.today, 20).map(ev), tomorrow: arr(p.tomorrow, 20).map(ev), overdue: arr(p.overdue, 10).map(ev),
     lastByCat: byCat(p.lastByCat), nextByCat: byCat(p.nextByCat),

@@ -1,6 +1,7 @@
 /* "Amigo" do modo Pessoal: ao longo do dia (7h20 às 22h15) manda para cada pessoa
    mensagens de ânimo, versículos, água, hora de comer e lembretes do que ela anotou.
    Cada pessoa recebe só sobre a própria agenda pessoal. */
+import { proxima, daAgenda, slotsDe, turnoDe, feCrista, introducao, inicia } from './vivo.js';
 import { brNow } from './coach.js';
 import { pickMind, pickFaith, mindBrief, hashStr, RELIGIONS } from './mind.js';
 
@@ -169,15 +170,17 @@ export function agendaMessages(p, br, st) {
   const nowMin = br.h * 60 + br.m;
   // variações por assunto e por dia: o mesmo lembrete nunca chega com a mesma frase dois dias seguidos
   const v = (key, list) => list[hashStr(`${key}|${br.date}`) % list.length];
+  const agora = agoraDe(p, br);
+  for (const x of daAgenda(p, br)) out.push({ ...x, vivo: true });
   for (const it of p.today || []) {
     if (it.done || !it.time) continue;
     const [h, m] = it.time.split(':').map(Number);
     const diff = h * 60 + m - nowMin;
-    if (diff > 90 && diff < 480) out.push({ key: `up-${it.title}`, title: v(`upt-${it.title}`, ['📅 Mais tarde', '⏳ Guarda esse horário', '🔔 Spoiler do seu dia']), body: v(`up-${it.title}`, [`Hoje às ${hm(it.time)} tem ${it.title}. Já tá se organizando, ${n}?`, `${it.title} às ${hm(it.time)}. Quem se adianta não se atrasa 😉`, `Às ${hm(it.time)}: ${it.title}. Eu toco o sino na hora, combinado? 🔔`, `${n}, anota aí na cabeça: ${it.title} às ${hm(it.time)}. O resto deixa comigo.`]) });
+    if (it.cat !== 'pagar' && diff > 90 && diff < 480) out.push({ key: `up-${it.title}`, title: v(`upt-${it.title}`, ['📅 Mais tarde', '⏳ Guarda esse horário', '🔔 Spoiler do seu dia']), body: v(`up-${it.title}`, [`Hoje às ${hm(it.time)} tem ${it.title}. Já tá se organizando, ${n}?`, `${it.title} às ${hm(it.time)}. Quem se adianta não se atrasa 😉`, `Às ${hm(it.time)}: ${it.title}. Eu toco o sino na hora, combinado? 🔔`, `${n}, anota aí na cabeça: ${it.title} às ${hm(it.time)}. O resto deixa comigo.`]) });
   }
   if ((p.today || []).some((it) => !it.done && !it.time)) {
-    const it = p.today.find((x) => !x.done && !x.time);
-    out.push({ key: `td-${it.title}`, title: v(`tdt-${it.title}`, ['📅 Não esquece hoje', '🔔 Lembra?', '✍️ Tá na lista de hoje']), body: v(`td-${it.title}`, [`Você anotou “${it.title}” pra hoje. Já fez? Se fez, marca como feito 😉`, `“${it.title}” tá te esperando hoje. Riscar é a melhor parte ✔️`, `Lembra de “${it.title}”? Eu lembro. É meu nome 😅`, `Hoje é dia de “${it.title}”. Um toque e pronto ✨`]) });
+    const it = p.today.find((x) => !x.done && !x.time && x.cat !== 'pagar');
+    if (it)     out.push({ key: `td-${it.title}`, title: v(`tdt-${it.title}`, ['📅 Não esquece hoje', '🔔 Lembra?', '✍️ Tá na lista de hoje']), body: v(`td-${it.title}`, [`Você anotou “${it.title}” pra hoje. Já fez? Se fez, marca como feito 😉`, `“${it.title}” tá te esperando hoje. Riscar é a melhor parte ✔️`, `Lembra de “${it.title}”? Eu lembro. É meu nome 😅`, `Hoje é dia de “${it.title}”. Um toque e pronto ✨`]) });
   }
   for (const it of (p.overdue || []).slice(0, 2)) out.push({ key: `od-${it.title}`, title: v(`odt-${it.title}`, ['📅 Ficou pra trás', '⏰ Atrasado não é perdido', '🔔 Toc toc']), body: v(`od-${it.title}`, [`Ainda tá pendente: ${it.title}. Bora resolver hoje? Você consegue 💪`, `${it.title} ficou pra trás. Que tal trazer pra frente hoje?`, `${it.title} ainda dá tempo! Resolve e tira isso da cabeça 😮‍💨`, `Quem é vivo sempre aparece… e ${it.title} também 😅 Bora?`]) });
   const lb = p.lastByCat || {}, nb = p.nextByCat || {};
@@ -188,9 +191,6 @@ export function agendaMessages(p, br, st) {
     if (days === null) out.push({ key: 'hair', title: '💈 Cuidar de você', body: `Já pensou em agendar ${what}, ${n}? Cuidar da aparência levanta a autoestima. Você merece 💜`, every: 5 });
     else if (days >= (fem ? 14 : 21)) out.push({ key: 'hair', title: fem ? '💅 Hora de se cuidar?' : '💈 E o cabelo?', body: `Faz ${days} dias desde o último cuidado com o visual. Precisa agendar? Anota aqui no app que eu te lembro 😉`, every: 4 });
   }
-  for (const b of (p.birthdays || []).filter((x) => x.inDays >= 1 && x.inDays <= 5)) {
-    out.push({ key: `bd-${b.name}`, title: '🎁 Aniversário chegando', body: `${b.name} faz aniversário ${b.inDays === 1 ? 'amanhã' : `em ${b.inDays} dias`}. Já pensou no presente ou numa mensagem bonita?`, every: 2 });
-  }
   for (const l of (p.lists || []).filter((x) => x.open >= 3).slice(0, 2)) {
     out.push({ key: `ls-${l.name}`, title: `Lista ${l.name} 📋`, body: `Sua lista “${l.name}” tem ${l.open} itens pendentes. Bora resolver alguns hoje?`, every: 2 });
   }
@@ -199,10 +199,18 @@ export function agendaMessages(p, br, st) {
     out.push({ key: `tm-${t.title}`, title: v(`tmt-${t.title}`, ['📅 Amanhã', '🌙 Spoiler de amanhã', '👀 Amanhã tem']), body: v(`tm-${t.title}`, [`Amanhã tem ${t.title}${t.time ? ' às ' + hm(t.time) : ''}. Já deixa tudo encaminhado pra não correr 😉`, `${t.title}${t.time ? ' às ' + hm(t.time) : ''}, amanhã. Dorme tranquilo(a) que eu te lembro 🔔`, `Amanhã: ${t.title}${t.time ? ' (' + hm(t.time) + ')' : ''}. Separa hoje o que precisar e acorda leve.`]) });
   }
   // não repete o mesmo assunto antes do prazo ("every" em dias; padrão: 1 vez por dia)
-  return out.filter((m) => {
+  const livres = out.filter((m) => {
     const last = st.asked?.[m.key];
     return !last || Date.parse(br.date) - Date.parse(last) >= (m.every || 1) * 864e5;
   });
+  // transforma os pedidos em frases (cada uma sem repetir as últimas da categoria)
+  const prontas = [];
+  for (const m of livres) {
+    if (!m.vivo) { prontas.push(m); continue; }
+    const f = proxima({ cat: m.cat, perfil: p, slots: m.slots, agora, vh: st.vh });
+    if (f) prontas.push({ key: m.key, every: m.every, title: f.titulo, body: inicia(f.texto), cat: m.cat, fid: f.id, vh: f.vh });
+  }
+  return prontas;
 }
 
 /* Intervalos aleatórios de verdade: às vezes várias numa hora, às vezes um silêncio longo.
@@ -242,6 +250,7 @@ export function anchorsFor(w) {
 }
 
 /* Escolhe a próxima mensagem de uma pessoa. Retorna { msg, state } ou null. Função pura (testável). */
+const agoraDe = (p, br) => { const w = dayWindow(p.prefs || {}), L = spanOf(w); return { turno: turnoDe(relOf(br.h * 60 + br.m, w), L), wd: br.wd, chave: `${br.date}T${String(br.h).padStart(2, '0')}` }; };
 export function nextNudge(p, st, now, rand = Math.random) {
   const br = brNow(now);
   const prefs = { nudges: true, water: true, meals: true, faith: true, freq: 'normal', ...(p.prefs || {}) };
@@ -264,6 +273,10 @@ export function nextNudge(p, st, now, rand = Math.random) {
   const seed = Math.floor(rand() * 1e6);
   const n = p.name || '';
   const V = { n, ...genderWords(p.prefs?.pronoun) };
+  const agora = agoraDe(p, br), SL = slotsDe(p, br), cristao = feCrista(fam, prefs.faith);
+  // frase viva da categoria; se nada couber, vale o texto de reserva
+  const viva = (cat, kind, reserva) => { const m = proxima({ cat, perfil: p, slots: SL, agora, vh: st.vh }); if (!m) return reserva; st.vh = m.vh; return { title: m.titulo || KIND_TITLE[kind], body: inicia(m.texto), kind, cat, fid: m.id }; };
+  const vivoVerso = () => { const m = proxima({ cat: 'versiculo', perfil: p, slots: SL, agora, vh: st.vh }); if (!m) return null; st.vh = m.vh; return m; };
   let msg = null;
 
   // 1) momentos fixos do dia
@@ -276,21 +289,20 @@ export function nextNudge(p, st, now, rand = Math.random) {
     st.water++;
     st.lastWater = now;
     st.nextWater = now + Math.round(waterEvery * (0.85 + rand() * 0.3)) * 60e3; // no intervalo que a pessoa escolheu, com variação
-    const wpool = T.water.filter((w) => !(st.recent || []).some((r) => r.includes(fill(w, V))));
-    msg = { title: KIND_TITLE.water, body: fill(pick(wpool.length ? wpool : T.water, seed), V), kind: 'water' };
+    msg = viva('agua', 'water', { title: KIND_TITLE.water, body: fill(pick(T.water, seed), V), kind: 'water' });
   } else if (anchor) {
     st.done = { ...st.done, [anchor.key]: true };
     if (anchor.key === 'morning') {
       const count = (p.today || []).filter((x) => !x.done).length;
-      const base = fill(pick(T.morning, seed), V);
-      const v = prefs.faith ? faithOf(`${br.date}|manha`) : null;
-      msg = { title: `☀️ Bom dia, ${n}`, body: v ? `${base}\n${verseText(v)}` : base, kind: 'morning', verse: v };
-      if (count) msg.body += `\nHoje você tem ${count} ${count > 1 ? 'coisas' : 'coisa'} anotada${count > 1 ? 's' : ''}.`;
-      if (prefs.faith) st.verses++;
+      msg = viva('manha', 'morning', { title: `☀️ Bom dia, ${n}`, body: fill(pick(T.morning, seed), V), kind: 'morning' });
+      const m0 = cristao ? vivoVerso() : null, v = m0 ? [m0.texto, m0.ref] : prefs.faith && prefs.religion && !cristao ? faithOf(`${br.date}|manha`) : null;
+      if (v) { msg.body = `${msg.body}\n${verseText(v)}`; msg.verse = v; msg.vfid = m0?.id; }
+      if (count && !msg.body.includes(SL.qtd_hoje)) msg.body += `\nHoje você tem ${count} ${count > 1 ? 'coisas' : 'coisa'} anotada${count > 1 ? 's' : ''}.`;
+      if (v) st.verses++;
     } else if (anchor.key === 'night') {
-      const base = fill(pick(T.night, seed), V);
-      const v = prefs.faith ? (prefs.religion && fam !== 'crista' && fam !== 'catolica' ? faithOf(`${br.date}|noite`) : pick(NIGHT_VERSES, hashStr(`${pid}|${br.date}|noite`))) : null;
-      msg = { title: KIND_TITLE.night, body: v ? `${base}\n${verseText(v)}` : base, kind: 'night', verse: v };
+      msg = viva('noite', 'night', { title: KIND_TITLE.night, body: fill(pick(T.night, seed), V), kind: 'night' });
+      const m0 = cristao ? vivoVerso() : null, v = m0 ? [m0.texto, m0.ref] : prefs.faith && prefs.religion && !cristao ? faithOf(`${br.date}|noite`) : null;
+      if (v) { msg.body = `${msg.body}\n${verseText(v)}`; msg.verse = v; msg.vfid = m0?.id; }
     } else {
       msg = { title: KIND_TITLE[anchor.key], body: fill(pick(T[anchor.key], seed), V), kind: anchor.key };
     }
@@ -323,7 +335,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
       if (st.rankWeek !== p.rank.week) { st.rankWeek = p.rank.week; st.rankPos = p.rank.pos; }
       else if (p.rank.pos < st.rankPos) st.rankPos = p.rank.pos; // subiu: guarda a melhor posição
     }
-    if (prefs.faith && st.verses < 4) options.push(['verse', 3]);
+    if (prefs.faith && prefs.religion && st.verses < 4) options.push(['verse', 3]); // só quem marcou a religião na ficha
     if (wantsMotivation) { options.push(['motivation', 3]); options.push(['counsel', 3]); }
     if (p.mind && wantsMotivation) options.push(['mind', 5]); // frases escolhidas pelo jeito de ser da pessoa
     const habits = HABITS.filter(([a, b, t]) => br.h >= a && br.h < b && !(st.recent || []).some((r) => r.includes(fill(t, V).slice(0, 30))));
@@ -337,10 +349,11 @@ export function nextNudge(p, st, now, rand = Math.random) {
     if (kind === 'agenda') {
       const m = agenda[seed % agenda.length];
       st.asked = { ...st.asked, [m.key]: br.date };
-      msg = { title: m.title, body: m.body, kind: 'agenda', fact: m.body };
+      if (m.vh) st.vh = m.vh;
+      msg = { title: m.title, body: m.body, kind: 'agenda', fact: m.body, ...(m.cat ? { cat: m.cat, fid: m.fid } : {}) };
     } else if (kind === 'water') {
       st.water++;
-      msg = { title: KIND_TITLE.water, body: fill(pick(T.water, seed), V), kind: 'water' };
+      msg = viva('agua', 'water', { title: KIND_TITLE.water, body: fill(pick(T.water, seed), V), kind: 'water' });
     } else if (kind === 'streak') {
       st.streakDay = br.date;
       const n2 = p.seen.streak;
@@ -364,16 +377,17 @@ export function nextNudge(p, st, now, rand = Math.random) {
       msg = { title: { ansiedade: '🌿 Respira', autoestima: '💜 Pra você', desmotivado: '💪 Um passo', motivado: '🔥 Bora', gratidao: '🙏 Gratidão', descanso: '🌙 Pausa' }[m2.group] || KIND_TITLE.motivation, body: fill(m2.text, V), kind: 'mind', group: m2.group };
     } else if (kind === 'verse') {
       st.verses++;
-      const v = faithOf(`${br.date}|${br.h}|${st.verses}`);
-      msg = { title: KIND_TITLE.verse, body: verseText(v), kind: 'verse', verse: v };
+      const m0 = cristao ? vivoVerso() : null, v = m0 ? [m0.texto, m0.ref] : faithOf(`${br.date}|${br.h}|${st.verses}`), it = m0 ? introducao(p, SL, agora) : '';
+      msg = { title: (m0 && m0.titulo) || KIND_TITLE.verse, body: `${it ? it + '\n' : ''}${verseText(v)}`, kind: 'verse', verse: v, ...(m0 ? { cat: 'versiculo', fid: m0.id, ref: m0.ref } : {}) };
     } else {
       const pool = T[kind].filter((s) => !st.recent.includes(fill(s, V)));
       const list = pool.length ? pool : T[kind];
-      msg = { title: KIND_TITLE[kind] || KIND_TITLE.motivation, body: fill(list[hashStr(`${pid}|${br.date}|${br.h}|${kind}|${seed}`) % list.length], V), kind };
+      const reserva = { title: KIND_TITLE[kind] || KIND_TITLE.motivation, body: fill(list[hashStr(`${pid}|${br.date}|${br.h}|${kind}|${seed}`) % list.length], V), kind };
+      msg = kind === 'motivation' ? viva('motivacao', kind, reserva) : kind === 'social' ? viva('socializar', kind, reserva) : reserva;
     }
   }
   // variedade mesmo sem IA: às vezes um jeito diferente de começar e de terminar
-  if (!['morning', 'night', 'verse'].includes(msg.kind)) {
+  if (!msg.fid && !['morning', 'night', 'verse'].includes(msg.kind)) {
     const r1 = rand(), r2 = rand();
     if (r1 < 0.45 && !/^(ei|opa|ô|psiu|fala|olha)\b/i.test(msg.body) && !(n && msg.body.includes(n))) msg.body = fill(`${pick(OPENERS, Math.floor(r1 * 1e6))} ${msg.body.charAt(0).toLowerCase()}${msg.body.slice(1)}`, V);
     if (r2 < 0.4) msg.body = fill(`${msg.body} ${pick(CLOSERS, Math.floor(r2 * 1e6))}`, V);
@@ -387,7 +401,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
 
 /* Reescreve a mensagem com IA, como um amigo/conselheiro de verdade.
    Versículos ficam exatamente como estão (a IA só escreve em volta). */
-const AI_MODELS = ['@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/meta/llama-3.1-8b-instruct-fast'];
+const AI_MODELS = ['@cf/meta/llama-3.1-8b-instruct-fast'];
 const KIND_TASK = {
   morning: 'Mensagem de bom dia carinhosa e animadora, que faça a pessoa se sentir importante. Se ela tiver coisas hoje, cite 1 ou 2 com leveza.',
   night: 'Mensagem de boa noite acolhedora: reconheça o esforço do dia, diga que ela foi bem e que pode descansar.',
@@ -407,11 +421,11 @@ const KIND_TASK = {
   selfcare: 'Sugira um cuidado rápido com o corpo/mente (respirar, alongar, postura, tomar um ar, descansar os olhos).',
 };
 export async function humanize(env, msg, p, recent, br) {
-  if (!env.AI || p.ia !== true || !msg.kind || !KIND_TASK[msg.kind]) return null; // só com o consentimento da pessoa
+  if (!env.AI || p.ia !== true || msg.kind !== 'agenda' || msg.fid) return null; // só com o consentimento da pessoa, e só recados da agenda (o resto vem do banco, sem gastar IA)
+  const g = p.prefs?.pronoun === 'f' ? { dele: 'dela', o: 'a', ele: 'ela' } : p.prefs?.pronoun === 'm' ? { dele: 'dele', o: 'o', ele: 'ele' } : { dele: 'dele(a)', o: 'o(a)', ele: 'ele(a)' };
   const today = (p.today || []).filter((x) => !x.done).map((x) => `${x.time ? x.time + ' ' : ''}${x.title}`).slice(0, 5).join('; ');
   const tone = { carinhoso: 'Tom: carinhoso e acolhedor.', firme: 'Tom: amigo coach, firme e motivador, que puxa para cima.', direto: 'Tom: direto e objetivo, sem rodeios, mas gentil.' }[p.prefs?.tone] || '';
   const work = p.work && p.work.profession ? `${p.name} trabalha como ${p.work.profession}${p.work.goal ? ` e o objetivo ${g.dele} é: ${p.work.goal}` : ''}. Quando fizer sentido, conecte a mensagem com a rotina dessa profissão (sem inventar fatos).` : '';
-  const g = p.prefs?.pronoun === 'f' ? { dele: 'dela', o: 'a', ele: 'ela' } : p.prefs?.pronoun === 'm' ? { dele: 'dele', o: 'o', ele: 'ele' } : { dele: 'dele(a)', o: 'o(a)', ele: 'ele(a)' };
   const sys = `Você escreve notificações de celular em português do Brasil para ${p.name}${p.prefs?.pronoun === 'f' ? ' (mulher; use o feminino)' : p.prefs?.pronoun === 'm' ? ' (homem; use o masculino)' : ' (use linguagem neutra, sem marcar gênero)'}, como o melhor amigo ${g.dele} — alguém que se importa de verdade, conselheiro, que levanta a autoestima e a moral.${p.prefs?.faith === false || (p.prefs?.religion && (RELIGIONS[p.prefs.religion] || {}).fam === 'secular') ? ' Não fale de religião nem de Deus.' : p.prefs?.religion ? ` A religião da pessoa é ${RELIGIONS[p.prefs.religion]?.label || 'cristã'}: se falar de fé, respeite SÓ essa tradição.` : ' Pode citar fé em Deus com naturalidade.'}${p.mind ? ` Sobre a pessoa: ${mindBrief(p.mind)}.` : ''}${p.age ? ` Ela tem por volta de ${p.age} anos: use referências e jeito de falar dessa idade.` : ''}
 ${tone} ${work}
 Estilo: humano, caloroso, informal, como mensagem de WhatsApp de um amigo espirituoso. Frases curtas. No máximo 1 emoji. Nunca soe robótico, nunca use "lembrete:" seco, não use aspas. PROIBIDO frases batidas de autoajuda e de app: "saco vazio não para em pé", "beba água", "hidrate-se", "seu corpo agradece", "um passo de cada vez", "você é capaz", "você consegue", "foco, força e fé", "bora lá", "não desista", "acredite em você". Seja específico, com uma imagem concreta, uma observação esperta ou um desafio pequeno — como quem conhece a pessoa.
@@ -464,24 +478,28 @@ export async function amigoOne(env, sendToMember, m, now = Date.now(), rankInfo 
   // posição no ranking (para avisar quando cair) — só para quem participa
   let rank = null;
   if (m.ws && m.ws !== 'main' && rankInfo) { const b = await rankInfo(m.ws); if (b) rank = b; }
-  let p = { ...prof, uid: m.id, name: prof.prefs?.nickname || prof.name || m.name, seenAt: sn.last || 0, seen: sn, rank, mind: prof.prefs?.mind || null, age: prof.prefs?.age || null };
+  let p = { ...prof, uid: m.id, name: prof.prefs?.nickname || prof.name || m.name, seenAt: sn.last || 0, seen: sn, rank, likes: prof.likes || [], goals: prof.goals || [], mind: prof.prefs?.mind || null, age: prof.prefs?.age || null };
   if (prof.date && prof.date !== br.date) {
     const yesterday = new Date(Date.parse(br.date) - 864e5).toISOString().slice(0, 10);
     p = { ...p, today: prof.date === yesterday ? prof.tomorrow || [] : [], tomorrow: [] };
   }
+  st.vh = (await env.CAL.get(`vh:${m.id}`, 'json')) || {};
   const r = nextNudge(p, st, now);
+  delete st.vh;
   if (!r) { if (changed) await env.CAL.put(key, JSON.stringify(st)); return { sent: 0, nextAt: amigoNextAt(st, now) }; }
-  // 7 em cada 10 mensagens escritas pela IA (as outras do banco variado): quase nunca iguais
+  // os recados da agenda que não vêm do banco de frases podem ser reescritos pela IA (com consentimento)
   let out = r.msg, ai = false;
-  if (Math.random() < 0.7 && r.msg.kind !== 'water') {
+  if (r.msg.kind === 'agenda' && !r.msg.fid && Math.random() < 0.7) {
     const h = await humanize(env, r.msg, p, st.recent, br).catch(() => null);
     if (h) { out = { ...r.msg, body: h.body }; ai = true; r.state.recent = [...(r.state.recent || []).slice(0, -1), h.body].slice(-12); }
   }
   delete r.state.usage;
+  const vh = r.state.vh; delete r.state.vh;
   // grava ANTES de mandar: se algo cair no meio, a mesma mensagem nunca sai duas vezes
   await env.CAL.put(key, JSON.stringify(r.state));
+  if (r.msg.fid || r.msg.vfid) await env.CAL.put(`vh:${m.id}`, JSON.stringify(vh || {}));
   if (usage) usage('amigo', ai);
-  const { kind, fact, verse, ...push } = out;
+  const { kind, fact, verse, cat, fid, vfid, ref, ...push } = out; // cat e fid vão no aviso na Etapa 4
   const sent = await sendToMember(env, m.id, push);
   return { sent, nextAt: amigoNextAt(r.state, now) };
 }

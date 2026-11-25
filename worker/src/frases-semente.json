@@ -1,0 +1,5499 @@
+{
+ "versao": 1,
+ "gerado_em": "2026-11-25",
+ "idioma": "pt-BR",
+ "descricao": "Banco-semente do motor de notificações vivas do Lembra. Cada frase tem tom, hora (manha|tarde|noite|qualquer), dia opcional (seg..dom), tags (interesses/perfil da ficha) e slots preenchidos pelo perfil/agenda. Frases com slot ausente são descartadas na hora da escolha (nunca enviar {chave} crua).",
+ "slots": {
+  "nome": "apelido ou primeiro nome (ficha: nickname/name)",
+  "profissao": "profissão da ficha (work.profession) no gênero certo",
+  "pessoa": "nome do aniversariante (agenda pessoal, categoria aniversario)",
+  "quando": "hoje | amanhã | em N dias",
+  "remedio": "título do lembrete de saúde (ex.: Losartana)",
+  "hora": "HH:MM do lembrete",
+  "materia": "título do lembrete de estudo",
+  "conta": "título do lembrete de pagar (ex.: a conta de luz)",
+  "meta": "objetivo da ficha (work.goal / goal)",
+  "diasemana": "segunda…domingo",
+  "qtd_hoje": "\"3 coisas\"",
+  "feitos": "\"4 tarefas\"",
+  "primeiro_amanha": "1º compromisso de amanhã",
+  "proximo": "próximo compromisso",
+  "contato": "pessoa da agenda/amigos sem contato há tempo"
+ },
+ "tons": [
+  "leve",
+  "trocadilho",
+  "carinhoso",
+  "firme",
+  "direto",
+  "reverente"
+ ],
+ "regras_fe": "Versículos só para quem marcou fé cristã/católica na ficha; texto nunca é alterado por IA nem vira piada; trocadilho nunca é aplicado à categoria versiculo.",
+ "titulos": {
+  "agua": [
+   "💧 Hora do gole",
+   "💧 Água",
+   "🥤 Pausa líquida",
+   "💧 Psiu, o copo",
+   "🫗 Hidrata aí",
+   "💧 H2Oi",
+   "🧊 Refresca",
+   "💧 Um golinho"
+  ],
+  "manha": [
+   "☀️ Bom dia, {nome}",
+   "☀️ Bom dia!",
+   "🌤️ Dia novo",
+   "☕ Café e agenda",
+   "🌅 Acordou?"
+  ],
+  "noite": [
+   "🌙 Boa noite",
+   "🌙 Hora de desacelerar",
+   "😴 Modo travesseiro",
+   "✨ Fim de dia",
+   "🌙 Descansa, {nome}"
+  ],
+  "motivacao": [
+   "💜 Motivação",
+   "🔥 Bora",
+   "💪 Um passo",
+   "✨ Pra você",
+   "🌱 Crescendo"
+  ],
+  "versiculo": [
+   "📖 Versículo do dia",
+   "📖 Uma palavra",
+   "🙏 Pra guardar no coração",
+   "📖 Palavra pra hoje"
+  ],
+  "aniversario": [
+   "🎂 Aniversário",
+   "🎁 Aniversário chegando",
+   "🎉 Hoje tem festa",
+   "🎈 Não esquece"
+  ],
+  "socializar": [
+   "💬 Pessoas",
+   "🤗 Gente que importa",
+   "📞 Bora conversar",
+   "💛 Conexão"
+  ],
+  "remedio": [
+   "💊 Remédio",
+   "💊 Hora do cuidado",
+   "🩺 Saúde em dia",
+   "💊 {remedio}"
+  ],
+  "estudo": [
+   "📚 Estudo",
+   "✏️ Hora de estudar",
+   "🧠 Cérebro on",
+   "📖 Bora aprender"
+  ],
+  "trabalho": [
+   "💼 Trabalho",
+   "📅 Agenda de hoje",
+   "☕ Pausa estratégica",
+   "💼 Expediente"
+  ],
+  "contas": [
+   "💸 Contas",
+   "🧾 Vence {quando}",
+   "💰 Bolso em dia",
+   "📲 Boleto à vista"
+  ]
+ },
+ "introducoes_versiculo": {
+  "manha": [
+   "Pra começar o dia:",
+   "Pra levar no bolso hoje:",
+   "Bom dia, {nome}. Uma palavra pra hoje:",
+   "Antes da correria:"
+  ],
+  "tarde": [
+   "Uma pausa pra alma:",
+   "Pra respirar no meio da tarde:",
+   "Lembrei de você e deste versículo:"
+  ],
+  "noite": [
+   "Antes de dormir:",
+   "Pra deitar em paz:",
+   "Pra fechar o dia:"
+  ],
+  "ansiedade": [
+   "Se o coração apertou:",
+   "Respira e lê devagar:"
+  ],
+  "aniversario": [
+   "Uma bênção pro seu dia:",
+   "Pra mandar junto com o parabéns:"
+  ]
+ },
+ "gramaticas": {
+  "agua": {
+   "abertura": [
+    "Psiu, {nome}!",
+    "Pausa rápida:",
+    "Aviso amigo:",
+    "Plim!",
+    "Ei, {nome},",
+    "Notícia boa:",
+    "Missão do momento:",
+    "Sem enrolação:",
+    "Pergunta séria:",
+    "Rapidinho:"
+   ],
+   "nucleo": [
+    "o copo aí do lado tá cheio de saudade de você",
+    "três goles agora e a tarde agradece",
+    "seu cérebro pediu combustível transparente",
+    "a sede chegou disfarçada de cansaço",
+    "a garrafinha tá torcendo por você",
+    "um copo agora vale mais que um café depois",
+    "sua planta já bebeu hoje, e você?",
+    "a hidratação nível {nivel_agua} foi desbloqueada, só falta o gole",
+    "o filtro está a {passos} passos de você",
+    "água gelada combina com {momento}"
+   ],
+   "fecho": [
+    "💧",
+    "Saúde! 🥂",
+    "Valendo!",
+    "Depois me conta.",
+    "Eu espero 😉",
+    "Bora?",
+    "Gole de mestre.",
+    "Sem desculpa de depois.",
+    ""
+   ],
+   "slots_extra": {
+    "nivel_agua": [
+     "bronze",
+     "prata",
+     "ouro",
+     "lendário"
+    ],
+    "passos": [
+     "10",
+     "15",
+     "20",
+     "poucos"
+    ],
+    "momento": [
+     "esse calor",
+     "esse foco",
+     "essa pausa",
+     "qualquer hora"
+    ]
+   },
+   "combinacoes_aprox": 900
+  },
+  "manha": {
+   "abertura": [
+    "Bom dia, {nome}!",
+    "Ei, bom dia!",
+    "Bom dia, {profissao}!",
+    "Acordou, {nome}?",
+    "Bom dia de {diasemana}!"
+   ],
+   "nucleo": [
+    "o dia chegou com 24 horas novinhas",
+    "hoje você tem {qtd_hoje} na agenda",
+    "o primeiro passo é só levantar e o café faz o resto",
+    "a meta \"{meta}\" ganha mais um dia de chance",
+    "o sol já bateu ponto e só falta você"
+   ],
+   "fecho": [
+    "☀️",
+    "Bora!",
+    "Eu cuido do resto.",
+    "Um passo de cada vez.",
+    "Que seja leve."
+   ],
+   "combinacoes_aprox": 125
+  }
+ },
+ "categorias": {
+  "agua": [
+   {
+    "texto": "H2Oi, {nome}! Passando só pra lembrar do copo aí do lado 💧",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-001",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Copo meio cheio ou meio vazio? Termina ele e acaba a discussão.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-002",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Água mole em pedra dura tanto bate até que… você bebe. Vai, um gole.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-003",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Sua planta bebe água todo dia. Não vai perder pra uma samambaia, né, {nome}? 🌿",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "jardinagem"
+    ],
+    "id": "agua-004",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Matar a sede não é crime. Pode cometer agora.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-005",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Isso não é treino de incêndio, é treino de gole. Três, valendo!",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-006",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Partiu filtro? Fica logo ali, mais perto que a próxima desculpa.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-007",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Seu corpo é uns 60% água. Bora manter essa média em dia?",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-008",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Gole agora, foco depois. Aqui a ordem dos fatores altera o produto.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-009",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Tá seco igual piada sem graça? Um copo resolve (a sede, a piada não).",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-010",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Garrafinha cheia de manhã e vazia à noite: essa é a meta do dia.",
+    "tom": "leve",
+    "hora": "manha",
+    "tags": [],
+    "id": "agua-011",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Dá um gole de mestre, {nome}. Pequeno, mas com estilo 🥤",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-012",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Hidratação não é moda, é manutenção. Revisão rápida: um copo.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-013",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Até quem é {profissao} de ponta para pra beber água. Sua vez, {nome}.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "trabalho"
+    ],
+    "id": "agua-014",
+    "slots": [
+     "nome",
+     "profissao"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "O copo tá te olhando com aquela cara de 'lembra de mim?' 👀",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-015",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Urgente: copo d’água cheio encontrado abandonado na sua mesa. Resgate imediato!",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-016",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Se a sede fosse notificação, já tava com bolinha vermelha. Abre essa: um gole.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-017",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Água não engorda, não dá ressaca e não manda boleto. Aproveita.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-018",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Pausa líquida de 20 segundos. O resto do mundo espera.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-019",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Rega a {nome}! Gente também precisa de água pra florescer 🌱",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-020",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Um brinde à sua saúde. Com água mesmo, que é o que está na mão 🥂",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-021",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Cafezinho conta como alegria. Água conta como água. Vai um copo também ☕",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "cafe"
+    ],
+    "id": "agua-022",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Depois do treino, a água é o pódio. Vai lá pegar o seu 🏃",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "esporte",
+     "corrida"
+    ],
+    "id": "agua-023",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Pausou o episódio? Pausa pro copo também 📺",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "series"
+    ],
+    "id": "agua-024",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Item de hidratação disponível no mapa. Aperta o botão 'gole' 🎮",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "games"
+    ],
+    "id": "agua-025",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Até o seu pet tem pote de água cheio. Você merece o mesmo cuidado 🐾",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "pets"
+    ],
+    "id": "agua-026",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Nota musical do momento: Dó… de sede. Resolve com um copo 🎵",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "musica"
+    ],
+    "id": "agua-027",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Quem cozinha sabe: tudo fica melhor no ponto certo de água. Você também 🍳",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "cozinhar"
+    ],
+    "id": "agua-028",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Página virada, copo virado. Combinado? 📖",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "leitura"
+    ],
+    "id": "agua-029",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Lá fora o calor pede, aqui dentro o corpo agradece: um copo gelado.",
+    "tom": "leve",
+    "hora": "tarde",
+    "tags": [],
+    "id": "agua-030",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Missão relâmpago: um copo inteiro antes do próximo compromisso.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-031",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Se você leu até aqui, já deu tempo de beber dois goles.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-032",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Fiz as contas: um copo agora vale menos cansaço às 16h. Matemática do bem.",
+    "tom": "leve",
+    "hora": "manha",
+    "tags": [],
+    "id": "agua-033",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "A tarde tá arrastada? Às vezes é só sede disfarçada de sono.",
+    "tom": "leve",
+    "hora": "tarde",
+    "tags": [],
+    "id": "agua-034",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Com limão, com gelo ou na caneca do time: só não deixa pra amanhã.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "futebol"
+    ],
+    "id": "agua-035",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Seu rim mandou um recadinho: 'saudade de você por aqui'. Responde com um copo 🫗",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-036",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Não deixa o dia passar em branco nem o copo ficar seco.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-037",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Vai de copo, de garrafa ou de caneca. O importante é ir.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-038",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Dica de produtividade que ninguém vende em curso: água. Grátis e na torneira.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-039",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Quanto você bebeu hoje, {nome}? Se precisou pensar, já sabe o que fazer.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-040",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Último lembrete aquático da tarde. Depois disso eu fico na minha (até a próxima) 🌊",
+    "tom": "trocadilho",
+    "hora": "tarde",
+    "tags": [],
+    "id": "agua-041",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Boca seca derruba o foco. Gole agora, ideia brilhante depois 💡",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "estudar",
+     "trabalho"
+    ],
+    "id": "agua-042",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Enche o copo e esvazia a cabeça por um minutinho. Troca justa.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-043",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Ainda dá tempo de bater a meta de água de hoje: um copo agora e outro no jantar.",
+    "tom": "direto",
+    "hora": "noite",
+    "tags": [],
+    "id": "agua-044",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Pequeno gole pra você, grande passo pro seu humor.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "agua-045",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Tá com a cabeça fervendo? Esfria por dentro: um copo d’água 🧊",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade"
+    ],
+    "id": "agua-046",
+    "slots": [],
+    "dia": null
+   }
+  ],
+  "manha": [
+   {
+    "texto": "Bom dia, {nome}! O sol já bateu ponto, só falta você ☀️",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-001",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Acordar já foi a primeira tarefa concluída. Pode marcar o ✔",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-002",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Café passado, dia presente, futuro bem anotado ☕",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "cafe"
+    ],
+    "id": "manha-003",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia! Hoje é página em branco, e a caneta é sua.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-004",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O despertador venceu, mas o dia quem ganha é você.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-005",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia, {nome}. Antes do celular te engolir: qual é a UMA coisa que salva o dia?",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-006",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Dia novo, placar zerado. Ontem não joga mais.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "futebol"
+    ],
+    "id": "manha-007",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Abre a janela e deixa o dia entrar. Ele trouxe 24 horas novinhas de presente 🎁",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-008",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia! Se o café ainda não fez efeito, deixa que eu faço: bora!",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "cafe"
+    ],
+    "id": "manha-009",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Levanta, {nome}! O dia tá esperando você dar o play ▶️",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-010",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia pra quem acordou, e bom dia em dobro pra quem acordou cedo.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-011",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Hoje não precisa ser perfeito. Precisa só começar.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "perfeccionista"
+    ],
+    "id": "manha-012",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "A sua versão das 18h vai agradecer o que você fizer nas próximas 2 horas.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "procrastinador"
+    ],
+    "id": "manha-013",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia! Começa pela tarefa mais chata. Depois é só ladeira abaixo.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "procrastinador"
+    ],
+    "id": "manha-014",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Alongou? Bebeu água? Então pode abrir a agenda. Nessa ordem 😉",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-015",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Hoje tem {nome} em campo. A preguiça e a procrastinação já tão tremendo ⚽",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "futebol",
+     "competitivo"
+    ],
+    "id": "manha-016",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia! Que hoje a sua lista seja curta e a sua energia, longa.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-017",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Manhã boa é a que começa sem correria. Respira, depois corre (se precisar).",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade"
+    ],
+    "id": "manha-018",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia! Mais um dia pra mostrar por que você é {profissao} de primeira.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "trabalho"
+    ],
+    "id": "manha-019",
+    "slots": [
+     "profissao"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "O dia acordou de bom humor. Bora acompanhar?",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-020",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Spoiler do dia: você vai dar conta. Agora é só assistir.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "series"
+    ],
+    "id": "manha-021",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia! Cama arrumada é a primeira vitória. A segunda é com você.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "organizado"
+    ],
+    "id": "manha-022",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Liga o modo dia: brilho no máximo, preocupação no mínimo ☀️",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-023",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Manhã de {diasemana}? Tá valendo do mesmo jeito. Bom dia, {nome}!",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-024",
+    "slots": [
+     "diasemana",
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Segunda-feira é só uma sexta com outra roupa. Bom dia!",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "dia": "seg",
+    "id": "manha-025",
+    "slots": []
+   },
+   {
+    "texto": "Sexta chegou! Bom dia com cheirinho de fim de semana 🎉",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "dia": "sex",
+    "id": "manha-026",
+    "slots": []
+   },
+   {
+    "texto": "Sábado de manhã: hoje a agenda é sua, não do trabalho.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "dia": "sab",
+    "id": "manha-027",
+    "slots": []
+   },
+   {
+    "texto": "Domingo: o dia oficial de não ter pressa. Bom dia ☀️",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "dia": "dom",
+    "id": "manha-028",
+    "slots": []
+   },
+   {
+    "texto": "Bom dia! Já sabe o que vai riscar primeiro da lista?",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-029",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O galo cantou, o café passou, o Lembra chegou. Bom dia! 🐓",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-030",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia, {nome}. Uma coisa de cada vez, começando pelo café.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade",
+     "cafe"
+    ],
+    "id": "manha-031",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Acordou com o pé esquerdo? Tudo bem, o direito chega já já.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-032",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia! Aproveita: o dia de hoje só passa uma vez.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-033",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Hoje é dia de fazer o simples bem feito. O resto vem junto.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-034",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia! Se o mundo pedir pressa, responde com calma e lista na mão.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-035",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Começo de dia é massa de bolo: capricha agora que lá na frente cresce 🍰",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "cozinhar"
+    ],
+    "id": "manha-036",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia! O treino de hoje começou quando você levantou da cama. Já cumpriu ✔",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "esporte"
+    ],
+    "id": "manha-037",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia, {nome}! Escolhe a trilha sonora do dia e solta o play 🎵",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "musica"
+    ],
+    "id": "manha-038",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Nova fase desbloqueada: hoje. Bom dia, {nome} 🎮",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "games"
+    ],
+    "id": "manha-039",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia! Seu pet já acordou feliz. Copia ele 🐶",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "pets"
+    ],
+    "id": "manha-040",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia! Planta regada, gente hidratada, dia encaminhado 🌱",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "jardinagem"
+    ],
+    "id": "manha-041",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia, {nome}. Ninguém está atrasado na própria vida: cada um tem seu relógio.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "autoestima"
+    ],
+    "id": "manha-042",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Hoje você tem {qtd_hoje} na agenda. Um de cada vez e tá resolvido 📅",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "manha-043",
+    "slots": [
+     "qtd_hoje"
+    ],
+    "dia": null
+   }
+  ],
+  "noite": [
+   {
+    "texto": "Desliga a tela, liga o modo travesseiro 🌙",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-001",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Fecha as abas do dia, {nome}. O que ficou, amanhã eu te lembro.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-002",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Hora de dar 'salvar' no dia e desligar o computador da cabeça.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-003",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Pode deixar a agenda de amanhã comigo. A sua parte agora é dormir 😴",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-004",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Boa noite! O dia acabou, mas as conquistas dele ficam.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-005",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Celular longe da cama hoje? Eu cuido de tudo enquanto você sonha.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-006",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Antes de apagar a luz: uma coisa boa que aconteceu hoje. Pensou? Pronto, boa noite.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "gratidao"
+    ],
+    "id": "noite-007",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Sono bom não se compra, se agenda. E a hora é agora.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-008",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Boa noite, {nome}. Amanhã a gente continua de onde parou.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-009",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "O travesseiro mandou dizer que está com saudade.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-010",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Modo avião na mente: nenhuma preocupação pousa até amanhã ✈️",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade",
+     "viagem"
+    ],
+    "id": "noite-011",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Hoje foi o que deu pra ser. E está tudo bem. Boa noite 💜",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "autoestima"
+    ],
+    "id": "noite-012",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Desacelera, {nome}. Até a lua trabalha devagar 🌙",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-013",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Último aviso do dia: você mereceu descansar. Pode ir.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-014",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O dia te cobrou, você entregou. Agora quem cobra é a cama 😴",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-015",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Boa noite! Que amanhã você acorde antes do despertador, e de bom humor.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-016",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Banho, pijama, travesseiro. Esse é o checklist da noite ✔",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "organizado"
+    ],
+    "id": "noite-017",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Respira fundo três vezes e solta o dia junto com o ar.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade"
+    ],
+    "id": "noite-018",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Boa noite. O seu eu de amanhã já agradece por você dormir agora.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-019",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Contar carneirinhos? Prefiro contar as tarefas que você riscou hoje 🐑",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-020",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "A noite fica curta pra quem fica rolando o feed. Bora dormir?",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-021",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Amanhã tem coisa boa. Mas pra isso, hoje tem que ter sono bom.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-022",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Desligando o modo {profissao} e ligando o modo gente. Boa noite!",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "trabalho"
+    ],
+    "id": "noite-023",
+    "slots": [
+     "profissao"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Expediente da vida encerrado por hoje. Reabre quando o despertador tocar.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-024",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Deixa a preocupação no criado-mudo. Amanhã ela ainda vai estar lá, se precisar.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade"
+    ],
+    "id": "noite-025",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Sonhar também conta como tarefa. Vai lá cumprir essa 💤",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-026",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O episódio pode esperar. O sono não 📺",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "series"
+    ],
+    "id": "noite-027",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Save point alcançado. Hora de desligar o console e a cabeça 🎮",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "games"
+    ],
+    "id": "noite-028",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Uma página e luz apagada. Combinado? 📖",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "leitura"
+    ],
+    "id": "noite-029",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Seu pet já tá dormindo. Ele sabe das coisas 🐾",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "pets"
+    ],
+    "id": "noite-030",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O treino de amanhã agradece o sono de hoje 💪",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "esporte"
+    ],
+    "id": "noite-031",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Playlist da noite: silêncio e travesseiro 🎵",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "musica"
+    ],
+    "id": "noite-032",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Boa noite, {nome}. Você foi bem hoje, até nos detalhes que ninguém viu.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "autoestima"
+    ],
+    "id": "noite-033",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "A cozinha fechou, o dia fechou. Só falta você fechar os olhos.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "cozinhar"
+    ],
+    "id": "noite-034",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Que a noite seja leve e o despertador, gentil.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-035",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Tudo o que é importante amanhã já está anotado. O resto é sonho.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "organizado"
+    ],
+    "id": "noite-036",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Domingo à noite pede calma: a semana começa amanhã, não agora.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "dia": "dom",
+    "id": "noite-037",
+    "slots": []
+   },
+   {
+    "texto": "Sexta à noite: o compromisso é curtir (com água do lado) 🎉",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "dia": "sex",
+    "id": "noite-038",
+    "slots": []
+   },
+   {
+    "texto": "Hoje você riscou {feitos} da lista. Mereceu o descanso.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-039",
+    "slots": [
+     "feitos"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Lua no céu, celular na mesa, você na cama. Essa é a ordem certa 🌙",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-040",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Cansaço de quem fez é diferente de cansaço de quem só pensou. O seu é do bom.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-041",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Se a cabeça não desligar, escreve no Lembra. Eu guardo, você dorme.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade"
+    ],
+    "id": "noite-042",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Amanhã cedo tem {primeiro_amanha}. Deixa tudo separado e dorme sossegado 🌙",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "noite-043",
+    "slots": [
+     "primeiro_amanha"
+    ],
+    "dia": null
+   }
+  ],
+  "motivacao": [
+   {
+    "texto": "Você riscou coisa hoje que ninguém viu, {nome}. Eu vi 👀",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-001",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Quem anota sai na frente de quem só promete fazer.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-002",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Dia de 60% também te leva pra frente. Não precisa ser 100 todo dia.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "perfeccionista"
+    ],
+    "id": "motivacao-003",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O que parecia enorme mês passado hoje você faz sem pensar. Isso tem nome: crescer.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-004",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Devagar também é velocidade. Só não para.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-005",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "A pessoa que você quer ser daqui a 6 meses está sendo construída nos dias comuns.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-006",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Lembra daquilo que você achou que não ia dar conta? Deu. Vai dar de novo.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-007",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Feito é melhor que perfeito. E perfeito vive adiando o feito.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "perfeccionista"
+    ],
+    "id": "motivacao-008",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Disciplina é lembrar do que você quer quando a preguiça bate. Por isso eu tô aqui 😉",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "disciplina"
+    ],
+    "id": "motivacao-009",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Seu ritmo é seu. Ninguém mais precisa entender.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-010",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Pequenos passos também deixam pegadas 👣",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-011",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Você não precisa de motivação pra começar. Começa, que ela vem atrás correndo.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "desmotivado"
+    ],
+    "id": "motivacao-012",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Hoje é um ótimo dia pra cumprir o que você prometeu ontem.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "procrastinador"
+    ],
+    "id": "motivacao-013",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Desistir qualquer um faz. Continuar é coisa de {nome}.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-014",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Até o maior quebra-cabeça se monta peça por peça 🧩",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-015",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Cansou? Descansa. Só não desiste.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-016",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Quem planta constância colhe resultado. Rega hoje 🌱",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "jardinagem"
+    ],
+    "id": "motivacao-017",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O impossível só é impossível até alguém riscar da lista.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-018",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Ninguém nasce {profissao} pronto. A gente se faz um dia de cada vez, igual hoje.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "trabalho"
+    ],
+    "id": "motivacao-019",
+    "slots": [
+     "profissao"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Você já passou por 100% dos seus dias difíceis. O placar é todo seu.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-020",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Comparar o seu bastidor com o palco dos outros não vale. Olha o seu caminho.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "autoestima"
+    ],
+    "id": "motivacao-021",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Foco não é fazer tudo: é escolher o que importa e fazer bem.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [
+     "foco"
+    ],
+    "id": "motivacao-022",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Respira. Você está mais perto do que imagina.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade"
+    ],
+    "id": "motivacao-023",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bora, {nome}! Hoje o 'depois eu faço' tirou folga.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "procrastinador"
+    ],
+    "id": "motivacao-024",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Se não saiu hoje do jeito que você queria, amanhã tem revanche.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "competitivo"
+    ],
+    "id": "motivacao-025",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "A preguiça bateu na porta? Fala que hoje não tem ninguém em casa.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-026",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Você é a soma das pequenas escolhas. Capricha na próxima.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-027",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Treino ruim ainda é treino. Dia fraco ainda é dia vivido 💪",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "esporte"
+    ],
+    "id": "motivacao-028",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Nenhum jogo se zera no primeiro nível. Segue jogando 🎮",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "games"
+    ],
+    "id": "motivacao-029",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Todo livro bom tem um capítulo difícil. Vira a página 📖",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "leitura"
+    ],
+    "id": "motivacao-030",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Até a melhor música tem pausa. Pausa, não fim 🎵",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "musica"
+    ],
+    "id": "motivacao-031",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Receita boa leva tempo no forno. Paciência com você 🍰",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "cozinhar"
+    ],
+    "id": "motivacao-032",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Quem caminha um pouco todo dia chega longe sem perceber 🚶",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "corrida"
+    ],
+    "id": "motivacao-033",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Você é maior do que a sua lista de tarefas.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "autoestima"
+    ],
+    "id": "motivacao-034",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Orgulho de quem você está se tornando? Eu tenho, {nome}.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "autoestima"
+    ],
+    "id": "motivacao-035",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Ninguém te cobra mais do que você mesmo. Pega um pouco mais leve hoje 💜",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "perfeccionista"
+    ],
+    "id": "motivacao-036",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Um 'sim' pro que importa às vezes pede um 'não' pro que distrai.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [
+     "foco"
+    ],
+    "id": "motivacao-037",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Hoje, o mínimo bem feito já conta como vitória.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "desmotivado"
+    ],
+    "id": "motivacao-038",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Grandes metas cabem em pequenas tarefas. Qual é a de agora?",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-039",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Não é sobre ter tempo. É sobre fazer caber o que importa.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "motivacao-040",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Lembra da sua meta: {meta}. O passo de hoje pode ser pequeno, mas tem que existir.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "meta"
+    ],
+    "id": "motivacao-041",
+    "slots": [
+     "meta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Sonhar alto é ótimo. Anotar o primeiro passo é o que tira o sonho do chão ✨",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "sonhador"
+    ],
+    "id": "motivacao-042",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Gol não sai sem chute. Arrisca o primeiro hoje ⚽",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "futebol"
+    ],
+    "id": "motivacao-043",
+    "slots": [],
+    "dia": null
+   }
+  ],
+  "versiculo": [
+   {
+    "texto": "Tudo posso naquele que me fortalece.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "forca",
+     "trabalho"
+    ],
+    "ref": "Filipenses 4:13",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-001",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O Senhor é o meu pastor; nada me faltará.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "confianca"
+    ],
+    "ref": "Salmos 23:1",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-002",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Seja forte e corajoso; não tenha medo nem desanime, pois o Senhor, o seu Deus, estará com você por onde você andar.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "coragem",
+     "viagem"
+    ],
+    "ref": "Josué 1:9",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-003",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Não tema, porque eu sou contigo; não te assombres, porque eu sou o teu Deus; eu te fortaleço e te ajudo.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade",
+     "coragem"
+    ],
+    "ref": "Isaías 41:10",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-004",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Eu sei os planos que tenho para vocês, diz o Senhor: planos de paz, e não de mal, para dar a vocês esperança e futuro.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "futuro",
+     "meta"
+    ],
+    "ref": "Jeremias 29:11",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-005",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Venham a mim todos os que estão cansados e sobrecarregados, e eu darei descanso a vocês.",
+    "tom": "reverente",
+    "hora": "noite",
+    "tags": [
+     "cansaco",
+     "noite"
+    ],
+    "ref": "Mateus 11:28",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-006",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Confie no Senhor de todo o seu coração e não se apoie no seu próprio entendimento.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "confianca"
+    ],
+    "ref": "Provérbios 3:5",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-007",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Sabemos que todas as coisas cooperam para o bem daqueles que amam a Deus.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "confianca"
+    ],
+    "ref": "Romanos 8:28",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-008",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Deus é o nosso refúgio e fortaleza, socorro bem presente na angústia.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade"
+    ],
+    "ref": "Salmos 46:1",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-009",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Deus não nos deu espírito de medo, mas de poder, de amor e de equilíbrio.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "coragem",
+     "ansiedade"
+    ],
+    "ref": "2 Timóteo 1:7",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-010",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Entregue o seu caminho ao Senhor, confie nele, e ele tudo fará.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "confianca",
+     "meta"
+    ],
+    "ref": "Salmos 37:5",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-011",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Os que esperam no Senhor renovam as suas forças; sobem com asas como águias, correm e não se cansam.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "forca",
+     "esporte"
+    ],
+    "ref": "Isaías 40:31",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-012",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Lancem sobre ele toda a ansiedade de vocês, porque ele tem cuidado de vocês.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade"
+    ],
+    "ref": "1 Pedro 5:7",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-013",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Este é o dia que o Senhor fez; alegremo-nos e exultemos nele.",
+    "tom": "reverente",
+    "hora": "manha",
+    "tags": [
+     "manha",
+     "alegria"
+    ],
+    "ref": "Salmos 118:24",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-014",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "As misericórdias do Senhor não têm fim; renovam-se a cada manhã. Grande é a tua fidelidade.",
+    "tom": "reverente",
+    "hora": "manha",
+    "tags": [
+     "manha",
+     "recomeco"
+    ],
+    "ref": "Lamentações 3:22-23",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-015",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Eu te louvo porque de modo tão admirável e maravilhoso fui feito.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "autoestima",
+     "aniversario"
+    ],
+    "ref": "Salmos 139:14",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-016",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Deixo com vocês a paz; a minha paz dou a vocês.",
+    "tom": "reverente",
+    "hora": "noite",
+    "tags": [
+     "paz",
+     "noite"
+    ],
+    "ref": "João 14:27",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-017",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O choro pode durar uma noite, mas a alegria vem pela manhã.",
+    "tom": "reverente",
+    "hora": "noite",
+    "tags": [
+     "recomeco",
+     "noite"
+    ],
+    "ref": "Salmos 30:5",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-018",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Confie ao Senhor as suas obras, e os seus planos serão bem-sucedidos.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "trabalho",
+     "meta"
+    ],
+    "ref": "Provérbios 16:3",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-019",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O Senhor te abençoe e te guarde.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "bencao",
+     "aniversario",
+     "viagem"
+    ],
+    "ref": "Números 6:24",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-020",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Tudo o que fizerem, façam de todo o coração, como para o Senhor.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "trabalho",
+     "estudo"
+    ],
+    "ref": "Colossenses 3:23",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-021",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Não andem ansiosos por coisa alguma; em tudo, apresentem seus pedidos a Deus em oração, com gratidão.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade",
+     "gratidao"
+    ],
+    "ref": "Filipenses 4:6",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-022",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "A alegria do Senhor é a força de vocês.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "alegria",
+     "forca"
+    ],
+    "ref": "Neemias 8:10",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-023",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Em paz me deito e logo pego no sono, porque só tu, Senhor, me fazes repousar seguro.",
+    "tom": "reverente",
+    "hora": "noite",
+    "tags": [
+     "noite",
+     "sono"
+    ],
+    "ref": "Salmos 4:8",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-024",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O meu socorro vem do Senhor, que fez o céu e a terra.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "confianca"
+    ],
+    "ref": "Salmos 121:2",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-025",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O Senhor guardará a tua saída e a tua entrada, desde agora e para sempre.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "viagem",
+     "bencao"
+    ],
+    "ref": "Salmos 121:8",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-026",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Não se preocupem com o amanhã, pois o amanhã trará as suas próprias preocupações. Basta a cada dia o seu próprio mal.",
+    "tom": "reverente",
+    "hora": "noite",
+    "tags": [
+     "ansiedade",
+     "noite"
+    ],
+    "ref": "Mateus 6:34",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-027",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Nunca te deixarei, jamais te abandonarei.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "solidao",
+     "confianca"
+    ],
+    "ref": "Hebreus 13:5",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-028",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Aquele que habita no esconderijo do Altíssimo, à sombra do Onipotente descansará.",
+    "tom": "reverente",
+    "hora": "noite",
+    "tags": [
+     "protecao",
+     "noite"
+    ],
+    "ref": "Salmos 91:1",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-029",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O amigo ama em todos os momentos; é um irmão na hora da dificuldade.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "social",
+     "amizade"
+    ],
+    "ref": "Provérbios 17:17",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-030",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Melhor é serem dois do que um, porque têm melhor recompensa pelo seu trabalho.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "social",
+     "trabalho"
+    ],
+    "ref": "Eclesiastes 4:9",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-031",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Ensina-nos a contar os nossos dias, para que alcancemos um coração sábio.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "aniversario",
+     "sabedoria"
+    ],
+    "ref": "Salmos 90:12",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-032",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Acima de tudo, guarde o seu coração, pois dele procedem as fontes da vida.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "autocuidado"
+    ],
+    "ref": "Provérbios 4:23",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-033",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Se algum de vocês tem falta de sabedoria, peça a Deus, que a todos dá com generosidade.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "estudo",
+     "sabedoria"
+    ],
+    "ref": "Tiago 1:5",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-034",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O amor é paciente, o amor é bondoso.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "familia",
+     "social"
+    ],
+    "ref": "1 Coríntios 13:4",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-035",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Entregue as suas preocupações ao Senhor, e ele o susterá.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade"
+    ],
+    "ref": "Salmos 55:22",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-036",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "No mundo vocês terão aflições; mas tenham coragem: eu venci o mundo.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "coragem"
+    ],
+    "ref": "João 16:33",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-037",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Assim brilhe a luz de vocês diante dos outros, para que vejam as suas boas obras.",
+    "tom": "reverente",
+    "hora": "manha",
+    "tags": [
+     "trabalho",
+     "manha"
+    ],
+    "ref": "Mateus 5:16",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-038",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Eu o instruirei e o ensinarei no caminho que você deve seguir; eu o aconselharei.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "decisao",
+     "estudo"
+    ],
+    "ref": "Salmos 32:8",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-039",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Alegrem-se na esperança, sejam pacientes na tribulação, perseverem na oração.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "perseveranca"
+    ],
+    "ref": "Romanos 12:12",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-040",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Amado, desejo que você prospere em tudo e tenha saúde, assim como vai bem a sua alma.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "saude",
+     "remedio",
+     "aniversario"
+    ],
+    "ref": "3 João 1:2",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-041",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O coração alegre é bom remédio.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "saude",
+     "remedio",
+     "alegria"
+    ],
+    "ref": "Provérbios 17:22",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-042",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Não nos cansemos de fazer o bem, pois no tempo certo colheremos, se não desanimarmos.",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "perseveranca",
+     "desmotivado"
+    ],
+    "ref": "Gálatas 6:9",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-043",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Qual de vocês, querendo construir uma torre, não se senta primeiro para calcular o custo?",
+    "tom": "reverente",
+    "hora": "qualquer",
+    "tags": [
+     "contas",
+     "planejamento"
+    ],
+    "ref": "Lucas 14:28",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-044",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Eis que faço uma coisa nova; agora mesmo ela está surgindo.",
+    "tom": "reverente",
+    "hora": "manha",
+    "tags": [
+     "manha",
+     "recomeco"
+    ],
+    "ref": "Isaías 43:19",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-045",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "De manhã, Senhor, ouves a minha voz; de manhã te apresento a minha oração e fico esperando.",
+    "tom": "reverente",
+    "hora": "manha",
+    "tags": [
+     "manha",
+     "oracao"
+    ],
+    "ref": "Salmos 5:3",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-046",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Aos seus amados ele dá o sono.",
+    "tom": "reverente",
+    "hora": "noite",
+    "tags": [
+     "noite",
+     "sono"
+    ],
+    "ref": "Salmos 127:2",
+    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "id": "versiculo-047",
+    "slots": [],
+    "dia": null
+   }
+  ],
+  "aniversario": [
+   {
+    "texto": "Hoje é aniversário de {pessoa}! Bolo é opcional, mensagem é obrigatória 🎂",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "aniversario-001",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "{pessoa} faz aniversário {quando}. Não deixa virar 'feliz aniversário atrasado' 😅",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "antes",
+    "id": "aniversario-002",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Alerta de parabéns: {pessoa} sopra as velinhas {quando} 🕯️",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "aniversario-003",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Um 'parabéns' sincero pra {pessoa} vale mais que mil curtidas.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "aniversario-004",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "{pessoa} faz aniversário {quando}. Aqui a gente não chama de 'ficar velho', chama de 'subir de nível' 🎉",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "aniversario-005",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Liga pra {pessoa} hoje. Áudio vale, ligação vale o dobro 📞",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "aniversario-006",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Presente pra {pessoa}: já tem ideia? Ainda dá tempo de caprichar 🎁",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "antes",
+    "id": "aniversario-007",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Hoje é dia de {pessoa}! Manda aquela foto antiga que só vocês entendem 📸",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "aniversario-008",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Parabéns pra você, nesta data querida… pra {pessoa}, no caso. Manda lá! 🎶",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "aniversario-009",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Mais um ano de {pessoa} no mundo. O mundo agradece, e você avisa 💛",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "aniversario-010",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Lembrete doce: {pessoa} faz aniversário {quando}. Doce tipo brigadeiro 🍫",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "aniversario-011",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "{pessoa} completa mais uma volta ao redor do sol {quando} ☀️",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "aniversario-012",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Sabe quem merece um abraço {quando}? {pessoa}. Aniversário confirmado 🤗",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "aniversario-013",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Uma mensagem sua pra {pessoa} hoje e o dia de alguém fica bem melhor.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "aniversario-014",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Agenda avisa: {quando} tem festa no coração de {pessoa} 🎈",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "aniversario-015",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "{pessoa} faz aniversário {quando}. Eu lembro, você emociona. Combinado?",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "aniversario-016",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Vela, bolo, abraço e parabéns. A parte do parabéns é com você 🎂",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "aniversario-017",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Presente fácil e lindo pra {pessoa}: uma mensagem com uma memória boa de vocês.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "aniversario-018",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Hoje é aniversário de {pessoa}. Um 'lembrei de você' não tem preço.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "aniversario-019",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Contagem regressiva: {pessoa} faz aniversário {quando} ⏳",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "antes",
+    "id": "aniversario-020",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "{pessoa} sobe de nível {quando}! Hora de mandar aquele 'GG' 🎮",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "games"
+    ],
+    "id": "aniversario-021",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Toca a música que lembra {pessoa} e manda junto com o parabéns 🎵",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "musica"
+    ],
+    "id": "aniversario-022",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Que tal fazer um bolo pra {pessoa}? Ou pelo menos mandar a foto de um 🍰",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "cozinhar"
+    ],
+    "id": "aniversario-023",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Aniversário de {pessoa} {quando}: ainda dá tempo de juntar a turma pra uma surpresa 🎉",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "amigos"
+    ],
+    "quando": "antes",
+    "id": "aniversario-024",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "{pessoa} faz aniversário {quando}. Escreve o parabéns agora e deixa agendado pra mandar cedo 😉",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "antes",
+    "id": "aniversario-025",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Não é todo dia que {pessoa} faz aniversário. Na verdade, é só {quando}. Aproveita!",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "aniversario-026",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Um brinde a {pessoa}! 🥂 Mensagem enviada é carinho entregue.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "aniversario-027",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Hoje {pessoa} merece ouvir o quanto é importante. Fala você.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "aniversario-028",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Lembrou do aniversário de {pessoa}? Agora lembrou 😄 Manda lá.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "aniversario-029",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "O melhor presente é presença. Se der, aparece pra dar um abraço em {pessoa}.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "aniversario-030",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Aniversário de {pessoa} {quando}. Presente não precisa ser caro, precisa ser pensado.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "antes",
+    "id": "aniversario-031",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "{pessoa} faz aniversário {quando}. Que tal uma chamada de vídeo com cara de festa? 📱",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "aniversario-032",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Dica de ouro: o parabéns mais bonito é o que conta uma lembrança. Pensa numa com {pessoa}.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "aniversario-033",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "{pessoa} ganha mais um ano de histórias {quando}. Manda um capítulo seu nessa história 📖",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "leitura"
+    ],
+    "id": "aniversario-034",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Pedido do Lembra: não esquece de {pessoa}. Eu nunca esqueço 😉",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "aniversario-035",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Família ou amizade, tanto faz: aniversário de {pessoa} {quando} pede ligação.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "familia"
+    ],
+    "id": "aniversario-036",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Parabéns atrasado é bom. Parabéns no dia é melhor. O de {pessoa} é {quando}!",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "aniversario-037",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Aquele cartão escrito à mão? {pessoa} vai guardar pra sempre ✉️",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "antes",
+    "id": "aniversario-038",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Não vai dar pra ir? Manda um vídeo cantando parabéns pra {pessoa} 🎤",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "musica"
+    ],
+    "quando": "hoje",
+    "id": "aniversario-039",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "{pessoa} faz aniversário {quando}. Que tal marcar um café pra comemorar? ☕",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "cafe"
+    ],
+    "id": "aniversario-040",
+    "slots": [
+     "pessoa",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Faltam poucos dias pro aniversário de {pessoa}. Presente comprado = paz garantida.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "antes",
+    "id": "aniversario-041",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Feliz aniversário pra {pessoa}, e feliz você por lembrar 🎉",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "aniversario-042",
+    "slots": [
+     "pessoa"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "O seu aniversário é {quando}, {nome}! Já pensou em como quer comemorar? 🎂",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "proprio"
+    ],
+    "id": "aniversario-043",
+    "slots": [
+     "nome",
+     "quando"
+    ],
+    "dia": null
+   }
+  ],
+  "socializar": [
+   {
+    "texto": "Manda um oi pra alguém que você não fala faz tempo. O 'sumido' vira 'que saudade' 💬",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-001",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Áudio de 2 minutos pra quem você ama? Hoje está liberado.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-002",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Elogia alguém hoje. Custa zero e rende o dia inteiro.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-003",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Quando foi a última vez que você ligou pra alguém da família só pra saber como está? 📞",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "familia"
+    ],
+    "id": "socializar-004",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Amizade é planta: precisa de rega. Manda uma mensagem 🌱",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "amigos",
+     "jardinagem"
+    ],
+    "id": "socializar-005",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Alguém te ajudou essa semana? Um 'obrigado' agora vale ouro.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "gratidao"
+    ],
+    "id": "socializar-006",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Combina um café com alguém. Café com conversa é o melhor café ☕",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "cafe"
+    ],
+    "id": "socializar-007",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Grupo da família parado? Manda um bom dia com figurinha. Clássico é clássico.",
+    "tom": "trocadilho",
+    "hora": "manha",
+    "tags": [
+     "familia"
+    ],
+    "id": "socializar-008",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Pergunta pra alguém 'como você está de verdade?' e escuta a resposta.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-009",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Uma risada com amigo vale mais que dez vídeos engraçados sozinho.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "amigos"
+    ],
+    "id": "socializar-010",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Marca aquele encontro que vive no 'vamos marcar'. Coloca data no Lembra 📅",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "amigos"
+    ],
+    "id": "socializar-011",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Faz alguém sorrir hoje. Meme vale, abraço vale mais.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-012",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Já deu bom dia pro pessoal do trabalho? Começo de conversa, começo de parceria.",
+    "tom": "leve",
+    "hora": "manha",
+    "tags": [
+     "trabalho"
+    ],
+    "id": "socializar-013",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Aquela amizade de infância ainda guarda um lugarzinho pra você. Manda um oi.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "amigos"
+    ],
+    "id": "socializar-014",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Saudade guardada não alimenta ninguém. Manda pra quem é.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-015",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Convida alguém pra caminhar. Conversa boa anda junto 🚶",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "corrida"
+    ],
+    "id": "socializar-016",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Jogar online com os amigos também é socializar. Chama a galera 🎮",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "games"
+    ],
+    "id": "socializar-017",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Manda uma música pra alguém com um 'lembrei de você' 🎵",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "musica"
+    ],
+    "id": "socializar-018",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Cozinha pra alguém essa semana. Comida feita com carinho fala por você 🍲",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "cozinhar"
+    ],
+    "id": "socializar-019",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Indica uma série pra alguém e garante assunto pra semana inteira 📺",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "series"
+    ],
+    "id": "socializar-020",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Oferece ajuda a alguém hoje. Às vezes é tudo que a pessoa precisava ouvir.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "voluntariado"
+    ],
+    "id": "socializar-021",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Responde aquela mensagem que ficou no 'visto'. Sem culpa, só responde 😅",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-022",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Chama alguém pra almoçar. Mesa com conversa é outra coisa.",
+    "tom": "leve",
+    "hora": "manha",
+    "tags": [],
+    "id": "socializar-023",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Um 'tô pensando em você' não ocupa espaço nenhum e esquenta o dia de alguém.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-024",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Avó e avô adoram ligação. Mesmo que seja pra ouvir a mesma história de novo 👵",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "familia"
+    ],
+    "id": "socializar-025",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Liga pra quem você ama e não fala de trabalho. Só de vida.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "familia"
+    ],
+    "id": "socializar-026",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Vida social também precisa de agenda. Tem algum encontro marcado essa semana?",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-027",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Comenta o post de um amigo com algo de verdade, não só um emoji.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "amigos"
+    ],
+    "id": "socializar-028",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Vizinho novo? Um oi no elevador já é um começo.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-029",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Gente boa por perto é o melhor aplicativo que existe (depois do Lembra 😉).",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-030",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Convida alguém pro seu programa favorito do fim de semana.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "dia": "sex",
+    "id": "socializar-031",
+    "slots": []
+   },
+   {
+    "texto": "Fim de semana chegando: que tal juntar a turma?",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "amigos"
+    ],
+    "dia": "sex",
+    "id": "socializar-032",
+    "slots": []
+   },
+   {
+    "texto": "Domingo é dia de visita. Quem você pode visitar hoje?",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "familia"
+    ],
+    "dia": "dom",
+    "id": "socializar-033",
+    "slots": []
+   },
+   {
+    "texto": "Já agradeceu alguém da sua equipe hoje? Reconhecimento move montanhas.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "trabalho"
+    ],
+    "id": "socializar-034",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Cinco minutos de conversa com quem você ama podem ser o melhor momento do dia.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-035",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Pensa em 3 pessoas que você ama. Agora manda mensagem pra uma delas.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-036",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Abraço não tem contraindicação. Distribua à vontade 🤗",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-037",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Lembrou de alguém que precisa de apoio agora? Às vezes, só ouvir já ajuda.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-038",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Seu pet é ótima companhia, mas gente também é. Liga pra alguém 🐾",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "pets"
+    ],
+    "id": "socializar-039",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Chama alguém pra estudar junto. Duas cabeças rendem mais que uma 📚",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "estudar"
+    ],
+    "id": "socializar-040",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Uma foto antiga no grupo dos amigos rende risada garantida 📸",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "amigos"
+    ],
+    "id": "socializar-041",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Quem tem amigo tem tudo. Cuida dos seus hoje 💛",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "amigos"
+    ],
+    "id": "socializar-042",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Faz tempo que você não fala com {contato}? Hoje é um ótimo dia pra isso 💬",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "socializar-043",
+    "slots": [
+     "contato"
+    ],
+    "dia": null
+   }
+  ],
+  "remedio": [
+   {
+    "texto": "Hora do {remedio}! Remédio no horário é cuidado, não castigo 💊",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-001",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "{nome}, o {remedio} tá te esperando. Pontualidade aqui vale ouro.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-002",
+    "slots": [
+     "nome",
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Plim! {hora}: hora do {remedio}. Toma com um copo d’água e já mata dois lembretes 💧",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-003",
+    "slots": [
+     "hora",
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Seu corpo agradece a pontualidade. {remedio} agora, combinado?",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-004",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Lembrete de cuidado: {remedio}. Tomou? Marca aqui que eu sossego.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-005",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Remédio tomado, dia mais tranquilo. Vai lá: {remedio} 💊",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-006",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Toc toc! É o {remedio} batendo na porta do seu horário.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-007",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Quem cuida da saúde no horário certo agradece depois. {remedio} agora.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-008",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Não esquece: {remedio} às {hora}. Eu lembro, você toma, a saúde agradece.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-009",
+    "slots": [
+     "hora",
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Pausa rápida de saúde: {remedio}. Leva 10 segundos.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-010",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Seu eu do futuro mandou lembrar do {remedio}. Ele tá bem graças a você.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-011",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Hora de tomar o {remedio}, {nome}. Deixa o copo d’água pertinho.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-012",
+    "slots": [
+     "nome",
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Tratamento é constância. Hoje também conta: {remedio} 💪",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-013",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Na correria, o {remedio} fica pra trás? Aqui não. Tá na hora.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-014",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Remédio no horário é como treino: o resultado vem da repetição.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "esporte"
+    ],
+    "id": "remedio-015",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "{hora} chegou, e o {remedio} também. Bora?",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-016",
+    "slots": [
+     "hora",
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Um gole d’água, o {remedio} e pronto. Cuidado feito ✔",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-017",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Lembrete carinhoso: hoje também é dia de {remedio}. Promessa é promessa.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-018",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Se já tomou o {remedio}, marca como feito. Se não, essa é a deixa 😉",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-019",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Pílula da vez: {remedio}. A da sorte vem de brinde 🍀",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-020",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Saúde não tira férias, e o {remedio} também não.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-021",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Alarme gentil: {remedio}. Sem soneca dessa vez ⏰",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-022",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Você cuida de tanta coisa. Agora cuida de você: {remedio}.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-023",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Para tudo só um segundinho pro {remedio}. Depois volta ao que estava fazendo.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-024",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Organização do dia inclui o {remedio}. Já está no seu checklist.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "organizado"
+    ],
+    "id": "remedio-025",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Tomar o {remedio} no horário é um carinho que só você pode fazer por você.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-026",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "{remedio} agora, e a tarde segue mais leve.",
+    "tom": "leve",
+    "hora": "tarde",
+    "tags": [],
+    "id": "remedio-027",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Antes de dormir: {remedio}. Depois, travesseiro 🌙",
+    "tom": "leve",
+    "hora": "noite",
+    "tags": [],
+    "id": "remedio-028",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Bom dia! O primeiro item da lista de hoje é o {remedio} ☀️",
+    "tom": "leve",
+    "hora": "manha",
+    "tags": [],
+    "id": "remedio-029",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Seu médico ia gostar de saber que você tá em dia. {remedio} agora 🩺",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-030",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Um lembrete que vale por dois: {remedio} e um copo d’água.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-031",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Não deixa pra 'daqui a pouco'. O {remedio} é agora.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-032",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Esqueceu da última vez? Normal. Dessa vez eu cheguei antes: {remedio} 😉",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-033",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "{nome}, missão de 10 segundos: {remedio}. Valendo!",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-034",
+    "slots": [
+     "nome",
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Tratamento em dia, cabeça tranquila. {remedio} na hora certa.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-035",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Seguir o horário faz diferença no tratamento. Agora é o do {remedio}.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-036",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Saúde é o projeto mais importante da sua agenda. Item de agora: {remedio}.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-037",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Mais uma dose de cuidado: {remedio} 💊",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-038",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Eu insisto porque me importo: hora do {remedio}.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-039",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Dúvida sobre a dose? Pergunta ao seu médico ou farmacêutico. Agora é só o horário: {remedio} 🩺",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-040",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Ritmo é tudo: mesma hora, mesmo cuidado. {remedio} agora.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-041",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "O seu corpo tá contando com você agora. {remedio} 💛",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "remedio-042",
+    "slots": [
+     "remedio"
+    ],
+    "dia": null
+   }
+  ],
+  "estudo": [
+   {
+    "texto": "Bora estudar {materia}? 25 minutinhos de foco e uma pausa de prêmio 📚",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-001",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Conhecimento não ocupa espaço, mas ocupa agenda. Hora de {materia}.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-002",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Abre o caderno antes que a preguiça abra o sofá.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "procrastinador"
+    ],
+    "id": "estudo-003",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Uma página por dia vira um livro por ano. Começa pela de hoje 📖",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "leitura"
+    ],
+    "id": "estudo-004",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "{materia} hoje, aprovação amanhã. A conta fecha.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-005",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Celular no modo foco, cérebro no modo esponja 🧽",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "foco"
+    ],
+    "id": "estudo-006",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Estudar com sede rende menos. Água, ar fresco e bora.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-007",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Quem estuda um pouco todo dia não precisa virar a noite na véspera.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-008",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Revisão relâmpago: o que você lembra da última aula de {materia}? Escreve 3 coisas.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-009",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Seu futuro está fazendo anotações. Ajuda ele com {materia} 📝",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-010",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Pomodoro na mesa: 25 de estudo, 5 de pausa. Repete 3 vezes 🍅",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "foco"
+    ],
+    "id": "estudo-011",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Dúvida que não pergunta vira dúvida que cai na prova. Anota pra perguntar.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-012",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Estudar é investir. E o rendimento de {materia} é garantido.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "dinheiro"
+    ],
+    "id": "estudo-013",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Explica a matéria de hoje em voz alta, como se fosse aula. Onde travar, é onde revisar.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-014",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Um capítulo agora vale mais que três 'depois eu leio'.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "procrastinador"
+    ],
+    "id": "estudo-015",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Mesa arrumada, mente arrumada. Prepara o cantinho e começa.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "organizado"
+    ],
+    "id": "estudo-016",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O cérebro gosta de rotina: mesma hora, mesmo lugar, mais foco.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-017",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Hoje é dia de aprender uma coisa nova. Qual vai ser?",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-018",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "{materia} pode até ser difícil. Mas você é mais.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-019",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Grifar não é estudar. Resumir é. Bora resumir {materia}? ✏️",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-020",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Prova chegando? Divide a matéria em pedacinhos e marca cada um no Lembra 📅",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-021",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Conhecimento é a única bagagem que nunca pesa.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "viagem"
+    ],
+    "id": "estudo-022",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Estuda agora, e o você do dia da prova te dá um abraço.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-023",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "5 minutos de revisão antes de dormir fixam mais que 1 hora correndo de manhã.",
+    "tom": "direto",
+    "hora": "noite",
+    "tags": [],
+    "id": "estudo-024",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Fone no ouvido, playlist sem letra e {materia} na frente 🎧",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "musica"
+    ],
+    "id": "estudo-025",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Nível de conhecimento subindo… {materia} +10 XP 🎮",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "games"
+    ],
+    "id": "estudo-026",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Quem lê muito escreve bem. Quem estuda sempre, sabe bem 📖",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "leitura"
+    ],
+    "id": "estudo-027",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Treino de cérebro: 30 minutos de {materia}. Sem desculpa de 'tá chovendo' 💪",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "esporte"
+    ],
+    "id": "estudo-028",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Errou o exercício? Ótimo. O erro é o professor mais sincero.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "perfeccionista"
+    ],
+    "id": "estudo-029",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Estudar com alguém ajuda. Chama um colega pra revisar {materia}.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "amigos"
+    ],
+    "id": "estudo-030",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Faz um mapa mental de {materia}. Cor e seta deixam tudo mais fácil 🗺️",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "arte"
+    ],
+    "id": "estudo-031",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Hoje: menos rolagem de tela, mais rolagem de página.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-032",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O conteúdo de {materia} não vai se estudar sozinho (eu tentei).",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-033",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Meta de hoje: entender, não decorar.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-034",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Café do lado, celular longe, {materia} na frente. Combinação vencedora ☕",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "cafe"
+    ],
+    "id": "estudo-035",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Estudar é plantar. A colheita vem na prova, no trabalho e na vida 🌱",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-036",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Aprender {materia} hoje é ganhar tempo amanhã.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-037",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Já fez a lista do que estudar essa semana? Coloca no Lembra que eu cobro 😉",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "dia": "seg",
+    "id": "estudo-038",
+    "slots": []
+   },
+   {
+    "texto": "Cansou? Pausa de 5 minutos, alonga, bebe água e volta. Funciona.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "estudo-039",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Último esforço do dia: uma revisão rapidinha de {materia}.",
+    "tom": "firme",
+    "hora": "noite",
+    "tags": [],
+    "id": "estudo-040",
+    "slots": [
+     "materia"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Você não precisa saber tudo. Precisa saber um pouco mais que ontem.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade"
+    ],
+    "id": "estudo-041",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Sábado também é dia de estudar… com pausa pra série depois, combinado? 📺",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "series"
+    ],
+    "dia": "sab",
+    "id": "estudo-042",
+    "slots": []
+   }
+  ],
+  "trabalho": [
+   {
+    "texto": "Bom expediente, {nome}! Começa pela tarefa que mais pesa: o resto fica leve.",
+    "tom": "firme",
+    "hora": "manha",
+    "tags": [],
+    "id": "trabalho-001",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Agenda organizada é meio caminho pro dia de {profissao} dar certo.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-002",
+    "slots": [
+     "profissao"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Reunião daqui a pouco? Anota as 3 coisas que você quer sair de lá sabendo 📝",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-003",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Caixa de entrada lotada? Responde as 3 mais importantes e respira.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade"
+    ],
+    "id": "trabalho-004",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Pausa de 5 minutos agora rende 50 de foco depois.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-005",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Foco total por 25 minutos. Depois, café merecido ☕",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "cafe",
+     "foco"
+    ],
+    "id": "trabalho-006",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Delegar também é trabalhar. Tem algo que outra pessoa pode fazer?",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-007",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Prazo de hoje já está no Lembra? Se não está, anota que eu cobro.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-008",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O trabalho bem feito de hoje é a indicação de amanhã.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-009",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Meio do expediente: confere a lista. O que ainda dá tempo de riscar?",
+    "tom": "direto",
+    "hora": "tarde",
+    "tags": [],
+    "id": "trabalho-010",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Termina o que começou antes de começar outra coisa. Promessa de produtividade.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "impulsivo"
+    ],
+    "id": "trabalho-011",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Trabalhar como {profissao} não é fácil. Mas você faz parecer 💪",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-012",
+    "slots": [
+     "profissao"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Organiza a mesa, organiza a cabeça, organiza o dia.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "organizado"
+    ],
+    "id": "trabalho-013",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Um 'não' bem dito agora protege o seu foco a tarde inteira.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [
+     "foco"
+    ],
+    "id": "trabalho-014",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Fim do expediente chegando: anota o que fica pra amanhã e desliga a cabeça.",
+    "tom": "carinhoso",
+    "hora": "tarde",
+    "tags": [],
+    "id": "trabalho-015",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Cliente feliz começa com prazo cumprido. Qual é o próximo?",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-016",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Você não é máquina. Pausa pro almoço é obrigatória, não opcional 🍽️",
+    "tom": "firme",
+    "hora": "manha",
+    "tags": [],
+    "id": "trabalho-017",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Multitarefa é mito. Uma coisa de cada vez, bem feita.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-018",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Seu trabalho importa, {nome}. Alguém está sendo ajudado por ele agora.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-019",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Ligação difícil pra fazer? Faz primeiro e tira o peso do dia 📞",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-020",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Planeja amanhã em 5 minutos antes de sair. O amanhã agradece.",
+    "tom": "direto",
+    "hora": "tarde",
+    "tags": [],
+    "id": "trabalho-021",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Sexta-feira: fecha as pendências e entra no fim de semana leve 🎉",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "dia": "sex",
+    "id": "trabalho-022",
+    "slots": []
+   },
+   {
+    "texto": "Segunda-feira: dia de plantar a semana. O que entra na agenda?",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "dia": "seg",
+    "id": "trabalho-023",
+    "slots": []
+   },
+   {
+    "texto": "Postura! Ombros pra baixo, costas retas, tela na altura dos olhos 🪑",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-024",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "O e-mail pode esperar 10 minutos. O seu foco não.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "foco"
+    ],
+    "id": "trabalho-025",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Mandou bem na entrega? Comemora, nem que seja com um café.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "cafe"
+    ],
+    "id": "trabalho-026",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Equipe boa é equipe que conversa. Já alinhou o dia com o pessoal?",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [
+     "equipe"
+    ],
+    "id": "trabalho-027",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Cada tarefa riscada é um tijolinho na sua carreira de {profissao}.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-028",
+    "slots": [
+     "profissao"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Respira antes de responder aquela mensagem difícil. Calma também é profissionalismo.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "impulsivo"
+    ],
+    "id": "trabalho-029",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Hora de levantar da cadeira e esticar as pernas. Volta em 2 minutos 🚶",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-030",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Sua meta \"{meta}\" começa nas tarefas de hoje. Qual delas te aproxima dela?",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "meta"
+    ],
+    "id": "trabalho-031",
+    "slots": [
+     "meta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Trabalho em casa ou no escritório, a regra é a mesma: começar.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-032",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Café, lista e foco: o trio do dia produtivo ☕",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "cafe"
+    ],
+    "id": "trabalho-033",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Se a tarefa leva menos de 2 minutos, faz agora.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-034",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bloqueia um horário só pra pensar. Sem reunião, sem notificação (menos as minhas 😉).",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-035",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Hoje tem entrega? Uma revisão rápida antes de mandar evita retrabalho.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-036",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Profissional de verdade também sabe a hora de parar. Já passou da sua?",
+    "tom": "carinhoso",
+    "hora": "noite",
+    "tags": [],
+    "id": "trabalho-037",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Seu chefe mais exigente é você? Dá um descanso pra ele também 😉",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "perfeccionista"
+    ],
+    "id": "trabalho-038",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Pequena vitória do dia: anota uma coisa que deu certo no trabalho hoje.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "gratidao"
+    ],
+    "id": "trabalho-039",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Quem tem agenda não tem pressa: tem plano.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-040",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Aquele projeto parado… 15 minutos nele hoje já tira do zero.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "procrastinador"
+    ],
+    "id": "trabalho-041",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Bom trabalho hoje, {nome}. De verdade.",
+    "tom": "carinhoso",
+    "hora": "noite",
+    "tags": [],
+    "id": "trabalho-042",
+    "slots": [
+     "nome"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Próximo compromisso: {proximo} às {hora}. Dá tempo de um café antes ☕",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "trabalho-043",
+    "slots": [
+     "hora",
+     "proximo"
+    ],
+    "dia": null
+   }
+  ],
+  "contas": [
+   {
+    "texto": "{conta} vence {quando}. Boleto pago é sono tranquilo 😴",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-001",
+    "slots": [
+     "conta",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Juros não mandam flores. Bora pagar {conta} até {quando}? 💐",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-002",
+    "slots": [
+     "conta",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Lembrete financeiro: {conta} vence {quando}. Pagou? Marca aqui ✔",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-003",
+    "slots": [
+     "conta",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Pagar {conta} hoje é dormir sem juros na consciência.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "contas-004",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Conta paga, cabeça leve. {conta} vence {quando}.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-005",
+    "slots": [
+     "conta",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Seu bolso agradece: {conta} no prazo é dinheiro que fica com você.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "dinheiro"
+    ],
+    "id": "contas-006",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Não deixa {conta} virar surpresa. Vence {quando}.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "antes",
+    "id": "contas-007",
+    "slots": [
+     "conta",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Pix rapidinho e {conta} resolvida. 1 minuto, zero dor de cabeça 📲",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-008",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Boleto que vence {quando} não é susto: é compromisso agendado.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-009",
+    "slots": [
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Multa é aquele presente que ninguém quer. Paga {conta} até {quando}.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-010",
+    "slots": [
+     "conta",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "{conta} vence {quando}. Dinheiro separado? Então paga logo e esquece.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-011",
+    "slots": [
+     "conta",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Organização financeira começa com uma conta paga no dia. Hoje é {conta}.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "dinheiro"
+    ],
+    "quando": "hoje",
+    "id": "contas-012",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Débito automático é ótimo, mas lembrar também é. {conta}: {quando}.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-013",
+    "slots": [
+     "conta",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Seu eu do fim do mês agradece: {conta} paga no prazo.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-014",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Paga {conta} assim que ler isso. Depois a gente esquece (você; eu nunca 😉).",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-015",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Contas em dia, nome limpo e paz no coração.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-016",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "{conta} entrou no radar: vence {quando} 📡",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "antes",
+    "id": "contas-017",
+    "slots": [
+     "conta",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Ninguém gosta de pagar conta. Mas todo mundo gosta de conta paga.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-018",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Atrasar conta é igual deixar louça pra depois: só cresce.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-019",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Confere o valor de {conta} antes de pagar. Erro em boleto acontece.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-020",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Hoje é o último dia de {conta}. Bora resolver agora? ⏰",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "contas-021",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Amanhã vence {conta}. Resolve hoje e amanhã é só alegria.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "amanha",
+    "id": "contas-022",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Dinheiro organizado é liberdade. Começa pagando {conta}.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "dinheiro"
+    ],
+    "id": "contas-023",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Planilha de gastos? O Lembra já guarda as datas, você só paga 😉",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-024",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "{conta} paga = um item a menos na cabeça. Vale o minuto.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade"
+    ],
+    "id": "contas-025",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Golpe de boleto existe: confere o beneficiário antes de pagar {conta} 🔒",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-026",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Fim do mês chegando: já conferiu as contas que vencem essa semana?",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-027",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "{conta} vence {quando}. Se o mês tá apertado, negociar antes é melhor que atrasar.",
+    "tom": "carinhoso",
+    "hora": "qualquer",
+    "tags": [
+     "dinheiro"
+    ],
+    "id": "contas-028",
+    "slots": [
+     "conta",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Pagou {conta}? Guarda o comprovante numa pasta. O seu eu do futuro agradece 📁",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [
+     "organizado"
+    ],
+    "id": "contas-029",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Salário caiu? Antes de gastar, paga {conta}. Ordem que salva o mês.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [
+     "dinheiro"
+    ],
+    "id": "contas-030",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Contas: o chefão do mês. Derrota esse antes de {quando} 🎮",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "games"
+    ],
+    "id": "contas-031",
+    "slots": [
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Lembrete sem drama: {conta}, {quando}. Só isso 😄",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-032",
+    "slots": [
+     "conta",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Seu CPF agradece cada conta paga em dia.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-033",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Não precisa ser rico pra ser organizado. Precisa só pagar {conta} no prazo.",
+    "tom": "firme",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-034",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "{conta} hoje, preocupação nunca.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "quando": "hoje",
+    "id": "contas-035",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Que tal deixar {conta} no débito automático? Um lembrete a menos pra vida.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-036",
+    "slots": [
+     "conta"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Respira: é só uma conta. {conta} vence {quando}, e você dá conta 😉",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [
+     "ansiedade"
+    ],
+    "id": "contas-037",
+    "slots": [
+     "conta",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Quem dá conta das contas dá conta de tudo.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-038",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Conta paga é luz acesa, internet ligada e paz garantida.",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-039",
+    "slots": [],
+    "dia": null
+   },
+   {
+    "texto": "Separa 5 minutinhos pra olhar as contas da semana. Resolve muita coisa.",
+    "tom": "direto",
+    "hora": "qualquer",
+    "tags": [],
+    "dia": "seg",
+    "id": "contas-040",
+    "slots": []
+   },
+   {
+    "texto": "{conta}: vence {quando}. Paga e manda um 'feito' pro Lembra ✔",
+    "tom": "leve",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-041",
+    "slots": [
+     "conta",
+     "quando"
+    ],
+    "dia": null
+   },
+   {
+    "texto": "Fazer as contas é chato. Pagar as contas é libertador.",
+    "tom": "trocadilho",
+    "hora": "qualquer",
+    "tags": [],
+    "id": "contas-042",
+    "slots": [],
+    "dia": null
+   }
+  ]
+ },
+ "contagem": {
+  "agua": 46,
+  "manha": 43,
+  "noite": 43,
+  "motivacao": 43,
+  "versiculo": 47,
+  "aniversario": 43,
+  "socializar": 43,
+  "remedio": 42,
+  "estudo": 42,
+  "trabalho": 43,
+  "contas": 42
+ }
+}
