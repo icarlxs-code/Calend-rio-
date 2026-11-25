@@ -31,7 +31,8 @@ export const RELIGIONS = {
 };
 
 /* textos de fé por tradição (citações conhecidas; quando não há texto sagrado único, frases de bênção respeitosas) */
-/* Trechos de livros sagrados abaixo são paráfrases próprias, em palavras nossas, com a referência. */
+/* Trechos de livros sagrados abaixo são paráfrases próprias, em palavras nossas, com a referência.
+   Frases de santos, Kardec, Chico Xavier e Buda seguem como eram, com a fonte conhecida e revisaoJuridica: true (aguardando o jurídico). */
 export const FAITH = {
   crista: [
     ['Com Cristo me sustentando, consigo encarar o que vier.', 'Filipenses 4:13'], ['Deus diz: estou do seu lado, então respire. Eu te dou força e te seguro pela mão.', 'Isaías 41:10'],
@@ -44,16 +45,16 @@ export const FAITH = {
   ],
   catolica: [
     ['Com Cristo me sustentando, consigo encarar o que vier.', 'Filipenses 4:13'], ['Deus cuida de mim como um pastor cuida do rebanho: não vai me faltar o essencial.', 'Salmo 23'],
-    ['Nada te perturbe, nada te espante. Quem a Deus tem, nada lhe falta. Só Deus basta.', 'Santa Teresa de Ávila'],
-    ['Reze, espere e não se preocupe.', 'São Padre Pio'], ['Faça o que puder, peça o que não puder, e Deus te dará o poder.', 'Santo Agostinho'],
-    ['Comece fazendo o que é necessário, depois o que é possível, e de repente estará fazendo o impossível.', 'São Francisco de Assis'],
-    ['Maria, passa na frente e abre os caminhos de hoje.', 'Oração popular'], ['Senhor, fazei de mim um instrumento de vossa paz.', 'Oração de São Francisco'],
-    ['Não tenham medo!', 'São João Paulo II'], ['Jesus deixou um presente de despedida: a paz dele, para ficar com a gente.', 'João 14:27'],
+    ['Nada te perturbe, nada te espante. Quem a Deus tem, nada lhe falta. Só Deus basta.', 'Santa Teresa de Ávila', { fonte: 'Poema atribuído a Santa Teresa de Ávila ("Nada te turbe"), séc. XVI', revisaoJuridica: true }],
+    ['Reze, espere e não se preocupe.', 'São Padre Pio', { fonte: 'Atribuída a São Pio de Pietrelcina (Padre Pio)', revisaoJuridica: true }], ['Faça o que puder, peça o que não puder, e Deus te dará o poder.', 'Santo Agostinho', { fonte: 'Santo Agostinho, De natura et gratia, 43 (versão livre)', revisaoJuridica: true }],
+    ['Comece fazendo o que é necessário, depois o que é possível, e de repente estará fazendo o impossível.', 'São Francisco de Assis', { fonte: 'Atribuída a São Francisco de Assis; sem fonte primária conhecida', revisaoJuridica: true }],
+    ['Maria, passa na frente e abre os caminhos de hoje.', 'Oração popular', { fonte: 'Oração popular; autoria não confirmada', revisaoJuridica: true }], ['Senhor, fazei de mim um instrumento de vossa paz.', 'Oração de São Francisco', { fonte: 'Oração de São Francisco; anônima, publicada em 1912 (La Clochette)', revisaoJuridica: true }],
+    ['Não tenham medo!', 'São João Paulo II', { fonte: 'São João Paulo II, homilia de início do pontificado, 22/10/1978', revisaoJuridica: true }], ['Jesus deixou um presente de despedida: a paz dele, para ficar com a gente.', 'João 14:27'],
   ],
   espirita: [
-    ['Fora da caridade não há salvação.', 'Allan Kardec'], ['Ninguém pode voltar atrás e fazer um novo começo, mas qualquer um pode recomeçar e fazer um novo fim.', 'Chico Xavier'],
-    ['Embora ninguém possa voltar atrás, todos podem começar agora.', 'Chico Xavier'], ['A gente pode morar numa casa mais ou menos, mas não pode viver uma vida mais ou menos.', 'Chico Xavier'],
-    ['Nascer, morrer, renascer ainda e progredir sempre, tal é a lei.', 'Allan Kardec'], ['Tudo passa, exceto Deus. Deus é o suficiente.', 'Chico Xavier'],
+    ['Fora da caridade não há salvação.', 'Allan Kardec', { fonte: 'Allan Kardec, O Evangelho segundo o Espiritismo, cap. XV', revisaoJuridica: true }], ['Ninguém pode voltar atrás e fazer um novo começo, mas qualquer um pode recomeçar e fazer um novo fim.', 'Chico Xavier', { fonte: 'Atribuída a Chico Xavier; autoria contestada', revisaoJuridica: true }],
+    ['Embora ninguém possa voltar atrás, todos podem começar agora.', 'Chico Xavier', { fonte: 'Atribuída a Chico Xavier; autoria contestada', revisaoJuridica: true }], ['A gente pode morar numa casa mais ou menos, mas não pode viver uma vida mais ou menos.', 'Chico Xavier', { fonte: 'Atribuída a Chico Xavier; fonte não confirmada', revisaoJuridica: true }],
+    ['Nascer, morrer, renascer ainda e progredir sempre, tal é a lei.', 'Allan Kardec', { fonte: 'Inscrição no túmulo de Allan Kardec (Paris)', revisaoJuridica: true }], ['Tudo passa, exceto Deus. Deus é o suficiente.', 'Chico Xavier', { fonte: 'Atribuída a Chico Xavier; fonte não confirmada', revisaoJuridica: true }],
   ],
   afro: [
     ['Que Oxalá te dê paz e sabedoria para hoje. Axé!', 'Bênção'], ['Que os bons caminhos se abram e a proteção dos seus orixás esteja contigo. Axé!', 'Bênção'],
@@ -72,8 +73,8 @@ export const FAITH = {
     ['Onde quer que você esteja, Deus está com você.', 'Alcorão 57:4'], ['Que a paz esteja contigo — As-salamu alaykum.', 'Saudação'],
   ],
   budista: [
-    ['A paz vem de dentro. Não a procure fora.', 'Buda'], ['A vida vai tomando a forma do que a gente pensa.', 'Dhammapada'],
-    ['Não insista no passado, não sonhe com o futuro: concentre a mente no momento presente.', 'Buda'],
+    ['A paz vem de dentro. Não a procure fora.', 'Buda', { fonte: 'Atribuída a Buda; sem fonte canônica conhecida', revisaoJuridica: true }], ['A vida vai tomando a forma do que a gente pensa.', 'Dhammapada'],
+    ['Não insista no passado, não sonhe com o futuro: concentre a mente no momento presente.', 'Buda', { fonte: 'Atribuída a Buda; sem fonte canônica conhecida', revisaoJuridica: true }],
     ['Uma palavra que traz paz vale mais que mil palavras vazias.', 'Dhammapada 100'], ['Respire. Você está aqui, agora. Isso basta.', 'Prática de atenção plena'],
     ['Como pedra firme no vento, quem tem sabedoria não balança com elogio nem com crítica.', 'Dhammapada 81'],
   ],

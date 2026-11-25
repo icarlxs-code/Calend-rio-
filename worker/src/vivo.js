@@ -39,12 +39,14 @@ export const NEUTRAS = {
 const TIT_NEUTRO = { agua: '💧 Água', manha: '☀️ Bom dia!', noite: '🌙 Boa noite', motivacao: '💜 Motivação', aniversario: '🎂 Aniversário', socializar: '💬 Pessoas', remedio: '💊 Remédio', estudo: '📚 Estudo', trabalho: '💼 Trabalho', contas: '💸 Contas', versiculo: '📖 Uma palavra' };
 
 /** agora = { turno, wd, chave } (chave: "2026-11-25T09", sempre no horário do Brasil) */
-export function candidatas({ cat, perfil = {}, slots = {}, agora, hist = [], lista = BANCO.categorias[cat] || [] }) {
+export function candidatas({ cat, perfil = {}, slots = {}, agora, hist = [], fora = [], lista }) {
+  const B = perfil.banco || {}; lista = lista || [...(BANCO.categorias[cat] || []), ...((B.extra && B.extra[cat]) || [])];
+  const X = new Set(fora);
   const tags = tagsDoPerfil(perfil), fase = faseDe(slots.quando), tom = perfil.prefs?.tone, verso = cat === 'versiculo', ok = [];
   for (const f of lista) {
     if (f.hora !== 'qualquer' && f.hora !== agora.turno) continue;
     if (f.dia && f.dia !== DIAS[agora.wd]) continue;
-    if (bloqueado(f.texto)) continue;
+    if (bloqueado(f.texto) || X.has(f.id) || (B.off && B.off.has(f.id))) continue; // proibida, que a pessoa não curtiu ou desligada
     if (!cabe(f.quando, fase)) continue;
     if (cat === 'aniversario' && fase && fase !== 'hoje' && !f.quando && !/\{quando\}/.test(f.texto) && /parab[eé]ns/i.test(f.texto)) continue; // "manda o parabéns" só no dia
     const texto = verso ? f.texto : preenche(f.texto, slots); if (!texto || CRU.test(texto)) continue;
@@ -87,8 +89,8 @@ export function proxima({ cat, perfil, slots, agora, vh = {} }) {
   const hist = vh[cat] || [], n = vh._n?.[cat] || 0;
   let m = null;
   if (BANCO.gramaticas[cat] && n % 4 === 3) m = daGramatica(cat, slots, hashStr(`${perfil.uid || perfil.name}|${cat}|g|${n}`), vh._p?.[cat] || []);
-  if (m && hist.includes(m.id)) m = null;
-  m = m || escolhe({ cat, perfil, slots, agora, hist });
+  if (m && (hist.includes(m.id) || (vh._x || []).includes(m.id) || perfil.banco?.off?.has(m.id))) m = null;
+  m = m || escolhe({ cat, perfil, slots, agora, hist, fora: vh._x || [] });
   if (!m || bloqueado(m.texto)) m = NEUTRAS[cat] ? { id: `${cat}-neutra`, cat, texto: NEUTRAS[cat], tom: 'leve', tags: [] } : null;
   if (!m) return null; // só versículo: sem banco, não se inventa
   const novo = { ...vh, [cat]: [...hist, m.id].slice(-40), _n: { ...(vh._n || {}), [cat]: n + 1 } };

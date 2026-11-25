@@ -5,6 +5,8 @@
    - Conversa com o Claude dentro do app (/ask), se houver chave da Anthropic
    Dados guardados num Durable Object com SQLite (veja entry.js e kvsql.js): chaves VAPID, aparelhos,
    listas de lembretes e a fila do relógio. O código usa a mesma interface do KV (env.CAL). */
+import { escondeNome } from '../../functions/remedios-lista.js';
+import { loteDiario } from './lote.js';
 import { socialRoute } from './social.js';
 import { staffRoute, pode } from './staff.js';
 import { generateVapid, sendPush } from './webpush.js';
@@ -36,6 +38,8 @@ async function getVapid(env) {
 /* Manda para todos os aparelhos de uma pessoa, respeitando as preferências do aparelho.
    meter.pushes conta as tentativas (o relógio para o lote antes de passar do limite grátis). */
 async function sendToMember(env, member, msg, pref, statuses = [], meter = null) {
+  // última barreira: nome de remédio nunca sai em título ou texto de aviso (mesmo de uma versão antiga do app)
+  if (msg && (msg.title || msg.body)) { const title = escondeNome(msg.title), body = escondeNome(msg.body); if (title !== msg.title || body !== msg.body) msg = { ...msg, title, body }; }
   const devs = await getDevices(env, member);
   const list = Object.entries(devs).filter(([, d]) => !(pref && d.prefs && d.prefs[pref] === false));
   if (!list.length) return 0;
@@ -247,7 +251,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/story-like': 60, '/friends/story-comment': 15, '/friends/story-comments': 60, '/friends/story-comment-del': 30, '/friends/story-repost': 6, '/friends/msg-send': 40, '/friends/msg-list': 60, '/friends/msg-media': 90, '/friends/msg-react': 60, '/friends/msg-del': 30, '/friends/convs': 40, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/friends/suggest': 20, '/friends/email': 15, '/friends/perto': 10, '/friends/close': 30, '/friends/dismiss': 30, '/friends/ping': 40, '/staff/me': 30, '/staff/list': 20, '/staff/set': 20, '/staff/remove': 20, '/staff/metrics': 20, '/staff/reports': 20, '/staff/report-action': 30, '/lb/report': 20, '/lb/board': 40 };
+const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/frase-queixa': 20, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/story-like': 60, '/friends/story-comment': 15, '/friends/story-comments': 60, '/friends/story-comment-del': 30, '/friends/story-repost': 6, '/friends/msg-send': 40, '/friends/msg-list': 60, '/friends/msg-media': 90, '/friends/msg-react': 60, '/friends/msg-del': 30, '/friends/convs': 40, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/friends/suggest': 20, '/friends/email': 15, '/friends/perto': 10, '/friends/close': 30, '/friends/dismiss': 30, '/friends/ping': 40, '/staff/me': 30, '/staff/list': 20, '/staff/set': 20, '/staff/remove': 20, '/staff/metrics': 20, '/staff/reports': 20, '/staff/report-action': 30, '/lb/report': 20, '/lb/board': 40 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -1003,6 +1007,15 @@ async function handle(req, env) {
     await env.CAL.put(`seen:${me.id}`, JSON.stringify(sn), { expirationTtl: 60 * 864e2 });
     return reply(env, req, { ok: true });
   }
+  // "não curti" numa frase: ela não volta para esta pessoa; com 3 pessoas, sai do banco
+  if (url.pathname === '/frase-queixa') {
+    const fid = typeof body.fid === 'string' && /^[a-z0-9-]{4,60}$/.test(body.fid) ? body.fid : '';
+    const r = fid && env.FRASES ? env.FRASES.queixa(fid, me.id, Date.now()) : null;
+    if (!r) return reply(env, req, { error: 'Essa frase não existe mais.' }, 404);
+    const vh = (await env.CAL.get(`vh:${me.id}`, 'json')) || {};
+    await env.CAL.put(`vh:${me.id}`, JSON.stringify({ ...vh, _x: [...new Set([...(vh._x || []), fid])].slice(-120) }));
+    return reply(env, req, { ok: true });
+  }
   if (url.pathname === '/personal') {
     const items = (Array.isArray(body.items) ? body.items : []).slice(0, 300)
       .filter((it) => it && typeof it.at === 'number')
@@ -1155,6 +1168,7 @@ export async function cronTick(env, { now = Date.now(), meter = { pushes: 0 }, m
     await safe('aviso único', oneShot(env));
     await safe('vitalício (quem ganhou antes da surpresa)', vipMigrate(env, (uid) => vipNotify(env, uid)));
     await safe('vitalício (numeração sem buracos)', vipCompacta(env));
+    await safe('lote de frases', loteDiario(env, now));
     await safe('ranking', monthlyAward(env, { stripe: stripeApi, getBill, putBill, notify: (id, msg) => send(env, id, msg) }));
   }
   const more = r.more || (await dueOf(env).dueBefore(now, 1)).length > 0;

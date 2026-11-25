@@ -8,6 +8,7 @@ import { safeHandle, cronTick } from './index.js';
 import { makeKv, makeDue } from './kvsql.js';
 import { sqlBoard } from './leaderboard.js';
 import { makeSocial } from './social.js';
+import { makeFrases } from './lote.js';
 import { verifyIdToken } from './auth.js';
 import { NET } from './webpush.js';
 
@@ -38,10 +39,11 @@ export class Hub extends DurableObject {
     this.kv = makeKv(ctx.storage.sql, this.meter);
     this.due = makeDue(ctx.storage.sql, this.kv, this.meter);
     this.social = makeSocial(ctx.storage.sql, this.meter);
+    this.frases = makeFrases(ctx.storage.sql, this.meter);
     this.runs = [];
     this.presence = new Map();
     this.presSaved = 0; this.presSig = '';
-    const base = { ...env, LB: sqlBoard(ctx.storage.sql, this.meter), CAL: this.kv, DUE: this.due, PRESENCE: this.presence, KV_OLD: env.CAL, METER: this.meter, RUNS: this.runs, SOCIAL: this.social,
+    const base = { ...env, LB: sqlBoard(ctx.storage.sql, this.meter), CAL: this.kv, DUE: this.due, PRESENCE: this.presence, KV_OLD: env.CAL, METER: this.meter, RUNS: this.runs, SOCIAL: this.social, FRASES: this.frases,
       // tempo real: manda o recado para os aparelhos abertos da pessoa; "visível" = com o app na frente agora
       AVISA: (u, o) => { const t = JSON.stringify(o); for (const w of ctx.getWebSockets(u)) { try { w.send(t); } catch { /* fechou */ } } },
       VISIVEL: (u) => ctx.getWebSockets(u).some((w) => { try { return !!w.deserializeAttachment()?.vis; } catch { return false; } }) };

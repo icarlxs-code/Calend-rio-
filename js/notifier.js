@@ -53,7 +53,8 @@ export function onEventChange(before0, after0) {
   const silent = (after || before).notifyPartner === false;
   const others = store.team.map((m) => m.id).filter((id) => id !== store.me && allowedFor(id, ev.companyId) && (!silent || (ev.assignees || []).includes(id)));
   const jobs = others.map((r) => {
-    const msg = changeMessage(before, after, { actor: nameOf(store.me), company: coName(ev.companyId), recipient: r, now: nowSP() }) || generic(nameOf(store.me));
+    const cob = (e) => (e && e.title === 'Seu remédio' && !(e.assignees || []).includes(r) ? { ...e, title: 'Compromisso' } : e); // saúde é da pessoa: o parceiro vê só "Compromisso"
+    const msg = changeMessage(cob(before), cob(after), { actor: nameOf(store.me), company: coName(ev.companyId), recipient: r, now: nowSP() }) || (ev.title === 'Seu remédio' ? { title: `${nameOf(store.me)} alterou um compromisso`, body: whenText(ev) } : generic(nameOf(store.me)));
     return notify([r], msg, `ev-${ev.id}`, `./#/e/${ev.id}`).then((d) => ({ r, d }));
   });
   // o próprio celular também recebe tudo
@@ -132,7 +133,7 @@ export function buildSchedule(now = Date.now()) {
       // com 60 minutos ou menos, o texto ganha a voz do Lembra (o título continua dizendo o essencial)
       if (!rem && offset > 0 && offset <= 60) { const p = piadaFixa(ev.title, 'a', `${ev.id}|${offset}|${ev.date}`); if (p) msg.body = `${ev.title ? `“${ev.title}”` : ''}${ev.location ? ` · ${ev.location}` : ''}${ev.title || ev.location ? ' · ' : ''}${p}`; }
       const resp = (ev.assignees || []).map(nameOf).join(' e ');
-      store.team.map((m) => m.id).filter((member) => memberOffsets(member).includes(offset) && allowedFor(member, ev.companyId) && (ev.notifyPartner !== false || member === ev.createdBy || (ev.assignees || []).includes(member))).forEach((member) => items.push({
+      store.team.map((m) => m.id).filter((member) => (!rem || (ev.assignees || []).includes(member) || (!(ev.assignees || []).length && member === ev.createdBy)) && memberOffsets(member).includes(offset) && allowedFor(member, ev.companyId) && (ev.notifyPartner !== false || member === ev.createdBy || (ev.assignees || []).includes(member))).forEach((member) => items.push({
         id: `r_${ev.id}_${offset}_${ev.date}${ev.time.replace(':', '')}_${member}`,
         at, member, title: msg.title, body: resp && !(ev.assignees.length === 1 && ev.assignees[0] === member) ? `${msg.body} · ${resp}` : msg.body, tag: `rem-${ev.id}`, url: `./#/e/${ev.id}`, kind: 'reminders', badge: pendingOn(member, ev.date),
       }));

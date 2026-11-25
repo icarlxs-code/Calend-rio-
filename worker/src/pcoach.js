@@ -484,7 +484,7 @@ export async function amigoOne(env, sendToMember, m, now = Date.now(), rankInfo 
   // posição no ranking (para avisar quando cair) — só para quem participa
   let rank = null;
   if (m.ws && m.ws !== 'main' && rankInfo) { const b = await rankInfo(m.ws); if (b) rank = b; }
-  let p = { ...prof, uid: m.id, name: prof.prefs?.nickname || prof.name || m.name, seenAt: sn.last || 0, seen: sn, rank, likes: prof.likes || [], goals: prof.goals || [], mind: prof.prefs?.mind || null, age: prof.prefs?.age || null };
+  let p = { ...prof, uid: m.id, name: prof.prefs?.nickname || prof.name || m.name, seenAt: sn.last || 0, seen: sn, rank, banco: env.FRASES ? env.FRASES.atual() : null, likes: prof.likes || [], goals: prof.goals || [], mind: prof.prefs?.mind || null, age: prof.prefs?.age || null };
   if (prof.date && prof.date !== br.date) {
     const yesterday = new Date(Date.parse(br.date) - 864e5).toISOString().slice(0, 10);
     p = { ...p, today: prof.date === yesterday ? prof.tomorrow || [] : [], tomorrow: [] };
