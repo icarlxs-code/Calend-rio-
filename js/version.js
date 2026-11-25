@@ -44,7 +44,7 @@ export const appInfo = () => ({ v: APP_VERSION, b: APP_BUILD, since });
 /* ---------- conferir se há versão nova ---------- */
 export let latest = null;
 let lastCheck = 0;
-const busy = () => !!document.querySelector('.sheet-wrap, .ficha, .paywall, .ob, .termsgate, .guide, .spaceveil, .okfx, .gx') || (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName));
+const busy = () => !!document.querySelector('.nv, .sheet-wrap, .ficha, .paywall, .ob, .termsgate, .guide, .spaceveil, .okfx, .gx') || (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName));
 export async function fetchLatest() {
   const r = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
   if (!r.ok) throw new Error('sem version.json');
@@ -90,11 +90,16 @@ function mustUpdate(j) {
 }
 
 /* ---------- novidades (uma vez depois de atualizar) ---------- */
-export function maybeShowWhatsNew() {
+export async function maybeShowWhatsNew() {
   if (!prevVersion || cmpVer(APP_VERSION, prevVersion) <= 0 || !APP_NOTES.length) return false;
+  const { store, saveProfileQuiet } = await import('./store.js');
+  if (store.profile?.newsVista && cmpVer(store.profile.newsVista, APP_VERSION) >= 0) return false; // já viu em outro aparelho
   const key = `lembra.news.${APP_VERSION}`;
   try { if (localStorage.getItem(key)) return false; localStorage.setItem(key, '1'); } catch { return false; }
-  openNews();
+  const { abreNovidades, quadrosDesde } = await import('./novidades.js');
+  const q = quadrosDesde(prevVersion, APP_VERSION);
+  saveProfileQuiet({ newsVista: APP_VERSION }).catch(() => {});
+  if (q.length) abreNovidades(q); else openNews(); // só as atualizações grandes ganham apresentação
   return true;
 }
 /* "Novidades" no jeito da App Store: versão, há quantos dias e um texto curto e geral
@@ -113,8 +118,10 @@ export function openNews() {
         <h2 class="news__h">Novidades</h2>
         <div class="news__meta"><span>Versão ${esc(APP_VERSION)}</span><span>${esc(sinceTxt(APP_DATE))}</span></div>
         <p class="news__txt">${esc(APP_NOTES[0] || NEWS_TEXT)}</p>
+        <button class="btn btn--soft btn--block" data-rever>Rever a apresentação</button>
         <p class="fhelp">O Lembra se atualiza sozinho sempre que você abre. Não precisa reinstalar nada.</p>
       </div>`,
+    onMount: (a) => { a.el.querySelector('[data-rever]').onclick = async () => { const m = await import('./novidades.js'), v = Object.keys(m.NOVIDADES).sort((x, y) => cmpVer(y, x))[0]; a.close(); m.abreNovidades(m.NOVIDADES[v]); }; },
   });
 }
 /* versão antiga: botãozinho no topo "Atualizar" — um toque e atualiza na hora; some quando estiver em dia */

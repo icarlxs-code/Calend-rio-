@@ -1627,7 +1627,7 @@ a.list__row { color: inherit; text-decoration: none; }
 html.is-locked #view .page > *:not(.trialbar--lock), html.is-locked #view > *:not(.page):not(.trialbar--lock) { user-select: none; }
 html.is-locked .tabbar__fab { filter: grayscale(1); opacity: .5; }
 /* confirmações (ex.: "Sair da conta?") precisam abrir POR CIMA da tela de planos */
-body:has(.paywall) #sheets { z-index: 500; }
+body:has(.paywall) #sheets, body:has(.ficha) #sheets:has(.sheet--time) { z-index: 500; }
 .trialbar--lock { background: linear-gradient(135deg, #6A4BFF, #C13FD9); position: relative; z-index: 2; }
 .trialbar--lock .trialbar__go { color: #6A4BFF; }
 .paywall .btn--primary { background: linear-gradient(135deg, #8B5CFF, #D946EF); color: #fff; box-shadow: 0 10px 28px rgba(160, 107, 255, .35); border: 0; }

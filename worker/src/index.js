@@ -17,6 +17,8 @@ import { getBill, putBill, stripe as stripeApi } from './billing.js';
 import { getDevices, removeDevices, addDevice, upgradeSubs } from './devices.js';
 import { runTick, planReminders, planPersonal, seedPerson, upgradeLegacy, usageMeter } from './tick.js';
 import { dueOf } from './kvsql.js';
+import { rodaFutebol, guardaTime, tiraTime, proximos, ligado as futebolLigado } from './futebol.js';
+import { meuId, trocaId, limpaId, esqueceAchado, guardaCodigos } from './achar.js';
 import { regGet, regPut, regDel, regAll, idOfWs } from './registry.js';
 import { boardOf } from './leaderboard.js';
 import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling, untilOf, statusOf, grantComp, markVipSent, vipMigrate, vipCompacta } from './billing.js';
@@ -252,7 +254,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/frase-queixa': 20, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/story-like': 60, '/friends/story-comment': 15, '/friends/story-comments': 60, '/friends/story-comment-del': 30, '/friends/story-repost': 6, '/friends/msg-send': 40, '/friends/msg-list': 60, '/friends/msg-media': 90, '/friends/msg-react': 60, '/friends/msg-del': 30, '/friends/convs': 40, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/friends/suggest': 20, '/friends/email': 15, '/friends/perto': 10, '/friends/close': 30, '/friends/dismiss': 30, '/friends/ping': 40, '/staff/me': 30, '/staff/list': 20, '/staff/set': 20, '/staff/remove': 20, '/staff/metrics': 20, '/staff/reports': 20, '/staff/report-action': 30, '/lb/report': 20, '/lb/board': 40 };
+const LIMITS = { '/friends/achar': 20, '/friends/id': 15, '/futebol': 20, '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/frase-queixa': 20, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/story-like': 60, '/friends/story-comment': 15, '/friends/story-comments': 60, '/friends/story-comment-del': 30, '/friends/story-repost': 6, '/friends/msg-send': 40, '/friends/msg-list': 60, '/friends/msg-media': 90, '/friends/msg-react': 60, '/friends/msg-del': 30, '/friends/convs': 40, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/friends/suggest': 20, '/friends/email': 15, '/friends/perto': 10, '/friends/close': 30, '/friends/dismiss': 30, '/friends/ping': 40, '/staff/me': 30, '/staff/list': 20, '/staff/set': 20, '/staff/remove': 20, '/staff/metrics': 20, '/staff/reports': 20, '/staff/report-action': 30, '/lb/report': 20, '/lb/board': 40 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -505,6 +507,7 @@ async function handle(req, env) {
       if (env.SOCIAL) env.SOCIAL.apagaConta(me.ws);
       if (env.FRASES) env.FRASES.apagaPessoa(me.id);
       await env.CAL.delete(`vh:${me.id}`);
+      await tiraTime(env, me.id); await esqueceAchado(env, me.ws);
       await Promise.all([`mudo:${me.ws}`, `mcfg:${me.ws}`].map((k) => env.CAL.delete(k)));
       const frs = (await env.CAL.get(`friends:${me.ws}`, 'json')) || [];
       for (const f of frs) { const l = (await env.CAL.get(`friends:${f}`, 'json')) || []; await env.CAL.put(`friends:${f}`, JSON.stringify(l.filter((x) => x !== me.ws))); }
@@ -561,7 +564,7 @@ async function handle(req, env) {
     const vipOfU = async (u) => { const b = await getBill(env, u); return b && b.lifetime && b.comp && b.vip ? { no: b.vip.no } : null; };
     const cardOf = async (u) => {
       const c = (await env.CAL.get(`card:${u}`, 'json')) || {};
-      return { uid: u, name: c.name || 'Alguém', photo: c.photo || null, color: c.color || '#7C5CFF', level: c.level || 0, xp: c.xp || 0, badges: c.badges || [], tier: c.tier || '', since: c.since || null, bio: c.bio || '', job: c.job || '', role: c.role || '', place: c.place || '', hide: !!c.hide, teen: !!c.teen, vip: await vipOfU(u) };
+      return { uid: u, name: c.name || 'Alguém', photo: c.photo || null, color: c.color || '#7C5CFF', level: c.level || 0, xp: c.xp || 0, badges: c.badges || [], tier: c.tier || '', since: c.since || null, bio: c.bio || '', job: c.job || '', role: c.role || '', place: c.place || '', cidade: c.cidade || '', idade: c.idade || null, hide: !!c.hide, teen: !!c.teen, vip: await vipOfU(u) };
     };
     // ---------- recompensas por amizade (o servidor decide: o app só mostra) ----------
     //  +300 XP: alguém NOVO entrou no Lembra pelo seu convite e virou seu amigo (1 vez por pessoa, nunca repete)
@@ -606,10 +609,8 @@ async function handle(req, env) {
       // celular embaralhado (SHA-256): só serve para amigos que já têm o seu número na agenda te encontrarem
       // e-mail embaralhado também (quem souber o seu e-mail te acha); quem é menor ou desligou "me encontrem" não é achado
       const achavel = body.achavel !== false && body.teen !== true;
-      for (const [campo, pre] of [['phoneHash', 'phash'], ['emailHash', 'mhash']]) {
-        const h = body[campo]; if (!/^[a-f0-9]{64}$/.test(h || '')) continue;
-        if (achavel || pre === 'phash') await env.CAL.put(`${pre}:${h}`, meU); else if ((await env.CAL.get(`${pre}:${h}`)) === meU) await env.CAL.delete(`${pre}:${h}`);
-      }
+      await guardaCodigos(env, meU, body, achavel);
+      if (body.teen !== true) { card.cidade = clean(body.cidade, 60); card.idade = Number.isInteger(body.idade) && body.idade >= 18 && body.idade < 111 ? body.idade : null; }
       card.achavel = achavel; await env.CAL.put(`card:${meU}`, JSON.stringify(card));
       return reply(env, req, { ok: true });
     }
@@ -832,6 +833,25 @@ async function handle(req, env) {
       await env.CAL.put(`close:${meU}`, JSON.stringify(l.slice(0, 100)));
       return reply(env, req, { ok: true, close: body.on === true });
     }
+    // o seu ID público (@nome): nasce pronto e dá para trocar
+    if (url.pathname === '/friends/id') {
+      if (body.novo) { const r = await trocaId(env, meU, body.novo); return r.error ? reply(env, req, r, 400) : reply(env, req, { ok: true, id: r.id }); }
+      return reply(env, req, { ok: true, id: await meuId(env, meU, (await cardOf(meU)).name) });
+    }
+    // busca única: celular ou e-mail (embaralhados no aparelho) ou ID. Menores e quem desligou "me encontrem" não aparecem
+    if (url.pathname === '/friends/achar') {
+      const hs = (Array.isArray(body.tel) ? body.tel : []).filter((h) => /^[a-f0-9]{64}$/.test(h)).slice(0, 4), m = /^[a-f0-9]{64}$/.test(body.mail || '') ? body.mail : '', idq = limpaId(body.id);
+      let u = null;
+      for (const h of hs) if (!u) u = await env.CAL.get(`phash:${h}`);
+      if (!u && m) u = await env.CAL.get(`mhash:${m}`);
+      if (!u && idq) u = await env.CAL.get(`uname:${idq}`);
+      if (!u) return reply(env, req, { ok: true, row: null });
+      if (u === meU) return reply(env, req, { ok: true, row: null, self: true });
+      const bruto = (await env.CAL.get(`card:${u}`, 'json')) || {};
+      if ((await getL(`blocks:${u}`)).includes(meU) || (await getL(`blocks:${meU}`)).includes(u) || bruto.achavel === false || bruto.teen) return reply(env, req, { ok: true, row: null });
+      const c = await cardOf(u), rel = await relacao(u);
+      return reply(env, req, { ok: true, row: rel !== 'amigo' && c.hide ? { uid: c.uid, name: c.name, color: c.color, level: c.level, rel } : { ...c, rel } });
+    }
     // achar pelo e-mail (o app manda o e-mail embaralhado; o servidor nunca recebe o e-mail de quem procura)
     if (url.pathname === '/friends/email') {
       const h = /^[a-f0-9]{64}$/.test(body.hash || '') ? body.hash : '';
@@ -1019,6 +1039,11 @@ async function handle(req, env) {
     await env.CAL.put(`vh:${me.id}`, JSON.stringify({ ...vh, _x: [...new Set([...(vh._x || []), fid])].slice(-120) }));
     return reply(env, req, { ok: true });
   }
+  // time do coração: guarda só o id do clube, e só de quem ligou os avisos (para saber de quem avisar)
+  if (url.pathname === '/futebol') {
+    const r = body.ver ? { time: clean(body.time, 20) } : await guardaTime(env, me.id, { time: clean(body.time, 20), avisos: body.avisos });
+    return reply(env, req, { ok: true, ...r, ligado: futebolLigado(env), jogos: r.time ? await proximos(env, r.time) : [] });
+  }
   if (url.pathname === '/personal') {
     const items = (Array.isArray(body.items) ? body.items : []).slice(0, 300)
       .filter((it) => it && typeof it.at === 'number')
@@ -1173,6 +1198,7 @@ export async function cronTick(env, { now = Date.now(), meter = { pushes: 0 }, m
     await safe('vitalício (numeração sem buracos)', vipCompacta(env));
     await safe('lixeira', purgaLixeira(env, now));
     await safe('lote de frases', loteDiario(env, now));
+    await safe('futebol', rodaFutebol(env, now, send));
     await safe('ranking', monthlyAward(env, { stripe: stripeApi, getBill, putBill, notify: (id, msg) => send(env, id, msg) }));
   }
   const more = r.more || (await dueOf(env).dueBefore(now, 1)).length > 0;

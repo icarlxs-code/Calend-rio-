@@ -16,6 +16,8 @@ import { burst } from '../reward.js';
 import { CONFIG } from '../../config.js';
 import { pickField, openPicker } from '../picker.js';
 import { roleHint } from '../roles.js';
+import { boton, porTime, AVISO_TIME } from '../times.js';
+import { escolheTime, sincTime } from './editar-perfil.js';
 
 /* páginas oficiais (Termos e Privacidade) */
 const pageUrl = (name) => `${/^(localhost|127\.0\.0\.1)$/.test(location.hostname) || !CONFIG.siteUrl ? location.pathname.replace(/[^/]*$/, '') : CONFIG.siteUrl.replace(/\/?$/, '/')}${name}/`;
@@ -38,7 +40,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     pronoun: '', gender: '', volume: '', method: '',
     journey: 'comercial', workStart: '08:00', workEnd: '18:00', workDays: [1, 2, 3, 4, 5], wake: '06:30', sleep: '22:30', lunch: '12:00',
     difficulties: [], forget: 3, lead: '', tone: 'firme', freq: '', faith: false, water: true, meals: true, goal: 'lembrar', consent: false,
-    motivationLevel: '', selfesteem: '', anxiety: '', traits: [], focus: [], likes: [], wantsMotivation: true, religion: '', perDay: 7, waterEvery: 180,
+    motivationLevel: '', selfesteem: '', anxiety: '', traits: [], focus: [], likes: [], wantsMotivation: true, religion: '', perDay: 7, waterEvery: 180, teamId: '', teamOther: '', teamAvisos: false,
     ...initial,
   };
   let step = initial.onboardedAt ? 1 : 0, q = '', err = '', sub = 0, calcDone = false;
@@ -168,6 +170,10 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       return `<h2>Você por dentro</h2><p class="ficha__sub">Para o Lembra falar com você como um amigo que te conhece — e não mandar a mesma coisa que manda para todo mundo. Fica só na sua conta.</p>
       ${field('motivationLevel')}${field('selfesteem')}${field('anxiety')}
       ${field('traits')}${field('focus')}${field('likes')}
+      <label class="flabel">Qual é o seu time do coração? <small class="muted">(opcional)</small></label>
+      <button type="button" class="ep__time" data-ftime>${f.teamId ? boton(f.teamId, 44) : `<span class="ep__bola">${icon('heart', 20)}</span>`}<span><b>${esc(porTime(f.teamId)?.nome || f.teamOther || 'Escolher meu time')}</b><small>${f.teamId ? 'toque para trocar' : 'pode pular'}</small></span>${icon('right', 16)}</button>
+      ${f.teamId ? `<div class="list"><label class="list__row"><span><b>Quer aviso antes do jogo?</b><small>só do seu time</small></span><input type="checkbox" class="switch" data-chk="teamAvisos" ${f.teamAvisos ? 'checked' : ''}></label></div>` : ''}
+      <p class="fhelp">${esc(AVISO_TIME)}</p>
       <div class="list ficha__toggles">
         <label class="list__row"><span><b>Mensagens de motivação</b><small>frases de ânimo do seu jeito</small></span><input type="checkbox" class="switch" data-chk="wantsMotivation" ${f.wantsMotivation ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Mensagens de fé</b><small>da sua religião, se você tiver</small></span><input type="checkbox" class="switch" data-chk="faith" data-rerender ${f.faith ? 'checked' : ''}></label>
@@ -346,6 +352,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
   const bind = () => {
     const $ = (sel) => wrap.querySelectorAll(sel);
     bindPick();
+    { const b = wrap.querySelector('[data-ftime]'); if (b) b.onclick = () => escolheTime(f, () => { saveDraft(); render(); }); }
     $('[data-f]').forEach((el) => (el.oninput = () => {
       const k = el.dataset.f;
       // corrigiu o campo: some o aviso de erro
@@ -424,7 +431,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
 /* ---------- salvar e quando pedir a ficha ---------- */
 const KEYS = ['name', 'nickname', 'pronoun', 'gender', 'birth', 'cpf', 'phone', 'profession', 'area', 'arch', 'role', 'workplace', 'journey', 'volume', 'method', 'workStart', 'workEnd', 'workDays',
   'wake', 'sleep', 'lunch', 'difficulties', 'forget', 'lead', 'tone', 'freq', 'faith', 'water', 'meals', 'goal',
-  'motivationLevel', 'selfesteem', 'anxiety', 'traits', 'focus', 'likes', 'wantsMotivation', 'religion', 'perDay', 'waterEvery'];
+  'motivationLevel', 'selfesteem', 'anxiety', 'traits', 'focus', 'likes', 'wantsMotivation', 'religion', 'perDay', 'waterEvery', 'teamId', 'teamOther', 'teamAvisos'];
 
 /* A ficha vira: perfil da conta + perfil de trabalho do espaço + lembretes da pessoa + mensagens do Pessoal */
 export async function saveFicha(r) {
@@ -434,6 +441,7 @@ export async function saveFicha(r) {
   KEYS.forEach((k) => (data[k] = typeof r[k] === 'string' ? r[k].trim() : r[k]));
   Object.assign(data, { index: p.index, consentAt: store.profile?.consentAt || now, fichaConsentAt: now, termsVersion: CONFIG.termsVersion || '1.0', onboardedAt: store.profile?.onboardedAt || now, fichaAt: now });
   await saveUserProfile(data);
+  if (data.teamId) sincTime().catch(() => {});
   // espaço próprio: a profissão muda os nomes e os tipos de compromisso; a rotina vira o expediente
   if (store.solo && store.workspace === store.user?.uid) {
     store.upsert('settings', { id: 'workprofile', arch: r.arch, profession: r.profession });

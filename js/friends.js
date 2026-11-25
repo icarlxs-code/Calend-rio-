@@ -9,6 +9,8 @@ import { esc, comUtm } from './utils.js';
 import { CONFIG } from '../config.js';
 import { sininho, alive, vivo } from './sininho.js';
 import { leCache, gravaCache } from './cache.js';
+import { ageOf } from './persona.js';
+import { abreAchar } from './achar.js';
 
 const LS = 'lembra.amigo';
 const call = (path, body = {}) => api(path, { ws: '', ...body }); // sempre a própria conta (nunca a agenda de outra pessoa)
@@ -56,7 +58,7 @@ export async function publishCard() {
     const st = G.state(), L = G.levelInfo();
     const me = store.member(store.me) || {};
     const card = { name: me.name || '', photo: me.photo && me.photo.length < 90000 ? me.photo : null, color: me.color || '#7C5CFF', level: L.level, xp: L.xp, tier: L.tier.name(), badges: Object.keys(st.badges || {}), teen: (await import('./teen.js')).isTeen(), hide: (await import('./teen.js')).rankHidden(),
-      bio: store.profile?.bio || '', job: store.profile?.profession ? (await import('../functions/catalog.js')).professionFor(store.profile.profession, store.profile.pronoun) : '', role: store.profile?.role || '', place: store.profile?.workplace || '',
+      bio: store.profile?.bio || '', job: store.profile?.profession ? (await import('../functions/catalog.js')).professionFor(store.profile.profession, store.profile.pronoun) : '', role: store.profile?.role || '', place: store.profile?.workplace || '', cidade: store.profile?.mostra?.cidade ? [store.profile.cidade, store.profile.uf].filter(Boolean).join(', ') : '', idade: store.profile?.mostra?.idade ? ageOf(store.profile.birth) : null,
       phoneHash: await hashTel(store.profile?.phone), emailHash: await hashMail(store.user?.email), achavel: achavel(),
       since: store.user.metadata?.creationTime ? Date.parse(store.user.metadata.creationTime) : null };
     const sig = JSON.stringify(card);
@@ -169,7 +171,7 @@ export function openFriends() {
   };
   const achar = () => `<div class="fxfind">
       <button class="fxfind__b" data-contatos><span class="fxfind__ic is-a">${icon('phone', 20)}</span><b>Contatos</b><small>quem já usa</small></button>
-      <button class="fxfind__b" data-email><span class="fxfind__ic is-b">${icon('mail', 20)}</span><b>E-mail</b><small>buscar alguém</small></button>
+      <button class="fxfind__b" data-achar><span class="fxfind__ic is-b">${icon('search', 20)}</span><b>Buscar</b><small>achar alguém</small></button>
       <button class="fxfind__b" data-perto><span class="fxfind__ic is-c">${icon('pin', 20)}</span><b>Perto de você</b><small>${pertoLigado() ? 'ligado · 100 km' : 'desligado'}</small></button>
     </div>`;
   const html = () => {
@@ -189,13 +191,14 @@ export function openFriends() {
       </header>
       ${St ? St.storyStrip() : ''}
       <div class="fxtabs" role="tablist"><button class="${aba === 'amigos' ? 'is-on' : ''}" data-aba="amigos">Amigos${data ? ` · ${data.friends.length}` : ''}</button><button class="${aba === 'descobrir' ? 'is-on' : ''}" data-aba="descobrir">Descobrir${lista.length ? `<i class="fxtabs__n">${Math.min(lista.length, 99)}</i>` : ''}</button></div>
+      <button class="achar__bt" data-achar>${icon('search', 22)}<span>Telefone, e-mail ou ID</span></button>
       ${aba === 'descobrir' ? `
         ${achar()}
         ${premiosHtml()}
         ${pertoHtml()}
         <h3 class="fx__h">${icon('users', 18)} Pessoas que você talvez conheça</h3>
         ${lista.length ? `<div class="fsugs">${lista.map(sugCard).join('')}</div>` : '<p class="fhelp">Assim que seus amigos tiverem amigos no Lembra, as sugestões aparecem aqui. Procure pelos contatos ou pelo e-mail ☝️</p>'}
-        <label class="fxachavel"><input type="checkbox" data-achavel ${achavel() ? 'checked' : ''}><span><b>Deixar quem tem meu e-mail ou celular me encontrar</b><small>Ninguém vê seu e-mail nem seu número: eles são embaralhados no aparelho.</small></span></label>`
+        <label class="fxachavel"><input type="checkbox" data-achavel ${achavel() ? 'checked' : ''}><span><b>Deixar que me encontrem por telefone, e-mail ou ID</b><small>Ninguém vê seu e-mail nem seu número: eles são embaralhados no aparelho.</small></span></label>`
       : `
       <div class="fx__busca"><label class="fsearch">${icon('search', 18)}<input type="search" placeholder="Buscar amigo" value="${esc(busca)}" data-busca autocomplete="off"></label>
         <button class="fx__round" data-aba="descobrir" aria-label="Encontrar amigos">${icon('users', 22)}</button></div>
@@ -238,7 +241,7 @@ export function openFriends() {
       toast(`${rows.length} ${rows.length === 1 ? 'pessoa' : 'pessoas'} dos seus contatos já ${rows.length === 1 ? 'usa' : 'usam'} o Lembra 🎉 Toque em Adicionar`);
     };
     if (ct) ct.onclick = () => contatosMenu(achou);
-    const em = x.el.querySelector('[data-email]'); if (em) em.onclick = () => porEmail(() => load(x));
+    x.el.querySelectorAll('[data-achar]').forEach((b) => (b.onclick = () => abreAchar({ onDone: () => load(x) })));
     const pt = x.el.querySelector('[data-perto]'); if (pt) pt.onclick = () => pertoDeVoce(x, true);
     const pte = x.el.querySelector('[data-perto-tenta]'); if (pte) pte.onclick = () => { pertoErr = ''; perto = null; x.set(html()); pertoDeVoce(x, false); };
     const ach = x.el.querySelector('[data-achavel]'); if (ach) ach.onchange = () => { try { localStorage.setItem('lembra.achavel', ach.checked ? '1' : '0'); } catch { /* ok */ } lastCard = ''; publishCard(); toast(ach.checked ? 'Quem tem seu e-mail ou celular pode te achar' : 'Ninguém te acha pelo e-mail ou celular'); };
@@ -292,13 +295,13 @@ function contatosMenu(achou) {
     <div class="phm__head"><b>Achar amigos pelos contatos</b><small>Os números são embaralhados no seu celular: o Lembra nunca vê a sua agenda</small></div>
     <div class="phm__grp">
       ${contatosDisponivel() ? `<button class="phm__row" data-agenda><span class="phm__ic is-cam">${icon('users', 21)}</span><span class="phm__t"><b>Escolher na agenda do celular</b><small>Marque vários de uma vez</small></span>${icon('right', 16)}</button>` : ''}
-      <button class="phm__row" data-numero><span class="phm__ic is-story">${icon('phone', 21)}</span><span class="phm__t"><b>Digitar um número</b><small>O celular de alguém que você conhece</small></span>${icon('right', 16)}</button>
+      <button class="phm__row" data-numero><span class="phm__ic is-story">${icon('phone', 21)}</span><span class="phm__t"><b>Digitar telefone, e-mail ou ID</b><small>De alguém que você conhece</small></span>${icon('right', 16)}</button>
       <label class="phm__row"><span class="phm__ic is-n">${icon('download', 21)}</span><span class="phm__t"><b>Importar arquivo de contatos (.vcf)</b><small>iPhone: Contatos → Listas → segure “Todos” → Exportar</small></span>${icon('right', 16)}<input type="file" accept=".vcf,text/vcard,text/x-vcard" data-vcf hidden></label>
     </div>
     <button class="phm__cancel" data-close>Cancelar</button></div>`,
   onMount: (x) => {
     const ag = x.el.querySelector('[data-agenda]'); if (ag) ag.onclick = async () => { x.close(); const rows = await buscarPelosContatos(); if (rows) achou(rows); };
-    x.el.querySelector('[data-numero]').onclick = () => { x.close(); porNumero(achou); };
+    x.el.querySelector('[data-numero]').onclick = () => { x.close(); abreAchar(); };
     x.el.querySelector('[data-vcf]').onchange = async (e) => {
       const f = e.target.files && e.target.files[0]; if (!f) return; x.close();
       try { const tels = telsDoVcf(await f.text()); if (!tels.length) return toast('Não achei números nesse arquivo.'); toast(`Procurando entre ${tels.length} números…`); achou(await buscarTels(tels)); }
@@ -306,50 +309,6 @@ function contatosMenu(achou) {
     };
   } });
 }
-function porNumero(achou) {
-  return openSheet({ className: 'sheet--dialog', html: `<div class="dialog fmail"><h3>Buscar pelo celular</h3><p>Digite o número com DDD.</p>
-    <input class="field" type="tel" inputmode="tel" autocomplete="off" placeholder="(21) 99999-9999" data-n>
-    <div data-res></div>
-    <button class="btn btn--primary btn--block" data-go>Buscar</button><button class="btn btn--ghost btn--block" data-close>Fechar</button></div>`,
-  onMount: (x) => {
-    const inp = x.el.querySelector('[data-n]'), res = x.el.querySelector('[data-res]');
-    setTimeout(() => inp.focus(), 250);
-    const go = async () => {
-      if (inp.value.replace(/\D/g, '').length < 10) { res.innerHTML = '<p class="fhelp">Digite o número com DDD.</p>'; return; }
-      res.innerHTML = '<div class="fx__load"><i></i><i></i><i></i></div>';
-      try { const rows = await buscarTels([inp.value]); if (!rows.length) { res.innerHTML = '<p class="fhelp">Não achei ninguém com esse número (ou a pessoa ainda não colocou o celular no perfil). Mande o convite: você ganha +300 XP se ela entrar.</p>'; return; } x.close(); achou(rows); }
-      catch (e) { res.innerHTML = `<p class="fhelp">${esc(e.message || 'Não consegui agora.')}</p>`; }
-    };
-    x.el.querySelector('[data-go]').onclick = go;
-    inp.onkeydown = (e) => { if (e.key === 'Enter') go(); };
-  } });
-}
-/* achar alguém pelo e-mail: o e-mail é embaralhado no aparelho antes de sair */
-function porEmail(onDone) {
-  return openSheet({ className: 'sheet--dialog', html: `<div class="dialog fmail"><h3>Buscar pelo e-mail</h3><p>Digite o e-mail que a pessoa usa no Lembra.</p>
-    <input class="field" type="email" inputmode="email" autocomplete="off" placeholder="nome@exemplo.com" data-m>
-    <div data-res></div>
-    <button class="btn btn--primary btn--block" data-go>Buscar</button><button class="btn btn--ghost btn--block" data-close>Fechar</button></div>`,
-  onMount: (x) => {
-    const inp = x.el.querySelector('[data-m]'), res = x.el.querySelector('[data-res]');
-    setTimeout(() => inp.focus(), 250);
-    const go = async () => {
-      const h = await hashMail(inp.value); if (!h) { res.innerHTML = '<p class="fhelp">Confira o e-mail.</p>'; return; }
-      res.innerHTML = '<div class="fx__load"><i></i><i></i><i></i></div>';
-      try {
-        const r = await call('/friends/email', { hash: h });
-        if (r.self) { res.innerHTML = '<p class="fhelp">Esse é o seu e-mail 😄</p>'; return; }
-        if (!r.row) { res.innerHTML = `<p class="fhelp">Não achei ninguém com esse e-mail (ou a pessoa preferiu não ser encontrada). Que tal mandar o convite? Você ganha +300 XP se ela entrar.</p><button class="btn btn--soft btn--block" data-conv>${icon('share', 16)} Mandar convite</button>`; res.querySelector('[data-conv]').onclick = () => { x.close(); openShareChoice(); }; return; }
-        const c = r.row;
-        res.innerHTML = `<button class="fxrow" data-pp><span class="fxava">${foto(c)}</span><span class="fxrow__id"><b>${esc(c.name)}</b><small>${c.rel === 'amigo' ? 'Vocês já são amigos' : c.rel === 'enviado' ? 'Pedido enviado' : esc(c.job || `Nível ${c.level || 0}`)}</small></span><span class="fx__ver">Ver</span></button>`;
-        res.querySelector('[data-pp]').onclick = () => { x.close(); openPublicProfile(c.uid).then(() => onDone && onDone()); };
-      } catch (e) { res.innerHTML = `<p class="fhelp">${esc(e.message || 'Não consegui agora.')}</p>`; }
-    };
-    x.el.querySelector('[data-go]').onclick = go;
-    inp.onkeydown = (e) => { if (e.key === 'Enter') go(); };
-  } });
-}
-
 /* Compartilhar: a pessoa escolhe se convida para a lista de amigos dela ou só indica o app.
    O link de amizade vale 14 dias e pode ir para quantas pessoas quiser (cada uma manda o pedido e você aceita). */
 export function openShareChoice() {
@@ -418,6 +377,7 @@ export async function openPublicProfile(uid, prev = {}, onRemoved) {
       ${c.vip ? `<div class="pp2__vip">${icon('crown', 16)} Membro Nº ${pad(c.vip.no)}</div><p class="pp2__vipt">Um dos raríssimos membros para sempre 🧡</p>` : ''}
       ${c.job || c.role ? `<p class="pp__job">${icon('briefcase', 14)} ${esc([c.job, c.role].filter(Boolean).join(' · '))}</p>` : ''}
       ${c.place ? `<p class="pp__place">${icon('building', 14)} ${esc(c.place)}</p>` : ''}
+      ${c.cidade || c.idade ? `<p class="pp__place">${icon('pin', 14)} ${esc([c.cidade, c.idade ? `${c.idade} anos` : ''].filter(Boolean).join(' · '))}</p>` : ''}
       ${c.bio ? `<p class="pp__bio">${esc(c.bio)}</p>` : ''}
       ${d?.online && rel === 'amigo' ? `<p class="pp__visto${isOnline(d.online) ? ' is-on' : ''}">${esc(onlineTxt(d.online))}</p>` : ''}
       ${d?.story === 'amigos' ? `<p class="fhelp">${icon('lock', 12)} Postou story hoje — só amigos veem.</p>` : ''}

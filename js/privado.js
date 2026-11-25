@@ -7,6 +7,9 @@ import { esc } from './utils.js';
 import { boneco3d } from './cena.js';
 import { call, podeSocial, ICO, rosto, desde, falta, ouvir, atualiza, conversas, aoVivo, conversaAberta, digitando } from './social.js';
 import { isTeen } from './teen.js';
+import { sininho, alive, veste, act, lookAt } from './sininho.js';
+import { roupa } from './roupas.js';
+import { mascotOn } from './mascote.js';
 
 const som = (f, ...a) => import('./sound.js').then((s) => s[f] && s[f](...a)).catch(() => {});
 const vib = (q) => { try { navigator.vibrate && navigator.vibrate(q); } catch { /* ok */ } };
@@ -80,14 +83,18 @@ export async function openConversa(uid, prev = {}) {
     const dia = !ant || new Date(ant.at).getDate() !== new Date(m.at).getDate() ? `<div class="conv__dia"><span>${new Date(m.at).getDate() === new Date().getDate() ? 'Hoje' : 'Ontem'}</span></div>` : '';
     return `${dia}<div class="bol${m.meu ? ' bol--eu' : ''}${junto ? ' is-junto' : ''}${fim ? ' is-fim' : ''}${m.nova ? ' is-entra' : ''}${rc.length ? ' tem-reac' : ''}" data-m="${esc(m.id)}"><div class="bol__c">${m.resp ? citacao(m.resp) : ''}${dentro}<span class="bol__pe">${hora(m.at)}${m.meu && m.tipo !== 'apagada' ? (m.falhou ? ` <button type="button" class="bol__re" data-re="${esc(m.id)}">não foi · tentar</button>` : m.envio ? ` ${icon('clock', 12)}` : D.lidoAte >= m.at ? ' <b class="bol__visto">visto</b>' : ` ${icon('check', 12)}`) : ''}</span></div>${rc.length ? `<span class="bol__reac">${[...new Set(rc)].map(esc).join('')}${rc.length > 1 ? `<small>${rc.length}</small>` : ''}</span>` : ''}</div>`;
   };
-  let assin = '';
+  let assin = '', viuAte = 0;
+  /* o Lembra na conversa: digita, grava, e quando a última mensagem é vista ele chega e lê */
+  const vesteCenas = () => { const L = a.el.querySelectorAll('[data-cena]'); if (!L.length) return; alive(); L.forEach((n) => { const e = n.querySelector('[data-snh]'); veste(e, roupa(n.dataset.cena)); if (n.dataset.cena === 'le') { const b = [...a.el.querySelectorAll('.bol--eu')].pop()?.getBoundingClientRect(); if (b) setTimeout(() => lookAt(e, b.left + b.width / 3, b.top, 2), 350); setTimeout(() => act(e, 'sim'), 2200); } }); };
+  const cenaVisto = (L) => { const u = L[L.length - 1]; if (!mascotOn() || !u || !u.meu || u.tipo === 'apagada' || u.envio || u.falhou || D.lidoAte < u.at) return ''; const novo = montou && viuAte < u.at; viuAte = u.at; return `<div class="conv__viu${novo ? ' is-novo' : ''}"><small>${esc(n1())} viu</small><span class="bol__snh" data-cena="le">${sininho('feliz', { size: 74, label: '' })}</span></div>`; };
   function pinta(forca) {
     const l = $('[data-lista]'); if (!l) return;
-    const L = todas(), s = JSON.stringify([L.map((m) => [m.id, m.tipo, m.reac, m.envio, m.falhou, abertas.has(m.id)]), D.lidoAte, D.amigo, D.carregou, Date.now() < digT]);
+    const L = todas(), s = JSON.stringify([L.map((m) => [m.id, m.tipo, m.reac, m.envio, m.falhou, abertas.has(m.id)]), D.lidoAte, D.amigo, D.carregou, Date.now() < digT && (digV || 1)]);
     status(); if (s === assin && !forca) return; assin = s;
     const perto = l.scrollHeight - l.scrollTop - l.clientHeight < 140; if (tocando && !forca && !perto) { /* não mexe na rolagem de quem está lendo */ }
     const topo = l.scrollTop, alt = l.scrollHeight;
-    l.innerHTML = `<div class="conv__selo">${icon('lock', 15)}<span>Só você e ${esc(n1())}. Cada mensagem é apagada do servidor 24 h depois.</span></div>${!D.carregou ? '<div class="fx__load"><i></i><i></i><i></i></div>' : !L.length ? `<div class="conv__vazio">${boneco3d('acena', 150)}<p>Comece a conversa com ${esc(n1())}</p><div>${['Oi! 👋', 'Bora marcar algo?', 'Vi seu story 😄'].map((t) => `<button type="button" data-rapida="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>` : L.map(bolha).join('')}${Date.now() < digT ? '<div class="bol is-dig"><div class="bol__c"><i></i><i></i><i></i></div></div>' : ''}${D.amigo ? '' : `<p class="conv__fim">Vocês não são mais amigos. As mensagens somem em até 24 h.</p>`}`;
+    l.innerHTML = `<div class="conv__selo">${icon('lock', 15)}<span>Só você e ${esc(n1())}. Cada mensagem é apagada do servidor 24 h depois.</span></div>${!D.carregou ? '<div class="fx__load"><i></i><i></i><i></i></div>' : !L.length ? `<div class="conv__vazio">${boneco3d('acena', 150)}<p>Comece a conversa com ${esc(n1())}</p><div>${['Oi! 👋', 'Bora marcar algo?', 'Vi seu story 😄'].map((t) => `<button type="button" data-rapida="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>` : L.map(bolha).join('') + (Date.now() < digT ? '' : cenaVisto(L))}${Date.now() < digT ? `<div class="bol is-dig"><span class="bol__snh"${mascotOn() ? '' : ' hidden'} data-cena="${digV === 'audio' ? 'grava' : 'digita'}">${sininho('feliz', { size: 80, label: '' })}</span><div class="bol__c${digV === 'audio' ? ' is-aud' : ''}" role="img" aria-label="${digV === 'audio' ? 'gravando áudio' : 'digitando'}">${'<i></i>'.repeat(digV === 'audio' ? 5 : 3)}</div></div>` : ''}${D.amigo ? '' : `<p class="conv__fim">Vocês não são mais amigos. As mensagens somem em até 24 h.</p>`}`;
+    vesteCenas();
     $('[data-barra]').classList.toggle('is-off', !D.amigo);
     if (!montou || perto || grude) l.scrollTop = l.scrollHeight; else l.scrollTop = topo + (l.scrollHeight - alt > 0 && topo < 10 ? l.scrollHeight - alt : 0);
     grude = false; montou = montou || D.carregou;

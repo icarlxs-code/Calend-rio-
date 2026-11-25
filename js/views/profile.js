@@ -14,11 +14,11 @@ import { meuStory, openViewer, comoPostar, refreshFeed } from '../stories.js';
 import { CONFIG } from '../../config.js';
 import { professionFor } from '../../functions/catalog.js';
 
-const COLORS = ['#7C5CFF', '#2563EB', '#0E9F6E', '#D9480F', '#DB2777', '#0891B2', '#CA8A04', '#4B5563'];
 const fmt = (n) => Number(n || 0).toLocaleString('pt-BR');
 const dt = (ms) => new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).replace('.', '');
 
 /* compatibilidade: "Editar perfil" dos Ajustes */
+export const openEditProfile = async (after) => (await import('./editar-perfil.js')).openEditProfile(after);
 export function openProfile() { return openEditProfile(); }
 
 export async function openProfilePage({ tab = 'emblemas' } = {}) {
@@ -306,33 +306,3 @@ export function cropper(file) {
   });
 }
 
-/* ---------- editar perfil: nome, frase e cor ---------- */
-export function openEditProfile(after) {
-  const me = store.member(store.me) || {};
-  const d = { name: me.name || '', bio: store.profile?.bio || '', color: me.color || COLORS[0] };
-  const html = () => `${sheetHead('Editar perfil', { left: '<button class="btn-text" data-close>Cancelar</button>', right: '<button class="btn btn--primary btn--sm" data-save>Salvar</button>' })}
-    <form class="form" onsubmit="return false">
-      <div class="profpic"><button type="button" class="profpic__btn" data-pic>${avatar(store.me, 88)}<span>${icon('camera', 14)} Alterar foto</span></button></div>
-      <div class="fgroup"><label class="flabel" for="p-name">${store.profile?.nickname ? 'Como prefere ser chamado(a)' : 'Nome'}</label><input id="p-name" class="input" name="name" value="${esc(d.name)}" maxlength="40" autocomplete="nickname"></div>
-      <div class="fgroup"><label class="flabel" for="p-bio">Uma frase sobre você <small class="muted">(opcional)</small></label><input id="p-bio" class="input" name="bio" value="${esc(d.bio)}" maxlength="80" placeholder="Ex.: Confeiteira apaixonada por bolo de pote 🍰"></div>
-      <div class="fgroup"><label class="flabel">Sua cor</label><div class="palette palette--8">${COLORS.map((c) => `<button type="button" class="swatch${d.color === c ? ' is-on' : ''}" style="background:${c}" data-color="${c}" aria-label="Cor">${icon('check', 16)}</button>`).join('')}</div></div>
-      <p class="fhelp">E-mail da conta: ${esc(store.user?.email || '')}</p>
-    </form>`;
-  return openSheet({
-    html: html(),
-    onMount: (a) => {
-      const el = a.el, form = el.querySelector('form');
-      const keep = () => { d.name = form.name.value; d.bio = form.bio.value; };
-      el.querySelector('[data-pic]').onclick = () => { keep(); photoActions(() => a.set(html())); };
-      el.querySelectorAll('[data-color]').forEach((b) => (b.onclick = () => { keep(); d.color = b.dataset.color; a.set(html()); }));
-      el.querySelector('[data-save]').onclick = async () => {
-        keep();
-        const name = d.name.replace(/\s+/g, ' ').trim();
-        if (!name || !/\p{L}/u.test(name)) return toast('Escreva seu nome');
-        const nameField = store.profile?.nickname ? { nickname: name } : { name };
-        try { await saveMyProfile({ ...nameField, bio: d.bio.replace(/\s+/g, ' ').trim().slice(0, 80), color: d.color }); toast('Perfil salvo ✓'); a.close(); after && after(); }
-        catch { toast('Não consegui salvar agora. Verifique a internet.'); }
-      };
-    },
-  });
-}

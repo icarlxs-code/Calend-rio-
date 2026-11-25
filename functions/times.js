@@ -1,0 +1,92 @@
+/* Clubes: só nome (informativo), apelidos e cores. Sem escudos. Usado pelo app e pelo servidor. */
+export const TIMES = [
+  { id: 'flamengo', nome: 'Flamengo', ap: ['mengao', 'mengo', 'fla', 'urubu'], uf: 'RJ', cores: ['#C8102E', '#111111'], sigla: 'FLA' },
+  { id: 'fluminense', nome: 'Fluminense', ap: ['flu', 'tricolor carioca', 'nense'], uf: 'RJ', cores: ['#7A1A35', '#0B6B3A'], sigla: 'FLU' },
+  { id: 'vasco', nome: 'Vasco', ap: ['vascao', 'vasco da gama', 'gigante da colina'], uf: 'RJ', cores: ['#111111', '#FFFFFF'], sigla: 'VAS' },
+  { id: 'botafogo', nome: 'Botafogo', ap: ['fogao', 'bota', 'glorioso'], uf: 'RJ', cores: ['#111111', '#FFFFFF'], sigla: 'BOT' },
+  { id: 'corinthians', nome: 'Corinthians', ap: ['timao', 'curintia'], uf: 'SP', cores: ['#FFFFFF', '#111111'], sigla: 'COR' },
+  { id: 'palmeiras', nome: 'Palmeiras', ap: ['verdao', 'porco', 'palestra'], uf: 'SP', cores: ['#0B6B3A', '#FFFFFF'], sigla: 'PAL' },
+  { id: 'saopaulo', nome: 'São Paulo', ap: ['sao paulo', 'spfc', 'tricolor paulista'], uf: 'SP', cores: ['#C8102E', '#111111'], sigla: 'SAO' },
+  { id: 'santos', nome: 'Santos', ap: ['peixe', 'santastico'], uf: 'SP', cores: ['#FFFFFF', '#111111'], sigla: 'SAN' },
+  { id: 'bragantino', nome: 'Bragantino', ap: ['red bull bragantino', 'massa bruta', 'rb bragantino'], uf: 'SP', cores: ['#FFFFFF', '#C8102E'], sigla: 'BGT' },
+  { id: 'mirassol', nome: 'Mirassol', ap: ['leao da alta araraquarense'], uf: 'SP', cores: ['#F6C700', '#0B6B3A'], sigla: 'MIR' },
+  { id: 'guarani', nome: 'Guarani', ap: ['bugre'], uf: 'SP', cores: ['#0B6B3A', '#FFFFFF'], sigla: 'GUA' },
+  { id: 'pontepreta', nome: 'Ponte Preta', ap: ['macaca', 'ponte'], uf: 'SP', cores: ['#111111', '#FFFFFF'], sigla: 'PON' },
+  { id: 'novorizontino', nome: 'Novorizontino', ap: ['tigre do vale'], uf: 'SP', cores: ['#F6C700', '#111111'], sigla: 'NOV' },
+  { id: 'botafogosp', nome: 'Botafogo-SP', ap: ['botafogo sp', 'botafogo ribeirao', 'pantera'], uf: 'SP', cores: ['#C8102E', '#111111'], sigla: 'BSP' },
+  { id: 'portuguesa', nome: 'Portuguesa', ap: ['lusa'], uf: 'SP', cores: ['#C8102E', '#0B6B3A'], sigla: 'POR' },
+  { id: 'atleticomg', nome: 'Atlético-MG', ap: ['atletico mineiro', 'galo', 'atletico mg'], uf: 'MG', cores: ['#111111', '#FFFFFF'], sigla: 'CAM' },
+  { id: 'cruzeiro', nome: 'Cruzeiro', ap: ['raposa', 'cabuloso'], uf: 'MG', cores: ['#0A3A8C', '#FFFFFF'], sigla: 'CRU' },
+  { id: 'americamg', nome: 'América-MG', ap: ['america mineiro', 'coelho', 'america mg'], uf: 'MG', cores: ['#0B6B3A', '#111111'], sigla: 'AME' },
+  { id: 'athletic', nome: 'Athletic', ap: ['athletic club', 'esquadrao de aco'], uf: 'MG', cores: ['#111111', '#FFFFFF'], sigla: 'ATH' },
+  { id: 'gremio', nome: 'Grêmio', ap: ['imortal', 'gremio fbpa', 'tricolor gaucho'], uf: 'RS', cores: ['#0D80BF', '#111111'], sigla: 'GRE' },
+  { id: 'internacional', nome: 'Internacional', ap: ['inter', 'colorado'], uf: 'RS', cores: ['#C8102E', '#FFFFFF'], sigla: 'INT' },
+  { id: 'juventude', nome: 'Juventude', ap: ['ju', 'papo'], uf: 'RS', cores: ['#0B6B3A', '#FFFFFF'], sigla: 'JUV' },
+  { id: 'caxias', nome: 'Caxias', ap: ['grena'], uf: 'RS', cores: ['#7A1A35', '#0A3A8C'], sigla: 'CAX' },
+  { id: 'athletico', nome: 'Athletico-PR', ap: ['athletico paranaense', 'furacao', 'atletico paranaense', 'athletico pr'], uf: 'PR', cores: ['#C8102E', '#111111'], sigla: 'CAP' },
+  { id: 'coritiba', nome: 'Coritiba', ap: ['coxa', 'verdao do parana'], uf: 'PR', cores: ['#0B6B3A', '#FFFFFF'], sigla: 'CFC' },
+  { id: 'operario', nome: 'Operário-PR', ap: ['operario', 'fantasma', 'operario pr'], uf: 'PR', cores: ['#111111', '#FFFFFF'], sigla: 'OPE' },
+  { id: 'londrina', nome: 'Londrina', ap: ['tubarao', 'lec'], uf: 'PR', cores: ['#0D80BF', '#FFFFFF'], sigla: 'LON' },
+  { id: 'parana', nome: 'Paraná Clube', ap: ['parana', 'tricolor da vila'], uf: 'PR', cores: ['#0A3A8C', '#C8102E'], sigla: 'PRC' },
+  { id: 'chapecoense', nome: 'Chapecoense', ap: ['chape', 'verdao do oeste'], uf: 'SC', cores: ['#0B6B3A', '#FFFFFF'], sigla: 'CHA' },
+  { id: 'criciuma', nome: 'Criciúma', ap: ['tigre', 'criciuma'], uf: 'SC', cores: ['#F6C700', '#111111'], sigla: 'CRI' },
+  { id: 'avai', nome: 'Avaí', ap: ['leao da ilha', 'avai'], uf: 'SC', cores: ['#0D80BF', '#FFFFFF'], sigla: 'AVA' },
+  { id: 'figueirense', nome: 'Figueirense', ap: ['figueira', 'furacao do estreito'], uf: 'SC', cores: ['#111111', '#FFFFFF'], sigla: 'FIG' },
+  { id: 'joinville', nome: 'Joinville', ap: ['jec'], uf: 'SC', cores: ['#C8102E', '#111111'], sigla: 'JEC' },
+  { id: 'brusque', nome: 'Brusque', ap: ['quadricolor'], uf: 'SC', cores: ['#F6C700', '#C8102E'], sigla: 'BRU' },
+  { id: 'bahia', nome: 'Bahia', ap: ['esquadrao', 'tricolor de aco', 'bahea'], uf: 'BA', cores: ['#0A3A8C', '#C8102E'], sigla: 'BAH' },
+  { id: 'vitoria', nome: 'Vitória', ap: ['leao da barra', 'vitoria'], uf: 'BA', cores: ['#C8102E', '#111111'], sigla: 'VIT' },
+  { id: 'jacuipense', nome: 'Jacuipense', ap: ['leao do sisal'], uf: 'BA', cores: ['#8C1D40', '#FFFFFF'], sigla: 'JAC' },
+  { id: 'fortaleza', nome: 'Fortaleza', ap: ['leao do pici', 'laion'], uf: 'CE', cores: ['#0A3A8C', '#C8102E'], sigla: 'FOR' },
+  { id: 'ceara', nome: 'Ceará', ap: ['vozao', 'ceara'], uf: 'CE', cores: ['#111111', '#FFFFFF'], sigla: 'CEA' },
+  { id: 'ferroviario', nome: 'Ferroviário', ap: ['tubarao da barra', 'ferrao'], uf: 'CE', cores: ['#C8102E', '#111111'], sigla: 'FER' },
+  { id: 'sport', nome: 'Sport', ap: ['sport recife', 'leao da praca da bandeira'], uf: 'PE', cores: ['#C8102E', '#111111'], sigla: 'SPT' },
+  { id: 'nautico', nome: 'Náutico', ap: ['timbu', 'nautico'], uf: 'PE', cores: ['#C8102E', '#FFFFFF'], sigla: 'NAU' },
+  { id: 'santacruz', nome: 'Santa Cruz', ap: ['cobra coral', 'santinha'], uf: 'PE', cores: ['#C8102E', '#111111'], sigla: 'STA' },
+  { id: 'remo', nome: 'Remo', ap: ['leao azul', 'clube do remo'], uf: 'PA', cores: ['#0A2A5E', '#FFFFFF'], sigla: 'REM' },
+  { id: 'paysandu', nome: 'Paysandu', ap: ['papao', 'lobo'], uf: 'PA', cores: ['#5BA7E0', '#FFFFFF'], sigla: 'PAY' },
+  { id: 'tuna', nome: 'Tuna Luso', ap: ['aguia guerreira'], uf: 'PA', cores: ['#0B6B3A', '#FFFFFF'], sigla: 'TUN' },
+  { id: 'amazonas', nome: 'Amazonas', ap: ['onca pintada'], uf: 'AM', cores: ['#F6C700', '#111111'], sigla: 'AMZ' },
+  { id: 'manaus', nome: 'Manaus', ap: ['gaviao do norte'], uf: 'AM', cores: ['#0B6B3A', '#FFFFFF'], sigla: 'MAN' },
+  { id: 'goias', nome: 'Goiás', ap: ['esmeraldino', 'goias'], uf: 'GO', cores: ['#0B6B3A', '#FFFFFF'], sigla: 'GOI' },
+  { id: 'vilanova', nome: 'Vila Nova', ap: ['tigrao', 'vila'], uf: 'GO', cores: ['#C8102E', '#FFFFFF'], sigla: 'VIL' },
+  { id: 'atleticogo', nome: 'Atlético-GO', ap: ['atletico goianiense', 'dragao', 'atletico go'], uf: 'GO', cores: ['#C8102E', '#111111'], sigla: 'ACG' },
+  { id: 'cuiaba', nome: 'Cuiabá', ap: ['dourado', 'cuiaba'], uf: 'MT', cores: ['#0B6B3A', '#F6C700'], sigla: 'CUI' },
+  { id: 'brasiliense', nome: 'Brasiliense', ap: ['jacare'], uf: 'DF', cores: ['#F6C700', '#FFFFFF'], sigla: 'BRA' },
+  { id: 'gama', nome: 'Gama', ap: ['periquito'], uf: 'DF', cores: ['#0B6B3A', '#FFFFFF'], sigla: 'GAM' },
+  { id: 'crb', nome: 'CRB', ap: ['galo da praia'], uf: 'AL', cores: ['#C8102E', '#FFFFFF'], sigla: 'CRB' },
+  { id: 'csa', nome: 'CSA', ap: ['azulao'], uf: 'AL', cores: ['#0A3A8C', '#FFFFFF'], sigla: 'CSA' },
+  { id: 'abc', nome: 'ABC', ap: ['mais querido'], uf: 'RN', cores: ['#111111', '#FFFFFF'], sigla: 'ABC' },
+  { id: 'americarn', nome: 'América-RN', ap: ['america de natal', 'mecao', 'america rn'], uf: 'RN', cores: ['#C8102E', '#FFFFFF'], sigla: 'ARN' },
+  { id: 'botafogopb', nome: 'Botafogo-PB', ap: ['belo', 'botafogo pb'], uf: 'PB', cores: ['#111111', '#C8102E'], sigla: 'BPB' },
+  { id: 'campinense', nome: 'Campinense', ap: ['raposa feroz'], uf: 'PB', cores: ['#C8102E', '#111111'], sigla: 'CPE' },
+  { id: 'treze', nome: 'Treze', ap: ['galo da borborema'], uf: 'PB', cores: ['#111111', '#FFFFFF'], sigla: 'TRE' },
+  { id: 'sampaio', nome: 'Sampaio Corrêa', ap: ['bolivia querida', 'sampaio correa'], uf: 'MA', cores: ['#F6C700', '#0B6B3A'], sigla: 'SAM' },
+  { id: 'motoclub', nome: 'Moto Club', ap: ['papao do norte'], uf: 'MA', cores: ['#C8102E', '#111111'], sigla: 'MOT' },
+  { id: 'confianca', nome: 'Confiança', ap: ['dragao do bairro industrial', 'confianca'], uf: 'SE', cores: ['#0A3A8C', '#FFFFFF'], sigla: 'CON' },
+  { id: 'sergipe', nome: 'Sergipe', ap: ['gipao'], uf: 'SE', cores: ['#C8102E', '#FFFFFF'], sigla: 'SER' },
+  { id: 'riverpi', nome: 'River-PI', ap: ['galo carijo', 'river pi'], uf: 'PI', cores: ['#C8102E', '#111111'], sigla: 'RIV' },
+  { id: 'altos', nome: 'Altos', ap: ['jacare do piaui'], uf: 'PI', cores: ['#0B6B3A', '#FFFFFF'], sigla: 'ALT' },
+  { id: 'portovelho', nome: 'Porto Velho', ap: ['locomotiva'], uf: 'RO', cores: ['#C8102E', '#0A3A8C'], sigla: 'PVE' },
+  { id: 'riobranco', nome: 'Rio Branco-AC', ap: ['rio branco ac', 'estrelao'], uf: 'AC', cores: ['#C8102E', '#FFFFFF'], sigla: 'RBR' },
+  { id: 'trem', nome: 'Trem', ap: ['locomotiva do amapa'], uf: 'AP', cores: ['#C8102E', '#111111'], sigla: 'TRM' },
+  { id: 'saoraimundo', nome: 'São Raimundo-RR', ap: ['sao raimundo rr', 'mundao'], uf: 'RR', cores: ['#0A3A8C', '#FFFFFF'], sigla: 'SRA' },
+  { id: 'tocantinopolis', nome: 'Tocantinópolis', ap: ['verdao do norte', 'tocantinopolis'], uf: 'TO', cores: ['#0B6B3A', '#FFFFFF'], sigla: 'TOC' },
+  { id: 'operarioms', nome: 'Operário-MS', ap: ['operario ms', 'galo ms'], uf: 'MS', cores: ['#111111', '#FFFFFF'], sigla: 'OMS' },
+  { id: 'riobrancoes', nome: 'Rio Branco-ES', ap: ['rio branco es', 'capa preta'], uf: 'ES', cores: ['#111111', '#FFFFFF'], sigla: 'RBE' },
+  { id: 'desportiva', nome: 'Desportiva', ap: ['tiva', 'desportiva ferroviaria'], uf: 'ES', cores: ['#7A1A35', '#FFFFFF'], sigla: 'DES' },
+];
+export const semAcento = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const MAPA = new Map(TIMES.map((t) => [t.id, t]));
+export const porTime = (id) => MAPA.get(id) || null;
+export function achaTimes(q) {
+  const k = semAcento(q); if (!k) return TIMES;
+  const nota = (t) => { const L = [semAcento(t.nome), ...t.ap, semAcento(t.sigla)]; return L.includes(k) ? 3 : L.some((x) => x.startsWith(k)) ? 2 : L.some((x) => x.includes(k)) || semAcento(t.uf) === k ? 1 : 0; };
+  return TIMES.map((t) => [nota(t), t]).filter(([n]) => n).sort((a, b) => b[0] - a[0]).map(([, t]) => t);
+}
+/** nome que veio da tabela de jogos → o nosso clube (só quando bate certinho; na dúvida, nada) */
+const NOMES = new Map();
+for (const t of TIMES) for (const n of t.ap.filter((a) => a.includes(' ') || a.length > 6)) if (!NOMES.has(n)) NOMES.set(n, t.id);
+for (const t of TIMES) NOMES.set(semAcento(t.nome), t.id);
+const solto = (s) => semAcento(s).replace(/\b(fc|ec|sc|cr|se|fr|futebol|clube|fbpa|fbc|saf|do|de|regatas)\b/g, ' ').replace(/\s+/g, ' ').trim();
+export function timeDoNome(nome) { return NOMES.get(semAcento(nome)) || NOMES.get(solto(nome)) || null; }
