@@ -10,6 +10,7 @@
    - aparece, fala e sai andando; volta sozinho em 15 s a 1 min;
    - por enquanto SÓ para o dono (CONFIG.adminEmail); para todo mundo: CONFIG.mascotPublic = true. */
 import { piada, humorOn } from './humor.js';
+import * as papo from './papo.js';
 import { store } from './store.js';
 import { CONFIG } from '../config.js';
 import { sininho, setMood, act, say, lookAt, rigOf, reactNivel, reactErro } from './sininho.js';
@@ -108,8 +109,42 @@ const A = {
 const agendaAqui = () => A.agendar(TELA.date || todayKey());
 
 /* ---------- falas: cada uma tem assunto (k), pontos de contexto e, quando faz sentido, ação ---------- */
+/* um dado incompleto (um amigo sem nome, um story estranho) nunca pode deixar o Lembra mudo */
 function falas(c) {
-  const out = [], L = c.late;
+  const out = [];
+  try { monta(c, out); } catch (e) { console.warn('falas', e); }
+  if (!out.some((x) => x.leve)) out.push({ k: 'oi', t: `Oi${c.primeiro}! Quer agendar alguma coisa?`, m: 'acena', leve: 1, acoes: [{ label: 'Sim', go: agendaAqui }, { label: 'Não' }] });
+  return out;
+}
+/* ---------- papo: profissão, dia, e o que a pessoa marcou, anotou ou pôs numa lista ---------- */
+function anotados(c) {
+  const L = [], poe = (tipo, x, l) => { x = String(x || '').trim(); if (x) L.push({ tipo, x, l }); };
+  try {
+    c.pend.forEach((e) => poe('vem', e.title)); c.pessoal.forEach((e) => poe('vem', e.title)); c.feitoPessoal.forEach((e) => poe('foi', e.title));
+    const T = c.t, on = (d) => (store.eventsOn ? store.eventsOn(d, { person: store.me || 'all' }) : []).filter(mine);
+    [T, addDays(T, -1)].forEach((d) => on(d).filter((e) => e.status === 'feito').forEach((e) => poe('foi', e.title)));
+    on(addDays(T, 1)).forEach((e) => poe('amanha', e.title)); (personal.events || []).filter((e) => !e.done && e.date === addDays(T, 1)).forEach((e) => poe('amanha', e.title));
+    (personal.memos || []).filter((m) => Date.now() - (m.at || 0) < 21 * 864e5).slice(0, 12).forEach((m) => poe('nota', m.text));
+    (personal.lists || []).forEach((l) => (l.entries || []).filter((e) => !e.done).slice(0, 8).forEach((e) => poe('lista', e.text, l.name || 'lista')));
+  } catch (e) { console.warn('papo', e); }
+  return L;
+}
+let ultPapo = '';
+function puxaPapo(c) {
+  try {
+    const it = anotados(c), dia = it.filter((x) => x.tipo === 'vem' || x.tipo === 'foi').some((x) => papo.serio(x.x)), p = store.profile || {};
+    const faz = {
+      prof: () => papo.daProfissao({ prof: p.profession, h: c.h, dow: c.dow, pron: p.pronoun, humor: humorOn() && !dia }),
+      item: () => papo.doQueMarcou(it)?.t, dia: () => papo.doDia({ nome: c.nome, dow: c.dow }),
+    };
+    const ordem = (Math.random() < 0.5 ? ['prof', 'item', 'dia'] : Math.random() < 0.75 ? ['item', 'prof', 'dia'] : ['dia', 'prof', 'item']);
+    if (ordem[0] === ultPapo && Math.random() < 0.6) ordem.push(ordem.shift());
+    for (const k of ordem) { const t = faz[k](); if (t) { ultPapo = k; papo.anota(t); return { k: `papo:${k}`, t, m: papo.humorDe(t), gesto: papo.gestoDe(t) }; } }
+  } catch (e) { console.warn('papo', e); }
+  return null;
+}
+function monta(c, out) {
+  const L = c.late;
   /* o que ficou pra trás, citado pelo nome — com botões que resolvem ali mesmo */
   if (L.length === 1) {
     const it = L[0], T = q(it.title), w = quando(it.date);
@@ -139,7 +174,7 @@ function falas(c) {
     if (a.resposta) setTimeout(() => fala({ t: a.resposta.t, m: a.resposta.m }, a.resposta.gesto || 'sim'), a.abrir ? 1600 : 450);
   } })) })); } catch { /* ok */ }
   /* amigos: story novo e visitas no perfil (gatilho de curiosidade) */
-  if (ST) {
+  if (ST) try {
     const novos = ST.feedCache().rows.filter((r) => !r.me && r.stories.some((x) => !x.seen));
     if (novos.length) {
       const r = novos[0], st = r.stories.find((x) => !x.seen), n1 = r.name.split(' ')[0];
@@ -200,7 +235,7 @@ function falas(c) {
       ]);
       out.push({ k: 'visitas', i, t, m: 'desconfiado', roteiro: ['olhaLados', 'maoBoca'], u: 1.9, acoes: [{ label: 'Quero saber', go: () => { try { localStorage.setItem(visKey, String(Date.now())); } catch { /* ok */ } return ST.openVisitors(); } }, { label: 'Nem ligo' }] });
     }
-  }
+  } catch (e) { console.warn('amigos', e); }
   /* o próximo compromisso, quando está chegando */
   if (c.prox) {
     const { e, min } = c.prox, T = q(e.title), em = min < 60 ? `${min} min` : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`;
@@ -274,7 +309,6 @@ function falas(c) {
     ['boba9', 'Tô de olho em você… brincadeira. Ou não 👀', 'desconfiado'],
     ['boba10', 'Você fica bem melhor quando sorri. Pronto, falei 🥹', 'amor'],
   ].forEach(([k, t, m, acoes]) => out.push({ k, t, m, acoes, leve: 1 }));
-  return out;
 }
 
 /* pontos: o que mais importa agora, sem repetir o que acabou de ser dito */
@@ -318,7 +352,7 @@ const comemora = () => (ultimaFesta = pick(['vibra', 'soco', 'orgulho', 'vibra',
 function feito(o = {}) {
   try {
     const c = ctx(), n = c.feitos + c.feitoPessoal.length, falta = c.pend.length + c.pessoal.length, L = [];
-    const px = piada(o.titulo || '', 'f'); if (px) L.push(px, px, px);
+    const px = papo.serio(o.titulo) ? '' : piada(o.titulo || '', 'f'); if (px) L.push(px, px, px);
     if (o.titulo && o.titulo.length < 34) L.push(`${q(o.titulo)} feito! Que orgulho 🧡`, `Você foi lá e fez: ${q(o.titulo)} ✔️`);
     if (n >= 2) L.push(`Já são ${n} hoje! Tô vibrando aqui 🎉`, `${n} de hoje riscados. Que ritmo!`);
     if (falta === 1) L.push('Só falta 1 pra fechar o dia! 🔥', 'Um só! A gente zera hoje 💪');
@@ -457,7 +491,7 @@ function cena() {
 }
 
 /* ao tocar: fala o que mais importa agora (com ação quando faz sentido) */
-let toques = [], semClique = 0;
+let toques = [], semClique = 0, falouEm = 0;
 function onTap() {
   if (Date.now() - semClique < 450 || arr) return;
   if (fingindo || el()?.dataset.snh === 'sono') return levaTapinha();
@@ -466,10 +500,14 @@ function onTap() {
   try { navigator.vibrate && navigator.vibrate(8); } catch { /* ok */ }
   if (toques.length === 5) return fala({ t: pick(['Ei! Para de me cutucar! 😤', 'Assim eu fico tonto! 😵‍💫', 'Cócegas não! 😆']), m: 'bravo' }, 'nao');
   if (toques.length === 9) return fala({ t: 'Tá bom, tá bom… FESTA! 🎉', m: 'danca' }, 'pulo');
-  if (toques.length > 1 && toques.length < 5) return act(el(), pick(['pop', 'sim', 'riso', 'timido', 'pisca']));
-  if (Date.now() < lendoAte) return act(el(), pick(['sim', 'pisca', 'pop'])); // ainda falando: reage, mas termina a frase
-  busyUntil = 0;
-  return fala(abre(ctx()), pick(['tchau', 'sim', 'pop', 'riso']));
+  // um toque sempre rende uma fala; só o toque-toque-toque (menos de 0,9 s) é que vira gesto
+  if (now - falouEm < 900) return act(el(), pick(['pop', 'sim', 'riso', 'timido', 'pisca']));
+  falouEm = now; busyUntil = 0; lendoAte = 0; atual = { p: -1, ate: 0, id: atual.id };
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) document.activeElement.blur();
+  const c = ctx(), L = falas(c), urg = L.filter((x) => (x.u || 0) >= 2 && Date.now() - (MEM.at[x.k] || 0) > 12 * 60e3);
+  // o urgente fala uma vez e dá lugar ao papo (não fica cobrando a cada toque)
+  const l = (urg.length && Math.random() < 0.7 && melhor(urg)) || (Math.random() < 0.75 && puxaPapo(c)) || melhor(L) || puxaPapo(c);
+  return fala(l, l && l.gesto ? l.gesto : pick(['tchau', 'sim', 'pop', 'riso']));
 }
 
 /* sai andando e aparece de novo, às vezes espiando e às vezes com algo a dizer */
@@ -479,7 +517,7 @@ function volta() {
   fingindo = false;
   state('rest', pick(['l', 'r']));
   settle();
-  if (Math.random() < 0.65) setTimeout(() => { if (!blocked()) fala(melhor(falas(ctx())), 'tchau'); }, 800);
+  if (Math.random() < 0.65) setTimeout(() => { if (!blocked()) { const c = ctx(), l = (Math.random() < 0.6 && puxaPapo(c)) || melhor(falas(c)); fala(l, l?.gesto || 'tchau'); } }, 800);
   else setTimeout(() => act(el(), pick(['tchau', 'pulo', 'pisca'])), 700);
 }
 /* o ciclo: some por 15 s a 1 min (aleatório), volta, fala quando tem algo; nunca passa de 1 min sumido */
@@ -490,7 +528,8 @@ function ciclo() {
   spyT = setTimeout(() => {
     if (!B || document.hidden || blocked() || falando() || arr) return ciclo();
     // não espia mais pelas laterais (cobria o conteúdo): só um gesto pequeno no cantinho dele, ou sai um pouco
-    if (Math.random() < 0.5) { act(el(), pick(['sim', 'olhaLados', 'pisca'])); ciclo(); }
+    if (Math.random() < 0.22) { const l = puxaPapo(ctx()); if (l) fala(l, l.gesto); ciclo(); }
+    else if (Math.random() < 0.5) { act(el(), pick(['sim', 'olhaLados', 'pisca'])); ciclo(); }
     else { sai(); ciclo(); }
   }, R(20, 60) * 1000);
 }
@@ -864,7 +903,7 @@ export function start() {
   if (!window.__snhOuve) { window.__snhOuve = 1; ouvir(); }
   import('./stories.js').then((m) => { ST = m; const up = () => { if (!document.hidden) Promise.all([m.refreshFeed(), m.refreshVisitors()]).then(avisaVisita).catch(() => {}); }; up(); clearInterval(window.__stT); window.__stT = setInterval(up, 3 * 60e3); }).catch(() => {});
   // só no modo de teste local (emuladores): ganchos para o robô de testes
-  try { if (localStorage.getItem('cal.emulator') === '1' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__lembra = { finge: () => { state('rest'); busyUntil = 0; fingeDormir(); }, toca: onTap, falas: () => falas(ctx()), livre: () => livre, solta: () => { voltaCanto(); }, rebelde: () => { if (livre) { busyUntil = 0; fala({ t: fraseDe('rebelde'), m: 'bravo' }, 'nao'); setTimeout(andaPraCasa, 2600); } }, estado: () => ({ st: B && B.dataset.st, humor: el()?.dataset.snh, fingindo, fala: B && B.querySelector('.snhbud__bub span')?.textContent }) }; } catch { /* ok */ }
+  try { if (localStorage.getItem('cal.emulator') === '1' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__lembra = { finge: () => { state('rest'); busyUntil = 0; fingeDormir(); }, toca: onTap, papo: () => puxaPapo(ctx()), falas: () => falas(ctx()), livre: () => livre, solta: () => { voltaCanto(); }, rebelde: () => { if (livre) { busyUntil = 0; fala({ t: fraseDe('rebelde'), m: 'bravo' }, 'nao'); setTimeout(andaPraCasa, 2600); } }, estado: () => ({ st: B && B.dataset.st, humor: el()?.dataset.snh, fingindo, fala: B && B.querySelector('.snhbud__bub span')?.textContent }) }; } catch { /* ok */ }
   // chega dando oi, com o que mais importa agora
   setTimeout(() => { state('rest'); setTimeout(() => fala(abre(ctx()), 'tchau'), 900); }, 1200);
   ciclo(); cena();
@@ -882,7 +921,7 @@ export function react(kind, o = {}) {
   if (kind === 'erro') { reactErro(el()); return fala({ t: 'Ops, não salvou. Tento de novo quando a internet voltar.', m: 'triste', p: PRIO.erro }, 'pop'); }
   if (kind === 'nivel') { reactNivel(el()); return fala({ t: o.nivel ? `Nível ${o.nivel}! Subiu de nível 🎉` : 'Subiu de nível! 🎉', m: 'comemora', p: PRIO.nivel }, null); }
   if (kind === 'done') return fala(o.perfect ? { k: 'perfeito', t: pick(['Dia 100%! Você zerou tudo! 🏆', 'Zerou o dia! Pode comemorar 🎉']), m: 'danca', p: PRIO.perfeito } : o.late ? { t: outra(DONE_LATE), m: 'feliz', p: PRIO.done, gesto: 'alivio' } : { t: feito(o), m: 'feliz', p: PRIO.done }, comemora());
-  if (kind === 'created') return fala({ t: piada(o.titulo || '', 'c') || outra(CREATED), m: 'feliz', p: PRIO.created }, 'sim');
+  if (kind === 'created') return fala({ t: (Math.random() < 0.5 && papo.trocadilho(o.titulo)) || (papo.serio(o.titulo) ? '' : piada(o.titulo || '', 'c')) || outra(CREATED), m: 'feliz', p: PRIO.created }, 'sim');
   if (kind === 'pedido') return fala({ t: pick([`Pedido enviado! Agora é torcer pra ${(o.nome || 'pessoa').split(' ')[0]} aceitar 🤞`, 'Mandei o convite voando! 🕊️ Já já chega no celular da pessoa.', 'Feito! Amizade a um toque de distância 🤝']), m: 'comemora', roteiro: ['balanca'] }, 'pulo');
   if (kind === 'story') return fala({ t: pick(['Postou story! Agora todo mundo vai ver que você fez 😎📸', 'XP em dobro na conta! Fotógrafo(a) profissional, hein 📸', 'Prova registrada! Ninguém pode dizer que você não fez 😏']), m: 'danca', roteiro: ['balanca'] }, 'pulo');
   if (kind === 'privado') return fala({ t: pick(['Chegou mensagem! Quem será? 👀', 'Plim! Tem gente falando com você 💌', 'Psiu… mensagem nova. Ela some em 24 h!']), m: 'feliz', p: 0, acoes: [{ label: 'Abrir', go: () => import('./privado.js').then((m) => m.openMensagens()) }] }, 'sobrancelha');
