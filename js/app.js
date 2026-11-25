@@ -401,11 +401,7 @@ const actions = {
     render();
   },
   'open-event': (b) => openEventDetail(b.dataset.id),
-  assistant: async () => {
-    const { hasPro } = await import('./billing.js');
-    if (!hasPro()) { toast('O assistente com IA faz parte do plano Profissional.', { ms: 4000 }); return openPlans(); }
-    return openAssistant();
-  },
+  assistant: () => openAssistant(),
   'apply-fix': async (b) => {
     const e = store.event(b.dataset.id);
     if (!e) return;

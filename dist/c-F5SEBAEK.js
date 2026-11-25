@@ -1,0 +1,16 @@
+import{n as t,p as l,q as r}from"./c-PP45APFB.js";import"./c-R3SEEGHU.js";import{b as n}from"./c-DWBEWQEH.js";import"./c-IANHVQNA.js";import"./c-3VF3KZPI.js";import{B as o}from"./c-MPTN5RTT.js";import"./c-5PVYAXQB.js";import"./c-JRZKGWYQ.js";import"./c-S22CTDX7.js";import"./c-TJYKSYVI.js";var p=a=>a===1?"\u{1F947}":a===2?"\u{1F948}":a===3?"\u{1F949}":`${a}\xBA`;async function h(){let a=null,e=()=>`${l("Ranking da semana",{left:'<button class="btn-text" data-close>Fechar</button>'})}
+  <div class="page page--sheet rank">
+    <div class="rank__hero">${n("trophy",34)}<div><strong>${a?`Liga ${o(a.leagueName)}`:"Ligas semanais"}</strong><small>Os ${a?.move||5} primeiros do grupo sobem de liga na segunda. No m\xEAs: 1\xBA ganha o m\xEAs seguinte <b>gr\xE1tis</b>, 2\xBA 50% e 3\xBA 25% de desconto.</small></div></div>
+    ${a?`
+      <div class="rank__stats">
+        <div><b>${a.streak||0}</b><small>\u{1F525} dias seguidos</small></div>
+        <div><b>${a.me&&a.me.pos?p(a.me.pos):"\u2014"}</b><small>sua posi\xE7\xE3o</small></div>
+        <div><b>${a.me?a.me.pts:0}</b><small>pontos na semana</small></div>
+      </div>
+      ${a.eligible?"":'<div class="rank__me rank__me--off"><span>O ranking faz parte do plano Profissional</span><small>Assine o Profissional (mensal ou anual) para participar e concorrer a meses gr\xE1tis.</small><button class="btn btn--primary btn--sm" data-action="plans">Ver planos</button></div>'}
+      <div class="glist rank__list">${a.top.length?a.top.map(s=>`<div class="rank__row${s.me?" is-me":""}${s.pos<=(a.move||5)?" is-up":""}"><span class="rank__pos">${p(s.pos)}</span><span class="rank__ini">${o(s.i)}</span><span class="rank__name">${s.me?"Voc\xEA":"Participante"}${s.pos===(a.move||5)?" <small>\xB7 zona de subida</small>":""}</span><b>${s.pts} pts</b></div>`).join(""):'<p class="fhelp" style="padding:16px">Ningu\xE9m pontuou ainda nesta liga. Seja o primeiro!</p>'}</div>
+      ${a.lastWinner?`<p class="fhelp">\u{1F3C6} Campe\xE3o de ${o(a.lastWinner.month.split("-").reverse().join("/"))}: <b>${o(a.lastWinner.i)}.</b> (${a.lastWinner.pts} pts)${a.lastWinner.me?" \u2014 foi voc\xEA! \u{1F389}":""}</p>`:""}
+      <h4>Como pontuar</h4>
+      <ul class="rank__rules"><li><b>3 pts</b> por tarefa conclu\xEDda no hor\xE1rio (atrasada vale 1)</li><li><b>2 pts</b> no primeiro uso do dia \u2014 mant\xE9m a sua sequ\xEAncia \u{1F525}</li><li><b>1 pt</b> por compromisso criado (at\xE9 10 por dia), lembrete pessoal ou bilhete</li></ul>
+      <p class="fhelp">Jogo limpo: cada item conta uma vez, h\xE1 limite de pontos por hora e por dia, e contas com uso autom\xE1tico (rob\xF4s, scripts, IA mexendo sozinha) saem do ranking. A sequ\xEAncia aguenta 1 dia de folga por semana. Quem fica 20+ dias ativo no m\xEAs ganha 10% de desconto. Cada pessoa ganha no m\xE1ximo 1 pr\xEAmio a cada 90 dias.</p>`:'<p class="fhelp">Carregando\u2026</p>'}
+  </div>`,i=t({className:"sheet--tall",html:e()});try{a=await(await import("./c-CWZCXWLS.js")).api("/rank/board",{}),i.set(e()),import("./c-ZLLHSVKS.js").then(s=>s.onRank(a)).catch(()=>{})}catch{r("N\xE3o consegui abrir o ranking agora.")}return i}export{h as openLeague};

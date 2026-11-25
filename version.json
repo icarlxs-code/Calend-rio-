@@ -1,10 +1,12 @@
 {
   "version": "2.29.0",
-  "build": "dxrgsf6q",
+  "build": "dnrt6kis",
   "date": "2026-11-24",
   "min": "2.22.0",
   "title": "Stories e privado",
   "notes": [
+    "O assistente de cima e o de baixo agora são o mesmo, e ele pergunta: agenda ou nota?",
+    "Trabalho e Pessoal com nome escrito no topo.",
     "Stories: curta, comente para todo mundo ver, responda só para a pessoa e reposte no seu (quando ela liberar).",
     "Privado com amigos: texto, foto e áudio. Tudo é apagado em 24 h.",
     "Trabalho e Pessoal agora trocam em 3D: o coração e a maleta se abrem e o Lembra salta de dentro.",
@@ -14,9 +16,7 @@
     "Conquistas e ofensiva novas: ele pega a medalha, ergue e vibra com você.",
     "Visitas novas ao seu perfil aparecem no começo, e os avisos ficaram mais espertos.",
     "Telas mais limpas: uma coisa em destaque por vez, e o resto a um toque.",
-    "Nova passagem entre Trabalho e Pessoal, com o Lembra trocando a maleta pelo coração.",
-    "Ajustes organizados por assunto.",
-    "Trocas de tela mais suaves: o Lembra pula de uma aba para a outra e traz a página com ele. Para desligar: Ajustes → Aparência → Animações."
+    "Nova passagem entre Trabalho e Pessoal, com o Lembra trocando a maleta pelo coração."
   ],
-  "builtAt": "2026-11-25T12:39:56.974Z"
+  "builtAt": "2026-11-25T13:05:15.565Z"
 }

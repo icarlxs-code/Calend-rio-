@@ -55,6 +55,7 @@ export function renderToday() {
   // topo compacto: "Hoje" + a data; a saudação vai para o Foco
   const header = `
   <header class="hdr hdr--hoje">
+    ${modoSwitch('work')}
     <div class="hdr__row">
       <div class="hdr__titles">
         <h1>${esc(relDay(date))}</h1>
@@ -66,7 +67,6 @@ export function renderToday() {
       </div>
       <div class="hdr__actions">
         ${date !== today ? `<button class="chip chip--accent" data-action="go-today">Hoje</button>` : ''}
-        ${modoSwitch('work')}
         ${botaoMensagens()}
         <button class="iconbtn iconbtn--ai" data-action="assistant" aria-label="Assistente">${icon('sparkle', 20)}</button>
         <button class="iconbtn iconbtn--me" data-action="profile" aria-label="Seu perfil e conquistas">${me ? meRing(me.id, 32) : icon('user', 20)}</button>

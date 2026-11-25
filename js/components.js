@@ -121,7 +121,7 @@ export function eventCard(e, { showDate = false, compact = false, highlight = []
 }
 
 /* Chave Trabalho | Pessoal: mesmo lugar e mesmo tamanho nos dois modos */
-export const modoSwitch = (space) => `<button class="modo modo--${space}" data-action="space" data-space="${space === 'work' ? 'personal' : 'work'}" aria-label="${space === 'work' ? 'Ir para o Pessoal' : 'Ir para o Trabalho'}"><i class="modo__pino"></i><span class="modo__op">${icon('briefcase', 18)}</span><span class="modo__op">${icon('heart', 18)}</span></button>`;
+export const modoSwitch = (space) => `<div class="modo modo--${space}" role="group" aria-label="Qual agenda você está vendo"><i class="modo__pino"></i>${[['work', 'briefcase', 'Trabalho'], ['personal', 'heart', 'Pessoal']].map(([k, ic, t]) => `<button class="modo__op" data-action="space" data-space="${k}" aria-pressed="${k === space}">${icon(ic, 18)}<span>${t}</span></button>`).join('')}</div>`;
 
 export function emptyState(title, text, actionHtml = '', mood = 'acena') {
   return `<div class="empty"><span class="vazio__fig">${sininho(mood, { size: 96 })}</span><h3>${esc(title)}</h3><p>${esc(text)}</p>${actionHtml}</div>`;

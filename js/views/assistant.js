@@ -9,6 +9,10 @@ import { dayBrief, freeTime, bestSlots, routine, evLabel } from '../planner.js';
 import { personConflicts } from '../insights.js';
 import { askClaude, presets } from '../claude-link.js';
 import { planAction } from '../agent.js';
+import { entende } from '../destino.js';
+import { personal, savePersonal, removePersonal, addMemo, guessCat } from '../personal.js';
+import { hasPro } from '../billing.js';
+import { okFx } from '../okfx.js';
 
 /* ---------- conversa ---------- */
 const LS_CHAT = 'cal.chat';
@@ -54,6 +58,49 @@ function actionsCard(m, i) {
     ${st === 'done' && m.actResult ? `<small class="acard__res">${esc(m.actResult)}</small>` : ''}
   </div>`;
 }
+/* Agenda ou nota? A pessoa escolhe antes de qualquer coisa ser guardada */
+const quandoTxt = (x) => `${dayLabel(x.data)}${x.hora ? ' às ' + fmtTime(x.hora) : ''}`;
+function escolhaCard(m, i) {
+  const x = m.escolha, st = m.escStatus || 'pergunta';
+  if (st === 'feito') return `<div class="esco is-feito"><span class="esco__ok">${icon('check', 18)}</span><span class="esco__r"><b>${esc(m.escResult)}</b><small>${esc(x.titulo)}</small></span>${m.desfaz ? `<button class="btn-text btn-text--sm" data-esc-undo="${i}">Desfazer</button>` : ''}</div>`;
+  if (st === 'cancelado') return '<div class="esco is-feito"><span class="esco__r"><small>Desfeito. Nada ficou guardado.</small></span></div>';
+  return `<div class="esco">
+    <div class="esco__q"><b>${esc(x.titulo)}</b><small>${x.data ? icon('clock', 14) + ' ' + esc(quandoTxt(x)) : 'Sem dia definido'}</small></div>
+    ${st === 'dia' ? `<p class="esco__p">Para que dia?</p><div class="esco__dias"><button data-esc-dia="${i}" data-d="${todayKey()}">Hoje</button><button data-esc-dia="${i}" data-d="${addDays(todayKey(), 1)}">Amanhã</button><label>Outro dia<input type="date" data-esc-data="${i}" min="${todayKey()}" aria-label="Escolher o dia"></label></div>`
+    : `<div class="esco__onde" role="group" aria-label="Em qual agenda"><button data-esc-esp="${i}" data-v="personal" aria-pressed="${x.espaco === 'personal'}">${icon('heart', 15)} Pessoal</button><button data-esc-esp="${i}" data-v="work" aria-pressed="${x.espaco === 'work'}">${icon('briefcase', 15)} Trabalho</button></div>
+    <div class="esco__b"><button class="esco__op esco__op--ag" data-esc-ag="${i}">${icon('calendar', 26)}<b>Agenda ${x.espaco === 'work' ? 'de trabalho' : 'pessoal'}</b><small>Aparece no dia e eu te aviso</small></button>${x.nota ? '' : `<button class="esco__op" data-esc-nota="${i}">${icon('note', 26)}<b>Só nota</b><small>Guarda o texto, sem aviso</small></button>`}</div>`}
+  </div>`;
+}
+async function guarda(m, onde) {
+  const x = m.escolha;
+  if (onde === 'nota') {
+    const it = addMemo(x.texto); if (!it) return false;
+    m.escStatus = 'feito'; m.escResult = 'Guardado nas Notas'; m.desfaz = { pessoal: it.id };
+    okFx({ title: 'Nota guardada!', sub: 'Sem aviso', item: { title: x.texto, date: it.date } });
+    return true;
+  }
+  if (!x.data) { m.escStatus = 'dia'; return true; }
+  if (x.espaco === 'work') {
+    const antes = new Set(store.state.events.map((e) => e.id));
+    const co = store.companiesSorted().find((c) => c.name && x.texto.toLowerCase().includes(c.name.toLowerCase()));
+    const p = planAction({ acao: 'criar', titulo: x.titulo, data: x.data, inicio: x.hora, empresa: co ? co.name : '' });
+    if (!p.ok) { // falta algo (ex.: a empresa): abre o cadastro já preenchido
+      const { openEventEditor } = await import('./event.js'); openEventEditor({ title: x.titulo, date: x.data, time: x.hora });
+      m.escStatus = 'feito'; m.escResult = 'Abri o cadastro do trabalho: complete e salve'; m.desfaz = null;
+      return true;
+    }
+    if (!(await p.run())) return false;
+    const novo = store.state.events.find((e) => !antes.has(e.id)); if (!novo) return false;
+    m.desfaz = { trab: novo.id };
+  } else {
+    const it = savePersonal({ title: x.titulo, date: x.data, time: x.hora, cat: x.cat || guessCat(x.texto), repeat: x.repetir || 'none', remind: 'auto' }); if (!it) return false;
+    m.desfaz = { pessoal: it.id };
+  }
+  if (x.nota && personal.item(x.nota)) removePersonal(x.nota); // a nota virou compromisso
+  m.escStatus = 'feito'; m.escResult = `Na agenda ${x.espaco === 'work' ? 'de trabalho' : 'pessoal'}: ${quandoTxt(x)}`;
+  okFx({ title: 'Na agenda!', sub: quandoTxt(x), item: { title: x.titulo, date: x.data, time: x.hora } });
+  return true;
+}
 const ERR = {
   'functions/failed-precondition': null, // usa a mensagem do servidor
   'functions/permission-denied': 'Só a equipe pode usar o assistente.',
@@ -76,7 +123,7 @@ const ORDER = /\b(marc|coloc|agend|cri[ae]|lan[cç]|cadastr|inclu|adicion|bota|p
 function pendingOrders() {
   const out = [];
   chat.forEach((m, i) => {
-    if (m.role !== 'user' || m.redone || !ORDER.test(m.text || '')) return;
+    if (m.role !== 'user' || m.redone || chat[i + 1]?.escolha || !ORDER.test(m.text || '')) return;
     const next = chat[i + 1];
     if (next && next.role === 'assistant' && !next.error && Array.isArray(next.actions)) return; // já veio com ações
     out.push(i);
@@ -86,19 +133,19 @@ function pendingOrders() {
 function chatHtml() {
   const pend = inAppChat && !thinking ? pendingOrders() : [];
   return `<section class="block" data-chat>
-    <h2 class="block__title">${icon('sparkle', 16)} Pergunte ao assistente</h2>
+    <h2 class="block__title">${icon('sparkle', 16)} Fale com o assistente</h2>
     ${pend.length ? `<div class="acard"><div class="acard__head">${icon('alert', 15)} Pedidos que ficaram sem fazer</div>
       ${pend.map((i) => `<div class="acard__row">${icon('calendar', 14)}<span>${esc(chat[i].text.slice(0, 160))}</span></div>`).join('')}
       <div class="acard__btns"><button class="btn btn--primary btn--sm" data-redo>Fazer agora</button><button class="btn btn--soft btn--sm" data-redo-skip>Ignorar</button></div></div>` : ''}
     <div class="chat">
-      ${chat.length ? `<p class="ia__aviso">Respostas geradas por inteligência artificial: podem errar, confira antes de confirmar.</p>` : ''}${chat.length ? chat.map((m, i) => `<div class="msg msg--${m.role}${m.error ? ' msg--err' : ''}">${md(m.text)}${m.role === 'assistant' && !m.error ? `<button class="msg__rep" data-rep="${i}" aria-label="Denunciar esta resposta">${icon('flag', 12)} Denunciar</button>` : ''}</div>${m.actions && m.actions.length ? actionsCard(m, i) : ''}`).join('')
+      ${chat.length ? `<p class="ia__aviso">Respostas geradas por inteligência artificial: podem errar, confira antes de confirmar.</p>` : ''}${chat.length ? chat.map((m, i) => `<div class="msg msg--${m.role}${m.error ? ' msg--err' : ''}">${md(m.text)}${m.role === 'assistant' && !m.error && !m.escolha ? `<button class="msg__rep" data-rep="${i}" aria-label="Denunciar esta resposta">${icon('flag', 12)} Denunciar</button>` : ''}</div>${m.escolha ? escolhaCard(m, i) : ''}${m.actions && m.actions.length ? actionsCard(m, i) : ''}`).join('')
         : isMarketing() ? `<div class="msg msg--assistant">Oi! Eu vejo e <b>mexo</b> na agenda de vocês. Peça o que quiser, por exemplo: “coloca captação na JG Garcia de segunda a sábado, das 7h ao meio-dia, até o fim do mês”, “passa o reels da Pura Vida para sexta 18h”, “marca cortar cabelo sábado 15h no meu pessoal”. Eu mostro o que vou fazer e você confirma.</div>`
         : `<div class="msg msg--assistant">Oi! Eu vejo e <b>mexo</b> na sua agenda. Peça o que quiser, por exemplo: “marca ${esc((TYPES[TYPE_ORDER[0]]?.label || 'reunião').toLowerCase())} amanhã às 14h”, “coloca ${esc((TYPES[TYPE_ORDER[1]]?.label || 'tarefa').toLowerCase())} toda segunda às 8h até o fim do mês”, “marca cortar cabelo sábado 15h no meu pessoal”. Eu mostro o que vou fazer e você confirma.</div>`}
       ${thinking ? `<div class="msg msg--assistant msg--typing"><i></i><i></i><i></i></div>` : ''}
     </div>
     <div class="presets">${presets().map((p, i) => `<button class="preset" data-preset="${i}">${esc(p.label)}</button>`).join('')}</div>
     <form class="chat__form" data-chatform onsubmit="return false">
-      <textarea class="input" rows="1" name="q" placeholder="Peça ou pergunte algo…" ${thinking ? 'disabled' : ''}></textarea>
+      <textarea class="input" rows="1" name="q" placeholder="Marque, anote ou pergunte…" ${thinking ? 'disabled' : ''}></textarea>
       <button class="iconbtn iconbtn--accent" type="submit" aria-label="Enviar" ${thinking ? 'disabled' : ''}>${icon('right', 20)}</button>
     </form>
     <div class="chat__foot">
@@ -137,7 +184,8 @@ export function weekProblems(person = 'all') {
   return out;
 }
 
-export function openAssistant() {
+export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {}) {
+  const pro = hasPro();
   const st = { type: 'feed', date: ui.date >= todayKey() ? ui.date : todayKey(), q: '' };
   const html = () => {
     const t = todayKey();
@@ -148,13 +196,13 @@ export function openAssistant() {
     return `
     ${sheetHead('Assistente')}
     <div class="page page--sheet">
-      <div class="assist-hero">
+      ${!pro ? '' : `<div class="assist-hero">
         <span class="assist-hero__ic">${icon('sparkle', 22)}</span>
         <div><strong>Analisando ${store.team.length > 1 ? 'a agenda de vocês' : 'a sua agenda'}</strong><p>Funciona sozinho, sem internet. Confere conflitos, tempo livre e os melhores horários sempre que algo muda.</p></div>
-      </div>
+      </div>`}
 
       ${chatHtml()}
-
+      ${!pro ? '' : `
       <section class="block">
         <h2 class="block__title">${icon('today', 16)} Hoje</h2>
         <div class="card">${dayBrief(t).map((l) => `<p>${esc(l)}</p>`).join('')}</div>
@@ -205,7 +253,7 @@ export function openAssistant() {
           }).join('')}
           <p class="fhelp">Toque num horário para já criar o evento com a pessoa certa.</p>
         </div>
-      </section>
+      </section>`}
 
     </div>`;
   };
@@ -220,8 +268,8 @@ export function openAssistant() {
         b.textContent = 'Denunciado ✓'; b.disabled = true; toast('Obrigado! Vamos revisar essa resposta.');
       }));
       const el = a.el;
-      el.querySelector('[data-f="type"]').onchange = (e) => { st.type = e.target.value; a.set(html()); };
-      el.querySelector('[data-f="date"]').onchange = (e) => { if (e.target.value) { st.date = e.target.value; a.set(html()); } };
+      if (pro) el.querySelector('[data-f="type"]').onchange = (e) => { st.type = e.target.value; a.set(html()); };
+      if (pro) el.querySelector('[data-f="date"]').onchange = (e) => { if (e.target.value) { st.date = e.target.value; a.set(html()); } };
       el.querySelectorAll('[data-new]').forEach((b) => (b.onclick = async () => {
         const [who, time] = b.dataset.new.split('|');
         const { openEventEditor } = await import('./event.js');
@@ -230,6 +278,20 @@ export function openAssistant() {
       const send = async (q) => {
         q = (q || '').trim();
         if (!q || thinking) return;
+        // coisa para guardar: pergunta o lugar (ou vai direto quando a pessoa já disse)
+        const x = entende(q, ui.space === 'personal' ? 'personal' : 'work');
+        if (x) {
+          const m = { role: 'assistant', text: x.dito ? 'Certo!' : 'Onde eu guardo isso?', escolha: x };
+          chat.push({ role: 'user', text: q }, m);
+          if (x.dito && !(await guarda(m, x.dito))) m.text = 'Não consegui guardar. Escolha de novo:';
+          saveChat(); redrawChat(a);
+          return;
+        }
+        if (!pro) {
+          toast('Perguntar à IA faz parte do plano Profissional. Marcar e anotar é livre.', { ms: 4500 });
+          const p = document.createElement('button'); p.dataset.action = 'plans'; p.hidden = true; document.body.appendChild(p); p.click(); p.remove();
+          return;
+        }
         // sem chave no servidor: abre o Claude com o login normal (precisa ser no mesmo toque)
         if (!inAppChat) {
           askClaude(q);
@@ -239,7 +301,7 @@ export function openAssistant() {
           redrawChat(a);
           return;
         }
-        const history = chat.filter((m) => !m.error).map((m) => ({ role: m.role, text: m.text + (m.actions?.length ? (m.actStatus === 'done' ? ' (ações confirmadas e feitas na agenda)' : m.actStatus === 'cancelled' ? ' (a pessoa cancelou essas ações)' : ' (ações aguardando confirmação)') : '') }));
+        const history = chat.filter((m) => !m.error).map((m) => ({ role: m.role, text: m.text + (m.escolha ? ` (${m.escolha.titulo}: ${m.escStatus === 'feito' ? m.escResult : 'ainda não guardado'})` : '') + (m.actions?.length ? (m.actStatus === 'done' ? ' (ações confirmadas e feitas na agenda)' : m.actStatus === 'cancelled' ? ' (a pessoa cancelou essas ações)' : ' (ações aguardando confirmação)') : '') }));
         chat.push({ role: 'user', text: q });
         thinking = true;
         redrawChat(a);
@@ -247,6 +309,13 @@ export function openAssistant() {
           const r = await store.askAssistant(q, history);
           const text = typeof r === 'string' ? r : r.text;
           const actions = typeof r === 'string' ? [] : r.actions || [];
+          const so = actions.length === 1 ? actions[0] : null;
+          if (so && /^(pessoal|anota[cç][aã]o|bilhete)$/i.test(so.acao || '') && (!so.repetir || so.repetir === 'none') && !so.datas) { // a IA não decide sozinha entre agenda e nota
+            const e2 = entende(q.slice(0, 160).replace(/\?+$/, ''), 'personal') || {};
+            chat.push({ role: 'assistant', text: 'Onde eu guardo isso?', escolha: { texto: so.texto || so.titulo || q, titulo: so.titulo || e2.titulo || so.texto || q, data: so.data || e2.data || null, hora: so.inicio || so.hora || e2.hora || null, cat: so.categoria, espaco: 'personal' } });
+            thinking = false; saveChat(); redrawChat(a);
+            return;
+          }
           chat.push({ role: 'assistant', text: text || 'Certo.', actions, actStatus: actions.length ? 'pending' : undefined });
         } catch (e) {
           chat.push({ role: 'assistant', text: errText(e), error: true });
@@ -264,7 +333,7 @@ export function openAssistant() {
     box.outerHTML = chatHtml();
     bindChat(a, a.send);
     const c = a.el.querySelector('.chat');
-    if (c) c.lastElementChild?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (c) c.lastElementChild?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
   function bindChat(a, send) {
     a.send = send;
@@ -284,6 +353,13 @@ export function openAssistant() {
       toast(n ? 'Pronto! Agenda atualizada ✓' : 'Nada foi alterado');
       redrawChat(a);
     }));
+    const esco = (attr, fn) => el.querySelectorAll(`[data-esc-${attr}]`).forEach((b) => { const k = 'esc' + attr[0].toUpperCase() + attr.slice(1); b[b.tagName === 'INPUT' ? 'onchange' : 'onclick'] = async () => { const m = chat[+b.dataset[k]]; if (!m || !m.escolha || m._b) return; m._b = 1; try { await fn(m, b); } finally { delete m._b; } saveChat(); redrawChat(a); }; });
+    esco('esp', (m, b) => { m.escolha.espaco = b.dataset.v; });
+    esco('ag', (m) => guarda(m, 'agenda'));
+    esco('nota', (m) => guarda(m, 'nota'));
+    esco('dia', (m, b) => { m.escolha.data = b.dataset.d; return guarda(m, 'agenda'); });
+    esco('data', (m, b) => { if (!b.value) return null; m.escolha.data = b.value; return guarda(m, 'agenda'); });
+    esco('undo', async (m) => { const d = m.desfaz || {}; if (d.pessoal) removePersonal(d.pessoal); if (d.trab) await store.removeMany('events', [d.trab]); if (m.escolha.nota) addMemo(m.escolha.texto); m.escStatus = 'cancelado'; m.desfaz = null; });
     const redo = el.querySelector('[data-redo]');
     if (redo) redo.onclick = () => {
       const pend = pendingOrders();
@@ -325,6 +401,11 @@ export function openAssistant() {
     };
     el.querySelector('[data-extclaude]').onclick = () => askClaude(ta.value.trim() || 'Analise a agenda e me diga o que é mais importante agora.');
   }
+  if (pergunta) setTimeout(() => {
+    if (!agenda) return api.send(pergunta);
+    const x = entende(pergunta, 'personal') || { texto: pergunta, titulo: pergunta.slice(0, 120), data: null, hora: null, espaco: 'personal' };
+    chat.push({ role: 'user', text: pergunta }, { role: 'assistant', text: 'Vamos colocar na agenda:', escolha: { ...x, nota } }); saveChat(); redrawChat(api);
+  }, 380);
   api.refresh = () => {
     const a = document.activeElement;
     if (a && api.el.contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return; // não atrapalha quem está digitando

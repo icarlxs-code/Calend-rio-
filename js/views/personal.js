@@ -46,8 +46,9 @@ const section = (title, html, extra = '') => `<section class="block"><h2 class="
 const HUMOR = { sun: 'feliz', cake: 'comemora', sparkles: 'acena', listcheck: 'acena', note: 'feliz' };
 const emptyCard = (ic, title, text) => `<div class="pempty"><span class="vazio__fig">${sininho(HUMOR[ic] || 'acena', { size: 96 })}</span><h3>${esc(title)}</h3><p>${esc(text)}</p></div>`;
 
-const header = (eyebrow, title, right = '') => `
+const header = (eyebrow, title, right = '', modo = false) => `
   <header class="phdr">
+    ${modo ? workBtn : ''}
     <div class="phdr__row">
       <div><p class="phdr__eyebrow">${eyebrow}</p><h1>${title}</h1></div>
       <div class="phdr__actions">${right}</div>
@@ -67,14 +68,14 @@ function renderHome() {
   const lists = personal.lists;
   const quickCats = ['aniversario', 'beleza', 'buscar', 'saude', 'pagar', 'compromisso'];
   return `
-  ${header(`${icon('lock', 11)} Só você vê`, `${esc(greeting())}${firstName() ? ', ' + esc(firstName()) : ''}`, `${workBtn}${botaoMensagens()}<button class="iconbtn iconbtn--ai" data-action="assistant" aria-label="Assistente">${icon('sparkle', 19)}</button><button class="iconbtn iconbtn--me" data-action="profile" aria-label="Seu perfil e conquistas">${store.me ? meRing(store.me, 32) : icon('user', 20)}</button>`)}
+  ${header(`${icon('lock', 11)} Só você vê`, `${esc(greeting())}${firstName() ? ', ' + esc(firstName()) : ''}`, `${botaoMensagens()}<button class="iconbtn iconbtn--ai" data-action="assistant" aria-label="Assistente">${icon('sparkle', 19)}</button><button class="iconbtn iconbtn--me" data-action="profile" aria-label="Seu perfil e conquistas">${store.me ? meRing(store.me, 32) : icon('user', 20)}</button>`, true)}
   <div class="page ppage">
     ${personal.error === 'rules' ? `<div class="palert">${tile('alert', ['#FF8A7A', '#E5341F'], 36)}<div><strong>O Pessoal ainda não está liberado na nuvem</strong><small>O que você anota não fica salvo. No Firebase: Firestore → Regras → cole as regras novas → Publicar. Depois feche e abra o app.</small></div></div>` : personal.error === 'net' ? `<div class="palert">${tile('alert', ['#FFB547', '#FF7A1A'], 36)}<div><strong>Sem conexão com a nuvem</strong><small>Confira a internet. O que você anotar aparece quando a conexão voltar.</small></div></div>` : ''}
     <div class="pcena">${cena()}<span class="pcena__fig">${boneco3d(late.length ? 'pensa' : !pending && today.length ? 'festa' : momento() === 'noite' ? 'amor' : 'acena', 132)}</span><p class="pcena__bal">${late.length ? (late.length === 1 ? 'Ficou 1 coisa pra trás. Bora juntos?' : `Ficaram ${late.length} pra trás. Bora juntos?`) : !pending && today.length ? 'Tudo feito hoje. Que orgulho!' : pending ? `${pending === 1 ? 'Uma coisa' : `${pending} coisas`} pra hoje. Eu te lembro na hora.` : 'Dia livre! O que eu guardo pra você?'}${(() => { const q = quoteOfDay(t); return q.t.length < 90 ? `<small>“${esc(q.t)}”</small>` : ''; })()}</p></div>
     <form class="pquick" data-form="pquick" onsubmit="return false">
       ${icon('sparkle', 18)}
-      <input name="q" placeholder="Anote: “cortar cabelo amanhã 15h”" autocomplete="off" enterkeyhint="done" maxlength="160">
-      <button class="pquick__go" aria-label="Anotar">${icon('plus', 18)}</button>
+      <input name="q" placeholder="Marque, anote ou pergunte…" aria-label="Falar com o assistente" autocomplete="off" enterkeyhint="send" maxlength="400">
+      <button class="pquick__go" aria-label="Enviar para o assistente">${icon('right', 18)}</button>
     </form>
     ${late.length || bdays.some((b) => diffDays(t, b.next) <= 7) ? `<div class="phero__stats">
         <span>${icon('cal2', 14)}<b>${pending}</b> para hoje</span>
@@ -131,7 +132,7 @@ function renderAgenda() {
     const byMonth = {};
     all.forEach((b) => (byMonth[b.item.date.slice(5, 7)] = byMonth[b.item.date.slice(5, 7)] || []).push(b));
     const order = Array.from({ length: 12 }, (_, i) => String(((+t.slice(5, 7) - 1 + i) % 12) + 1).padStart(2, '0'));
-    return `${header(`${icon('lock', 11)} Só você vê`, 'Agenda', workBtn)}
+    return `${header(`${icon('lock', 11)} Só você vê`, 'Agenda', '', true)}
     <div class="page ppage">${seg}
       ${all.length ? order.filter((m) => byMonth[m]).map((m) => section(MONTHS[+m - 1].replace(/^./, (c) => c.toUpperCase()), `<div class="plist">${byMonth[m].sort((a, b) => (a.item.date.slice(8) < b.item.date.slice(8) ? -1 : 1)).map((b) => {
         const d = diffDays(t, b.next);
@@ -145,7 +146,7 @@ function renderAgenda() {
   const occ = occurrences(start, addDays(start, 41));
   const cells = Array.from({ length: 42 }, (_, i) => addDays(start, i));
   const dayList = occurrences(sel, sel);
-  return `${header(`${icon('lock', 11)} Só você vê`, 'Agenda', workBtn)}
+  return `${header(`${icon('lock', 11)} Só você vê`, 'Agenda', '', true)}
   <div class="page ppage">${seg}
     <div class="pmonth" data-swipe="pmonth">
       <div class="pmonth__head"><button class="iconbtn" data-action="pmonth" data-d="-1" aria-label="Mês anterior">${icon('left', 18)}</button><strong>${esc(fmtMonth(mk))}</strong><button class="iconbtn" data-action="pmonth" data-d="1" aria-label="Próximo mês">${icon('right', 18)}</button></div>
@@ -176,7 +177,7 @@ function renderLists() {
   const lists = personal.lists;
   const presets = LIST_PRESETS.filter((p) => !lists.some((l) => l.name.toLowerCase() === p.name.toLowerCase()));
   const memos = personal.memos;
-  return `${header(`${icon('lock', 11)} Só você vê`, 'Listas', workBtn)}
+  return `${header(`${icon('lock', 11)} Só você vê`, 'Listas', '', true)}
   <div class="page ppage">
     <button class="pmemocard" data-action="ptab" data-tab="p-notas">${tile('note', ['#FFB86B', '#FF7A59'], 44)}
       <span><strong>Notas</strong><small>${memos.length ? `Última: ${esc(memos[0].text.slice(0, 48))}` : 'O que você fez ou onde deixou as coisas, com dia e hora'}</small></span>${icon('right', 16)}</button>
@@ -200,9 +201,9 @@ function renderMemos() {
       <textarea name="t" rows="2" maxlength="500" placeholder="O que você fez ou onde deixou? Ex.: deixei o tênis em cima da mesa"></textarea>
       <button class="btn btn--primary" type="submit">${icon('plus', 18)} Anotar agora</button>
     </form>
-    <p class="fhelp">Guarda com o dia e a hora. Depois é só perguntar ao assistente: “onde deixei o tênis?”</p>
+    <p class="fhelp">Nota só guarda o texto: não aparece na agenda e não avisa. Para virar compromisso, toque em ${icon('cal2', 14)}.</p>
     ${all.length > 3 ? `<input class="input memosearch" type="search" placeholder="Procurar nas notas" data-memoq value="${esc(ui.memoQ || '')}">` : ''}
-    ${days.length ? days.map((d) => section(esc(dayLabel(d.date)), `<div class="memos">${d.items.map((m) => `<div class="memo"><span class="memo__t">${esc(m.time ? fmtTime(m.time) : '')}</span><p>${esc(m.text)}</p><button class="iconbtn memo__x" data-action="memo-del" data-id="${esc(m.id)}" aria-label="Apagar">${icon('trash', 16)}</button></div>`).join('')}</div>`)).join('')
+    ${days.length ? days.map((d) => section(esc(dayLabel(d.date)), `<div class="memos">${d.items.map((m) => `<div class="memo"><span class="memo__t">${esc(m.time ? fmtTime(m.time) : '')}</span><p>${esc(m.text)}</p><button class="iconbtn memo__x" data-action="memo-agenda" data-id="${esc(m.id)}" aria-label="Colocar na agenda">${icon('cal2', 17)}</button><button class="iconbtn memo__x" data-action="memo-del" data-id="${esc(m.id)}" aria-label="Apagar">${icon('trash', 16)}</button></div>`).join('')}</div>`)).join('')
       : q ? '<p class="fhelp">Nada encontrado.</p>' : emptyCard('note', 'Suas notas do dia a dia', 'Anote o que fez ou onde deixou as coisas. Ex.: “deixei a chave na gaveta da cozinha”, “paguei a conta de luz”.')}
     <div style="height:28px"></div>
   </div>`;
@@ -292,12 +293,8 @@ export function bindPersonal(view) {
   if (f) f.onsubmit = (ev) => {
     if (ev) ev.preventDefault(); // nunca deixa o navegador "enviar" o formulário (isso recarregava o app)
     const q = f.q.value.trim();
-    if (!q) { openPersonalEditor(); return false; }
-    f.q.value = '';
-    const it = savePersonal({ ...parseQuick(q), remind: 'auto' });
-    if (!it) { f.q.value = q; return false; } // sem plano ativo: nada foi salvo
-    okFx({ title: 'Anotado!', sub: `${dayLabel(it.date)}${it.time ? ' às ' + fmtTime(it.time) : ''}`, item: it });
-    setTimeout(() => toast(`${it.title}`, { action: 'Ajustar', onAction: () => openPersonalEditor(it.id), ms: 3500 }), window.__motion && window.__motion.pronto() ? 3300 : 1600);
+    f.q.value = ''; f.q.blur();
+    import('./assistant.js').then((m) => m.openAssistant(q)); // o mesmo assistente do brilho lá de cima
     return false;
   };
   const mf = view.querySelector('[data-form="memo"]');
@@ -346,6 +343,7 @@ export const personalActions = {
     window.__calRender && window.__calRender();
   },
   'p-open': (b) => openPersonalEditor(b.dataset.id),
+  'memo-agenda': (b) => { const m = personal.item(b.dataset.id); if (m) import('./assistant.js').then((x) => x.openAssistant(m.text, { agenda: true, nota: m.id })); },
   'memo-del': async (b) => {
     const m = personal.item(b.dataset.id);
     if (!m || !(await confirmDialog({ title: 'Apagar esta nota?', text: m.text, ok: 'Apagar', danger: true }))) return;
@@ -485,7 +483,7 @@ function openListForm(id = null) {
 export function openPersonalEditor(id = null, preset = {}) {
   const old = id ? personal.item(id) : null;
   if (old && old.kind === 'list') return openList(id);
-  const d = old ? { ...old } : { title: '', date: preset.date || todayKey(), time: '', cat: preset.cat || 'lembrete', repeat: preset.cat === 'aniversario' ? 'yearly' : 'none', note: '', remind: 'auto' };
+  const d = old ? { ...old } : { title: preset.title || '', date: preset.date || todayKey(), time: preset.time || '', cat: preset.cat || 'lembrete', repeat: preset.cat === 'aniversario' ? 'yearly' : 'none', note: '', remind: 'auto' };
   const api = openSheet({
     className: 'sheet--tall psheet',
     html: `${sheetHead(old ? 'Editar' : 'Anotar', { left: '<button class="btn-text" data-close>Cancelar</button>', right: '<button class="btn btn--primary btn--sm" data-save>Salvar</button>' })}

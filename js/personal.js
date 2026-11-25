@@ -14,7 +14,7 @@ export const CATS = {
   compromisso: { label: 'Compromisso', emoji: '📍', ic: 'mappin', g: ['#5AA8FF', '#2F6BFF'], color: '#2F7BFF', words: ['ir ao', 'ir na', 'ir no', 'ir para', 'ir pra', 'reunião', 'encontro', 'evento', 'festa', 'casamento', 'igreja', 'culto', 'missa'] },
   buscar: { label: 'Buscar / levar', emoji: '🚗', ic: 'car', g: ['#FFB547', '#FF7A1A'], color: '#FF8A1F', words: ['buscar', 'levar', 'pegar ', 'carona'] },
   beleza: { label: 'Cabelo / beleza', emoji: '💇', ic: 'hairdryer', g: ['#FF8FB8', '#D9367A'], color: '#E0457F', words: ['cabelo', 'escova', 'progressiva', 'hidratação', 'hidratacao', 'luzes', 'mechas', 'tintura', 'trança', 'penteado', 'barba', 'barbeiro', 'unha', 'manicure', 'pedicure', 'esmalte', 'sobrancelha', 'cílios', 'cilios', 'maquiagem', 'make', 'depilação', 'depilacao', 'limpeza de pele', 'estética', 'estetica', 'massagem', 'salão', 'salao'] },
-  saude: { label: 'Saúde', emoji: '🩺', ic: 'stethoscope', g: ['#4BD88B', '#16A35A'], color: '#1FB566', words: ['médico', 'medico', 'médica', 'dentista', 'exame', 'consulta', 'remédio', 'remedio', 'academia', 'treino', 'vacina', 'terapia', 'psicólogo', 'psicologo', 'fisioterapia', 'pilates', 'yoga', 'hospital', 'farmácia', 'farmacia', 'nutricionista'] },
+  saude: { label: 'Saúde', emoji: '🩺', ic: 'stethoscope', g: ['#4BD88B', '#16A35A'], color: '#1FB566', words: ['médico', 'medico', 'médica', 'dentista', 'exame', 'consulta', 'remédio', 'remedio', 'academia', 'treino', 'vacina', 'terapia', 'psiqui', 'neuro', 'psicólogo', 'psicologo', 'fisioterapia', 'pilates', 'yoga', 'hospital', 'farmácia', 'farmacia', 'nutricionista'] },
   pagar: { label: 'Pagar conta', emoji: '🧾', ic: 'receipt', g: ['#3FD0E0', '#0E8FB0'], color: '#14A3C2', words: ['pagar', 'conta de', 'boleto', 'fatura', 'aluguel', 'pix', 'condomínio', 'condominio', 'iptu', 'ipva', 'internet', 'mensalidade', 'parcela', 'imposto'] },
   compras: { label: 'Compras', emoji: '🛒', ic: 'cart', g: ['#8B8CFF', '#5146E5'], color: '#5E5CF0', words: ['comprar', 'mercado', 'supermercado', 'feira', 'shopping', 'padaria'] },
 };
@@ -182,8 +182,10 @@ export function guessCat(text) {
   for (const k of ['aniversario', 'beleza', 'saude', 'pagar', 'compras', 'buscar', 'compromisso']) if (CATS[k].words.some((w) => t.includes(w))) return k;
   return 'lembrete';
 }
+const MES3 = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const existe = (k) => { const d = fromKey(k); return d.getDate() === +k.slice(8) && d.getMonth() + 1 === +k.slice(5, 7); };
 export function parseQuick(raw) {
-  let text = ' ' + raw.trim() + ' ';
+  let text = ' ' + raw.trim().replace(/[,;!]+(\s|$)/g, ' ').replace(/\.(\s|$)/g, ' ') + ' ';
   const low = () => text.toLowerCase();
   let date = null, time = null;
   const take = (re, fn) => { const m = re.exec(low()); if (m) { fn(m); text = text.slice(0, m.index) + ' ' + text.slice(m.index + m[0].length); } };
@@ -198,6 +200,18 @@ export function parseQuick(raw) {
     if (!m[3] && k < t) k = `${+y + 1}-${pad(+m[2])}-${pad(+m[1])}`;
     date = k;
   });
+  // "dia 20", "dia 20 de dezembro", "20 de dezembro de 2027"
+  if (!date) take(/\s(?:no |pro |para o )?(?:dia )?(\d{1,2})(?:º|°)? de (jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)[a-zç]*(?: de (\d{4}))?\s/, (m) => {
+    const md = `${pad(MES3.indexOf(m[2]) + 1)}-${pad(+m[1])}`, y = m[3] || t.slice(0, 4); let k = `${y}-${md}`;
+    if (!m[3] && k < t) k = `${+y + 1}-${md}`;
+    if (existe(k)) date = k;
+  });
+  if (!date) take(/\s(?:no |pro |para o )?dia (\d{1,2})(?:º|°)?(?: (?:deste mês|desse mês|(do mês que vem|do próximo mês)))?\s/, (m) => {
+    let y = +t.slice(0, 4), mo = +t.slice(5, 7); if (m[2]) mo++;
+    for (let i = 0; i < 14; i++, mo++) { if (mo > 12) { mo = 1; y++; } const k = `${y}-${pad(mo)}-${pad(+m[1])}`; if (existe(k) && k >= t) { date = k; break; } }
+  });
+  if (!date) take(/\sdaqui (?:a )?(\d{1,2}|uma?|duas) (dias?|semanas?)\s/, (m) => { const n = /^\d/.test(m[1]) ? +m[1] : m[1] === 'duas' ? 2 : 1; date = addDays(t, n * (m[2][0] === 's' ? 7 : 1)); });
+  if (!date) take(/\s(?:na )?semana que vem\s/, () => (date = addDays(t, 7)));
   take(/\s(?:no |na |nesta |nessa |próxima |proxima )?(domingo|segunda|terça|terca|quarta|quinta|sexta|sábado|sabado)(?:-feira)?\s/, (m) => {
     const want = WD.indexOf(m[1].replace('terca', 'terça').replace('sabado', 'sábado'));
     let d = addDays(t, 1);
@@ -209,6 +223,7 @@ export function parseQuick(raw) {
     if (h <= 23 && mi <= 59) time = `${pad(h)}:${pad(mi)}`;
   });
   take(/\s(?:ao )?meio-dia\s/, () => (time = '12:00'));
+  take(/\sda (tarde|noite|manhã|manha)\s/, (m) => { if (time && m[1][0] !== 'm' && +time.slice(0, 2) < 12) time = `${pad(+time.slice(0, 2) + 12)}${time.slice(2)}`; });
   const title = text.replace(/\s+/g, ' ').trim().replace(/^(de|do|da|para|pra)\s/i, '');
   const cat = guessCat(raw);
   return { title: title.charAt(0).toUpperCase() + title.slice(1), date: date || t, time, cat, repeat: cat === 'aniversario' ? 'yearly' : 'none' };
