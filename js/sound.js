@@ -164,3 +164,8 @@ export function abreMundo(space) {
 export function pouso() { const a = audio(); if (!a) return; const t = a.currentTime + 0.01; baque(a, t, 0.13); note(a, 1046.5, t + 0.05, 0.3, 0.04); note(a, 1567.98, t + 0.12, 0.36, 0.03); }
 /* carimbo: toque seco e grave; ao concluir, com o "dim" da marca */
 export function carimbo(feito = false) { const a = audio(); if (!a) return; const t = a.currentTime + 0.005; baque(a, t, 0.2); if (feito) { note(a, 987.77, t + 0.05, 0.3, 0.04); note(a, 1318.51, t + 0.12, 0.34, 0.035); } }
+
+/* conversa: ida (sobe), chegada (duas notas da marca) e curtida (gota) */
+export function msgVai() { const a = audio(); if (!a) return; const t = a.currentTime + 0.005; note(a, 659.25, t, 0.12, 0.03); note(a, 987.77, t + 0.06, 0.16, 0.03); }
+export function msgVem() { const a = audio(); if (!a) return; const t = a.currentTime + 0.005; note(a, 783.99, t, 0.2, 0.04); note(a, 1046.5, t + 0.1, 0.3, 0.035); }
+export function curtida() { const a = audio(); if (!a) return; const t = a.currentTime + 0.005; note(a, 587.33, t, 0.1, 0.045); note(a, 1174.66, t + 0.07, 0.26, 0.04); }

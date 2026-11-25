@@ -878,13 +878,17 @@ export function stop() {
 /* o app avisa o que aconteceu; ele reage */
 export function react(kind, o = {}) {
   if (kind === 'created') salvouAgora = Date.now();
-  if (!B || (blocked() && !['done', 'nivel', 'visitas', 'story', 'pedido'].includes(kind))) return;
+  if (!B || (blocked() && !['done', 'nivel', 'visitas', 'story', 'pedido', 'gostou', 'comentou', 'repostou'].includes(kind))) return;
   if (kind === 'erro') { reactErro(el()); return fala({ t: 'Ops, não salvou. Tento de novo quando a internet voltar.', m: 'triste', p: PRIO.erro }, 'pop'); }
   if (kind === 'nivel') { reactNivel(el()); return fala({ t: o.nivel ? `Nível ${o.nivel}! Subiu de nível 🎉` : 'Subiu de nível! 🎉', m: 'comemora', p: PRIO.nivel }, null); }
   if (kind === 'done') return fala(o.perfect ? { k: 'perfeito', t: pick(['Dia 100%! Você zerou tudo! 🏆', 'Zerou o dia! Pode comemorar 🎉']), m: 'danca', p: PRIO.perfeito } : o.late ? { t: outra(DONE_LATE), m: 'feliz', p: PRIO.done, gesto: 'alivio' } : { t: feito(o), m: 'feliz', p: PRIO.done }, comemora());
   if (kind === 'created') return fala({ t: piada(o.titulo || '', 'c') || outra(CREATED), m: 'feliz', p: PRIO.created }, 'sim');
   if (kind === 'pedido') return fala({ t: pick([`Pedido enviado! Agora é torcer pra ${(o.nome || 'pessoa').split(' ')[0]} aceitar 🤞`, 'Mandei o convite voando! 🕊️ Já já chega no celular da pessoa.', 'Feito! Amizade a um toque de distância 🤝']), m: 'comemora', roteiro: ['balanca'] }, 'pulo');
   if (kind === 'story') return fala({ t: pick(['Postou story! Agora todo mundo vai ver que você fez 😎📸', 'XP em dobro na conta! Fotógrafo(a) profissional, hein 📸', 'Prova registrada! Ninguém pode dizer que você não fez 😏']), m: 'danca', roteiro: ['balanca'] }, 'pulo');
+  if (kind === 'privado') return fala({ t: pick(['Chegou mensagem! Quem será? 👀', 'Plim! Tem gente falando com você 💌', 'Psiu… mensagem nova. Ela some em 24 h!']), m: 'feliz', p: 0, acoes: [{ label: 'Abrir', go: () => import('./privado.js').then((m) => m.openMensagens()) }] }, 'sobrancelha');
+  if (kind === 'gostou') return fala({ t: `${o.nome || 'Alguém'} curtiu seu story ❤️ Tá podendo, hein?`, m: 'feliz', p: PRIO.xp }, 'timido');
+  if (kind === 'comentou') return fala({ t: `${o.nome || 'Alguém'} comentou no seu story! Corre ver 👀`, m: 'feliz', p: PRIO.xp }, 'soco');
+  if (kind === 'repostou') return fala({ t: `${o.nome || 'Alguém'} repostou seu story! Tá famoso(a) 🔁`, m: 'feliz', p: PRIO.xp }, 'vibra');
   if (kind === 'visitas') { try { localStorage.setItem(visKey, String(Date.now())); } catch { /* ok */ } return o.n ? fala({ t: pick([`Hmm… que que será que ${(o.nome || 'essa pessoa').split(' ')[0]} tava querendo, hein? 🤭`, `${(o.nome || 'Alguém').split(' ')[0]} passou por aqui… será que tá com saudade? 👀`, 'Olha quanta gente curiosa com a sua vida 😏', `${(o.nome || 'Alguém').split(' ')[0]} veio, olhou e não falou nada… típico de quem tá interessado 😏`, 'Esse povo vê tudo e finge que não viu 🙈 Mas eu vi.', 'Quer que eu fique de olho em quem voltar? Eu fico 🕵️']), m: 'desconfiado', roteiro: ['olhaLados', 'maoBoca'] }, 'sobrancelha') : fala({ t: 'Ninguém passou ainda… posta um story que o povo aparece 😉', m: 'feliz' }, 'pisca'); }
   if (kind === 'late') return fala({ t: 'Ih… esse passou da hora. Quer ver o que ficou pra trás?', m: 'triste', acoes: [{ label: 'Ver', go: A.atrasados }, { label: 'Depois' }] }, null);
 }

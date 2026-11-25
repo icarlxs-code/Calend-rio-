@@ -5,6 +5,7 @@
    - Conversa com o Claude dentro do app (/ask), se houver chave da Anthropic
    Dados guardados num Durable Object com SQLite (veja entry.js e kvsql.js): chaves VAPID, aparelhos,
    listas de lembretes e a fila do relógio. O código usa a mesma interface do KV (env.CAL). */
+import { socialRoute } from './social.js';
 import { staffRoute, pode } from './staff.js';
 import { generateVapid, sendPush } from './webpush.js';
 import { verifyIdToken } from './auth.js';
@@ -243,7 +244,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/friends/suggest': 20, '/friends/email': 15, '/friends/perto': 10, '/friends/close': 30, '/friends/dismiss': 30, '/friends/ping': 40, '/staff/me': 30, '/staff/list': 20, '/staff/set': 20, '/staff/remove': 20, '/staff/metrics': 20, '/staff/reports': 20, '/staff/report-action': 30, '/lb/report': 20, '/lb/board': 40 };
+const LIMITS = { '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/coach': 20, '/ask': 15, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/story-like': 60, '/friends/story-comment': 15, '/friends/story-comments': 60, '/friends/story-comment-del': 30, '/friends/story-repost': 6, '/friends/msg-send': 40, '/friends/msg-list': 60, '/friends/msg-media': 90, '/friends/msg-react': 60, '/friends/msg-del': 30, '/friends/convs': 40, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/friends/suggest': 20, '/friends/email': 15, '/friends/perto': 10, '/friends/close': 30, '/friends/dismiss': 30, '/friends/ping': 40, '/staff/me': 30, '/staff/list': 20, '/staff/set': 20, '/staff/remove': 20, '/staff/metrics': 20, '/staff/reports': 20, '/staff/report-action': 30, '/lb/report': 20, '/lb/board': 40 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -491,7 +492,10 @@ async function handle(req, env) {
     // amizades, stories e visitas: apaga as fotos (mesmo antes das 24 h), as visitas e tira a pessoa da lista dos amigos
     try {
       const sts = (await env.CAL.get(`stories:${me.ws}`, 'json')) || [];
-      await Promise.all(sts.map((x) => env.CAL.delete(`storyimg:${x.id}`)));
+      await Promise.all(sts.map((x) => env.CAL.delete(`storyimg:${x.id}`))); await Promise.all(sts.map((x) => env.CAL.delete(`storycom:${x.id}`)));
+      for (const x of sts) for (const [u, rid] of Object.entries(x.reps || {})) { const l = (await env.CAL.get(`stories:${u}`, 'json')) || []; await env.CAL.put(`stories:${u}`, JSON.stringify(l.filter((y) => y.id !== rid)), { expirationTtl: 26 * 3600 }); }
+      if (env.SOCIAL) env.SOCIAL.apagaConta(me.ws);
+      await Promise.all([`mudo:${me.ws}`, `mcfg:${me.ws}`].map((k) => env.CAL.delete(k)));
       const frs = (await env.CAL.get(`friends:${me.ws}`, 'json')) || [];
       for (const f of frs) { const l = (await env.CAL.get(`friends:${f}`, 'json')) || []; await env.CAL.put(`friends:${f}`, JSON.stringify(l.filter((x) => x !== me.ws))); }
       await Promise.all([`stories:${me.ws}`, `visits:${me.ws}`, `friends:${me.ws}`, `freq:${me.ws}`, `ls:${me.ws}`, `blocks:${me.ws}`].map((k) => env.CAL.delete(k)));
@@ -642,12 +646,15 @@ async function handle(req, env) {
     // ---------- stories (24h) e visitas ao perfil ----------
     const memberOf = (u) => 'u' + String(u).replace(/[^A-Za-z0-9]/g, '').slice(0, 24);
     const DAY = 864e5, now = Date.now();
-    const vivos = (l) => l.filter((x) => now - x.at < DAY);
+    const vivos = (l) => l.filter((x) => now < (x.fim || x.at + DAY));
     const marcaOnline = async () => { const k = `ls:${meU}`, v = +(await env.CAL.get(k)) || 0; if (now - v > 90e3) await env.CAL.put(k, String(now), { expirationTtl: 30 * 864e2 }); };
-    const vistoEm = async (u) => +(await env.CAL.get(`ls:${u}`)) || 0;
+    const vistoEm = async (u) => (env.VISIVEL && env.VISIVEL(u) ? now : +(await env.CAL.get(`ls:${u}`)) || 0);
     const brHora = () => new Date(Date.now() - 3 * 3600e3).getUTCHours();
     const dormindo = async (u) => { const c = (await env.CAL.get(`card:${u}`, 'json')) || {}; const h = brHora(); return c.teen === true && (h >= 22 || h < 7); }; // modo dormir (menores)
     const isFriend = async (a, b) => a === b || (await getL(`friends:${a}`)).includes(b);
+    // curtir, comentar, repostar e conversas privadas
+    const soc = await socialRoute({ env, meU, path: url.pathname, body, now, getL, cardOf, isFriend, vivos, memberOf, dormindo, send: (m, msg) => sendToMember(env, m, msg) });
+    if (soc) return reply(env, req, soc[0], soc[1] || 200);
     if (url.pathname === '/friends/story-post') {
       const photo = typeof body.photo === 'string' && body.photo.length < 420000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(body.photo) ? body.photo : null;
       if (!photo) return reply(env, req, { error: 'Foto inválida. Tire a foto pela câmera do app.' }, 400);
@@ -656,7 +663,7 @@ async function handle(req, env) {
       const id = Array.from(crypto.getRandomValues(new Uint8Array(12)), (x) => 'abcdefghijkmnpqrstuvwxyz23456789'[x % 32]).join('');
       const list = vivos(await getL(`stories:${meU}`));
       if (list.length >= 10) return reply(env, req, { error: 'Você já postou 10 stories hoje. Espere alguns sumirem.' }, 429);
-      list.push({ id, at: now, title: livre ? '' : clean(body.title, 60), caption: clean(body.caption, 120), ref: clean(body.ref, 80), livre, views: {} });
+      list.push({ id, at: now, title: livre ? '' : clean(body.title, 60), caption: clean(body.caption, 120), ref: clean(body.ref, 80), livre, views: {}, podeCom: body.podeCom === true, podeRp: body.podeRp === true && !(await cardOf(meU)).teen });
       await env.CAL.put(`stories:${meU}`, JSON.stringify(list), { expirationTtl: 26 * 3600 });
       await env.CAL.put(`storyimg:${id}`, photo, { expirationTtl: 24 * 3600 }); // a foto some sozinha em 24h (não fica guardada)
       const mine = await cardOf(meU), fr = await getL(`friends:${meU}`);
@@ -667,8 +674,11 @@ async function handle(req, env) {
     if (url.pathname === '/friends/story-delete') {
       const id = clean(body.id, 40), list = await getL(`stories:${meU}`);
       if (!list.some((x) => x.id === id)) return reply(env, req, { error: 'Story não encontrado.' }, 404);
+      const alvo = list.find((x) => x.id === id);
       await env.CAL.put(`stories:${meU}`, JSON.stringify(list.filter((x) => x.id !== id)), { expirationTtl: 26 * 3600 });
-      await env.CAL.delete(`storyimg:${id}`);
+      await env.CAL.delete(`storyimg:${id}`); await env.CAL.delete(`storycom:${id}`);
+      // os reposts deste story somem junto
+      for (const [u, rid] of Object.entries(alvo.reps || {})) { const l = await getL(`stories:${u}`); if (l.some((x) => x.id === rid)) { await env.CAL.put(`stories:${u}`, JSON.stringify(l.filter((x) => x.id !== rid)), { expirationTtl: 26 * 3600 }); await env.CAL.delete(`storycom:${rid}`); } }
       return reply(env, req, { ok: true });
     }
     if (url.pathname === '/friends/stories') {
@@ -676,8 +686,9 @@ async function handle(req, env) {
       const fr = await getL(`friends:${meU}`);
       const donos = [meU, ...fr.slice(0, 200)];
       const rows = (await Promise.all(donos.map(async (u) => {
-        const l = vivos(await getL(`stories:${u}`)); if (!l.length) return null;
-        return { ...(await cardOf(u)), me: u === meU, stories: l.map((x) => ({ id: x.id, at: x.at, title: x.title, caption: x.caption, livre: !!x.livre, seen: !!x.views[meU], views: u === meU ? Object.keys(x.views).length : undefined })) };
+        let l = vivos(await getL(`stories:${u}`)); if (!l.length) return null;
+        if (l.some((x) => x.rp)) { const bl = []; for (const x of l) if (x.rp && x.rp.uid !== meU && (await getL(`blocks:${x.rp.uid}`)).includes(meU)) bl.push(x.id); l = l.filter((x) => !bl.includes(x.id)); if (!l.length) return null; }
+        return { ...(await cardOf(u)), me: u === meU, stories: l.map((x) => ({ id: x.id, at: x.at, title: x.title, caption: x.caption, livre: !!x.livre, seen: !!x.views[meU], views: u === meU ? Object.keys(x.views).length : undefined, gostei: !!(x.likes && x.likes[meU]), likes: u === meU ? Object.keys(x.likes || {}).length : undefined, ncom: x.ncom || 0, podeCom: x.podeCom === true, podeRp: x.podeRp === true, rp: x.rp ? { uid: x.rp.uid, id: x.rp.id, name: x.rp.name, meu: x.rp.uid === meU } : undefined, fim: x.fim || x.at + DAY })) };
       }))).filter(Boolean);
       // como no Instagram/WhatsApp: os seus primeiro, depois quem tem novidade, do mais recente ao mais antigo
       rows.sort((a, b) => (b.me - a.me) || (a.stories.every((x) => x.seen) - b.stories.every((x) => x.seen)) || (Math.max(...b.stories.map((x) => x.at)) - Math.max(...a.stories.map((x) => x.at))));
@@ -689,10 +700,11 @@ async function handle(req, env) {
     if (url.pathname === '/friends/story-view') {
       const owner = clean(body.owner, 64), id = clean(body.id, 40);
       if (!(await isFriend(meU, owner))) return reply(env, req, { error: 'Só amigos veem os stories.' }, 403);
-      const list = await getL(`stories:${owner}`), st = list.find((x) => x.id === id && now - x.at < DAY);
+      const list = await getL(`stories:${owner}`), st = list.find((x) => x.id === id && now < (x.fim || x.at + DAY));
+      if (st && st.rp && (await getL(`blocks:${st.rp.uid}`)).includes(meU)) return reply(env, req, { error: 'Esse story já sumiu.' }, 404);
       // modo "foto": só baixa (o app adianta o próximo story sem marcar como visto); "visto": só marca (a foto já está no celular)
       const modo = body.modo === 'foto' || body.modo === 'visto' ? body.modo : '';
-      const photo = st && modo !== 'visto' ? await env.CAL.get(`storyimg:${id}`) : null;
+      const photo = st && modo !== 'visto' ? await env.CAL.get(`storyimg:${st.rp ? st.rp.id : id}`) : null;
       if (!st || (modo !== 'visto' && !photo)) return reply(env, req, { error: 'Esse story já sumiu.' }, 404);
       if (modo !== 'foto' && owner !== meU && !st.views[meU]) { st.views[meU] = now; await env.CAL.put(`stories:${owner}`, JSON.stringify(list), { expirationTtl: 26 * 3600 }); }
       return reply(env, req, modo === 'visto' ? { ok: true } : { ok: true, photo });
@@ -701,7 +713,7 @@ async function handle(req, env) {
       const st = (await getL(`stories:${meU}`)).find((x) => x.id === clean(body.id, 40));
       if (!st) return reply(env, req, { error: 'Story não encontrado.' }, 404);
       const v = Object.entries(st.views).sort((a, b) => b[1] - a[1]).slice(0, 100);
-      return reply(env, req, { ok: true, viewers: await Promise.all(v.map(async ([u, at]) => ({ ...(await cardOf(u)), at }))) });
+      return reply(env, req, { ok: true, viewers: await Promise.all(v.map(async ([u, at]) => ({ ...(await cardOf(u)), at, gostou: !!(st.likes && st.likes[u]), repostou: !!(st.reps && st.reps[u]) }))) });
     }
     if (url.pathname === '/friends/visit') {
       const other = clean(body.uid, 64);
@@ -721,7 +733,9 @@ async function handle(req, env) {
     if (url.pathname === '/friends/report') {
       const owner = clean(body.owner, 64), id = clean(body.id, 40), motivo = clean(body.motivo, 200);
       const rep = (await getL('reports')).slice(0, 499);
-      rep.unshift({ by: meU, owner, id, motivo, at: now });
+      // denúncia de mensagem: guarda o trecho que a pessoa recebeu (a mensagem some em 24 h, a revisão precisa dele)
+      const dm = body.msg && env.SOCIAL ? env.SOCIAL.acha(meU, owner, body.msg.at, body.msg.id) : null;
+      rep.unshift({ by: meU, owner, id, motivo, at: now, ...(dm && dm.de === owner ? { msg: dm.tipo, trecho: clean(dm.txt, 300) } : {}), ...(body.cid ? { com: clean(body.cid, 40) } : {}) });
       await env.CAL.put('reports', JSON.stringify(rep));
       // 2 denúncias diferentes no mesmo story: ele sai do ar na hora, até o dono do app revisar
       if (id && rep.filter((r) => r.id === id).length >= 2) {
@@ -737,6 +751,7 @@ async function handle(req, env) {
       const bl = await getL(`blocks:${meU}`); await env.CAL.put(`blocks:${meU}`, JSON.stringify([...new Set([other, ...bl])].slice(0, 500)));
       await env.CAL.put(`friends:${meU}`, JSON.stringify((await getL(`friends:${meU}`)).filter((x) => x !== other)));
       await env.CAL.put(`friends:${other}`, JSON.stringify((await getL(`friends:${other}`)).filter((x) => x !== meU)));
+      if (env.SOCIAL) env.SOCIAL.apagaDupla(meU, other); // bloqueou: a conversa dos dois é apagada na hora
       await env.CAL.put(`freq:${meU}`, JSON.stringify((await getL(`freq:${meU}`)).filter((r) => r.from !== other)));
       await env.CAL.put(`visits:${meU}`, JSON.stringify((await getL(`visits:${meU}`)).filter((v) => v.from !== other)), { expirationTtl: 8 * 24 * 3600 });
       return reply(env, req, { ok: true });

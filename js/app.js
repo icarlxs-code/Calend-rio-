@@ -381,6 +381,7 @@ const actions = {
     ui.date = b.dataset.k;
     setTab('hoje');
   },
+  mensagens: () => import('./privado.js').then((m) => m.openMensagens()),
   visitas: () => import('./stories.js').then((m) => m.openVisitors()).then(() => render()),
   'ui-toggle': (b) => { ui[b.dataset.k] = !ui[b.dataset.k]; render(); },
   acc: (b) => { const k = b.dataset.k; ui.acc[k] = !ui.acc[k]; const s = b.closest('.acc'); s.classList.toggle('is-open', ui.acc[k]); b.setAttribute('aria-expanded', !!ui.acc[k]); },
@@ -837,6 +838,8 @@ function openDeepLink(hash = location.hash, tries = 0) {
     return true;
   }
   if (/^#\/stories$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./stories.js').then((m) => m.openStoriesFeed()); return true; }
+  const priv = /^#\/privado(?:\/([A-Za-z0-9]{6,64}))?$/.exec(hash || '');
+  if (priv) { history.replaceState(null, '', location.pathname + location.search); window.PautaIntro && window.PautaIntro.finish(); import('./privado.js').then((m) => (priv[1] ? m.openConversa(priv[1]) : m.openMensagens())); return true; }
   if (/^#\/visitas$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./stories.js').then((m) => m.openVisitors()); return true; }
   if (/^#\/amigos$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./friends.js').then((m) => m.openFriends()); return true; }
   if (/^#\/amigo\//.test(hash || '')) { import('./friends.js').then((m) => { m.captureFriendLink(hash); m.processFriendLink(); }); return true; }
@@ -1314,6 +1317,7 @@ function startApp() {
     if (document.hidden) { hiddenAt = Date.now(); return; }
     if (hiddenAt && Date.now() - hiddenAt > 30 * 60e3) { askedThisOpen = false; window.__vipAskedNotif = false; setTimeout(askNotifications, 3000); }
   });
+  setTimeout(() => import('./social.js').then((m) => m.inicia()).catch(() => {}), 3500); // mensagens em tempo real
   startPresence();
   personal.on(() => { if (ui.space === 'personal' || document.querySelector('.atrcard')) rerenderAll(); }); // o cartão "ficou pra trás" do Trabalho também mostra o Pessoal
   store.onDenied = (msg) => toast(msg, { ms: 5000 });
@@ -1648,7 +1652,7 @@ navigator.serviceWorker?.addEventListener('message', (ev) => {
 window.addEventListener('hashchange', () => {
   // abriu um convite com o app já aberto
   if (/^#\/convite\//.test(location.hash)) { captureInvite(); return maybeAcceptInvite(); }
-  if (/^#\/((e|d|p)\/|suporte|ranking|vitalicio|amigos|amigo\/|stories|visitas)/.test(location.hash)) return openDeepLink();
+  if (/^#\/((e|d|p)\/|suporte|ranking|vitalicio|amigos|amigo\/|stories|visitas|privado)/.test(location.hash)) return openDeepLink();
   if (/^#\/(c|v)\//.test(location.hash)) location.reload();
 });
 

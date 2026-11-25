@@ -1,4 +1,5 @@
 /* Telas "Hoje" (agenda do dia) e "Calendário" (mês) */
+import { botaoMensagens } from '../social.js';
 import { cena, momento } from '../cena.js';
 import { streak } from '../reward.js';
 import { store } from '../store.js';
@@ -66,6 +67,7 @@ export function renderToday() {
       <div class="hdr__actions">
         ${date !== today ? `<button class="chip chip--accent" data-action="go-today">Hoje</button>` : ''}
         ${modoSwitch('work')}
+        ${botaoMensagens()}
         <button class="iconbtn iconbtn--ai" data-action="assistant" aria-label="Assistente">${icon('sparkle', 20)}</button>
         <button class="iconbtn iconbtn--me" data-action="profile" aria-label="Seu perfil e conquistas">${me ? meRing(me.id, 32) : icon('user', 20)}</button>
       </div>

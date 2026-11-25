@@ -7,6 +7,8 @@ import { DurableObject } from 'cloudflare:workers';
 import { safeHandle, cronTick } from './index.js';
 import { makeKv, makeDue } from './kvsql.js';
 import { sqlBoard } from './leaderboard.js';
+import { makeSocial } from './social.js';
+import { verifyIdToken } from './auth.js';
 import { NET } from './webpush.js';
 
 const HUB = 'lembra';
@@ -35,10 +37,15 @@ export class Hub extends DurableObject {
     this.meter = {};
     this.kv = makeKv(ctx.storage.sql, this.meter);
     this.due = makeDue(ctx.storage.sql, this.kv, this.meter);
+    this.social = makeSocial(ctx.storage.sql, this.meter);
     this.runs = [];
     this.presence = new Map();
     this.presSaved = 0; this.presSig = '';
-    const base = { ...env, LB: sqlBoard(ctx.storage.sql, this.meter), CAL: this.kv, DUE: this.due, PRESENCE: this.presence, KV_OLD: env.CAL, METER: this.meter, RUNS: this.runs };
+    const base = { ...env, LB: sqlBoard(ctx.storage.sql, this.meter), CAL: this.kv, DUE: this.due, PRESENCE: this.presence, KV_OLD: env.CAL, METER: this.meter, RUNS: this.runs, SOCIAL: this.social,
+      // tempo real: manda o recado para os aparelhos abertos da pessoa; "visível" = com o app na frente agora
+      AVISA: (u, o) => { const t = JSON.stringify(o); for (const w of ctx.getWebSockets(u)) { try { w.send(t); } catch { /* fechou */ } } },
+      VISIVEL: (u) => ctx.getWebSockets(u).some((w) => { try { return !!w.deserializeAttachment()?.vis; } catch { return false; } }) };
+    try { ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong')); } catch { /* ok */ }
     this.http = { ...base, AI: limitedAI(env.AI, this.kv, 9500) };   // assistente: quase tudo
     this.bg = { ...base, AI: limitedAI(env.AI, this.kv, 6000) };     // mensagens automáticas: até 6.000
     this.bg.USAGE = this.http.USAGE = base.USAGE = { date: '', amigo: { sent: 0, ai: 0 }, coach: { sent: 0, ai: 0 } };
@@ -84,7 +91,36 @@ export class Hub extends DurableObject {
     return false;
   }
 
+  /* conexão em tempo real (dorme sem custo quando ninguém fala). O login vai no subprotocolo: new WebSocket(url, ['lembra', token]) */
+  async ws(req) {
+    const origem = req.headers.get('Origin') || '', ok = (this.env.ALLOWED_ORIGINS || '').split(',').map((x) => x.trim()).includes(origem) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origem);
+    if (!ok) return new Response('origem', { status: 403 });
+    const p = (req.headers.get('Sec-WebSocket-Protocol') || '').split(',').map((x) => x.trim());
+    let me; try { if (p[0] !== 'lembra') throw new Error('protocolo'); me = await verifyIdToken(p[1], this.http); } catch { return new Response('login', { status: 401 }); }
+    const u = me.ws, velhos = this.ctx.getWebSockets(u);
+    if (velhos.length >= 4) { try { velhos[0].close(4000, 'muitos aparelhos'); } catch { /* ok */ } }
+    const par = new WebSocketPair();
+    this.ctx.acceptWebSocket(par[1], [u]);
+    par[1].serializeAttachment({ u, vis: true, d: 0 });
+    return new Response(null, { status: 101, webSocket: par[0], headers: { 'Sec-WebSocket-Protocol': 'lembra' } });
+  }
+  async webSocketMessage(w, m) {
+    if (typeof m !== 'string' || m.length > 300) return;
+    let o; try { o = JSON.parse(m); } catch { return; }
+    const a = w.deserializeAttachment() || {};
+    if (o.t === 'vis') return w.serializeAttachment({ ...a, vis: o.v === true });
+    if (o.t === 'dig' && typeof o.para === 'string') { // "digitando…" (no máximo um a cada 2 s, só entre amigos)
+      if (Date.now() - (a.d || 0) < 2000) return;
+      w.serializeAttachment({ ...a, d: Date.now() });
+      const l = (await this.kv.get(`friends:${a.u}`, 'json')) || [];
+      if (l.includes(o.para)) this.http.AVISA(o.para, { t: 'dig', de: a.u, v: o.v === 'audio' ? 'audio' : 'txt' });
+    }
+  }
+  async webSocketClose(w, code) { try { w.close(code === 1005 || code === 1006 ? 1000 : code); } catch { /* ok */ } }
+  async webSocketError() { /* o navegador reconecta */ }
+
   async fetch(req) {
+    if (req.headers.get('Upgrade') === 'websocket' && new URL(req.url).pathname === '/ws') return this.ws(req);
     const res = await safeHandle(req, this.http);
     // alguém entrou na fila (cadastro, primeira agenda): grava já, para não se perder se o servidor dormir
     try { await this.due.flush(); } catch (e) { console.log('fila', e.message); }
@@ -120,7 +156,8 @@ export class Hub extends DurableObject {
       this.runs.push({ at: Date.now(), ms: Math.round(performance.now() - t0), semRede: Math.round(performance.now() - t0 - (NET.ms - n0)), pushes: r.pushes || 0, keys: r.processed || 0, more: !!r.more });
       if (this.runs.length > 60) this.runs.splice(0, this.runs.length - 60);
       if (r.more) await this.ctx.storage.setAlarm(Date.now() + 50); // continua o lote quase na hora
-      this.kv.sweep(30);
+      this.kv.sweep(120);
+      this.social.limpa(); // mensagens, fotos e áudios com mais de 24 h: apagados de verdade
       await this.due.flush();
       await this.savePresence(true);
       return r;

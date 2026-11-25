@@ -8,6 +8,7 @@
 /* sql: objeto com exec(query, ...params) → cursor com toArray()/one() (Cloudflare) */
 export function makeKv(sql, meter = {}) {
   sql.exec(`CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL, exp INTEGER)`);
+  sql.exec('CREATE INDEX IF NOT EXISTS kv_exp ON kv(exp) WHERE exp IS NOT NULL'); // a limpeza do que venceu não precisa ler o banco inteiro
   const count = (key, n = 1, k = null) => { meter[key] = (meter[key] || 0) + n; if (meter.detail && k) { const p = String(k).split(':')[0]; meter.detail[key + ':' + p] = (meter.detail[key + ':' + p] || 0) + n; } };
   const rowOf = (k) => { const r = sql.exec('SELECT v, exp FROM kv WHERE k = ?', k).toArray(); count('rowsRead'); return r[0] || null; };
   // chaves lidas o tempo todo (o registro de quem usa o app): o objeto já lido fica na memória

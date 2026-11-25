@@ -395,7 +395,7 @@ export async function openPublicProfile(uid, prev = {}, onRemoved) {
     const L = G.levelInfo(c.xp || 0);
     const ring = d?.story === 'novo' ? 'is-story' : d?.story === 'visto' ? 'is-seen' : '';
     const me = store.member(store.me) || {};
-    const btn = !d ? '' : rel === 'eu' ? '' : rel === 'amigo' ? `<span class="pp2__amigos">${icon('check', 14)} Vocês são amigos</span>`
+    const btn = !d ? '' : rel === 'eu' ? '' : rel === 'amigo' ? `<button class="fxbtn" data-conversa>${icon('mail', 18)} Mensagem</button><span class="pp2__amigos">${icon('check', 14)} Vocês são amigos</span>`
       : rel === 'enviado' ? `<span class="pp__tag">${icon('clock', 14)} Pedido enviado</span>`
       : rel === 'recebido' ? `<button class="fxbtn" data-aceitar ${busy ? 'disabled' : ''}>${icon('check', 18)} Aceitar pedido de amizade</button>`
       : `<button class="fxbtn" data-pedir ${busy ? 'disabled' : ''}>${icon('plus', 18)} Adicionar amigo</button>`;
@@ -443,6 +443,7 @@ export async function openPublicProfile(uid, prev = {}, onRemoved) {
     x.el.querySelectorAll('[data-invite]').forEach((b) => (b.onclick = () => openShareChoice()));
     x.el.querySelectorAll('[data-todos]').forEach((b) => (b.onclick = () => { todos = !todos; x.set(html()); }));
     const st = x.el.querySelector('[data-story]'); if (st) st.onclick = () => import('./stories.js').then((m) => m.openViewer(uid));
+    const cv = x.el.querySelector('[data-conversa]'); if (cv) cv.onclick = () => import('./privado.js').then((m) => m.openConversa(uid, d?.card || prev));
     const mn = x.el.querySelector('[data-menu]');
     if (mn) mn.onclick = () => {
       const c = d?.card || prev;

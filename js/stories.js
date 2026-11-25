@@ -16,8 +16,14 @@ import { leCache, gravaCache } from './cache.js';
 import { personal } from './personal.js';
 import { previewStory } from './game.js';
 import { todayKey } from './utils.js';
+import { ICO, rosto, falta } from './social.js';
+import { isTeen } from './teen.js';
 
 const call = (path, body = {}) => api(path, { ws: '', ...body });
+const som = (f, ...a) => import('./sound.js').then((m) => m[f] && m[f](...a)).catch(() => {});
+/* quem pode o quê nos meus stories (a escolha fica lembrada; repostar só liga se a pessoa ligar ou deixar ligado no editor) */
+const pref = (k, p) => { try { const v = localStorage.getItem('lembra.st.' + k); return v === null ? p : v === '1'; } catch { return p; } };
+const guardaPref = (k, v) => { try { localStorage.setItem('lembra.st.' + k, v ? '1' : '0'); } catch { /* ok */ } };
 const desde = (at) => { const m = Math.round((Date.now() - at) / 60000); return m < 1 ? 'agora' : m < 60 ? `há ${m} min` : `há ${Math.round(m / 60)} h`; };
 const face = (c, size = 56) => c.photo ? `<span class="stface" style="--s:${size}px"><img src="${esc(c.photo)}" alt=""></span>` : `<span class="stface" style="--s:${size}px;background:${esc(c.color || '#FF6B1A')}">${esc((c.name || '?').charAt(0).toUpperCase())}</span>`;
 
@@ -45,7 +51,7 @@ export async function refreshVisitors() {
 
 /* ---------- câmera: só foto tirada agora ---------- */
 /* foto → JPEG leve (até 1080 px, até ~400 KB) */
-function prepara(f) {
+export function prepara(f) {
   return new Promise((res, rej) => {
     const img = new Image(), url = URL.createObjectURL(f);
     img.onload = () => {
@@ -85,7 +91,7 @@ export async function postStory({ title = '', ref = '', kind = 'w', cam } = {}) 
   try { photo = await tiraFoto(cam || (selfie(title) ? 'user' : 'environment')); } catch (e) { if (e.message !== 'cancelou') toast(e.message); return null; }
   toast('Postando seu story…');
   try {
-    const r = await call('/friends/story-post', { photo, camera: true, title, ref });
+    const r = await call('/friends/story-post', { photo, camera: true, title, ref, podeCom: pref('com', true), podeRp: !isTeen() && pref('rp', false) });
     const G = await import('./game.js');
     const got = G.storyXp(r.id, kind, ref);
     toast(got ? `📸 Story no ar! +${got} XP (em dobro)` : '📸 Story no ar! Seus amigos vão ver por 24 h');
@@ -147,14 +153,20 @@ async function fotoDe(r, st, { adianta = false } = {}) {
   return res.photo;
 }
 
-/* ---------- visualizador em tela cheia (estilo Instagram) ----------
+export async function fotoDoStory(dono, id) {
+  const tem = await fotoGuardada(id); if (tem) return tem;
+  const r = await call('/friends/story-view', { owner: dono, id, modo: 'foto' }); guardaFoto(id, r.photo); return r.photo;
+}
+/* ---------- visualizador em tela cheia ----------
    toque à direita/esquerda: próximo/anterior · segurar: pausa · arrastar pra baixo: fecha · arrastar pra cima (no seu): quem viu */
-export async function openViewer(ownerUid, onChange) {
+export async function openViewer(ownerUid, onChange, storyId = '') {
   if (!feed.rows.length || Date.now() - feed.at > 60e3) await refreshFeed();
   const ordem = feed.rows.filter((r) => r.stories.length);
   let oi = Math.max(0, ordem.findIndex((r) => r.uid === ownerUid)), si = 0, timer = 0, pausado = false, vez = 0;
   if (!ordem.length) return toast('Nenhum story agora.');
-  const first = ordem[oi].stories.findIndex((x) => !x.seen); si = first < 0 ? 0 : first;
+  const alvoSt = storyId ? ordem[oi].stories.findIndex((x) => x.id === storyId) : -1;
+  if (storyId && alvoSt < 0) return toast('Esse story já sumiu.');
+  const first = ordem[oi].stories.findIndex((x) => !x.seen); si = alvoSt >= 0 ? alvoSt : first < 0 ? 0 : first;
   const w = document.createElement('div');
   w.className = 'stv'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Stories');
   (document.getElementById('sheets') || document.body).appendChild(w); document.body.classList.add('has-stv'); // na mesma pilha das janelas: o que abrir depois (Visto por, Apagar) fica na frente
@@ -168,19 +180,26 @@ export async function openViewer(ownerUid, onChange) {
   async function mostra() {
     clearInterval(timer);
     const minha = ++vez, r = ordem[oi], st = r.stories[si];
-    const rodape = r.me ? `<footer class="stv__me"><button class="stv__ativ" data-viewers><span class="stv__faces" data-faces></span><b>Atividade</b><small>${st.views || 0} ${st.views === 1 ? 'visualização' : 'visualizações'} · arraste pra cima</small></button><button class="stv__ic" data-postar aria-label="Postar outro">${icon('camera', 22)}<small>Postar</small></button><button class="stv__ic" data-del aria-label="Apagar">${icon('trash', 22)}<small>Apagar</small></button></footer>`
-      : st.title ? `<footer class="stv__done">${icon('check', 16)} ${esc(r.name.split(' ')[0])} concluiu “${esc(st.title)}”</footer>` : '<footer class="stv__done stv__done--vazio"></footer>';
+    const n1 = esc(r.name.split(' ')[0]);
+    const rodape = r.me ? `<footer class="stv__me"><button class="stv__ativ" data-viewers><span class="stv__faces" data-faces></span><b>Atividade</b><small>${st.views || 0} ${st.views === 1 ? 'viu' : 'viram'}${st.likes ? ` · ${st.likes} ♥` : ''}</small></button>${st.podeCom ? `<button class="stv__ic" data-coms aria-label="Comentários">${ICO.coment(22)}<small>${st.ncom || 'Comentar'}</small></button>` : ''}<button class="stv__ic" data-postar aria-label="Postar outro">${icon('camera', 22)}<small>Postar</small></button><button class="stv__ic" data-del aria-label="Apagar">${icon('trash', 22)}<small>Apagar</small></button></footer>`
+      : `<footer class="stv__soc"><div class="stv__emo" data-emo hidden>${['😂', '😮', '😍', '😢', '👏', '🔥'].map((e) => `<button type="button" data-e="${e}" aria-label="Reagir ${e}">${e}</button>`).join('')}</div>
+        <form class="stv__resp" data-resp autocomplete="off">${st.podeCom ? `<button type="button" class="stv__modo" data-modo aria-label="Trocar entre privado e comentário público">${icon('lock', 17)}</button>` : ''}<input type="text" maxlength="${st.podeCom ? 200 : 500}" placeholder="Responder ${n1}…" data-in enterkeyhint="send" aria-label="Responder"><button class="stv__manda" data-manda hidden aria-label="Enviar">${ICO.manda(20)}</button></form>
+        <button class="stv__b${st.gostei ? ' is-on' : ''}" data-gosta aria-label="Curtir" aria-pressed="${!!st.gostei}">${ICO.coracao(27, st.gostei)}</button>
+        ${st.podeCom ? `<button class="stv__b" data-coms aria-label="Comentários">${ICO.coment(26)}${st.ncom ? `<em>${st.ncom}</em>` : ''}</button>` : ''}
+        ${(st.podeRp || st.rp) && !(st.rp && st.rp.meu) ? `<button class="stv__b" data-rep aria-label="Repostar no seu story">${icon('repeat', 25)}</button>` : ''}</footer>`;
     w.innerHTML = `<div class="stv__bars">${r.stories.map((x, i) => `<i><b style="width:${i < si ? 100 : 0}%"></b></i>`).join('')}</div>
-      <header class="stv__top">${face(r, 36)}<span><b>${r.me ? 'Seu story' : esc(r.name)}</b><small>${desde(st.at)}${st.title ? ` · ${esc(st.title)}` : ''}</small></span><button class="stv__x" data-x aria-label="Fechar">${icon('x', 22)}</button></header>
+      <header class="stv__top">${face(r, 36)}<span><b>${r.me ? 'Seu story' : esc(r.name)}</b><small>${desde(st.at)}${st.rp ? ` · repostou de ${esc(st.rp.name.split(' ')[0])}` : st.title ? ` · ✓ ${esc(st.title)}` : ''}</small></span><button class="stv__x" data-x aria-label="Fechar">${icon('x', 22)}</button></header>
       <div class="stv__img"><div class="stv__load"><i></i><i></i><i></i></div></div>
       ${st.caption ? `<p class="stv__cap">${esc(st.caption)}</p>` : ''}
+      <div class="stv__falas" data-falas aria-live="polite"></div>
       ${r.me ? '' : `<button class="stv__more" data-more aria-label="Mais opções">${icon('dots', 22)}</button>`}
       ${rodape}
       <button class="stv__nav stv__nav--l" data-prev aria-label="Anterior"></button><button class="stv__nav stv__nav--r" data-next aria-label="Próximo"></button>`;
     w.querySelector('[data-x]').onclick = fecha;
-    w.querySelector('[data-prev]').onclick = () => { if (!arrastou) anterior(); };
-    w.querySelector('[data-next]').onclick = () => { if (!arrastou) proximo(); };
+    w.querySelector('[data-prev]').onclick = (ev) => { if (!arrastou) toque(ev, anterior); };
+    w.querySelector('[data-next]').onclick = (ev) => { if (!arrastou) toque(ev, proximo); };
     const v = w.querySelector('[data-viewers]'); if (v) v.onclick = abreQuemViu;
+    ligaSocial(r, st, minha);
     const pp = w.querySelector('[data-postar]'); if (pp) pp.onclick = () => { fecha(); novoStory(onChange); };
     if (r.me && st.views) call('/friends/story-viewers', { id: st.id }).then((x) => { const f = w.querySelector('[data-faces]'); if (f) f.innerHTML = (x.viewers || []).slice(0, 3).map((c) => face(c, 26)).join(''); }).catch(() => {});
     const mais = w.querySelector('[data-more]');
@@ -196,17 +215,91 @@ export async function openViewer(ownerUid, onChange) {
     try {
       const foto = await fotoDe(r, st);
       if (!w.isConnected || minha !== vez) return;
-      w.querySelector('.stv__img').innerHTML = `<img src="${foto}" alt="Story de ${esc(r.name)}" draggable="false">`;
+      w.querySelector('.stv__img').innerHTML = st.rp ? `<div class="stv__fundo" style="background-image:url('${foto}')"></div><figure class="stv__cartao"><img src="${foto}" alt="Story de ${esc(st.rp.name)}, repostado" draggable="false"><figcaption>${icon('repeat', 15)} ${esc(st.rp.name)}</figcaption></figure>` : `<img src="${foto}" alt="Story de ${esc(r.name)}" draggable="false">`;
     } catch (e) { if (minha === vez) w.querySelector('.stv__img').innerHTML = `<p class="stv__gone">${esc(e.message || 'Esse story já sumiu.')}</p>`; }
     if (minha !== vez) return;
     adianta();
     let gasto = 0, ult = Date.now();
     const bar = w.querySelectorAll('.stv__bars b')[si];
-    timer = setInterval(() => { const agora = Date.now(); if (!pausado && !document.hidden) gasto += agora - ult; ult = agora; if (bar) bar.style.width = `${Math.min(100, (gasto / DUR) * 100)}%`; if (gasto >= DUR) proximo(); }, 50);
+    timer = setInterval(() => { const agora = Date.now(); if (zera) { zera = false; gasto = 0; } if (!pausado && !document.hidden) gasto += agora - ult; ult = agora; if (bar) bar.style.width = `${Math.min(100, (gasto / DUR) * 100)}%`; if (gasto >= DUR) proximo(); }, 50);
   }
+  /* curtir, comentar, responder e repostar */
+  let publico = false, coms = [], zera = false; // zera: interagiu, o tempo do story recomeça
+  function coracaoVoa(x, y) {
+    zera = true;
+    const c = document.createElement('span'); c.className = 'stv__voa'; c.innerHTML = ICO.coracao(96, true); Object.assign(c.style, { left: x + 'px', top: y + 'px' }); w.appendChild(c);
+    const g = (Math.random() - 0.5) * 30;
+    c.animate([{ transform: `translate(-50%,-50%) scale(0) rotate(${g}deg)`, opacity: 1 }, { transform: `translate(-50%,-50%) scale(1.25) rotate(${g / 2}deg)`, opacity: 1, offset: 0.22 }, { transform: `translate(-50%,-50%) scale(1) rotate(${g / 2}deg)`, opacity: 1, offset: 0.42 }, { transform: `translate(-50%,-190%) scale(.7) rotate(${-g}deg)`, opacity: 0 }], { duration: 1000, easing: 'cubic-bezier(.2,.9,.3,1)' }).finished.finally(() => c.remove());
+    for (let i = 0; i < 7; i++) { const p = document.createElement('span'); p.className = 'stv__voa stv__voa--p'; p.innerHTML = ICO.coracao(22, true); Object.assign(p.style, { left: x + 'px', top: y + 'px' }); w.appendChild(p); const a = Math.random() * 6.28, d = 50 + Math.random() * 70; p.animate([{ transform: 'translate(-50%,-50%) scale(.2)', opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(a) * d}px), calc(-50% + ${Math.sin(a) * d - 60}px)) scale(1)`, opacity: 0 }], { duration: 700 + Math.random() * 300, delay: 80, easing: 'cubic-bezier(.16,1,.3,1)', fill: 'backwards' }).finished.finally(() => p.remove()); }
+  }
+  function gosta(r, st, x, y, so = false) {
+    const b = w.querySelector('[data-gosta]'); if (!b || r.me) return;
+    const on = so ? true : !st.gostei;
+    if (on) { coracaoVoa(x, y); som('curtida'); try { navigator.vibrate && navigator.vibrate(12); } catch { /* ok */ } }
+    if (on === !!st.gostei) return;
+    st.gostei = on; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', on); b.innerHTML = ICO.coracao(27, on);
+    b.animate([{ transform: 'scale(.6)' }, { transform: 'scale(1.35)', offset: 0.5 }, { transform: 'scale(1)' }], { duration: 360, easing: 'cubic-bezier(.2,1.1,.3,1)' });
+    call('/friends/story-like', { owner: r.uid, id: st.id, on }).catch((e) => { st.gostei = !on; b.classList.toggle('is-on', !on); b.innerHTML = ICO.coracao(27, !on); toast(e.message || 'Não consegui curtir agora.'); });
+  }
+  async function falas(r, st, minha) { // comentários passando sobre a foto
+    const cx = w.querySelector('[data-falas]'); if (!cx || !st.podeCom || !st.ncom) return;
+    try { const x = await call('/friends/story-comments', { owner: r.uid, id: st.id }); coms = x.comentarios || []; } catch { return; }
+    if (minha !== vez || !w.isConnected || !coms.length) return;
+    let i = Math.max(0, coms.length - 6); const L = coms;
+    const passa = () => {
+      if (minha !== vez || !w.isConnected) return;
+      if (!pausado && i < L.length) { const c = L[i++], e = document.createElement('button'); e.type = 'button'; e.className = 'stv__fala'; e.innerHTML = `${rosto(c, 26)}<span><b>${esc((c.name || '').split(' ')[0])}</b> ${esc(c.t)}</span>`; e.onclick = () => abreComs(r, st); cx.appendChild(e); e.animate([{ transform: 'translateY(18px) scale(.9)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 380, easing: 'cubic-bezier(.16,1,.3,1)' }); while (cx.children.length > 3) cx.firstChild.remove(); }
+      if (i < L.length) setTimeout(passa, 1100);
+    };
+    setTimeout(passa, 500);
+  }
+  function abreComs(r, st) {
+    pausado = true; zera = true;
+    const html = () => `${sheetHead(`Comentários${coms.length ? ` · ${coms.length}` : ''}`, { left: '<button class="btn-text" data-close>Fechar</button>' })}<div class="page page--sheet coms">${coms.length ? coms.map((c) => `<div class="com">${rosto(c, 40)}<span><b>${esc(c.name)}</b><p>${esc(c.t)}</p><small>${desde(c.at)}</small></span>${c.apaga ? `<button class="iconbtn" data-ap="${esc(c.id)}" aria-label="Apagar comentário">${icon('trash', 17)}</button>` : `<button class="iconbtn" data-dn="${esc(c.id)}" data-u="${esc(c.uid)}" aria-label="Denunciar comentário">${icon('flag', 17)}</button>`}</div>`).join('') : '<p class="fhelp coms__v">Nenhum comentário ainda. Seja a primeira pessoa 😄</p>'}</div>
+      <form class="coms__f" data-f autocomplete="off"><input class="input" maxlength="200" placeholder="Comentar para todos…" data-c aria-label="Comentário"><button class="conv__b conv__b--ir" aria-label="Enviar">${ICO.manda(20)}</button></form>`;
+    const a = openSheet({ className: 'sheet--coms', html: html(), onClose: () => { pausado = false; }, onMount: (x) => {
+      x.el.querySelector('[data-f]').onsubmit = async (e) => { e.preventDefault(); const t = x.el.querySelector('[data-c]').value.trim(); if (!t) return; if (await comenta(r, st, t)) { if (!a.closed) a.set(html()); } };
+      x.el.querySelectorAll('[data-ap]').forEach((b) => (b.onclick = async () => { try { const k = await call('/friends/story-comment-del', { owner: r.uid, id: st.id, cid: b.dataset.ap }); st.ncom = k.n; coms = coms.filter((c) => c.id !== b.dataset.ap); a.set(html()); } catch (e2) { toast(e2.message); } }));
+      x.el.querySelectorAll('[data-dn]').forEach((b) => (b.onclick = async () => { if (!(await confirmDialog({ title: 'Denunciar este comentário?', text: 'A denúncia é anônima.', ok: 'Denunciar', danger: true }))) return; try { await call('/friends/report', { owner: b.dataset.u, motivo: 'Comentário em story', cid: b.dataset.dn }); toast('Denúncia enviada 🙏'); } catch { toast('Não consegui enviar agora.'); } }));
+    } });
+    call('/friends/story-comments', { owner: r.uid, id: st.id }).then((k) => { coms = k.comentarios || []; if (!a.closed && !a.el.querySelector('[data-c]').value) a.set(html()); }).catch(() => {});
+  }
+  async function comenta(r, st, t) {
+    zera = true;
+    try {
+      const k = await call('/friends/story-comment', { owner: r.uid, id: st.id, text: t }), me = store.member(store.me) || {};
+      st.ncom = k.n; coms = [...coms, { id: k.id, uid: store.user?.uid, t, at: k.at, meu: true, apaga: true, name: me.name || 'Você', photo: me.photo, color: me.color }];
+      const b = w.querySelector('[data-coms]'); if (b && !r.me) { let e = b.querySelector('em'); if (!e) { e = document.createElement('em'); b.appendChild(e); } e.textContent = k.n; }
+      som('msgVai'); try { navigator.vibrate && navigator.vibrate(8); } catch { /* ok */ }
+      const cx = w.querySelector('[data-falas]'); if (cx) { const c = coms.at(-1), e = document.createElement('span'); e.className = 'stv__fala'; e.innerHTML = `${rosto(c, 26)}<span><b>Você</b> ${esc(t)}</span>`; cx.appendChild(e); e.animate([{ transform: 'translateY(30px) scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.2,1.1,.3,1)' }); while (cx.children.length > 3) cx.firstChild.remove(); }
+      return true;
+    } catch (e) { toast(e.message || 'Não consegui comentar agora.'); return false; }
+  }
+  async function responde(r, st, t, emo) {
+    zera = true;
+    try { await call('/friends/msg-send', { com: r.uid, tipo: 'story', owner: r.uid, id: st.id, txt: t }); som('msgVai'); toast(emo ? `${t} enviado para ${r.name.split(' ')[0]}` : `Enviado só para ${r.name.split(' ')[0]} 🔒`); return true; } catch (e) { toast(e.message || 'Não consegui enviar agora.'); return false; }
+  }
+  function ligaSocial(r, st, minha) {
+    coms = []; publico = false; falas(r, st, minha);
+    const q = (s2) => w.querySelector(s2), g = q('[data-gosta]'), inp = q('[data-in]'), emo = q('[data-emo]'), md = q('[data-modo]'), mn = q('[data-manda]');
+    if (g) g.onclick = () => { const k = g.getBoundingClientRect(); gosta(r, st, k.left + k.width / 2, k.top - 70); };
+    w.querySelectorAll('[data-coms]').forEach((b) => (b.onclick = () => abreComs(r, st)));
+    const rp = q('[data-rep]'); if (rp) rp.onclick = () => { pausado = true; repostar(r, st, q('.stv__img img')?.src, () => { pausado = false; }, onChange); };
+    if (!inp) return;
+    const n1 = r.name.split(' ')[0], foco = (on) => { w.classList.toggle('is-escreve', on); if (on) pausado = true; emo.hidden = !on || publico; };
+    inp.onfocus = () => foco(true);
+    inp.onblur = () => setTimeout(() => { if (!w.isConnected || w.contains(document.activeElement) && document.activeElement.closest('.stv__soc')) return; foco(false); if (!document.querySelector('.sheet-wrap.is-open')) pausado = false; }, 160);
+    inp.oninput = () => { mn.hidden = !inp.value.trim(); };
+    if (md) md.onclick = () => { publico = !publico; md.classList.toggle('is-pub', publico); md.innerHTML = publico ? ICO.coment(18) : icon('lock', 17); inp.placeholder = publico ? 'Comentar…' : `Responder ${n1}…`; md.animate([{ transform: 'rotateY(90deg)' }, { transform: 'none' }], { duration: 220 }); inp.focus(); emo.hidden = publico; };
+    q('[data-resp]').onsubmit = async (e) => { e.preventDefault(); const t = inp.value.trim(); if (!t) return; inp.disabled = true; const ok = publico ? await comenta(r, st, t) : await responde(r, st, t); inp.disabled = false; if (ok) { inp.value = ''; mn.hidden = true; inp.blur(); foco(false); pausado = false; } };
+    w.querySelectorAll('[data-e]').forEach((b) => (b.onclick = async () => { const k = b.getBoundingClientRect(); for (let i = 0; i < 9; i++) { const p = document.createElement('span'); p.className = 'stv__emov'; p.textContent = b.dataset.e; Object.assign(p.style, { left: k.left + k.width / 2 + (Math.random() - 0.5) * 120 + 'px', top: k.top + 'px' }); w.appendChild(p); p.animate([{ transform: 'translate(-50%,0) scale(.4)', opacity: 0 }, { transform: 'translate(-50%,-60px) scale(1.2)', opacity: 1, offset: 0.25 }, { transform: `translate(calc(-50% + ${(Math.random() - 0.5) * 120}px), -${300 + Math.random() * 200}px) scale(.9) rotate(${(Math.random() - 0.5) * 60}deg)`, opacity: 0 }], { duration: 1300 + Math.random() * 500, delay: i * 45, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'backwards' }).finished.finally(() => p.remove()); } inp.blur(); foco(false); pausado = false; som('curtida'); responde(r, st, b.dataset.e, true); }));
+  }
+  // dois toques na foto: curtir
+  let tTap = 0, tNav = 0;
+  const toque = (ev, vai) => { const r = ordem[oi], st = r.stories[si]; if (w.classList.contains('is-escreve')) { w.querySelector('[data-in]')?.blur(); return; } if (r.me) return vai(); if (Date.now() - tTap < 280) { tTap = 0; clearTimeout(tNav); return gosta(r, st, ev.clientX || innerWidth / 2, ev.clientY || innerHeight / 2, true); } tTap = Date.now(); clearTimeout(tNav); tNav = setTimeout(() => { if (w.isConnected) vai(); }, 285); };
   // gestos: o dedo segura (pausa), arrasta pra baixo (fecha) ou pra cima (quem viu, no seu story)
   let y0 = null, x0 = 0, arrastou = false;
-  w.addEventListener('pointerdown', (e) => { if (e.target.closest('button:not(.stv__nav), a, input')) return; pausado = true; y0 = e.clientY; x0 = e.clientX; arrastou = false; w.classList.add('is-drag'); });
+  w.addEventListener('pointerdown', (e) => { if (e.target.closest('button:not(.stv__nav), a, input, .stv__soc')) return; pausado = true; y0 = e.clientY; x0 = e.clientX; arrastou = false; w.classList.add('is-drag'); });
   w.addEventListener('pointermove', (e) => {
     if (y0 == null) return;
     const dy = e.clientY - y0;
@@ -217,10 +310,10 @@ export async function openViewer(ownerUid, onChange) {
   });
   const solta = (e) => {
     if (y0 == null) return;
-    const dy = e.clientY - y0; y0 = null; pausado = false; w.classList.remove('is-drag');
+    const dy = e.clientY - y0; y0 = null; pausado = w.classList.contains('is-escreve'); w.classList.remove('is-drag');
     if (dy > 110) { w.style.transform = `translateY(${innerHeight}px)`; return setTimeout(fecha, 120); }
     w.style.transform = ''; w.style.borderRadius = '';
-    if (dy < -70 && ordem[oi].me) abreQuemViu();
+    if (dy < -70 && ordem[oi].me) abreQuemViu(); else if (dy < -70) w.querySelector('[data-in]')?.focus();
     setTimeout(() => { arrastou = false; }, 60);
   };
   w.addEventListener('pointerup', solta);
@@ -235,9 +328,9 @@ function openViewers(id, onClose, foto, st = {}) {
   const html = () => `<div class="stvw">
     <header class="stvw__top"><button class="stvw__x" data-close aria-label="Fechar">${icon('x', 22)}</button>
       ${foto ? `<span class="stvw__thumb"><img src="${esc(foto)}" alt=""></span>` : ''}
-      <span class="stvw__n">${icon('eye', 16)} ${lista ? lista.length : st.views || 0}</span>${st.title ? `<small class="stvw__t">${icon('check', 12)} ${esc(st.title)}</small>` : ''}</header>
+      <span class="stvw__n">${icon('eye', 16)} ${lista ? lista.length : st.views || 0}${lista && lista.some((c) => c.gostou) ? ` · ${ICO.coracao(15, true)} ${lista.filter((c) => c.gostou).length}` : ''}</span>${st.title ? `<small class="stvw__t">${icon('check', 12)} ${esc(st.title)}</small>` : ''}</header>
     <h3 class="stvw__h">Quem viu este story</h3>
-    ${!lista ? '<div class="fx__load"><i></i><i></i><i></i></div>' : lista.length ? lista.map((c) => `<div class="stvw__row">${face(c, 52)}<span><b>${esc(c.name)}</b><small>${desde(c.at).replace(/^há/, 'Há').replace(/^agora$/, 'Agora')}</small></span></div>`).join('') : '<p class="fhelp">Ninguém viu ainda. Daqui a pouco aparece gente 👀</p>'}</div>`;
+    ${!lista ? '<div class="fx__load"><i></i><i></i><i></i></div>' : lista.length ? lista.map((c) => `<div class="stvw__row">${face(c, 52)}<span><b>${esc(c.name)}</b><small>${desde(c.at).replace(/^há/, 'Há').replace(/^agora$/, 'Agora')}</small></span>${c.repostou ? `<i class="stvw__r">${icon('repeat', 18)}</i>` : ''}${c.gostou ? `<i class="stvw__g">${ICO.coracao(20, true)}</i>` : ''}</div>`).join('') : '<p class="fhelp">Ninguém viu ainda. Daqui a pouco aparece gente 👀</p>'}</div>`;
   const a = openSheet({ className: 'sheet--tall sheet--stview sheet--fx', html: html(), onClose });
   call('/friends/story-viewers', { id }).then((r) => { lista = r.viewers || []; if (!a.closed) a.set(html()); }).catch(() => { lista = []; if (!a.closed) a.set(html()); });
 }
@@ -429,7 +522,7 @@ export function novoStory(onChange) {
   const a = openSheet({
     className: 'sheet--actions sheet--phm',
     html: `<div class="phm">
-      <div class="phm__head"><span class="phm__pic"><span>${face(store.member(store.me) || { name: 'Você' }, 72)}</span></span><b>Novo story</b><small>Só seus amigos veem · some em 24 h</small></div>
+      <div class="phm__head"><span class="phm__pic"><span>${face(store.member(store.me) || { name: 'Você' }, 72)}</span></span><b>Novo story</b><small>Seus amigos veem · some em 24 h</small></div>
       ${fp ? `<div class="phm__grp"><button class="phm__row" data-tarefa><span class="phm__ic is-cam">${icon('check', 21)}</span><span class="phm__t"><b>Foto de “${esc(fp.title)}”</b><small>Prova do que você fez · +${fp.P.total} XP agora</small></span>${icon('right', 16)}</button></div>` : ''}
       <div class="phm__grp">
         <label class="phm__row"><span class="phm__ic is-story">${icon('camera', 21)}</span><span class="phm__t"><b>Câmera</b><small>Tirar uma foto agora</small></span>${icon('right', 16)}<input type="file" accept="image/*" capture="environment" data-livre hidden></label>
@@ -454,18 +547,40 @@ function editorStory(foto, onChange) {
   w.innerHTML = `<header class="stv__top"><button class="stv__x" data-x aria-label="Cancelar">${icon('x', 22)}</button><span><b>Novo story</b><small>some em 24 h</small></span></header>
     <div class="stv__img"><img src="${foto}" alt="" draggable="false"></div>
     <div class="stve"><input class="stve__cap" type="text" maxlength="120" placeholder="Escreva uma legenda…" data-cap>
+    <div class="stve__ops"><button type="button" class="stve__op${pref('com', true) ? ' is-on' : ''}" data-op="com" aria-pressed="${pref('com', true)}">${ICO.coment(18)} Comentários</button>${isTeen() ? '' : `<button type="button" class="stve__op${pref('rp', true) ? ' is-on' : ''}" data-op="rp" aria-pressed="${pref('rp', true)}">${icon('repeat', 18)} Amigos podem repostar</button>`}</div>
     <button class="stve__go" data-go>${face(store.member(store.me) || { name: 'Você' }, 26)}<span>Seu story</span>${icon('right', 18)}</button></div>`;
   const fecha = () => { w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-stv'); }, 220); };
   w.querySelector('[data-x]').onclick = fecha;
+  w.querySelectorAll('[data-op]').forEach((o) => (o.onclick = () => { const on = o.classList.toggle('is-on'); o.setAttribute('aria-pressed', on); }));
+  const op = (k) => !!w.querySelector(`[data-op="${k}"].is-on`);
   w.querySelector('[data-go]').onclick = async (ev) => {
     const b = ev.currentTarget; b.disabled = true; b.classList.add('is-busy');
+    guardaPref('com', op('com')); if (!isTeen()) guardaPref('rp', op('rp'));
     try {
-      const r = await call('/friends/story-post', { photo: foto, caption: w.querySelector('[data-cap]').value.trim() });
+      const r = await call('/friends/story-post', { photo: foto, caption: w.querySelector('[data-cap]').value.trim(), podeCom: op('com'), podeRp: op('rp') });
       guardaFoto(r.id, foto);
       toast('📸 Story no ar! Seus amigos vão ver por 24 h');
       fecha(); await refreshFeed(); onChange && onChange();
       import('./mascote.js').then((M) => M.react('story')).catch(() => {});
     } catch (e) { toast(e.message || 'Não consegui postar agora.'); b.disabled = false; b.classList.remove('is-busy'); }
   };
+  requestAnimationFrame(() => w.classList.add('is-in'));
+}
+
+/* ---------- repostar no meu story ---------- */
+function repostar(r, st, foto, fim, onChange) {
+  const dono = st.rp ? st.rp.name : r.name, n1 = dono.split(' ')[0];
+  const w = document.createElement('div'); w.className = 'stv stv--edit stv--rep'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Repostar');
+  (document.getElementById('sheets') || document.body).appendChild(w);
+  w.innerHTML = `<header class="stv__top"><button class="stv__x" data-x aria-label="Cancelar">${icon('x', 22)}</button><span><b>Repostar no seu story</b><small>${esc(n1)} recebe um aviso · some em ${falta((st.fim || st.at + 864e5) - 864e5)}</small></span></header>
+    <div class="stv__img"><div class="stv__fundo" style="background-image:url('${foto || ''}')"></div><figure class="stv__cartao"><img src="${foto || ''}" alt="" draggable="false"><figcaption>${icon('repeat', 15)} ${esc(dono)}</figcaption></figure></div>
+    <div class="stve"><input class="stve__cap" type="text" maxlength="120" placeholder="Diga algo sobre…" data-cap><button class="stve__go" data-go>${face(store.member(store.me) || { name: 'Você' }, 26)}<span>Seu story</span>${icon('right', 18)}</button></div>`;
+  const fecha = () => { w.classList.add('is-out'); setTimeout(() => w.remove(), 220); fim && fim(); };
+  w.querySelector('[data-x]').onclick = fecha;
+  w.querySelector('[data-go]').onclick = async (ev) => {
+    const b = ev.currentTarget; b.disabled = true; b.classList.add('is-busy');
+    try { const k = await call('/friends/story-repost', { owner: r.uid, id: st.id, caption: w.querySelector('[data-cap]').value.trim(), podeCom: pref('com', true) }); if (foto) guardaFoto(k.id, foto); som('abreMundo', 'personal'); if (window.__motion) window.__motion.chuva(26); toast('🔁 No seu story!'); fecha(); refreshFeed().then(() => onChange && onChange()); } catch (e) { toast(e.message || 'Não consegui repostar agora.'); b.disabled = false; b.classList.remove('is-busy'); }
+  };
+  const c = w.querySelector('.stv__cartao'); c.animate([{ transform: 'scale(1.4) rotate(0)', opacity: 0.2 }, { transform: 'scale(.94) rotate(-3deg)', opacity: 1, offset: 0.6 }, { transform: 'scale(1) rotate(-2deg)' }], { duration: 480, easing: 'cubic-bezier(.2,1.1,.3,1)', fill: 'forwards' });
   requestAnimationFrame(() => w.classList.add('is-in'));
 }
