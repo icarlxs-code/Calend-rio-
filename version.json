@@ -1,11 +1,11 @@
 {
-  "version": "2.25.0",
-  "build": "45ehoewf",
+  "version": "2.25.1",
+  "build": "6pv6q3nc",
   "date": "2026-11-24",
   "min": "2.22.0",
-  "title": "O Lembra ganhou movimento",
+  "title": "Movimento mais suave",
   "notes": [
-    "Cada aba abre do seu jeito, os botões respondem ao toque e o compromisso marcado voa até o dia. Para desligar: Ajustes → Aparência → Animações.",
+    "Trocas de tela mais suaves: o Lembra pula de uma aba para a outra e traz a página com ele. Para desligar: Ajustes → Aparência → Animações.",
     "Arrastar o Lembra ficou liso: ele cola no seu dedo, sem atraso.",
     "O Lembra não some mais da tela quando você arrasta ele.",
     "Modo noturno preto de verdade, com o laranja do Lembra.",
@@ -18,5 +18,5 @@
     "Painel da equipe: cargos (Suporte, Moderação, Marketing, Dados, Financeiro, RH, Produto, Administração), cada um vê só o que precisa.",
     "Tudo grátis até 31 de dezembro de 2026, inclusive o assistente com IA."
   ],
-  "builtAt": "2026-11-25T01:41:40.566Z"
+  "builtAt": "2026-11-25T02:03:11.528Z"
 }

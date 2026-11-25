@@ -229,7 +229,7 @@ function rerenderAll() {
 
 function setTab(tab, from) {
   const go = () => { ui.tab = tab; saveUi(); render(); window.scrollTo(0, 0); };
-  if (window.__motion && ui.tab !== tab && document.getElementById('view')) window.__motion.trocar(tab, go, from); else go();
+  if (window.__motion && document.getElementById('view')) window.__motion.trocar(tab, go, from, ui.tab === tab); else go();
 }
 
 /* ---------- ações (delegação de cliques) ---------- */

@@ -337,7 +337,7 @@ export function bindPersonal(view) {
 export const personalActions = {
   ptab: (b) => {
     const tab = b.dataset.tab, go = () => { ui.ptab = tab; saveUi(); window.__calRender && window.__calRender(); window.scrollTo(0, 0); };
-    if (window.__motion && (ui.ptab || 'p-hoje') !== tab) window.__motion.trocar(tab, go, b); else go();
+    if (window.__motion) window.__motion.trocar(tab, go, b, (ui.ptab || 'p-hoje') === tab); else go();
   },
   pview: (b) => { ui.pView = b.dataset.v; window.__calRender && window.__calRender(); },
   pmonth: (b) => { ui.pMonth = addMonths(ui.pMonth || monthKey(todayKey()), +b.dataset.d); window.__calRender && window.__calRender(); },

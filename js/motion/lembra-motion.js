@@ -1,170 +1,152 @@
-/* Lembra Motion · lembra-motion.js
-   Todas as animacoes do app, sem biblioteca. Usa so transform, opacity e clip-path (GPU).
-   Cada funcao funciona sozinha:  import { trocar, botao, agenda, momento } from './lembra-motion.js'  */
-import { criarMascote, mascoteParado, POSES } from './mascote.js';
+/* Lembra Motion 2 · transições suaves, na paleta do app, com o Lembra participando.
+   Regra de desempenho: só transform e opacity, em camadas prontas (a placa de vídeo anima sozinha,
+   mesmo enquanto o app monta a tela). Nada de clonar a tela nem redesenhar o mascote a cada quadro. */
+import { mascoteParado } from './mascote.js';
 import { som } from './sons.js';
 
-export const ajustes = {
-  intensidade: 'padrao',          // 'sutil' | 'padrao' | 'show'
-  forcar: false,                  // true = ignora o pedido de 'menos movimento' (so para demonstracao)
-  trocas: true, botoes: true, agendamento: true, conclusao: true, folhas: true,
-  sons: { trocas: true, botoes: false, agendamento: true, conclusao: false, momentos: true }, // conclusao: o app ja toca o dele
-};
-const E = { saida: 'cubic-bezier(.23,1,.32,1)', move: 'cubic-bezier(.77,0,.175,1)', gaveta: 'cubic-bezier(.32,.72,0,1)' };
-E.mola = CSS.supports('transition-timing-function', 'linear(0, 1)') ? 'linear(0, .009, .035 2.1%, .141 4.4%, .723 12.9%, .938 16.7%, 1.017, 1.077, 1.121, 1.149 24.3%, 1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, .991, .977 51%, .974 53.8%, .975 57.1%, .997 69.8%, 1.003 76.9%, 1)' : 'cubic-bezier(.34,1.56,.64,1)';
-const VEL = () => ({ sutil: 0.75, padrao: 1, show: 1.35 }[ajustes.intensidade] || 1);
-/** menos movimento: preferencia do aparelho ou localStorage 'lembra.motion' = '0' */
-export const reduzido = () => { if (ajustes.forcar) return false; try { if (localStorage.getItem('lembra.motion') === '0') return true; } catch { /* ok */ } return matchMedia('(prefers-reduced-motion: reduce)').matches; };
-const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+const SAI = 'cubic-bezier(.4,0,.2,1)', ENTRA = 'cubic-bezier(.16,1,.3,1)', ARCO = 'cubic-bezier(.33,0,.2,1)';
+/** menos movimento: preferência do aparelho ou Ajustes → Animações */
+export const reduzido = () => { try { if (localStorage.getItem('lembra.motion') === '0') return true; } catch { /* ok */ } return matchMedia('(prefers-reduced-motion: reduce)').matches; };
+const anima = (el, q, o) => { const a = el.animate(q, { easing: ENTRA, fill: 'both', ...o }); return a.finished.catch(() => {}); };
+const passageiro = (el, q, o) => el.animate(q, { easing: ENTRA, fill: 'backwards', ...o }); // em elemento do app: não deixa nada preso
+const meio = (x) => { const r = x.getBoundingClientRect ? x.getBoundingClientRect() : x; return [r.left + r.width / 2, r.top + r.height / 2, r.top]; };
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-function anima(el, quadros, o = {}) { const a = el.animate(quadros, { duration: 300, easing: E.saida, fill: 'both', ...o }); return a.finished.catch(() => {}); }
-/** anima um elemento DO APP: nao deixa transform preso depois */
-function animaApp(el, quadros, o = {}) { const a = el.animate(quadros, { duration: 300, easing: E.saida, fill: 'backwards', ...o }); return a.finished.catch(() => {}); }
-function camada(toca, cls = '') { const c = document.createElement('div'); c.className = 'lm-camada ' + cls + (toca ? ' lm-camada--toca' : ''); c.setAttribute('aria-hidden', toca ? 'false' : 'true'); document.body.appendChild(c); return c; }
-const caixa = (x) => { if (!x) return { left: innerWidth / 2 - 20, top: innerHeight / 2 - 20, width: 40, height: 40 }; return x.getBoundingClientRect ? x.getBoundingClientRect() : x; };
-const meio = (x) => { const r = caixa(x); return [r.left + r.width / 2, r.top + r.height / 2]; };
-const raioTotal = (x, y) => Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)) + 20;
 
-/* ============ pecas de desenho ============ */
-/** mancha organica dos posts (svg) */
-export function mancha(cor = '#FB8A24', semente = 3, lobos = 7) {
-  let s = semente; const rnd = () => { s = (s * 16807 + 11) % 2147483647; return (s % 1000) / 1000; }; const P = [];
-  for (let l = 0; l < lobos; l++) { const larg = 0.2 + 0.1 * rnd(), R = 1 + 0.36 * (rnd() - 0.2), V = 1 - 0.36 * (0.15 + 0.45 * rnd()); [[-0.5, V], [-larg, R], [larg, R]].forEach(([d, r]) => { const a = ((l + d) / lobos) * 6.2832 - 1.57; P.push([150 + Math.cos(a) * r * 96, 150 + Math.sin(a) * r * 92]); }); }
-  let d = ''; const n = P.length, k = 0.2; P.forEach((p1, i) => { const p0 = P[(i + n - 1) % n], p2 = P[(i + 1) % n], p3 = P[(i + 2) % n]; d += (i ? '' : `M${p1}`) + `C${p1[0] + (p2[0] - p0[0]) * k} ${p1[1] + (p2[1] - p0[1]) * k} ${p2[0] - (p3[0] - p1[0]) * k} ${p2[1] - (p3[1] - p1[1]) * k} ${p2[0]} ${p2[1]}`; });
-  return `<svg viewBox="0 0 300 300" width="100%" height="100%" style="overflow:visible"><path d="${d}Z" fill="${cor}"/></svg>`;
-}
-/** confete num canvas so (leve) */
-export function confete({ x = innerWidth / 2, y = innerHeight * 0.4, n = 70, forca = 1 } = {}) {
-  if (reduzido()) return; const c = document.createElement('canvas'); c.className = 'lm-confete'; const dpr = Math.min(2, devicePixelRatio || 1); c.width = innerWidth * dpr; c.height = innerHeight * dpr; document.body.appendChild(c); const g = c.getContext('2d'); g.scale(dpr, dpr);
-  const cores = ['#FB652A', '#FFB054', '#fff', '#FFC23D', '#E43E04', '#FFD3BF'], P = Array.from({ length: n }, (_, i) => { const a = Math.random() * 6.283, v = (180 + Math.random() * 620) * forca; return { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 260 * forca, r: Math.random() * 6, w: 6 + Math.random() * 8, h: 4 + Math.random() * 6, vr: (Math.random() - 0.5) * 14, c: cores[i % 6] }; });
-  let t0 = 0, ult = 0; const passo = (t) => { if (!t0) t0 = ult = t; const dt = Math.min(0.033, (t - ult) / 1000), vida = (t - t0) / 1000; ult = t; g.clearRect(0, 0, innerWidth, innerHeight); P.forEach((p) => { p.vx *= 1 - 2.2 * dt; p.vy += 900 * dt - p.vy * 1.6 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.r += p.vr * dt; g.save(); g.globalAlpha = Math.max(0, Math.min(1, (1.9 - vida) * 2)); g.translate(p.x, p.y); g.rotate(p.r); g.scale(1, Math.cos(p.r * 2)); g.fillStyle = p.c; g.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); g.restore(); }); if (vida < 1.9) requestAnimationFrame(passo); else c.remove(); }; requestAnimationFrame(passo);
-}
-function aneis(c, x, y, { cor = '#FB652A', n = 2, ate = 90 } = {}) { for (let i = 0; i < n; i++) { const a = document.createElement('div'); a.className = 'lm-anel'; Object.assign(a.style, { left: x - ate + 'px', top: y - ate + 'px', width: ate * 2 + 'px', height: ate * 2 + 'px', borderColor: cor }); c.appendChild(a); anima(a, [{ transform: 'scale(.1)', opacity: 1 }, { transform: 'scale(1)', opacity: 0 }], { duration: 520, delay: i * 90 }); } }
-function selo(c, pose, titulo, sub = '', cls = '') { const s = document.createElement('div'); s.className = 'lm-selo ' + cls; s.innerHTML = `<span></span><div>${esc(titulo)}${sub ? `<small>${esc(sub)}</small>` : ''}</div>`; c.appendChild(s); const m = criarMascote(s.firstElementChild, { tamanho: 74, pose, sombra: false }); anima(s, [{ transform: 'translate(-50%, 160%) scale(.8)' }, { transform: 'translate(-50%, 0) scale(1)' }], { duration: 560, easing: E.mola }); return { el: s, m, sair: () => anima(s, [{ transform: 'translate(-50%, 0)', opacity: 1 }, { transform: 'translate(-50%, 180%)', opacity: 0 }], { duration: 240 }) }; }
+/* ---------- o Lembra em imagens prontas (desenhadas uma vez só) ---------- */
+const CHEGADA = { hoje: 'acena', mes: 'aponta', empresas: 'joia', ajustes: 'pensa', 'p-hoje': 'amor', 'p-agenda': 'aponta', 'p-listas': 'joia', 'p-notas': 'pensa', 'p-ajustes': 'pensa' };
+const fotos = {};
+const figura = (pose) => fotos[pose] || (fotos[pose] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(mascoteParado(pose, 160).replace(/<svg(?![^>]*xmlns=)/, '<svg xmlns="http://www.w3.org/2000/svg"')));
 
-/* ============ 1 · TROCA DE PAGINA ============ */
-export function fotografar(view) {
-  const r = view.getBoundingClientRect(), f = document.createElement('div'), c = view.cloneNode(true); f.className = 'lm-foto'; f.setAttribute('aria-hidden', 'true'); f.inert = true; c.removeAttribute('id'); c.querySelectorAll('video, audio, iframe').forEach((n) => n.remove()); c.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'));
-  const a = view.querySelectorAll('canvas'), b = c.querySelectorAll('canvas'); a.forEach((cv, i) => { try { b[i].width = cv.width; b[i].height = cv.height; b[i].getContext('2d').drawImage(cv, 0, 0); } catch { /* ok */ } });
-  Object.assign(c.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', opacity: 1, transform: 'none' }); f.style.background = getComputedStyle(document.body).backgroundColor; f.appendChild(c); document.body.appendChild(f); return f;
+/* ---------- palco fixo, criado uma vez ---------- */
+let P = null;
+function palco() {
+  if (P && P.raiz.isConnected) return P;
+  const raiz = document.createElement('div');
+  raiz.className = 'lm-palco'; raiz.setAttribute('aria-hidden', 'true');
+  raiz.innerHTML = '<div class="lm-brilho"></div><div class="lm-sombra"></div><div class="lm-x"><div class="lm-y"><img class="lm-a" alt=""><img class="lm-b" alt=""></div></div>';
+  document.body.appendChild(raiz);
+  const q = (s) => raiz.querySelector(s);
+  P = { raiz, brilho: q('.lm-brilho'), sombra: q('.lm-sombra'), x: q('.lm-x'), y: q('.lm-y'), a: q('.lm-a'), b: q('.lm-b') };
+  P.a.src = figura('voa');
+  return P;
 }
-const lista = (view) => [...view.querySelectorAll('.page > *, .block > *, .card, .list__row, .prow')].filter((e, i, l) => { const r = e.getBoundingClientRect(); return r.top < innerHeight && r.bottom > 0 && !l.some((o) => o !== e && o.contains(e)); }).slice(0, 9);
-function cascata(view, dx = 0, dy = 16) { if (dx) { view.style.overflowX = 'clip'; setTimeout(() => { view.style.overflowX = ''; }, 900 * VEL()); } lista(view).forEach((e, i) => animaApp(e, [{ transform: `translate(${dx}px, ${dy}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 360 * VEL(), delay: 50 + i * 34 })); }
-/** cada tela tem a sua assinatura. (foto = tela que sai, view = tela que entra, o = ponto tocado) */
-export const TROCAS = {
-  /* Hoje: nasce do botao, como o sol */
-  async sol(foto, view, o, v) { const [x, y] = o, R = raioTotal(x, y), r = view.getBoundingClientRect(), c = camada(false, 'lm-troca'), px = x - r.left, py = y - r.top; c.style.zIndex = 31; ['#FFD9B0', '#FFA24A', '#FB652A'].forEach((cor, i) => { const d = document.createElement('div'); Object.assign(d.style, { position: 'absolute', left: x - R + 'px', top: y - R + 'px', width: R * 2 + 'px', height: R * 2 + 'px', borderRadius: '50%', background: cor }); c.appendChild(d); anima(d, [{ transform: 'scale(.01)' }, { transform: 'scale(1.04)' }], { duration: 380 * v, delay: i * 46 * v, easing: 'cubic-bezier(.45,0,.2,1)' }); });
-    Object.assign(view.style, { position: 'relative', zIndex: 32, background: foto.style.background, minHeight: '100vh' }); setTimeout(() => cascata(view, 0, 24), 120 * v);
-    await animaApp(view, [{ clipPath: `circle(0px at ${px}px ${py}px)` }, { clipPath: `circle(${R}px at ${px}px ${py}px)` }], { duration: 400 * v, delay: 140 * v, easing: 'cubic-bezier(.45,0,.2,1)' }); Object.assign(view.style, { position: '', zIndex: '', background: '', minHeight: '' }); c.remove(); },
-  /* Calendario: vira a folha */
-  async folha(foto, view, o, v) { som2('trocas', 'folha'); foto.style.boxShadow = '0 30px 60px rgba(60,15,0,.35)'; cascata(view, 0, 10); animaApp(view, [{ transform: 'scale(.965)', opacity: 0.6 }, { transform: 'none', opacity: 1 }], { duration: 420 * v }); await anima(foto, [{ transform: 'perspective(1100px) rotateX(0)', opacity: 1 }, { transform: 'perspective(1100px) rotateX(38deg) translateY(-6%)', opacity: 1, offset: 0.5 }, { transform: 'perspective(1100px) rotateX(80deg) translateY(-27%)', opacity: 1, offset: 0.9 }, { transform: 'perspective(1100px) rotateX(89deg) translateY(-30%)', opacity: 0 }], { duration: 430 * v, easing: E.move }); },
-  /* Locais, clientes, empresas: porta de correr */
-  async porta(foto, view, o, v, dir) { cascata(view, 46 * dir, 0); anima(view, [{ opacity: 0.4 }, { opacity: 1 }], { duration: 240 * v, fill: 'none' }); const t = document.createElement('div'); Object.assign(t.style, { position: 'absolute', inset: '-10% -20%', background: 'linear-gradient(100deg,#FF8A1E,#E43E04)' }); const c = camada(false, 'lm-troca'); c.style.zIndex = 29; c.appendChild(t); anima(t, [{ transform: 'translateX(0) skewX(-6deg)' }, { transform: `translateX(${-130 * dir}%) skewX(-6deg)` }], { duration: 430 * v, easing: E.move, delay: 60 }); await anima(foto, [{ transform: 'none' }, { transform: `translateX(${-104 * dir}%) skewX(${-6 * dir}deg)` }], { duration: 350 * v, easing: E.move }); await espera(150 * v); c.remove(); },
-  /* Ajustes: engrenagem */
-  async engrenagem(foto, view, o, v) { som2('trocas', 'engrenagem'); view.style.transformOrigin = '50% 40vh'; animaApp(view, [{ transform: 'rotate(-5deg) scale(.92)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 440 * v, easing: E.mola }).then(() => { view.style.transformOrigin = ''; }); foto.style.transformOrigin = '50% 40%'; await anima(foto, [{ transform: 'none', opacity: 1 }, { transform: 'rotate(7deg) scale(1.1)', opacity: 0 }], { duration: 260 * v }); },
-  /* modo Pessoal: mancha que inunda */
-  async mancha(foto, view, o, v) { const [x, y] = o, R = raioTotal(x, y) * 1.75, c = camada(false, 'lm-troca'), m = document.createElement('div'); m.innerHTML = mancha('#FF8A3C', 5); Object.assign(m.style, { position: 'absolute', left: x - R + 'px', top: y - R + 'px', width: R * 2 + 'px', height: R * 2 + 'px' }); c.appendChild(m); await anima(m, [{ transform: 'scale(.02) rotate(-50deg)' }, { transform: 'scale(1) rotate(0)' }], { duration: 290 * v, easing: E.move }); foto.remove(); cascata(view, 0, 24); await anima(m, [{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(1.2) rotate(20deg)', opacity: 0 }], { duration: 260 * v }); c.remove(); },
-  /* Listas: riscada de cima a baixo */
-  async risco(foto, view, o, v) { const c = camada(false, 'lm-troca'), l = document.createElement('div'); Object.assign(l.style, { position: 'absolute', left: 0, right: 0, top: 0, height: '10px', borderRadius: '9px', background: 'linear-gradient(90deg,#FFC23D,#FB652A)', boxShadow: '0 0 26px #FB652A' }); c.appendChild(l); anima(l, [{ transform: 'translateY(-12px)' }, { transform: `translateY(${innerHeight}px)` }], { duration: 400 * v, easing: E.move }); cascata(view, -22, 0); await anima(foto, [{ clipPath: 'inset(0 0 0 0)' }, { clipPath: 'inset(100% 0 0 0)' }], { duration: 400 * v, easing: E.move }); c.remove(); },
-  /* Notas: papel que cai */
-  async papel(foto, view, o, v) { som2('trocas', 'folha'); foto.style.transformOrigin = '0 0'; cascata(view, 0, 18); await anima(foto, [{ transform: 'none', opacity: 1 }, { transform: 'rotate(9deg) translate(6%, 10%)', opacity: 1, offset: 0.4 }, { transform: 'rotate(34deg) translate(40%, 90%)', opacity: 0 }], { duration: 430 * v, easing: 'cubic-bezier(.5,0,.8,.6)' }); },
-  /* Trabalho <-> Pessoal: fita + mascote (momento grande, use pela API) */
-  async fita(foto, view, o, v, dir) { const c = camada(false, 'lm-troca'); c.innerHTML = `<svg viewBox="0 0 1080 1920" preserveAspectRatio="none" width="100%" height="100%" style="transform:scaleX(${dir})"><g fill="none" stroke-linecap="round"><path d="M-520 120C500 -320 1700 260 700 640C-420 1040 -420 1260 620 1330C1640 1400 1500 1900 -500 2180" pathLength="1" stroke="#FB652A" stroke-width="980" stroke-dasharray="1 3"/><path d="M-520 0C500 -440 1700 140 700 520C-420 920 -420 1140 620 1210C1640 1280 1500 1780 -500 2060" pathLength="1" stroke="#FFA24A" stroke-width="280" stroke-dasharray="1 3"/></g></svg>`; const ps = c.querySelectorAll('path'); som2('trocas', 'vento'); await Promise.all([...ps].map((p) => anima(p, [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 380 * v, easing: E.move }))); const ch = document.createElement('div'); Object.assign(ch.style, { position: 'absolute', inset: 0, zIndex: -1, background: '#FB652A' }); c.appendChild(ch); foto.remove(); const h = document.createElement('div'); Object.assign(h.style, { position: 'absolute', left: '50%', top: '50%', margin: '-90px' }); c.appendChild(h); criarMascote(h, { tamanho: 180, pose: 'festa', sombra: false }).girar(); anima(h, [{ transform: 'scale(.3)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }], { duration: 300, easing: E.mola }); await espera(420 * v); anima(h, [{ opacity: 1 }, { transform: 'scale(1.3)', opacity: 0 }], { duration: 200 }); ch.remove(); cascata(view, 0, 26); await Promise.all([...ps].map((p) => anima(p, [{ strokeDashoffset: 0 }, { strokeDashoffset: -1.02 }], { duration: 420 * v, easing: E.move }))); c.remove(); },
-  async suave(foto, view, o, v, dir) { animaApp(view, [{ transform: `translateX(${22 * dir}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 240 * v }); await anima(foto, [{ opacity: 1 }, { transform: `translateX(${-18 * dir}px)`, opacity: 0 }], { duration: 170 * v }); },
-};
-const som2 = (grupo, nome, d) => { if (ajustes.sons[grupo]) som(nome, d); };
-/** qual assinatura cada aba usa (pode trocar aqui) */
-export const ABAS = { hoje: 'sol', mes: 'folha', empresas: 'porta', locais: 'porta', clientes: 'porta', ajustes: 'engrenagem', 'p-hoje': 'mancha', 'p-mes': 'folha', 'p-agenda': 'folha', 'p-listas': 'risco', 'p-notas': 'papel', 'p-ajustes': 'engrenagem' };
-const ORDEM = ['hoje', 'p-hoje', 'mes', 'p-mes', 'p-agenda', 'p-listas', 'empresas', 'locais', 'clientes', 'p-notas', 'ajustes', 'p-ajustes'];
-let atual = null, emTroca = null;
-const LIMPO = { position: '', zIndex: '', background: '', minHeight: '', overflowX: '', transformOrigin: '' };
-/** trocar('mes', () => irParaCalendario(), botao)  — faz a troca dentro da animacao */
-export async function trocar(aba, fazer, origem, tipo) {
-  const view = document.getElementById('view') || document.querySelector('[data-lm-view]');
-  if (!view || !ajustes.trocas || reduzido()) { fazer(); atual = aba; return; }
-  if (emTroca) { document.getAnimations().forEach((a) => { const n = a.effect && a.effect.target; if (n && (n === view || n.closest('.lm-foto, .lm-troca'))) a.cancel(); }); emTroca.remove(); document.querySelectorAll('.lm-troca').forEach((n) => n.remove()); }
-  Object.assign(view.style, LIMPO);
-  const dir = ORDEM.indexOf(aba) >= ORDEM.indexOf(atual) ? 1 : -1, ponto = origem ? meio(origem) : [innerWidth / 2, innerHeight / 2], foto = fotografar(view); emTroca = foto; atual = aba;
-  let mudou = false; const ob = new MutationObserver(() => { mudou = true; }); ob.observe(document.getElementById('app') || view, { childList: true, subtree: true });
-  try { fazer(); } catch (e) { foto.remove(); ob.disconnect(); throw e; }
-  for (let i = 0; i < 14 && !mudou; i++) await espera(18);
-  ob.disconnect(); if (!mudou) { foto.remove(); if (emTroca === foto) emTroca = null; return; } if (emTroca !== foto) return; // outra troca ja comecou
-  const nova = document.getElementById('view') || document.querySelector('[data-lm-view]'), nome = ajustes.intensidade === 'sutil' && tipo !== 'fita' ? 'suave' : tipo || ABAS[aba] || 'suave';
-  if (!['folha', 'engrenagem', 'papel', 'fita'].includes(nome)) som2('trocas', nome === 'porta' ? 'vento' : nome === 'mancha' ? 'gota' : 'toque');
-  nova.querySelectorAll('.page').forEach((p) => { p.style.animation = 'none'; }); // a entrada do app nao roda junto
-  // rede de seguranca: nada fica por cima da tela, aconteca o que acontecer
-  const limpa = () => { foto.remove(); if (emTroca === foto) { emTroca = null; document.querySelectorAll('.lm-troca').forEach((n) => n.remove()); Object.assign(nova.style, LIMPO); } };
-  const guarda = setTimeout(limpa, 1800);
-  try { await TROCAS[nome](foto, nova, ponto, VEL(), dir); } finally { clearTimeout(guarda); limpa(); }
+/** deixa as imagens decodificadas antes do primeiro toque */
+export function aquecer() {
+  const p = palco();
+  const lista = [...new Set(Object.values(CHEGADA))];
+  lista.forEach((pose, i) => setTimeout(() => { const im = new Image(); im.src = figura(pose); im.decode && im.decode().catch(() => {}); fotos['_' + pose] = im; }, 60 * i));
+  p.a.decode && p.a.decode().catch(() => {});
 }
 
-/* ============ 2 · BOTOES ============ */
-export const botao = {
-  /** gota que se espalha dentro do botao, a partir do dedo */
-  gota(el, x, y) { if (reduzido()) return; const r = el.getBoundingClientRect(), cs = getComputedStyle(el), g = document.createElement('div'), i = document.createElement('i'); const claro = /rgba?\((2[0-4]\d|25[0-5]), ?(2[0-4]\d|25[0-5])/.test(cs.backgroundColor) || /, 0\)$/.test(cs.backgroundColor); g.className = 'lm-gota' + (claro && cs.backgroundImage === 'none' ? ' lm-gota--escura' : ''); Object.assign(g.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', borderRadius: cs.borderRadius }); Object.assign(i.style, { left: (x ?? r.left + r.width / 2) - r.left + 'px', top: (y ?? r.top + r.height / 2) - r.top + 'px' }); g.appendChild(i); document.body.appendChild(g); anima(i, [{ transform: 'scale(.4)', opacity: 1 }, { transform: `scale(${Math.hypot(r.width, r.height) / 9})`, opacity: 0 }], { duration: 520 }).then(() => g.remove()); },
-  _estado(el, cls, svg) { const r = el.getBoundingClientRect(), d = document.createElement('div'); d.className = 'lm-estado ' + cls; Object.assign(d.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', borderRadius: getComputedStyle(el).borderRadius }); d.innerHTML = svg; document.body.appendChild(d); return d; },
-  /** salvando... devolve funcoes: const b = botao.carregar(el); b.ok() ou b.erro() */
-  carregar(el) { const d = this._estado(el, '', '<svg class="lm-gira" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M12 3a9 9 0 1 1-8 5"/></svg>'); anima(d, [{ opacity: 0 }, { opacity: 1 }], { duration: 140 }); const fim = async () => { await espera(720); await anima(d, [{ opacity: 1 }, { opacity: 0 }], { duration: 200 }); d.remove(); };
-    return { ok() { som2('agendamento', 'feito'); d.className = 'lm-estado lm-estado--ok'; d.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path pathLength="1" stroke-dasharray="1" d="M4.5 12.5l5 5L20 7"/></svg>'; anima(d.querySelector('path'), [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 320 }); anima(d, [{ transform: 'scale(1)' }, { transform: 'scale(1.05)' }, { transform: 'scale(1)' }], { duration: 420, easing: E.mola }); return fim(); }, erro() { som2('agendamento', 'erro'); d.className = 'lm-estado lm-estado--erro'; d.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>'; botao.treme(d); return fim(); } }; },
-  treme(el) { return animaApp(el, [0, -9, 8, -6, 5, -3, 0].map((x) => ({ transform: `translateX(${x}px)` })), { duration: 380, easing: 'linear' }); },
-  pula(el) { return animaApp(el, [{ transform: 'scale(1)' }, { transform: 'scale(.88, 1.08)' }, { transform: 'scale(1)' }], { duration: 460, easing: E.mola }); },
-  /** o + vira uma bola que abre a folha de novo compromisso */
-  abrirNovo(el) { if (reduzido()) return; const c = camada(), [x, y] = meio(el), R = Math.max(90, innerWidth * 0.32), m = document.createElement('div'); m.innerHTML = mancha('#FB8A24', 9); Object.assign(m.style, { position: 'absolute', left: x - R + 'px', top: y - R + 'px', width: R * 2 + 'px', height: R * 2 + 'px' }); c.style.zIndex = 40; c.appendChild(m); som2('trocas', 'gota'); anima(m, [{ transform: 'scale(.08) rotate(-60deg)', opacity: 1 }, { transform: 'scale(1) rotate(0)', opacity: 1, offset: 0.55 }, { transform: 'scale(1.5) translateY(-20%)', opacity: 0 }], { duration: 560 }).then(() => c.remove()); },
-};
+/* ---------- 1 · troca de página ---------- */
+let vez = 0, pendente = 0, vivas = [], fimT = 0, ultimaAba = '';
+const ORDEM = ['hoje', 'p-hoje', 'mes', 'p-agenda', 'p-listas', 'p-notas', 'empresas', 'ajustes', 'p-ajustes'];
+const toca = (el, q, o) => { const a = el.animate(q, { easing: ENTRA, fill: 'both', ...o }); vivas.push(a); return a; };
+function para() { clearTimeout(pendente); clearTimeout(fimT); pendente = 0; vivas.forEach((a) => { try { a.cancel(); } catch { /* ok */ } }); vivas = []; document.documentElement.classList.remove('lm-viajando'); }
+const ativa = () => document.querySelector('.tabbar .tabbar__btn.is-on');
 
-/* ============ 3 · AGENDAMENTO ============ */
-const diaAlvo = (d) => { if (d && d.getBoundingClientRect) return d; if (typeof d === 'string') { const e = document.querySelector(`.week [data-date="${d}"], .mday[data-date="${d}"], [data-date="${d}"]`); if (e) return e; } return document.querySelector('.week__days .is-on, .week__days .is-sel, .week [aria-current], .mday.is-sel') || document.querySelector('.tabbar [data-tab="mes"], .tabbar [data-tab="hoje"]'); };
-async function voa(c, el, de, para, ms, alt = 160) { const N = 14, q = []; for (let i = 0; i <= N; i++) { const p = i / N, e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2, s = 1 + Math.sin(p * 3.14) * 0.35; q.push({ transform: `translate(${de[0] + (para[0] - de[0]) * e}px, ${de[1] + (para[1] - de[1]) * e - Math.sin(p * 3.1416) * alt}px) translate(-50%, -50%) scale(${1 / s}, ${s})` }); } await anima(el, q, { duration: ms, easing: 'linear' }); }
-export const agenda = {
-  /** agendado({ titulo, hora, quando, cor, dia: '2026-11-27' | elemento, de: elemento }) */
-  async agendado({ titulo = 'Compromisso', hora = '', quando = '', cor = '#FB652A', dia, de } = {}) {
-    const c = camada(); if (reduzido()) { const s = selo(c, 'joia', 'Marcado!', [titulo, hora].filter(Boolean).join(' · ')); await espera(1500); await s.sair(); c.remove(); return; }
-    const d0 = de ? meio(de) : [innerWidth / 2, innerHeight * 0.62], x0 = Math.max(120, Math.min(innerWidth - 120, d0[0])), y0 = Math.min(d0[1], innerHeight * 0.64), alvo = diaAlvo(dia), [x1, y1] = alvo ? meio(alvo) : [innerWidth / 2, 120], b = document.createElement('div'); b.className = 'lm-bilhete'; b.style.setProperty('--lm-cor', cor); b.innerHTML = `${esc(titulo)}<small>${esc([quando, hora].filter(Boolean).join(' · '))}</small>`; c.appendChild(b);
-    const em = (s) => `translate(${x0}px, ${y0}px) translate(-50%, -50%) ${s}`; som2('agendamento', 'estouro'); await anima(b, [{ transform: em('scale(.6) rotate(-6deg)'), opacity: 0 }, { transform: em('scale(1) rotate(-2deg)'), opacity: 1 }], { duration: 380, easing: E.mola }); await espera(140);
-    await anima(b, [{ transform: em('scale(1)'), opacity: 1 }, { transform: em('scale(1.06,.8)'), opacity: 1, offset: 0.4 }, { transform: em('scale(.16)'), opacity: 0 }], { duration: 240, easing: E.move }); b.remove();
-    const bo = document.createElement('div'); bo.className = 'lm-bola'; c.appendChild(bo); som2('agendamento', 'vento'); await voa(c, bo, [x0, y0], [x1, y1], 480); bo.remove(); som2('agendamento', 'carimbo'); som2('agendamento', 'dimdom', 0.08); aneis(c, x1, y1, { n: 3, ate: 70 }); if (alvo) botao.pula(alvo); try { navigator.vibrate && navigator.vibrate(12); } catch { /* ok */ }
-    const s = selo(c, 'joia', 'Deixa comigo!', [quando, hora].filter(Boolean).join(' · ') || titulo); s.m.falar(900); await espera(1300); await s.sair(); c.remove(); },
-  /** concluido({ el, xp }) : anel + confete no check e o XP voando ate o perfil */
-  async concluido({ el, xp = 0 } = {}) { const c = camada(), [x, y] = meio(el); som2('conclusao', 'feito'); aneis(c, x, y, { cor: '#35B36B', n: 2, ate: 64 }); confete({ x, y, n: 34, forca: 0.6 }); if (xp && !reduzido()) { const t = document.createElement('div'); t.className = 'lm-xp'; t.textContent = `+${xp} XP`; c.appendChild(t); const perfil = document.querySelector('.iconbtn--me, [data-action="profile"]'), p = perfil ? meio(perfil) : [innerWidth - 40, 40]; await anima(t, [{ transform: `translate(${x}px, ${y}px) translate(-50%,-50%) scale(.4)`, opacity: 0 }, { transform: `translate(${Math.max(60, x - 30)}px, ${y - 56}px) translate(-50%,-50%) scale(1.15)`, opacity: 1 }], { duration: 420, easing: E.mola }); await espera(200); await voa(c, t, [Math.max(60, x - 30), y - 56], p, 440, 40); som2('conclusao', 'xp'); if (perfil) botao.pula(perfil); } else await espera(700); c.remove(); },
-  /** cartao guardado sai de cena (o aviso com "Desfazer" e do app) */
-  async saiDeCena({ clone, rect: r }, tipo) { const c = camada(); Object.assign(clone.style, { position: 'fixed', left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', margin: 0 }); c.appendChild(clone); som2('agendamento', tipo === 'adiado' ? 'ventoVolta' : 'amassa'); await anima(clone, tipo === 'adiado' ? [{ transform: 'none', opacity: 1 }, { transform: 'translateX(-14px) rotate(-2deg)', opacity: 1, offset: 0.25 }, { transform: 'translateX(120%) rotate(9deg)', opacity: 0 }] : [{ transform: 'none', opacity: 1 }, { transform: 'scale(.55,.7) rotate(-9deg)', opacity: 1, offset: 0.4 }, { transform: `translateY(${Math.max(120, innerHeight - r.top)}px) scale(.12) rotate(200deg)`, opacity: 0.4 }], { duration: tipo === 'adiado' ? 480 : 620, easing: E.move }); c.remove(); },
-  async anelDeFeito(r) { const c = camada(), [x, y] = meio(r); aneis(c, x, y, { cor: '#35B36B', n: 2, ate: 60 }); await espera(760); c.remove(); },
-  async adiado({ el, quando = 'amanhã' } = {}) { const c = camada(); if (el && !reduzido()) { som2('agendamento', 'ventoVolta'); const f = el.cloneNode(true), r = el.getBoundingClientRect(); Object.assign(f.style, { position: 'fixed', left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', margin: 0 }); c.appendChild(f); anima(f, [{ transform: 'none', opacity: 1 }, { transform: 'translateX(-14px) rotate(-2deg)', opacity: 1, offset: 0.25 }, { transform: 'translateX(120%) rotate(9deg)', opacity: 0 }], { duration: 480, easing: E.move }); } const s = selo(c, 'pensa', `Adiado para ${quando}`, 'Eu te lembro de novo'); await espera(1600); await s.sair(); c.remove(); },
-  async excluido({ el } = {}) { const c = camada(); if (el && !reduzido()) { som2('agendamento', 'amassa'); const f = el.cloneNode(true), r = el.getBoundingClientRect(); Object.assign(f.style, { position: 'fixed', left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', margin: 0 }); c.appendChild(f); await anima(f, [{ transform: 'none', borderRadius: '16px', opacity: 1 }, { transform: 'scale(.55,.7) rotate(-9deg)', opacity: 1, offset: 0.4 }, { transform: `translateY(${innerHeight - r.top}px) scale(.12) rotate(200deg)`, opacity: 0.6 }], { duration: 620, easing: E.move }); } const s = selo(c, 'triste', 'Apagado', '', 'lm-selo--triste'); await espera(1200); await s.sair(); c.remove(); },
-  /** cobra o atraso: cartao treme e o Lembra aparece bravo, sacudindo o sino */
-  async atrasado({ el, titulo = 'Ficou um pra trás', texto = 'Resolve comigo?' } = {}) { const c = camada(); if (el) botao.treme(el); som2('agendamento', 'dimdom'); const s = selo(c, 'chama', titulo, texto, 'lm-selo--bravo'); s.m.falar(1300); await espera(2300); s.m.pose('bravo'); await espera(600); await s.sair(); c.remove(); },
-  /** lembrete que desce do topo, com o sino tocando */
-  async lembrete({ titulo = 'Psiu…', texto = '' } = {}) { const c = camada(), s = document.createElement('div'); s.className = 'lm-selo'; Object.assign(s.style, { bottom: 'auto', top: 'calc(14px + env(safe-area-inset-top, 0px))', boxShadow: '0 22px 50px rgba(120,30,0,.35)', background: '#fff', color: '#1E1612' }); s.innerHTML = `<span></span><div>${esc(titulo)}<small>${esc(texto)}</small></div>`; c.appendChild(s); const m = criarMascote(s.firstElementChild, { tamanho: 74, pose: 'chama', sombra: false }); som2('agendamento', 'dimdom'); await anima(s, [{ transform: 'translate(-50%, -180%)' }, { transform: 'translate(-50%, 0)' }], { duration: 560, easing: E.mola }); m.falar(1200); await espera(900); m.pose('acena'); await espera(1500); await anima(s, [{ transform: 'translate(-50%, 0)' }, { transform: 'translate(-50%, -180%)' }], { duration: 260, easing: E.gaveta }); c.remove(); },
-};
+export function trocar(aba, fazer, origem) {
+  const view = document.getElementById('view');
+  const minha = ++vez, de = ativa(), dir = ORDEM.indexOf(aba) >= ORDEM.indexOf(ultimaAba || (de && de.dataset.tab)) ? 1 : -1;
+  para(); ultimaAba = aba;
+  const p = palco(), larg = innerWidth, alt = innerHeight;
+  const alvo = document.querySelector(`.tabbar [data-tab="${aba}"]`) || origem || de;
+  // o botão responde na hora, antes de a tela ser montada
+  if (alvo && alvo.closest('.tabbar')) document.querySelectorAll('.tabbar__btn').forEach((b) => b.classList.toggle('is-on', b === alvo));
+  const [x1, , topo1] = alvo ? meio(alvo) : [larg / 2, 0, alt - 70];
+  const [x0, , topo0] = de ? meio(de) : [x1, 0, topo1];
+  const barra = document.querySelector('.tabbar'), chao = (barra ? barra.getBoundingClientRect().top : Math.min(topo0, topo1)) + 9;
+  document.documentElement.classList.add('lm-viajando'); // o companheiro do canto dá licença: é ele quem está pulando
 
-/* ============ 4 · MOMENTOS DE TELA CHEIA ============ */
-export const MOMENTOS = {
-  nivel: { pose: 'festa', cor: ['#FFC23D', '#E86A00'], titulo: 'Subiu de nível!', som: 'nivel' }, emblema: { pose: 'estrela', cor: ['#FF8A3C', '#B3200A'], titulo: 'Emblema novo!', som: 'nivel' },
-  ofensiva: { pose: 'chama', cor: ['#FF7A0A', '#C2370C'], titulo: 'dias seguidos', som: 'nivel' }, diaPerfeito: { pose: 'amor', cor: ['#FF9A3C', '#E43E04'], titulo: 'Dia perfeito!', som: 'nivel' },
-  boasVindas: { pose: 'acena', cor: ['#FF8A3C', '#E43E04'], titulo: 'Oi! Eu sou o Lembra', som: 'dimdom' }, convite: { pose: 'festa', cor: ['#FFB054', '#E43E04'], titulo: 'Seu amigo chegou!', som: 'xp' },
-  ofensivaPerdida: { pose: 'choro', cor: ['#6a625c', '#2b2320'], titulo: 'A chama apagou', som: 'erro' }, bravo: { pose: 'bravo', cor: ['#8c1404', '#1a0302'], titulo: 'Eu fico assim.', som: 'carimbo' },
-};
-/** momento('nivel', { numero: 12, texto: 'Aprendiz', imagem: 'emblema.png', botao: 'Continuar' }) */
-export async function momento(tipo, { titulo, texto = '', numero = '', imagem = '', rotulo = 'Continuar', origem, ms = 0 } = {}) {
-  const M = MOMENTOS[tipo] || MOMENTOS.nivel, c = camada(true), [x, y] = origem ? meio(origem) : [innerWidth / 2, innerHeight * 0.5], R = raioTotal(x, y) * 1.8, red = reduzido(); c.setAttribute('role', 'dialog'); c.setAttribute('aria-label', titulo || M.titulo);
-  const f = document.createElement('div'); f.innerHTML = mancha(M.cor[0], 4); Object.assign(f.style, { position: 'absolute', left: x - R + 'px', top: y - R + 'px', width: R * 2 + 'px', height: R * 2 + 'px' }); c.appendChild(f);
-  const p = document.createElement('div'); Object.assign(p.style, { position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 40%, ${M.cor[0]}, ${M.cor[1]})` }); p.innerHTML = '<div class="lm-raios"></div>'; c.appendChild(p);
-  if (red) anima(p, [{ opacity: 0 }, { opacity: 1 }], { duration: 200 }); else { anima(p, [{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: 200 }); await anima(f, [{ transform: 'scale(.02) rotate(-60deg)' }, { transform: 'scale(1) rotate(0)' }], { duration: 380, easing: E.move }); }
-  som2('momentos', M.som); const d = document.createElement('div'); d.className = 'lm-momento'; d.innerHTML = `<div data-m class="lm-luz"></div>${imagem ? `<img src="${esc(imagem)}" alt="" style="width:132px;margin-top:-18px">` : ''}${numero !== '' ? `<div class="lm-num">${esc(numero)}</div>` : ''}<h2>${[...(titulo || M.titulo)].map((l) => `<span>${l === ' ' ? '&nbsp;' : esc(l)}</span>`).join('')}</h2>${texto ? `<p>${esc(texto)}</p>` : ''}<button type="button">${esc(rotulo)}</button>`; c.appendChild(d);
-  const h = d.querySelector('[data-m]'), m = criarMascote(h, { tamanho: Math.min(260, innerWidth * 0.6), pose: 'voa' });
-  if (!red) { const tardios = d.querySelectorAll('h2 span, .lm-num, p, button, img'); tardios.forEach((n) => { n.style.opacity = 0; }); await anima(h, [{ transform: 'translateY(70vh) scale(.6, 1.3)' }, { transform: 'translateY(-24px) scale(.96, 1.06)', offset: 0.7 }, { transform: 'none' }], { duration: 560 }); m.girar(); d.querySelectorAll('p, button, img').forEach((n, i) => { n.style.opacity = ''; anima(n, [{ transform: 'translateY(22px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 360, delay: 260 + i * 90, fill: 'backwards' }); }); if (tipo !== 'ofensivaPerdida' && tipo !== 'bravo') confete({ n: 90 }); d.querySelectorAll('h2 span').forEach((s, i) => anima(s, [{ transform: 'translateY(60px) rotate(16deg)', opacity: 0, filter: 'blur(8px)' }, { transform: 'none', opacity: 1, filter: 'blur(0)' }], { duration: 480, delay: i * 18, easing: E.mola })); const nu = d.querySelector('.lm-num'); if (nu) anima(nu, [{ transform: 'scale(2.4)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }], { duration: 460, easing: E.mola }); }
-  m.pose(M.pose).falar(1100); const bt = d.querySelector('button'); bt.focus({ preventScroll: true });
-  await new Promise((r) => { bt.onclick = r; c.addEventListener('keydown', (e) => { if (e.key === 'Escape') r(); }); if (ms) setTimeout(r, ms); });
-  som2('momentos', 'toque'); await anima(c, red ? [{ opacity: 1 }, { opacity: 0 }] : [{ clipPath: `circle(${raioTotal(innerWidth / 2, innerHeight / 2)}px at 50% 50%)` }, { clipPath: 'circle(0px at 50% 92%)' }], { duration: 360, easing: E.move }); c.remove();
+  // brilho suave na cor do app, acompanhando o Lembra
+  toca(p.brilho, [
+    { transform: `translate3d(${x0 - 260}px, ${chao - 260}px, 0) scale(.5)`, opacity: 0 },
+    { transform: `translate3d(${(x0 + x1) / 2 - 260}px, ${chao - 300}px, 0) scale(1.15)`, opacity: 1, offset: 0.42 },
+    { transform: `translate3d(${x1 - 260}px, ${chao - 270}px, 0) scale(1.7)`, opacity: 0 },
+  ], { duration: 760, easing: ARCO });
+
+  // o Lembra pula de uma aba para a outra
+  const longe = Math.abs(x1 - x0), salto = 44 + Math.min(46, longe * 0.2), T = 400 + Math.min(90, longe * 0.3);
+  p.b.src = figura(CHEGADA[aba] || 'acena');
+  toca(p.x, [{ transform: `translate3d(${x0 - 36}px, ${chao - 72}px, 0)` }, { transform: `translate3d(${x1 - 36}px, ${chao - 72}px, 0)` }], { duration: T, easing: 'cubic-bezier(.4,.1,.3,1)' });
+  toca(p.y, [
+    { transform: 'translate3d(0, 34px, 0) scale(.55)', opacity: 0, easing: 'cubic-bezier(.2,.7,.3,1)' },
+    { transform: `translate3d(0, ${-salto}px, 0) scale(1) rotate(${dir * 7}deg)`, opacity: 1, offset: 0.27, easing: 'cubic-bezier(.6,0,.75,.5)' },
+    { transform: 'translate3d(0, 0, 0) scale(1.06, .93)', opacity: 1, offset: 0.49, easing: 'cubic-bezier(.2,.8,.3,1)' },
+    { transform: 'translate3d(0, -5px, 0) scale(.99, 1.02)', opacity: 1, offset: 0.6, easing: 'ease-in-out' },
+    { transform: 'translate3d(0, 0, 0) scale(1)', opacity: 1, offset: 0.74, easing: 'cubic-bezier(.5,0,.8,.4)' },
+    { transform: 'translate3d(0, 46px, 0) scale(.7)', opacity: 0 },
+  ], { duration: T * 2.05, easing: 'linear' });
+  toca(p.a, [{ opacity: 1 }, { opacity: 1, offset: 0.43 }, { opacity: 0, offset: 0.52 }, { opacity: 0 }], { duration: T * 2.05, easing: 'linear' });
+  toca(p.b, [{ opacity: 0 }, { opacity: 0, offset: 0.43 }, { opacity: 1, offset: 0.52 }, { opacity: 1 }], { duration: T * 2.05, easing: 'linear' });
+  toca(p.sombra, [{ transform: `translate3d(${x0 - 24}px, ${chao - 5}px, 0) scale(.5)`, opacity: 0 }, { transform: `translate3d(${(x0 + x1) / 2 - 24}px, ${chao - 5}px, 0) scale(.55)`, opacity: 0.35, offset: 0.27 }, { transform: `translate3d(${x1 - 24}px, ${chao - 5}px, 0) scale(1)`, opacity: 1, offset: 0.49 }, { transform: `translate3d(${x1 - 24}px, ${chao - 5}px, 0) scale(1)`, opacity: 1, offset: 0.74 }, { transform: `translate3d(${x1 - 24}px, ${chao - 5}px, 0) scale(.5)`, opacity: 0 }], { duration: T * 2.05, easing: 'linear' });
+  fimT = setTimeout(() => { if (minha === vez) para(); }, T * 2.05 + 60);
+
+  // a página sai de leve… e a nova chega na direção do pulo
+  if (view) toca(view, [{ opacity: 1 }, { opacity: 0.1 }], { duration: 90, easing: SAI });
+  pendente = setTimeout(() => {
+    pendente = 0;
+    const sai = vivas.filter((a) => a.effect && a.effect.target === view);
+    try { fazer(); } finally {
+      const nova = document.getElementById('view') || view;
+      if (nova) {
+        nova.querySelectorAll('.page').forEach((n) => { n.style.animation = 'none'; }); // a entrada antiga do app não roda junto
+        sai.forEach((a) => a.cancel());
+        toca(nova, [{ opacity: 0.1 }, { opacity: 1 }], { duration: 280, easing: 'cubic-bezier(.2,.6,.3,1)', fill: 'backwards' });
+        const pg = nova.querySelector('.page');
+        if (pg) toca(pg, [{ transform: `translate3d(${dir * 26}px, 0, 0)` }, { transform: 'translate3d(0, 0, 0)' }], { duration: 460, fill: 'backwards' });
+      }
+    }
+    som('toque');
+  }, 90);
 }
+/** tocou na aba em que já está (ou a animação foi desligada): cancela o que estiver no ar e faz */
+export function direto(aba, fazer) { vez++; para(); ultimaAba = aba; fazer(); }
 
-/* ============ 5 · ESTADOS ============ */
-export const estado = {
-  vazio(el, { pose = 'pensa', titulo = 'Nada por aqui', texto = '' } = {}) { el.innerHTML = `<div class="lm-vazio"><span data-m></span><b>${esc(titulo)}</b><span>${esc(texto)}</span></div>`; return criarMascote(el.querySelector('[data-m]'), { tamanho: 150, pose }); },
-  carregando(el, linhas = 3) { el.innerHTML = Array.from({ length: linhas }, () => '<div class="lm-esqueleto" style="margin-bottom:10px"></div>').join(''); },
-  erro(el, texto = 'Sem internet. Já tento de novo.') { return estado.vazio(el, { pose: 'susto', titulo: 'Opa!', texto }); },
-};
-/** Lembra espiando por cima de qualquer cartao ou folha */
-export function espiar(el, { pose = 'espia', tamanho = 110, lado = 0.78, ms = 2600 } = {}) { if (reduzido()) return; const r = el.getBoundingClientRect(), c = camada(), j = document.createElement('div'), h = document.createElement('div'); c.style.zIndex = 300; Object.assign(j.style, { position: 'absolute', left: 0, right: 0, top: 0, height: r.top + 2 + 'px', overflow: 'hidden' }); Object.assign(h.style, { position: 'absolute', left: r.left + r.width * lado - tamanho / 2 + 'px', bottom: 0 }); j.appendChild(h); c.appendChild(j); const m = criarMascote(h, { tamanho, pose, sombra: false }); const t0 = r.top, vigia = setInterval(() => { if (!el.isConnected || Math.abs(el.getBoundingClientRect().top - t0) > 24) { clearInterval(vigia); c.remove(); } }, 60); setTimeout(() => clearInterval(vigia), ms + 1200);
-  anima(h, [{ transform: 'translateY(100%)' }, { transform: 'translateY(34%)' }], { duration: 520, easing: E.mola }).then(() => espera(ms)).then(() => anima(h, [{ transform: 'translateY(34%)' }, { transform: 'translateY(100%)' }], { duration: 240 })).then(() => c.remove()); return m; }
-export { criarMascote, mascoteParado, POSES, som };
+/* ---------- 2 · botões ---------- */
+export function gota(el, x, y) {
+  const r = el.getBoundingClientRect(), g = document.createElement('div'), i = document.createElement('i');
+  g.className = 'lm-gota';
+  Object.assign(g.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', borderRadius: getComputedStyle(el).borderRadius });
+  Object.assign(i.style, { left: x - r.left + 'px', top: y - r.top + 'px' });
+  g.appendChild(i); document.body.appendChild(g);
+  anima(i, [{ transform: 'scale(.2)', opacity: 0.5 }, { transform: 'scale(1)', opacity: 0 }], { duration: 520 }).then(() => g.remove());
+}
+const pula = (el) => passageiro(el, [{ transform: 'scale(1)' }, { transform: 'scale(1.1)', offset: 0.4 }, { transform: 'scale(1)' }], { duration: 360, easing: 'ease-in-out' });
+export { pula };
+
+/* ---------- 3 · agendamento ---------- */
+function camada() { const c = document.createElement('div'); c.className = 'lm-camada'; c.setAttribute('aria-hidden', 'true'); document.body.appendChild(c); return c; }
+const diaAlvo = (d) => (d && [...document.querySelectorAll('#view [data-date], #view [data-k]')].find((e) => (e.dataset.date || e.dataset.k) === d && e.getClientRects().length)) || document.querySelector('.tabbar [data-tab="mes"], .tabbar [data-tab="p-agenda"]');
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+/** o Lembra surge, mostra o bilhete e o manda para o dia */
+export async function agendado({ titulo = 'Compromisso', quando = '', dia } = {}) {
+  const c = camada();
+  try {
+    const x0 = innerWidth / 2, y0 = innerHeight * 0.56, alvo = diaAlvo(dia), a = alvo ? meio(alvo) : [x0, 110];
+    const visivel = a[1] > 0 && a[1] < innerHeight, [x1, y1] = visivel ? a : [x0, 110];
+    c.innerHTML = `<div class="lm-cartao"><img alt="" src="${figura('joia')}"><div><b>Deixa comigo!</b><span>${esc(titulo)}</span>${quando ? `<small>${esc(quando)}</small>` : ''}</div></div>`;
+    const b = c.firstElementChild, em = (dx, dy, s) => `translate3d(${dx}px, ${dy}px, 0) translate(-50%, -50%) scale(${s})`;
+    som('estouro');
+    await anima(b, [{ transform: em(x0, y0 + 40, 0.94), opacity: 0 }, { transform: em(x0, y0, 1), opacity: 1 }], { duration: 420 });
+    await espera(900);
+    som('dimdom');
+    await anima(b, [{ transform: em(x0, y0, 1), opacity: 1 }, { transform: em(x0 + (x1 - x0) * 0.35, y0 + (y1 - y0) * 0.35, 0.7), opacity: 1, offset: 0.4 }, { transform: em(x1, y1, 0.08), opacity: 0 }], { duration: 520, easing: 'cubic-bezier(.5,0,.2,1)' });
+    if (alvo && visivel) pula(alvo);
+    try { navigator.vibrate && navigator.vibrate(10); } catch { /* ok */ }
+  } finally { c.remove(); }
+}
+/** cartão guardado sai de cena (o aviso com "Desfazer" é do app) */
+export async function saiDeCena({ clone, rect: r }, tipo) {
+  const c = camada();
+  Object.assign(clone.style, { position: 'fixed', left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', margin: 0 });
+  c.appendChild(clone);
+  await anima(clone, [{ transform: 'none', opacity: 1 }, { transform: tipo === 'adiado' ? 'translate3d(70px, 0, 0)' : 'translate3d(0, 18px, 0) scale(.92)', opacity: 0 }], { duration: 320, easing: SAI });
+  c.remove();
+}
+export async function anelDeFeito(r) {
+  const c = camada(), [x, y] = meio(r), n = document.createElement('div');
+  n.className = 'lm-anel'; Object.assign(n.style, { left: x - 44 + 'px', top: y - 44 + 'px' }); c.appendChild(n);
+  await anima(n, [{ transform: 'scale(.3)', opacity: 0.9 }, { transform: 'scale(1)', opacity: 0 }], { duration: 620 });
+  c.remove();
+}

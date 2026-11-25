@@ -1,0 +1,10 @@
+import{a as u}from"./c-6PVVLET6.js";import{B as m,d as s,g as f}from"./c-MPTN5RTT.js";var r=null;function b({title:c="Marcado!",sub:a="",sound:h=!0,item:l=null}={}){if(typeof document>"u")return;document.querySelectorAll(".okfx").forEach(e=>e.remove()),clearTimeout(r);let i=window.__motion;if(l&&i&&i.pronto()){let e=document.createElement("div");e.className="okfx okfx--motion",e.setAttribute("role","status"),e.textContent=`${c} ${a}`,document.body.appendChild(e);let d=()=>e.remove();setTimeout(()=>{i.agendado({titulo:l.title||c,quando:a,dia:l.date}).catch(()=>{}).then(d)},240),r=setTimeout(d,5e3);return}let t=document.createElement("div");t.className="okfx",t.setAttribute("role","status"),t.innerHTML=`<div class="okfx__card">
+      <svg class="okfx__ring" viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="okfx__halo" cx="60" cy="60" r="50"/>
+        <circle class="okfx__track" cx="60" cy="60" r="46"/>
+        <circle class="okfx__prog" cx="60" cy="60" r="46"/>
+        <path class="okfx__check" d="M40 61.5 54 75 81 46"/>
+      </svg>
+      <b class="okfx__t">${m(c)}</b>${a?`<small class="okfx__s">${m(a)}</small>`:""}
+      <span class="okfx__brand">${u("simbolo",{h:18})}</span>
+    </div>`,document.body.appendChild(t),requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add("is-in"))),h&&import("./c-3P7SELW2.js").then(e=>e.softOk()).catch(()=>{});try{navigator.vibrate&&navigator.vibrate(12)}catch{}let p=()=>{t.classList.add("is-out"),setTimeout(()=>t.remove(),420)};r=setTimeout(p,1500),t.addEventListener("click",()=>{clearTimeout(r),p()})}var o=(()=>{try{return JSON.parse(localStorage.getItem("pauta.ui")||"{}")}catch{return{}}})(),n={tab:o.tab==="pessoal"?"hoje":o.tab||"hoje",space:o.space==="personal"?"personal":"work",ptab:o.ptab||"p-hoje",pMonth:null,pSel:null,pView:"mes",person:o.person||"all",date:s(),month:f(s()),monthSel:s(),monthCompany:null,showAllTips:!1,showTypes:!1};function T(){try{localStorage.setItem("pauta.ui",JSON.stringify({tab:n.tab,person:n.person,space:n.space,ptab:n.ptab}))}catch{}}export{b as a,n as b,T as c};
