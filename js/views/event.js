@@ -1,4 +1,5 @@
 /* Detalhe do evento e editor (criar/editar) */
+import { ajudante, ajudanteHtml } from '../ajudante.js';
 import { postStory } from '../stories.js';
 import { previewStory } from '../game.js';
 import { okFx } from '../okfx.js';
@@ -208,6 +209,11 @@ function editorHtml(d, editing, rep) {
     right: `<button class="btn btn--primary btn--sm" data-save>Salvar</button>`,
   })}
   <form class="form" data-editor onsubmit="return false">
+    ${editing ? '' : ajudanteHtml()}
+    <div class="fgroup">
+      <label class="flabel" for="f-title">Título</label>
+      <input id="f-title" class="input" name="title" value="${esc(d.title)}" placeholder="${esc(TYPES[d.type].placeholder)}" autocomplete="off" maxlength="120">
+    </div>
     <div class="fgroup">
       <label class="flabel">O que é?</label>
       <div class="typegrid">
@@ -227,11 +233,6 @@ function editorHtml(d, editing, rep) {
       <label class="flabel">Onde vai postar?</label>
       <div class="netgrid">${POST_NETS.map((id) => { const p = platformById(id); return p ? `<button type="button" class="netbtn${(d.platform || 'instagram') === id ? ' is-on' : ''}" data-net="${id}"><span class="pf" style="width:22px;height:22px">${p.svg}</span><span>${esc(p.name.replace(' (Twitter)', ''))}</span></button>` : ''; }).join('')}</div>
     </div>` : ''}
-
-    <div class="fgroup">
-      <label class="flabel" for="f-title">Título</label>
-      <input id="f-title" class="input" name="title" value="${esc(d.title)}" placeholder="${esc(TYPES[d.type].placeholder)}" autocomplete="off" maxlength="120">
-    </div>
 
     <div class="fgroup row2">
       <div><label class="flabel" for="f-date">Dia</label><input id="f-date" class="input" type="date" name="date" value="${d.date}" required></div>
@@ -299,6 +300,7 @@ function mountEditor(api, d, original, rep) {
   const form = el.querySelector('[data-editor]');
   const $ = (s) => el.querySelector(s);
 
+  if (!original) ajudante(el, form);
   const refreshHint = () => {
     const box = $('[data-hint]');
     box.innerHTML = assistantPanel(d, !original);

@@ -51,4 +51,15 @@ function voarXp(el) {
   }, 950);
 }
 const mundo = (...a) => LM.mundo(...a);
-window.__motion = { pronto, trocar, mundo, chuva: (...a) => LM.chuva(...a), agendado: LM.agendado, guardar, excluido: sai('excluido'), adiado: sai('adiado'), concluido, voarXp };
+/* a tela recua quando uma folha abre (só quando nada fixo mora dentro dela) */
+const raiz = document.getElementById('sheets');
+if (raiz) new MutationObserver(() => {
+  const aberta = raiz.childElementCount > 0 && !LM.reduzido(), b = document.body, tem = b.classList.contains('lm-recua');
+  if (aberta === tem) return;
+  if (aberta) document.documentElement.style.setProperty('--oy', `${scrollY + innerHeight / 2}px`);
+  b.classList.toggle('lm-recua', aberta); b.classList.toggle('lm-volta', !aberta);
+  if (!aberta) setTimeout(() => b.classList.remove('lm-volta'), 400);
+}).observe(raiz, { childList: true });
+const antes = (el) => (pronto() ? LM.antes(el) : null);
+const concluir = (s) => { if (s) LM.concluir(s).catch(() => {}); };
+window.__motion = { pronto, antes, concluir, trocar, mundo, chuva: (...a) => LM.chuva(...a), agendado: LM.agendado, guardar, excluido: sai('excluido'), adiado: sai('adiado'), concluido, voarXp };

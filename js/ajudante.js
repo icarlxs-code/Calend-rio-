@@ -1,0 +1,38 @@
+/* O Lembra dentro do editor: lê o que a pessoa escreve, brinca com o assunto e oferece preencher dia e hora
+   ("dentista amanhã 15h" → um toque e pronto). Nada sai do aparelho. */
+import { sininho, alive, act, say, setMood } from './sininho.js';
+import { parseQuick } from './personal.js';
+import { piada, tema, humorOn } from './humor.js';
+import { dayLabel, fmtTime, todayKey } from './utils.js';
+
+export const ajudanteHtml = (frase = 'O que eu não posso deixar você esquecer?') => `<div class="ajd"><span class="ajd__fig">${sininho('feliz', { size: 64 })}</span><div class="ajd__c"><p class="ajd__b" aria-live="polite">${frase}</p><button type="button" class="ajd__ok" hidden></button></div></div>`;
+const TEM_QUANDO = /\b(hoje|amanh[ãa]|segunda|ter[çc]a|quarta|quinta|sexta|s[áa]bado|domingo|meio-dia|dia \d{1,2}\/\d{1,2}|\d{1,2}\/\d{1,2})\b|\b(?:[àa]s )?\d{1,2}(?:h\d{0,2}|:\d{2})\b/i;
+export function ajudante(raiz, form) {
+  const cx = raiz.querySelector('.ajd'); if (!cx || !form.title) return;
+  alive();
+  const fig = cx.querySelector('[data-snh]'), bal = cx.querySelector('.ajd__b'), ok = cx.querySelector('.ajd__ok');
+  let t = 0, ultTema = -2, ult = '';
+  const fala = (x, humor, gesto) => { if (!x || x === ult) return; ult = x; setMood(fig, humor || 'feliz'); say(fig, x, { bubble: bal, speed: 20 }); setTimeout(() => act(fig, gesto || 'sim'), 120); };
+  const olha = () => {
+    const v = form.title.value.trim();
+    ok.hidden = true;
+    if (v.length < 3) return;
+    const tem = TEM_QUANDO.test(v) ? parseQuick(v) : null;
+    if (tem && tem.title && (tem.date !== form.date.value || (tem.time && tem.time !== form.time.value))) {
+      const alvo = `${tem.date === todayKey() && !tem.time ? 'hoje' : dayLabel(tem.date).split(' · ')[0].toLowerCase()}${tem.time ? ' às ' + fmtTime(tem.time) : ''}`;
+      fala(`Entendi! Coloco para ${alvo}?`, 'feliz', 'sobrancelha');
+      ok.textContent = `Colocar ${alvo}`; ok.hidden = false;
+      ok.onclick = () => {
+        form.title.value = tem.title; form.date.value = tem.date; if (tem.time) form.time.value = tem.time;
+        [form.title, form.date, form.time].forEach((i) => { i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); });
+        ok.hidden = true; ultTema = -2; ult = '';
+        fala(piada(tem.title, 'c') || 'Prontinho!', 'feliz', 'soco');
+      };
+      return;
+    }
+    const i = tema(v); if (i === ultTema) return; ultTema = i;
+    if (i >= 0 && humorOn()) fala(piada(v, 'c', { geral: false }), 'feliz', ['riso', 'pisca', 'balanca', 'soco'][i % 4]);
+  };
+  form.title.addEventListener('input', () => { clearTimeout(t); t = setTimeout(olha, 650); });
+  form.title.addEventListener('focus', () => act(fig, 'olhaLados'));
+}

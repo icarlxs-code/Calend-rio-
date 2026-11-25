@@ -2,6 +2,8 @@
    - quando alguém marca/muda/conclui/remove algo, avisa o parceiro NA HORA
    - mantém no servidor a lista dos próximos lembretes (ele dispara no horário,
      mesmo com os celulares fechados) */
+import { piadaFixa } from './humor.js';
+import { folga } from './habito.js';
 import { store } from './store.js';
 import { WORK } from './constants.js';
 import { api, server } from './avisos.js';
@@ -124,6 +126,8 @@ export function buildSchedule(now = Date.now()) {
       const at = at0 - offset * 60e3;
       if (at < now - 10 * 60e3 || at > now + 4 * 86400e3) return;
       const msg = reminderMessage(ev, offset, coName(ev.companyId));
+      // com 60 minutos ou menos, o texto ganha a voz do Lembra (o título continua dizendo o essencial)
+      if (offset > 0 && offset <= 60) { const p = piadaFixa(ev.title, 'a', `${ev.id}|${offset}|${ev.date}`); if (p) msg.body = `${ev.title ? `“${ev.title}”` : ''}${ev.location ? ` · ${ev.location}` : ''}${ev.title || ev.location ? ' · ' : ''}${p}`; }
       const resp = (ev.assignees || []).map(nameOf).join(' e ');
       store.team.map((m) => m.id).filter((member) => memberOffsets(member).includes(offset) && allowedFor(member, ev.companyId) && (ev.notifyPartner !== false || member === ev.createdBy || (ev.assignees || []).includes(member))).forEach((member) => items.push({
         id: `r_${ev.id}_${offset}_${ev.date}${ev.time.replace(':', '')}_${member}`,
@@ -135,7 +139,9 @@ export function buildSchedule(now = Date.now()) {
     if (ev.status === 'pendente' && !essencial) {
       const owner = onlyFor(ev.companyId);
       const who = owner ? [owner] : (ev.assignees || []).length ? ev.assignees : [ev.createdBy || store.me].filter(Boolean);
-      who.forEach((member) => lateReminders(ev, at0, coName(ev.companyId), personaOf(member), { clientLike: WORK.clientLike }).forEach((r) => {
+      who.forEach((member) => lateReminders(ev, at0 + folga(ev.type) * 60e3, coName(ev.companyId), personaOf(member), { clientLike: WORK.clientLike }).forEach((r, k) => {
+        // a primeira cobrança é sempre leve; o tom escolhido na ficha vale das próximas em diante
+        if (k === 0) { const p = piadaFixa(ev.title, 't', `${ev.id}|${ev.date}`); if (p) r.body = `${ev.title ? ev.title + '. ' : ''}${p}`; }
         if (r.at < now - 10 * 60e3 || r.at > now + 4 * 86400e3) return;
         items.push({
           id: `l_${ev.id}_${r.late}_${ev.date}${ev.time.replace(':', '')}_${member}`,

@@ -9,6 +9,7 @@
    - nunca fica parado: entre uma fala e outra ele pisca, olha pros lados, pensa, boceja, fica tímido, dá risada…;
    - aparece, fala e sai andando; volta sozinho em 15 s a 1 min;
    - por enquanto SÓ para o dono (CONFIG.adminEmail); para todo mundo: CONFIG.mascotPublic = true. */
+import { piada, humorOn } from './humor.js';
 import { store } from './store.js';
 import { CONFIG } from '../config.js';
 import { sininho, setMood, act, say, lookAt, rigOf, reactNivel, reactErro } from './sininho.js';
@@ -317,6 +318,7 @@ const comemora = () => (ultimaFesta = pick(['vibra', 'soco', 'orgulho', 'vibra',
 function feito(o = {}) {
   try {
     const c = ctx(), n = c.feitos + c.feitoPessoal.length, falta = c.pend.length + c.pessoal.length, L = [];
+    const px = piada(o.titulo || '', 'f'); if (px) L.push(px, px, px);
     if (o.titulo && o.titulo.length < 34) L.push(`${q(o.titulo)} feito! Que orgulho 🧡`, `Você foi lá e fez: ${q(o.titulo)} ✔️`);
     if (n >= 2) L.push(`Já são ${n} hoje! Tô vibrando aqui 🎉`, `${n} de hoje riscados. Que ritmo!`);
     if (falta === 1) L.push('Só falta 1 pra fechar o dia! 🔥', 'Um só! A gente zera hoje 💪');
@@ -880,10 +882,25 @@ export function react(kind, o = {}) {
   if (kind === 'erro') { reactErro(el()); return fala({ t: 'Ops, não salvou. Tento de novo quando a internet voltar.', m: 'triste', p: PRIO.erro }, 'pop'); }
   if (kind === 'nivel') { reactNivel(el()); return fala({ t: o.nivel ? `Nível ${o.nivel}! Subiu de nível 🎉` : 'Subiu de nível! 🎉', m: 'comemora', p: PRIO.nivel }, null); }
   if (kind === 'done') return fala(o.perfect ? { k: 'perfeito', t: pick(['Dia 100%! Você zerou tudo! 🏆', 'Zerou o dia! Pode comemorar 🎉']), m: 'danca', p: PRIO.perfeito } : o.late ? { t: outra(DONE_LATE), m: 'feliz', p: PRIO.done, gesto: 'alivio' } : { t: feito(o), m: 'feliz', p: PRIO.done }, comemora());
-  if (kind === 'created') return fala({ t: outra(CREATED), m: 'feliz', p: PRIO.created }, 'sim');
+  if (kind === 'created') return fala({ t: piada(o.titulo || '', 'c') || outra(CREATED), m: 'feliz', p: PRIO.created }, 'sim');
   if (kind === 'pedido') return fala({ t: pick([`Pedido enviado! Agora é torcer pra ${(o.nome || 'pessoa').split(' ')[0]} aceitar 🤞`, 'Mandei o convite voando! 🕊️ Já já chega no celular da pessoa.', 'Feito! Amizade a um toque de distância 🤝']), m: 'comemora', roteiro: ['balanca'] }, 'pulo');
   if (kind === 'story') return fala({ t: pick(['Postou story! Agora todo mundo vai ver que você fez 😎📸', 'XP em dobro na conta! Fotógrafo(a) profissional, hein 📸', 'Prova registrada! Ninguém pode dizer que você não fez 😏']), m: 'danca', roteiro: ['balanca'] }, 'pulo');
   if (kind === 'visitas') { try { localStorage.setItem(visKey, String(Date.now())); } catch { /* ok */ } return o.n ? fala({ t: pick([`Hmm… que que será que ${(o.nome || 'essa pessoa').split(' ')[0]} tava querendo, hein? 🤭`, `${(o.nome || 'Alguém').split(' ')[0]} passou por aqui… será que tá com saudade? 👀`, 'Olha quanta gente curiosa com a sua vida 😏', `${(o.nome || 'Alguém').split(' ')[0]} veio, olhou e não falou nada… típico de quem tá interessado 😏`, 'Esse povo vê tudo e finge que não viu 🙈 Mas eu vi.', 'Quer que eu fique de olho em quem voltar? Eu fico 🕵️']), m: 'desconfiado', roteiro: ['olhaLados', 'maoBoca'] }, 'sobrancelha') : fala({ t: 'Ninguém passou ainda… posta um story que o povo aparece 😉', m: 'feliz' }, 'pisca'); }
   if (kind === 'late') return fala({ t: 'Ih… esse passou da hora. Quer ver o que ficou pra trás?', m: 'triste', acoes: [{ label: 'Ver', go: A.atrasados }, { label: 'Depois' }] }, null);
 }
 export const active = () => !!B;
+
+/* ---------- cada botão mexe com ele: um gesto sempre, uma gracinha de vez em quando ---------- */
+const CLIQUES = {
+  'new-event': ['sobrancelha'], 'p-new': ['sobrancelha'], assistant: ['pensa', 'assistente'], ranking: ['soco', 'ranking'], friends: ['tchau', 'amigos'], profile: ['orgulho', 'perfil'],
+  'adiar-1h': ['revira', 'adiar'], 'ui-toggle': ['olhaLados'], acc: ['olhaLados'], 'set-date': ['olhaLados'], month: ['olhaLados'], 'set-person': ['sim'], 'open-event': ['sim'], 'open-company': ['sim'], visitas: ['maoBoca'], 'p-open': ['sim'], 'team-board': ['soco'], whatsnew: ['riso'], guide: ['aponta'],
+};
+let ultimaGraca = 0, ultimoClique = 0;
+document.addEventListener('click', (ev) => {
+  if (!B || !ev.target.closest) return;
+  const b = ev.target.closest('[data-action]'); if (!b || B.contains(b)) return;
+  const agora = Date.now(); if (agora - ultimoClique < 350) return; ultimoClique = agora;
+  const c = b.dataset.action === 'theme' ? ['susto', b.dataset.v === 'dark' ? 'escuro' : 'claro'] : CLIQUES[b.dataset.action]; if (!c) return;
+  if (!falando() && !arr) act(el(), c[0]);
+  if (c[1] && humorOn() && agora - ultimaGraca > 45e3 && !falando()) { const t = piada('', c[1]); if (t) { ultimaGraca = agora; setTimeout(() => fala({ t, m: 'feliz' }, c[0]), 700); } }
+}, true);

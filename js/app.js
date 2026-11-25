@@ -1,4 +1,6 @@
 /* Inicialização, navegação e ações globais */
+import { cena, momento, boneco3d, pose3d, aquece3d } from './cena.js';
+import { say } from './sininho.js';
 import { brand } from './brand.js';
 import { syncCoach } from './coach.js';
 import { polishSoon } from './polish.js';
@@ -89,7 +91,6 @@ function switchSpace(space, from) {
   document.querySelectorAll('.sheet-wrap.is-open [data-close]').forEach((b) => b.click());
   const M = window.__motion;
   if (M && M.pronto()) {
-    chime(space);
     M.mundo(space, from, () => { ui.space = space; saveUi(); shell(); render(); window.scrollTo(0, 0); document.getElementById('view')?.querySelectorAll('.page').forEach((n) => { n.style.animation = 'none'; }); }, setBarColor, SPACE_BAR[space]);
     return;
   }
@@ -427,7 +428,9 @@ const actions = {
     if (!e) return;
     const status = e.status === 'feito' ? 'pendente' : 'feito';
     const at = b.getBoundingClientRect(); // a tela é redesenhada ao salvar: mede o botão antes
+    const M = window.__motion, foto = M && status === 'feito' && b.closest('#view') ? M.antes(b.closest('.foco, .ecard')) : null;
     await store.upsert('events', { ...e, status });
+    if (foto && store.event(e.id)?.status === 'feito') M.concluir(foto);
     if (status === 'feito' && store.event(e.id)?.status === 'feito') {
       const left = e.date === todayKey() ? store.eventsOn(e.date, { person: store.me }).filter((x) => x.status !== 'feito').length : null;
       toast(onDone({ el: at, left }), { action: 'Desfazer', onAction: () => store.upsert('events', { ...store.event(e.id), status: e.status }) });
@@ -526,6 +529,7 @@ document.addEventListener('click', (ev) => {
   fn(b);
 });
 document.addEventListener('change', (ev) => {
+  if (ev.target.matches('[data-humor]')) { try { localStorage.setItem('lembra.humor', ev.target.checked ? '1' : '0'); } catch { /* ok */ } }
   if (ev.target.matches('[data-motion]')) { try { localStorage.setItem('lembra.motion', ev.target.checked ? '1' : '0'); } catch { /* ok */ } }
   if (ev.target.matches('[data-sound]')) { setSound(ev.target.checked); if (ev.target.checked) chime(ui.space); }
   if (ev.target.matches('[data-action-change="import"]')) settingsActions.import(ev.target);
@@ -946,11 +950,11 @@ function showLogin(errMsg = '') {
   if (/^#\/cadastro/.test(location.hash)) { signupMode = true; history.replaceState(null, '', location.pathname + location.search); }
   const msg = errMsg || loginNotice;
   root.innerHTML = `
-  <div class="login">
-    ${isStandalone() ? '' : `<button class="login__installtop" type="button" data-installguide>${icon("download", 16)} Instalar o app no celular · grátis</button>`}
-    <div class="brandwrap login__brand">${brand('completa', { h: 112, alt: esc(CONFIG.appName) })}</div>
+  <div class="login login--novo${showLogin.ja ? '' : ' login--entra'}">
+    <div class="login__cena">${cena()}<div class="login__marca">${brand('palavra', { h: 34, alt: esc(CONFIG.appName), on: momento() === 'noite' ? 'dark' : 'light' })}</div>${boneco3d(msg ? 'pensa' : 'acena', 172)}<p class="login__fala" role="status"></p></div>
+    <div class="login__folha">
     <h1 class="login__hook">${signupMode ? 'Crie sua conta grátis' : 'Que bom ter você aqui'}</h1>
-    <p class="login__lead">${signupMode ? 'Em 2 minutos o Lembra aprende a sua rotina e passa a lembrar de tudo por você.' : 'Entre para ver o que tem para hoje.'}</p>
+    <p class="login__lead">${signupMode ? 'Em 2 minutos eu aprendo a sua rotina.' : 'Entre para ver o que tem para hoje.'}</p>
     ${invitedBy() ? `<div class="login__invite">${icon('users', 18)}<span><b>${esc(invitedBy())}</b> convidou você para a agenda de trabalho compartilhada. ${signupMode ? 'Crie sua conta' : 'Entre ou crie sua conta'} para participar — você não paga nada.</span></div>` : ''}
     <form class="form" data-login novalidate>
       ${signupMode ? `<div class="fgroup"><label class="flabel" for="l-name">Seu nome</label><input id="l-name" class="input" name="name" autocomplete="name" maxlength="40" placeholder="Seu primeiro nome" value="${esc(loginName)}"></div>` : ''}
@@ -959,7 +963,7 @@ function showLogin(errMsg = '') {
         <div class="input-eye"><input id="l-pass" class="input" type="password" name="pass" autocomplete="${signupMode ? 'new-password' : 'current-password'}" placeholder="${signupMode ? '8+ caracteres, letras e números' : ''}" value="${esc(loginPass)}" autocapitalize="none" autocorrect="off" spellcheck="false">
         <button type="button" class="iconbtn iconbtn--sm" data-eye aria-label="Mostrar senha">${icon('eye', 18)}</button></div>
       </div>
-      ${signupMode ? `<p class="login__hint">Mínimo de 8 caracteres, com letras e números.</p>
+      ${signupMode ? `<div class="login__forca" data-n="0"><i><b></b></i><ul><li data-r="8">${icon('check', 14)} 8 caracteres</li><li data-r="l">${icon('check', 14)} letras</li><li data-r="n">${icon('check', 14)} números</li></ul></div>
       <label class="consent"><input type="checkbox" name="consent" ${loginConsent ? 'checked' : ''}><span class="consent__dot" aria-hidden="true">${icon('check', 14)}</span>
         <span>Li e concordo com os <a href="${siteBase()}termos/" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="${siteBase()}privacidade/" target="_blank" rel="noopener">Política de Privacidade</a> (LGPD).</span></label>` : ''}
       ${loginTypo ? `<div class="login__typo">Você quis dizer <b>${esc(loginTypo)}</b>? <button class="btn-text btn-text--sm" type="button" data-fixmail>Corrigir</button></div>` : ''}
@@ -969,23 +973,34 @@ function showLogin(errMsg = '') {
         <span>Lembrar de mim neste celular</span></label>
       <div class="login__links">${signupMode ? '' : '<button class="btn-text btn-text--sm" type="button" data-reset>Esqueci minha senha</button>'}</div>
       <div class="login__switch">${signupMode ? 'Já tem conta?' : 'Ainda não tem conta?'} <button class="btn-text btn-text--sm" type="button" data-mode>${signupMode ? 'Entrar' : 'Criar conta'}</button></div>
-    </form>
+      <p class="login__pe">${icon('lock', 14)} Seus dados são só seus.${isStandalone() ? '' : ` <button type="button" data-installguide>${icon('download', 15)} Instalar o app</button>`}</p>
+    </form></div>
   </div>`;
+  showLogin.ja = true;
   const f = root.querySelector('[data-login]');
-  /* o Lembra recebe a pessoa (e explica os erros) — por enquanto no celular do dono */
-  import('./guia.js').then(({ guiaOn, criaGuia }) => {
-    if (!guiaOn() || !root.querySelector('[data-login]')) return;
-    const G = criaGuia({ tamanho: 66 }), lead = root.querySelector('.login__lead');
-    root.querySelector('.login').classList.add('login--guia');
-    lead.replaceWith(G.el); G.chega();
-    if (msg) setTimeout(() => G.erro(msg), 300);
-    else setTimeout(() => G.fala(signupMode ? 'Oi! Eu sou o Lembra 👋 Cria sua conta e eu cuido de lembrar de tudo pra você.' : 'Que bom te ver de novo! 😊 Entra aí que eu já separei o seu dia.', 'acena', 'tchau'), 350);
-    f.addEventListener('submit', () => import('./sfx.js').then((m) => m.ui('clique')));
-  }).catch(() => {});
+  /* o Lembra recebe, reage a cada campo e explica os erros */
+  const bon = root.querySelector('.c3d'), bal = root.querySelector('.login__fala');
+  aquece3d(['acena', 'aponta', 'segredo', 'joia', 'festa', 'triste', 'pensa', 'amor']);
+  const diz = (t, pose) => { if (!bal || bal._u === t) return; bal._u = t; pose3d(bon, pose); say(null, t, { bubble: bal, speed: 18 }); };
+  if (msg) { const p0 = { triste: 'triste', desconfiado: 'pensa', acena: 'acena', feliz: 'joia' }; import('./guia.js').then(({ falaDoErro }) => { const l = falaDoErro(msg); setTimeout(() => diz(l.t, p0[l.m] || 'pensa'), 200); import('./sfx.js').then((m) => m.ui('erro')); }).catch(() => {}); }
+  else setTimeout(() => diz(signupMode ? 'Oi! Eu sou o Lembra. Você vive, eu lembro 🔔' : 'Voltou! Eu já tava com saudade 🧡', 'acena'), 520);
+  const senhaBoa = (v) => [v.length >= 8, /[A-Za-zÀ-ÿ]/.test(v), /\d/.test(v)];
+  const escuta = (c, ev, fn) => { const i = f.elements[c]; if (i) i.addEventListener(ev, () => fn(i)); };
+  escuta('name', 'focus', () => diz('Como eu te chamo?', 'aponta'));
+  escuta('name', 'blur', (i) => { const n = tidyName(i.value).split(' ')[0]; i.classList.toggle('is-ok', n.length > 1); if (n.length > 1) diz(`Prazer, ${n}! Nome bonito assim eu não esqueço 😄`, 'amor'); });
+  escuta('email', 'focus', () => diz(signupMode ? 'Seu e-mail. Prometo não mandar corrente 😅' : 'Me lembra o seu e-mail? Ironia, né 😄', 'aponta'));
+  escuta('email', 'blur', (i) => { const e = cleanEmail(i.value); if (!e) return; const t = emailTypo(e); i.classList.toggle('is-ok', validEmail(e) && !t); if (t) diz(`Será que não era ${t}?`, 'pensa'); else if (!validEmail(e)) diz('Esse e-mail ficou incompleto. Confere comigo?', 'pensa'); else diz('E-mail certinho!', 'joia'); });
+  escuta('pass', 'focus', (i) => { const e0 = cleanEmail(f.email.value), t0 = e0 && emailTypo(e0); if (t0) return diz(`Antes da senha: será que não era ${t0}?`, 'pensa'); diz(i.type === 'password' ? 'Pode digitar. Fechei os olhos! 🙈' : 'Tá aparecendo, hein? Olha em volta 👀', i.type === 'password' ? 'segredo' : 'pensa'); });
+  const mede = (i) => { const fx0 = root.querySelector('.login__forca'); if (!fx0) return; const r = senhaBoa(i.value), n = r.filter(Boolean).length; fx0.dataset.n = i.value ? n : 0; ['8', 'l', 'n'].forEach((k, j) => fx0.querySelector(`[data-r="${k}"]`).classList.toggle('is-ok', r[j])); i.classList.toggle('is-ok', n === 3); return n; };
+  if (f.pass.value) mede(f.pass);
+  escuta('pass', 'input', (i) => { if (mede(i) === 3) diz('Essa nem eu adivinho! 🔒', 'joia'); });
+  escuta('consent', 'change', (i) => { if (i.checked) diz('Combinado! Eu as-SINO embaixo ✍️', 'festa'); });
+  f.addEventListener('submit', () => import('./sfx.js').then((m) => m.ui('clique')));
   const fx = root.querySelector('[data-fixmail]');
   if (fx) fx.onclick = () => { loginEmail = loginTypo; loginTypo = ''; loginName = tidyName(f.name?.value || loginName); loginPass = f.pass.value; loginConsent = !!f.consent?.checked; showLogin(); };
   root.querySelector('[data-eye]').onclick = () => {
     f.pass.type = f.pass.type === 'password' ? 'text' : 'password';
+    diz(f.pass.type === 'text' ? 'Opa, espiei só um pouquinho 👀' : 'Olhos fechados de novo! 🙈', f.pass.type === 'text' ? 'pensa' : 'segredo');
   };
   f.onsubmit = async (ev) => {
     ev.preventDefault();
@@ -1011,6 +1026,7 @@ function showLogin(errMsg = '') {
     const go = f.querySelector('[data-go]');
     go.disabled = true;
     go.textContent = signupMode ? 'Criando…' : 'Entrando…';
+    diz(signupMode ? 'Preparando o seu cantinho…' : 'Abrindo a porta…', 'festa');
     try {
       if (signupMode) pendingProfile = { name, consentAt: Date.now(), termsVersion: CONFIG.termsVersion || '1.0' };
       // vai entrar outra conta: esquece qualquer sessão guardada antes
@@ -1045,8 +1061,9 @@ function showForgot(state = 'form', msg = '') {
   const email = loginEmail || '';
   const app = MAILAPP.find(([re]) => re.test(forgotTo || email));
   const wait = Math.max(0, 60 - Math.round((Date.now() - forgotSentAt) / 1000));
-  root.innerHTML = `<div class="login login--forgot">
-    <div class="brandwrap login__brand">${brand('simbolo', { h: 64, alt: esc(CONFIG.appName) })}</div>
+  root.innerHTML = `<div class="login login--novo login--forgot">
+    <div class="login__cena">${cena()}<div class="login__marca">${brand('palavra', { h: 34, alt: esc(CONFIG.appName), on: momento() === 'noite' ? 'dark' : 'light' })}</div>${boneco3d(msg ? 'triste' : state === 'sent' || state === 'helped' ? 'joia' : 'pensa', 172)}<p class="login__fala" role="status">${state === 'sent' ? 'Mandei! Corre no seu e-mail 📬' : state === 'helped' ? 'Recado recebido 🧡' : state === 'help' ? 'Conta pra mim, eu resolvo.' : 'Esqueceu? Relaxa, lembrar é comigo 😄'}</p></div>
+    <div class="login__folha">
     ${state === 'sent' ? `<h1 class="login__hook">Confira seu e-mail</h1>
       <p class="login__lead">Enviamos um link para <b>${esc(forgotTo)}</b>. Toque nele para criar uma senha nova. Ele vale por 1 hora.</p>
       <ul class="fsteps">
@@ -1080,7 +1097,7 @@ function showForgot(state = 'form', msg = '') {
       </form>
       ${phoneOn() ? `<button class="btn btn--soft btn--block" data-sms>${icon('phone', 18)} Recuperar pelo celular (SMS)</button>` : ''}
       <button class="btn-text btn-text--sm" data-back>Voltar para entrar</button>`}
-  </div>`;
+  </div></div>`;
   const $ = (sel) => root.querySelector(sel);
   if ($('[data-back]')) $('[data-back]').onclick = () => { loginTypo = ''; showLogin(); };
   if ($('[data-other]')) $('[data-other]').onclick = () => showForgot('form');

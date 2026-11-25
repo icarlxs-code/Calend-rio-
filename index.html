@@ -2,6 +2,10 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
+  <!-- proteção: nada de plugins, o endereço base não muda, formulários só para https e o app não abre dentro de outro site -->
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'; form-action 'self' https:">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <script>if (self !== top) { try { if (top.location.host !== location.host) throw 0; } catch (e) { document.documentElement.style.display = "none"; } }</script>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Lembra · Sua agenda</title>
   <meta name="description" content="Lembra: a agenda que avisa na hora certa, cobra com carinho e comemora cada coisa feita. Grátis até 31/12/2026.">
@@ -21,98 +25,100 @@
   <link rel="stylesheet" href="css/app.css">
   <link rel="stylesheet" href="css/arte.css">
   <link rel="stylesheet" href="css/motion.css">
+  <link rel="stylesheet" href="css/marca.css">
   <!--PRELOAD-->
-  <link rel="modulepreload" href="dist/c-WFLEIISD.js">
-  <link rel="modulepreload" href="dist/c-HHLTEN5T.js">
-  <link rel="modulepreload" href="dist/c-GEWFJHGT.js">
-  <link rel="modulepreload" href="dist/c-DKIC5VSL.js">
-  <link rel="modulepreload" href="dist/c-76HJISYK.js">
-  <link rel="modulepreload" href="dist/c-HQHGZAXK.js">
-  <link rel="modulepreload" href="dist/c-7GVMBXN3.js">
-  <link rel="modulepreload" href="dist/c-C5CMHP4A.js">
-  <link rel="modulepreload" href="dist/c-AHEGOLRP.js">
-  <link rel="modulepreload" href="dist/c-YRHAH2NT.js">
-  <link rel="modulepreload" href="dist/c-7BVN76RL.js">
-  <link rel="modulepreload" href="dist/c-7XTWFVIG.js">
-  <link rel="modulepreload" href="dist/c-CD3LELUT.js">
-  <link rel="modulepreload" href="dist/c-IO54KLRN.js">
-  <link rel="modulepreload" href="dist/c-NIBASCHH.js">
-  <link rel="modulepreload" href="dist/c-UKRBJKD2.js">
-  <link rel="modulepreload" href="dist/c-VXQCXGFO.js">
-  <link rel="modulepreload" href="dist/c-AMSN6LZQ.js">
-  <link rel="modulepreload" href="dist/c-33DONZ5K.js">
-  <link rel="modulepreload" href="dist/c-T67QUIN4.js">
-  <link rel="modulepreload" href="dist/c-6B375V6L.js">
-  <link rel="modulepreload" href="dist/c-VWK2CQXA.js">
-  <link rel="modulepreload" href="dist/c-44YTE6EJ.js">
-  <link rel="modulepreload" href="dist/c-SHFMFF67.js">
-  <link rel="modulepreload" href="dist/c-E2SYICHR.js">
-  <link rel="modulepreload" href="dist/c-GY2QFPKU.js">
-  <link rel="modulepreload" href="dist/c-NGIVWFOT.js">
-  <link rel="modulepreload" href="dist/c-SWXRF6H6.js">
-  <link rel="modulepreload" href="dist/c-NY2QK6PV.js">
+  <link rel="modulepreload" href="dist/c-MBZX7O5E.js">
+  <link rel="modulepreload" href="dist/c-YTVZTLMT.js">
+  <link rel="modulepreload" href="dist/c-K6RLAJIM.js">
+  <link rel="modulepreload" href="dist/c-I4WFVNLG.js">
+  <link rel="modulepreload" href="dist/c-NSPR672G.js">
+  <link rel="modulepreload" href="dist/c-4G2AFEQS.js">
+  <link rel="modulepreload" href="dist/c-Q6NMPDZP.js">
+  <link rel="modulepreload" href="dist/c-LVPYPW3A.js">
+  <link rel="modulepreload" href="dist/c-ICJCTP7C.js">
+  <link rel="modulepreload" href="dist/c-LAZOD4UE.js">
+  <link rel="modulepreload" href="dist/c-LLB2TZEC.js">
+  <link rel="modulepreload" href="dist/c-BJMKSOYR.js">
+  <link rel="modulepreload" href="dist/c-TQ4TKTLX.js">
+  <link rel="modulepreload" href="dist/c-N47IQAXV.js">
+  <link rel="modulepreload" href="dist/c-RUKQYOTQ.js">
+  <link rel="modulepreload" href="dist/c-GFKJYY4B.js">
+  <link rel="modulepreload" href="dist/c-B6YD2YGN.js">
+  <link rel="modulepreload" href="dist/c-KCLJTG4X.js">
+  <link rel="modulepreload" href="dist/c-QBYP4TOS.js">
+  <link rel="modulepreload" href="dist/c-TLCNGM5U.js">
+  <link rel="modulepreload" href="dist/c-QITGK42J.js">
+  <link rel="modulepreload" href="dist/c-24FU2GLN.js">
+  <link rel="modulepreload" href="dist/c-4MQ5XIJB.js">
+  <link rel="modulepreload" href="dist/c-TEE2XFK5.js">
+  <link rel="modulepreload" href="dist/c-5Z673CY3.js">
+  <link rel="modulepreload" href="dist/c-BTSXXXSH.js">
+  <link rel="modulepreload" href="dist/c-3SNJADEP.js">
+  <link rel="modulepreload" href="dist/c-XDIADKQU.js">
+  <link rel="modulepreload" href="dist/c-67JCHKWQ.js">
   <link rel="modulepreload" href="dist/c-66XZN5VB.js">
-  <link rel="modulepreload" href="dist/c-B5QFP4FF.js">
+  <link rel="modulepreload" href="dist/c-RZUG4MPE.js">
   <link rel="modulepreload" href="dist/c-I75AAJN7.js">
-  <link rel="modulepreload" href="dist/c-DJMLBI4M.js">
-  <link rel="modulepreload" href="dist/c-RQXO5WZ6.js">
-  <link rel="modulepreload" href="dist/c-CDAJBU25.js">
-  <link rel="modulepreload" href="dist/c-MSLGDSJR.js">
-  <link rel="modulepreload" href="dist/c-HSUD3A3C.js">
-  <link rel="modulepreload" href="dist/c-CPWI2FNE.js">
-  <link rel="modulepreload" href="dist/c-DPZBO4GV.js">
-  <link rel="modulepreload" href="dist/c-HWVDZTJW.js">
-  <link rel="modulepreload" href="dist/c-MQ2OEJFP.js">
-  <link rel="modulepreload" href="dist/c-6ITICOUX.js">
-  <link rel="modulepreload" href="dist/c-RARQSQBD.js">
-  <link rel="modulepreload" href="dist/a-4BZKZ4D2.js">
-  <link rel="modulepreload" href="dist/c-7BCGVALS.js">
-  <link rel="modulepreload" href="dist/c-WWMNFOEA.js">
-  <link rel="modulepreload" href="dist/c-VY7VIPQG.js">
-  <link rel="modulepreload" href="dist/c-EK2MMQ3C.js">
-  <link rel="modulepreload" href="dist/c-OUVVO5FV.js">
-  <link rel="modulepreload" href="dist/c-OEKGHV4L.js">
-  <link rel="modulepreload" href="dist/c-K63ONBDY.js">
-  <link rel="modulepreload" href="dist/c-L6PW247E.js">
-  <link rel="modulepreload" href="dist/c-6JTAWARB.js">
-  <link rel="modulepreload" href="dist/c-XUQVVH25.js">
-  <link rel="modulepreload" href="dist/c-EOZUG7L7.js">
-  <link rel="modulepreload" href="dist/c-LKKTKGRL.js">
-  <link rel="modulepreload" href="dist/c-OWOSNCDK.js">
-  <link rel="modulepreload" href="dist/c-ZJAFRIPI.js">
-  <link rel="modulepreload" href="dist/c-R5DXHYTV.js">
-  <link rel="modulepreload" href="dist/c-LK6GXHWD.js">
-  <link rel="modulepreload" href="dist/c-7ACZFC3I.js">
-  <link rel="modulepreload" href="dist/c-GXCFQAKS.js">
+  <link rel="modulepreload" href="dist/c-GBGCHH3Z.js">
+  <link rel="modulepreload" href="dist/c-IM5C5NE3.js">
+  <link rel="modulepreload" href="dist/c-IV72JEPS.js">
+  <link rel="modulepreload" href="dist/c-WDOD42UJ.js">
+  <link rel="modulepreload" href="dist/c-7MKKEXBQ.js">
+  <link rel="modulepreload" href="dist/c-LAQ3OJTS.js">
+  <link rel="modulepreload" href="dist/c-VIJSGNZK.js">
+  <link rel="modulepreload" href="dist/c-JFEF5P5U.js">
+  <link rel="modulepreload" href="dist/c-623ZQPZO.js">
+  <link rel="modulepreload" href="dist/c-M3Z2ECGT.js">
+  <link rel="modulepreload" href="dist/c-6OASQ6VQ.js">
+  <link rel="modulepreload" href="dist/a-6J7N62GT.js">
+  <link rel="modulepreload" href="dist/c-OVJZFYMG.js">
+  <link rel="modulepreload" href="dist/c-VJJVP2WY.js">
+  <link rel="modulepreload" href="dist/c-F3ONOOES.js">
+  <link rel="modulepreload" href="dist/c-WVOQ4GQD.js">
+  <link rel="modulepreload" href="dist/c-HBKAUPCX.js">
+  <link rel="modulepreload" href="dist/c-JUBB2QDZ.js">
+  <link rel="modulepreload" href="dist/c-55HEVR7M.js">
+  <link rel="modulepreload" href="dist/c-GM65D2JE.js">
+  <link rel="modulepreload" href="dist/c-6ERITLWD.js">
+  <link rel="modulepreload" href="dist/c-XQTCS6CC.js">
+  <link rel="modulepreload" href="dist/c-P5GNZ7FV.js">
+  <link rel="modulepreload" href="dist/c-TSMAYCXD.js">
+  <link rel="modulepreload" href="dist/c-T3AUHQOT.js">
+  <link rel="modulepreload" href="dist/c-DFXGDIUH.js">
+  <link rel="modulepreload" href="dist/c-EB4B6GI7.js">
+  <link rel="modulepreload" href="dist/c-7WPNQGMO.js">
+  <link rel="modulepreload" href="dist/c-GBQNNSVD.js">
+  <link rel="modulepreload" href="dist/c-AWJOSMHV.js">
+  <link rel="modulepreload" href="dist/c-5KDN44MS.js">
   <link rel="modulepreload" href="dist/c-6PVVLET6.js">
-  <link rel="modulepreload" href="dist/c-BZVPSK7C.js">
-  <link rel="modulepreload" href="dist/c-WVVFA3YP.js">
-  <link rel="modulepreload" href="dist/c-PDVT2M4Y.js">
-  <link rel="modulepreload" href="dist/c-GZN3HHFD.js">
-  <link rel="modulepreload" href="dist/c-NK5OOVFW.js">
-  <link rel="modulepreload" href="dist/c-UY7PKGSX.js">
-  <link rel="modulepreload" href="dist/c-A3GGYHYZ.js">
-  <link rel="modulepreload" href="dist/c-JMVJ3HVU.js">
-  <link rel="modulepreload" href="dist/c-C46R3EGD.js">
-  <link rel="modulepreload" href="dist/c-F2DIITXZ.js">
+  <link rel="modulepreload" href="dist/c-DGJ42N5C.js">
+  <link rel="modulepreload" href="dist/c-IU7QLK3B.js">
+  <link rel="modulepreload" href="dist/c-AEBPP4GJ.js">
+  <link rel="modulepreload" href="dist/c-3FBA6X5H.js">
+  <link rel="modulepreload" href="dist/c-D3BBICYM.js">
+  <link rel="modulepreload" href="dist/c-NADBRLZZ.js">
+  <link rel="modulepreload" href="dist/c-JD7DXLJJ.js">
+  <link rel="modulepreload" href="dist/c-FBXJ4J4O.js">
   <link rel="modulepreload" href="dist/c-R3SEEGHU.js">
-  <link rel="modulepreload" href="dist/c-LISODL6D.js">
-  <link rel="modulepreload" href="dist/c-EOZP6RTU.js">
-  <link rel="modulepreload" href="dist/c-OUWJPLFY.js">
-  <link rel="modulepreload" href="dist/c-SLYUS4NG.js">
-  <link rel="modulepreload" href="dist/c-DMRK45NH.js">
+  <link rel="modulepreload" href="dist/c-OUAOHUCT.js">
+  <link rel="modulepreload" href="dist/c-OSIQNCC2.js">
+  <link rel="modulepreload" href="dist/c-LZ6CKKKD.js">
+  <link rel="modulepreload" href="dist/c-PPJSVXVI.js">
+  <link rel="modulepreload" href="dist/c-UWTUFYRV.js">
+  <link rel="modulepreload" href="dist/c-5SOZA4A3.js">
+  <link rel="modulepreload" href="dist/c-V6ULGCDA.js">
   <link rel="modulepreload" href="dist/c-IRRLC4F2.js">
   <link rel="modulepreload" href="dist/c-FQJ5CCBF.js">
   <link rel="modulepreload" href="dist/c-DWBEWQEH.js">
-  <link rel="modulepreload" href="dist/c-55MO4WGQ.js">
-  <link rel="modulepreload" href="dist/c-SS6SU2PF.js">
-  <link rel="modulepreload" href="dist/c-KFMKKP6P.js">
+  <link rel="modulepreload" href="dist/c-MFR5ZX2Q.js">
+  <link rel="modulepreload" href="dist/c-Q24VXIYO.js">
+  <link rel="modulepreload" href="dist/c-N3IEKPG4.js">
   <link rel="modulepreload" href="dist/c-3VF3KZPI.js">
+  <link rel="modulepreload" href="dist/c-MPTN5RTT.js">
   <link rel="modulepreload" href="dist/c-5PVYAXQB.js">
   <link rel="modulepreload" href="dist/c-JRZKGWYQ.js">
   <link rel="modulepreload" href="dist/c-S22CTDX7.js">
-  <link rel="modulepreload" href="dist/c-MPTN5RTT.js">
-  <link rel="modulepreload" href="dist/c-3G2NLLBU.js">
+  <link rel="modulepreload" href="dist/c-V65VGHHO.js">
   <!--/PRELOAD-->
 </head>
 <body>
@@ -213,7 +219,7 @@
         lastErr = t && t !== window && (t.src || t.href) ? 'não carregou ' + String(t.src || t.href).split('/').slice(-2).join('/') : (e.message || '') + ' ' + String(e.filename || '').split('/').pop();
       }, true);
       window.addEventListener('unhandledrejection', function (e) { lastErr = String(e.reason && (e.reason.message || e.reason)); });
-      var APP = /*APP*/'./dist/a-4BZKZ4D2.js'/*APP*/;
+      var APP = /*APP*/'./dist/a-6J7N62GT.js'/*APP*/;
       window.__appEntry = APP;
       // quem já usava o app antes de existir o número de versão vê as "Novidades" da 2.0.0 (quem acabou de instalar, não)
       try { window.__firstRun = !localStorage.getItem('pauta.ui') && !localStorage.getItem('lembra.ver'); } catch (e) { window.__firstRun = true; }

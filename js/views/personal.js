@@ -1,5 +1,7 @@
 /* Modo Pessoal: um "outro app" dentro do Calendário. Visual, telas e menu próprios,
    mesmo login. Só o dono vê o que está aqui (nem o parceiro, nem o trabalho). */
+import { ajudante, ajudanteHtml } from '../ajudante.js';
+import { cena, boneco3d, momento } from '../cena.js';
 import { postStory } from '../stories.js';
 import { itemLook } from '../itemicons.js';
 import { okFx } from '../okfx.js';
@@ -67,6 +69,7 @@ function renderHome() {
   ${header(`${icon('lock', 11)} Só você vê`, `${esc(greeting())}${firstName() ? ', ' + esc(firstName()) : ''}`, `${workBtn}${store.mode === 'cloud' && store.solo ? `<button class="iconbtn iconbtn--friends" data-action="friends" aria-label="Amigos e stories">${icon('users', 19)}<i class="iconbtn__dot"></i></button>` : ''}<button class="iconbtn iconbtn--ai" data-action="assistant" aria-label="Assistente">${icon('sparkle', 19)}</button><button class="iconbtn iconbtn--me" data-action="profile" aria-label="Seu perfil e conquistas">${store.me ? meRing(store.me, 32) : icon('user', 20)}</button>`)}
   <div class="page ppage">
     ${personal.error === 'rules' ? `<div class="palert">${tile('alert', ['#FF8A7A', '#E5341F'], 36)}<div><strong>O Pessoal ainda não está liberado na nuvem</strong><small>O que você anota não fica salvo. No Firebase: Firestore → Regras → cole as regras novas → Publicar. Depois feche e abra o app.</small></div></div>` : personal.error === 'net' ? `<div class="palert">${tile('alert', ['#FFB547', '#FF7A1A'], 36)}<div><strong>Sem conexão com a nuvem</strong><small>Confira a internet. O que você anotar aparece quando a conexão voltar.</small></div></div>` : ''}
+    <div class="pcena">${cena()}<span class="pcena__fig">${boneco3d(late.length ? 'pensa' : !pending && today.length ? 'festa' : momento() === 'noite' ? 'amor' : 'acena', 132)}</span><p class="pcena__bal">${late.length ? (late.length === 1 ? 'Ficou 1 coisa pra trás. Bora juntos?' : `Ficaram ${late.length} pra trás. Bora juntos?`) : !pending && today.length ? 'Tudo feito hoje. Que orgulho!' : pending ? `${pending === 1 ? 'Uma coisa' : `${pending} coisas`} pra hoje. Eu te lembro na hora.` : 'Dia livre! O que eu guardo pra você?'}${(() => { const q = quoteOfDay(t); return q.t.length < 90 ? `<small>“${esc(q.t)}”</small>` : ''; })()}</p></div>
     <form class="pquick" data-form="pquick" onsubmit="return false">
       ${icon('sparkle', 18)}
       <input name="q" placeholder="Anote: “cortar cabelo amanhã 15h”" autocomplete="off" enterkeyhint="done" maxlength="160">
@@ -79,7 +82,7 @@ function renderHome() {
         ${bdays.some((b) => diffDays(t, b.next) <= 7) ? `<span>${icon('cake', 14)}<b>${bdays.filter((b) => diffDays(t, b.next) <= 7).length}</b> aniversário${bdays.filter((b) => diffDays(t, b.next) <= 7).length > 1 ? 's' : ''} na semana</span>` : ''}
       </div>` : ''}
     ${late.length ? section('<span style="color:var(--danger)">Ficou pra trás</span>', `<div class="plist">${late.map((it) => row(it, it.date, false, { showDate: true })).join('')}</div>`) : ''}
-    ${section('Hoje', today.length ? `<div class="plist">${today.map((o) => row(o.item, o.date, o.done)).join('')}</div>` : emptyCard('sun', 'Dia livre', 'Nada anotado pra hoje. Aproveita ou anota algo acima.', ['#FFD25A', '#FF9F1A']))}
+    ${section('Hoje', today.length ? `<div class="plist">${today.map((o) => row(o.item, o.date, o.done)).join('')}</div>` : '<p class="agfim">Nada por aqui. Escreva no campo acima ou toque num atalho.</p>')}
     <div class="pchips pchips--ini">${quickCats.slice(0, 4).map((k) => `<button class="pchip" data-action="p-new" data-cat="${k}">${catTile(k, 24)}${esc(CATS[k].label)}</button>`).join('')}</div>
     ${tomorrow.length ? section('Amanhã', `<div class="plist">${tomorrow.map((o) => row(o.item, o.date, o.done)).join('')}</div>`) : ''}
     ${week.length ? section('Próximos dias', `<div class="plist">${week.map((o) => row(o.item, o.date, o.done, { showDate: true })).join('')}</div>`) : ''}
@@ -96,10 +99,6 @@ function renderHome() {
 
     ${lists.length ? section('Listas', `<div class="pgrid">${lists.slice(0, 4).map(listCard).join('')}</div>`, `<button class="btn-text btn-text--sm" data-action="ptab" data-tab="p-listas">Ver todas</button>`) : ''}
     ${forYou()}
-    <div class="phero">
-      <p class="phero__date">${esc(fmtDayLong(t))}</p>
-      ${(() => { const q = quoteOfDay(t); return `<p class="phero__phrase">“${esc(q.t)}”</p><p class="phero__author">— ${esc(q.a)}</p>`; })()}
-    </div>
     <div style="height:28px"></div>
   </div>`;
 }
@@ -356,7 +355,9 @@ export const personalActions = {
     if (!it) return;
     const was = doneOn(it, b.dataset.date);
     const at = b.getBoundingClientRect();
+    const M = window.__motion, foto = M && !was && b.closest('#view') ? M.antes(b.closest('.prow')) : null;
     const saved = toggleDone(it, b.dataset.date);
+    if (foto && saved && saved.updatedAt) M.concluir(foto);
     if (!was && saved && saved.updatedAt) {
       const t = todayKey();
       const left = b.dataset.date === t ? occurrences(t, t).filter((o) => !o.done).length : null;
@@ -488,6 +489,7 @@ export function openPersonalEditor(id = null, preset = {}) {
     className: 'sheet--tall psheet',
     html: `${sheetHead(old ? 'Editar' : 'Anotar', { left: '<button class="btn-text" data-close>Cancelar</button>', right: '<button class="btn btn--primary btn--sm" data-save>Salvar</button>' })}
     <form class="form" onsubmit="return false">
+      ${old ? '' : ajudanteHtml()}
       <div class="fgroup"><label class="flabel">Tipo</label><div class="pcats">
         ${Object.entries(CATS).map(([k, c]) => `<button type="button" class="pcat${d.cat === k ? ' is-on' : ''}" style="--pc:${c.color}" data-cat="${k}">${tile(c.ic, c.g, 30)}<span>${esc(c.label)}</span></button>`).join('')}
       </div></div>
@@ -509,6 +511,7 @@ export function openPersonalEditor(id = null, preset = {}) {
       const el = a.el, form = el.querySelector('form');
       // o ícone muda enquanto a pessoa escreve (cabelo → secador, conta de luz → lâmpada…)
       let catPicked = !!old;
+      if (!old) ajudante(el, form);
       const prev = () => { const p = el.querySelector('[data-tprev]'); if (p) p.innerHTML = itemTile({ ...d, title: form.title.value }, 38); };
       form.title.addEventListener('input', () => {
         if (!catPicked && d.cat !== 'aniversario') { const g = guessCat(form.title.value); if (g !== d.cat && g !== 'lembrete') { d.cat = g; el.querySelectorAll('[data-cat]').forEach((x) => x.classList.toggle('is-on', x.dataset.cat === g)); } }

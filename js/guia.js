@@ -17,6 +17,8 @@ export function guiaOn() {
 /* frases das mensagens de erro, ditas pelo Lembra (o texto técnico continua no campo, para leitores de tela) */
 export function falaDoErro(msg) {
   const m = (msg || '').toLowerCase();
+  if (m.includes('já tem conta')) return { t: 'Esse e-mail já é da casa! Toca em “Entrar” ali embaixo 😄', m: 'acena' };
+  if (m.includes('senha incorret') || m.includes('senha errad')) return { t: 'Essa dupla não bateu… Toca no olhinho e confere a senha comigo? 🔑', m: 'triste' };
   if (m.includes('nome completo') || m.includes('nome e sobrenome')) return { t: 'Quase lá! Me diz seu nome completo, nome e sobrenome, pra eu te chamar direitinho 😊', m: 'acena' };
   if (m.includes('só letras')) return { t: 'Ops, esse nome tem número ou símbolo. Pode tirar pra mim? 🙂', m: 'desconfiado' };
   if (m.includes('apelido')) return { t: 'Esse apelido precisa ter pelo menos uma letra 😅', m: 'desconfiado' };

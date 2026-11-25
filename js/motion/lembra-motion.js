@@ -1,9 +1,9 @@
 /* Lembra Motion 2 · transições suaves, na paleta do app, com o Lembra participando.
    Regra de desempenho: só transform e opacity, em camadas prontas (a placa de vídeo anima sozinha,
    mesmo enquanto o app monta a tela). Nada de clonar a tela nem redesenhar o mascote a cada quadro. */
-import { mascoteParado } from './mascote.js';
+import { prepara, tem3d, toca as toca3d } from './palco3d.js';
 import { som } from './sons.js';
-import { passo } from '../sound.js';
+import { passo, chime, pulso, abreMundo, pouso, carimbo as somCarimbo } from '../sound.js';
 
 const SAI = 'cubic-bezier(.4,0,.2,1)', ENTRA = 'cubic-bezier(.16,1,.3,1)', ARCO = 'cubic-bezier(.33,0,.2,1)';
 /** menos movimento: preferência do aparelho ou Ajustes → Animações */
@@ -15,8 +15,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 
 /* ---------- o Lembra em imagens prontas (desenhadas uma vez só) ---------- */
 const CHEGADA = { hoje: 'acena', mes: 'aponta', empresas: 'joia', ajustes: 'pensa', 'p-hoje': 'amor', 'p-agenda': 'aponta', 'p-listas': 'joia', 'p-notas': 'pensa', 'p-ajustes': 'pensa' };
-const fotos = {}, guardadas = [];
-const figura = (pose) => fotos[pose] || (fotos[pose] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(mascoteParado(pose, 160).replace(/<svg(?![^>]*xmlns=)/, '<svg xmlns="http://www.w3.org/2000/svg"')));
+const figura = (pose) => `assets/mascot/3d/${pose}.webp`;
 
 /* ---------- palco fixo, criado uma vez ---------- */
 let P = null;
@@ -34,18 +33,11 @@ function palco() {
 /** deixa as imagens decodificadas antes do primeiro toque */
 export function aquecer() {
   const p = palco();
-  const lista = [...new Set(Object.values(CHEGADA))];
-  // o desenho vetorial vira bitmap uma vez só, no tempo livre: na hora da troca não há nada para desenhar
-  ['voa', ...lista].forEach((pose, i) => setTimeout(() => {
-    const im = new Image(); im.width = im.height = 384; im.src = figura(pose);
-    (im.decode ? im.decode() : Promise.reject()).then(() => {
-      const cv = document.createElement('canvas'); cv.width = cv.height = 384;
-      cv.getContext('2d').drawImage(im, 0, 0, 384, 384);
-      cv.toBlob((b) => { if (!b) return; const u = URL.createObjectURL(b), pronta = new Image(); pronta.src = u; (pronta.decode ? pronta.decode() : Promise.resolve()).then(() => { fotos[pose] = u; guardadas.push(pronta); if (pose === 'voa') p.a.src = u; }).catch(() => {}); });
-    }).catch(() => {});
-  }, 140 * i));
+  ['voa', 'joia', ...new Set(Object.values(CHEGADA))].forEach((pose, i) => setTimeout(() => { const im = new Image(); im.src = figura(pose); im.decode && im.decode().catch(() => {}); guardadas.push(im); }, 120 * i));
   p.a.decode && p.a.decode().catch(() => {});
+  setTimeout(prepara, 2600);
 }
+const guardadas = [];
 
 /* ---------- 1 · troca de página ---------- */
 const ORDEM_SOM = ['hoje', 'mes', 'empresas', 'ajustes'].concat(['p-hoje', 'p-agenda', 'p-listas', 'p-ajustes']);
@@ -131,23 +123,30 @@ export { pula };
 function camada() { const c = document.createElement('div'); c.className = 'lm-camada'; c.setAttribute('aria-hidden', 'true'); document.body.appendChild(c); return c; }
 const diaAlvo = (d) => (d && [...document.querySelectorAll('#view [data-date], #view [data-k]')].find((e) => (e.dataset.date || e.dataset.k) === d && e.getClientRects().length)) || document.querySelector('.tabbar [data-tab="mes"], .tabbar [data-tab="p-agenda"]');
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
-/** o Lembra surge, mostra o bilhete e o manda para o dia */
-export async function agendado({ titulo = 'Compromisso', quando = '', dia } = {}) {
-  const c = camada();
+/** o Lembra aparece atrás do cartão, solta a piada, carimba e o cartão voa até o dia */
+export async function agendado({ titulo = 'Compromisso', quando = '', dia, frase = '' } = {}) {
+  const c = camada(); c.classList.add('lm-camada--fundo');
   try {
-    const x0 = innerWidth / 2, y0 = innerHeight * 0.56, alvo = diaAlvo(dia), a = alvo ? meio(alvo) : [x0, 110];
-    const visivel = a[1] > 0 && a[1] < innerHeight, [x1, y1] = visivel ? a : [x0, 110];
-    c.innerHTML = `<div class="lm-cartao"><img alt="" src="${figura('joia')}"><div><b>Deixa comigo!</b><span>${esc(titulo)}</span>${quando ? `<small>${esc(quando)}</small>` : ''}</div></div>`;
-    const b = c.firstElementChild, em = (dx, dy, s) => `translate3d(${dx}px, ${dy}px, 0) translate(-50%, -50%) scale(${s})`;
+    const x0 = innerWidth / 2, y0 = innerHeight * 0.52, alvo = diaAlvo(dia), a = alvo ? meio(alvo) : [x0, 110], visivel = a[1] > 0 && a[1] < innerHeight, [x1, y1] = visivel ? a : [x0, 110];
+    const dito = frase || 'Deixa comigo!';
+    c.innerHTML = `<div class="lm-marca"><img alt="" src="${figura('joia')}"><b>${esc(dito)}</b><div><span>${esc(titulo)}${quando ? `<small>${esc(quando)}</small>` : ''}</span><i class="lm-selo2">${SINO}</i></div></div>`;
+    const b = c.firstElementChild, img = b.querySelector('img'), selo = b.querySelector('.lm-selo2');
+    const em = (dx, dy, s, rx = 0, rz = 0) => `translate3d(${dx}px, ${dy}px, 0) translate(-50%, -50%) rotateX(${rx}deg) rotate(${rz}deg) scale(${s})`;
+    img.decode && await Promise.race([img.decode().catch(() => {}), espera(160)]);
     som('estouro');
-    await anima(b, [{ transform: em(x0, y0 + 40, 0.94), opacity: 0 }, { transform: em(x0, y0, 1), opacity: 1 }], { duration: 420 });
-    await espera(900);
-    som('dimdom');
-    await anima(b, [{ transform: em(x0, y0, 1), opacity: 1 }, { transform: em(x0 + (x1 - x0) * 0.35, y0 + (y1 - y0) * 0.35, 0.7), opacity: 1, offset: 0.4 }, { transform: em(x1, y1, 0.08), opacity: 0 }], { duration: 520, easing: 'cubic-bezier(.5,0,.2,1)' });
-    if (alvo && visivel) pula(alvo);
+    anima(img, [{ transform: 'translateY(120px) scale(.7, .6)' }, { transform: 'translateY(-16px) scale(.98, 1.06)', offset: 0.5 }, { transform: 'translateY(4px) scale(1.03, .96)', offset: 0.75 }, { transform: 'none' }], { duration: 640, delay: 180 });
+    anima(selo, [{ transform: 'scale(2.6) rotate(24deg)', opacity: 0 }, { transform: 'scale(2.6) rotate(24deg)', opacity: 1, offset: 0.1 }, { transform: 'scale(.86) rotate(-8deg)', opacity: 1, offset: 0.55 }, { transform: 'scale(1) rotate(-8deg)', opacity: 1 }], { duration: 380, delay: 620, easing: 'cubic-bezier(.6,0,.4,1)' });
+    setTimeout(() => { somCarimbo(); try { navigator.vibrate && navigator.vibrate(18); } catch { /* ok */ } b.animate([{ translate: '0 0' }, { translate: '0 5px' }, { translate: '0 -2px' }, { translate: '0 0' }], { duration: 180 }); }, 830);
+    await anima(b, [{ transform: em(x0, y0 + 150, 0.86, 58), opacity: 0 }, { transform: em(x0, y0 - 6, 1.02, -6), opacity: 1, offset: 0.62 }, { transform: em(x0, y0, 1), opacity: 1 }], { duration: 520 });
+    await espera(Math.min(2400, 900 + dito.length * 24));
+    som('dimdom'); c.classList.add('is-fim');
+    anima(img, [{ transform: 'none', opacity: 1 }, { transform: 'translateY(70px) scale(.6)', opacity: 0 }], { duration: 200, easing: SAI });
+    await anima(b, [{ transform: em(x0, y0, 1), opacity: 1 }, { transform: em(x0, y0 + 14, 0.94, 0, 2), opacity: 1, offset: 0.18 }, { transform: em(x0 + (x1 - x0) * 0.45, y0 + (y1 - y0) * 0.45 - 30, 0.56, 34, -8), opacity: 1, offset: 0.6 }, { transform: em(x1, y1, 0.07, 60, -20), opacity: 0 }], { duration: 560, easing: 'cubic-bezier(.5,0,.25,1)' });
+    if (alvo && visivel) { pula(alvo); anelDeFeito(alvo.getBoundingClientRect(), '#FF6B1A'); }
     try { navigator.vibrate && navigator.vibrate(10); } catch { /* ok */ }
   } finally { c.remove(); }
 }
+const SINO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.6 2H4.4Z"/><path d="M10 21h4M12 3v2"/></svg>';
 /** cartão guardado sai de cena (o aviso com "Desfazer" é do app) */
 export async function saiDeCena({ clone, rect: r }, tipo) {
   const c = camada();
@@ -156,9 +155,9 @@ export async function saiDeCena({ clone, rect: r }, tipo) {
   await anima(clone, [{ transform: 'none', opacity: 1 }, { transform: tipo === 'adiado' ? 'translate3d(70px, 0, 0)' : 'translate3d(0, 18px, 0) scale(.92)', opacity: 0 }], { duration: 320, easing: SAI });
   c.remove();
 }
-export async function anelDeFeito(r) {
+export async function anelDeFeito(r, cor = '') {
   const c = camada(), [x, y] = meio(r), n = document.createElement('div');
-  n.className = 'lm-anel'; Object.assign(n.style, { left: x - 44 + 'px', top: y - 44 + 'px' }); c.appendChild(n);
+  n.className = 'lm-anel'; if (cor) n.style.borderColor = cor; Object.assign(n.style, { left: x - 44 + 'px', top: y - 44 + 'px' }); c.appendChild(n);
   await anima(n, [{ transform: 'scale(.3)', opacity: 0.9 }, { transform: 'scale(1)', opacity: 0 }], { duration: 620 });
   c.remove();
 }
@@ -170,8 +169,41 @@ const OBJ = {
   work: '<svg viewBox="0 0 64 64"><rect x="6" y="20" width="52" height="36" rx="9" fill="#8A3B12"/><path d="M23 20v-4a6 6 0 0 1 6-6h6a6 6 0 0 1 6 6v4" fill="none" stroke="#8A3B12" stroke-width="6"/><path d="M6 34h52" stroke="#5E2407" stroke-width="5"/><rect x="26" y="29" width="12" height="11" rx="4" fill="#FFC23D"/></svg>',
   personal: '<svg viewBox="0 0 64 64"><path d="M32 57C10 42 5 31 5 22 5 13 12 7 19 7c6 0 10 3 13 8 3-5 7-8 13-8 7 0 14 6 14 15 0 9-5 20-27 35Z" fill="#FF4F6D"/><path d="M15 20c0-4 3-6 6-6" stroke="#fff" stroke-opacity=".75" stroke-width="5" stroke-linecap="round" fill="none"/></svg>',
 };
-export async function mundo(space, from, trocaTela, cor = () => {}, barra = []) {
+/** a passagem entre Trabalho e Pessoal: em 3D quando o aparelho permite; senão, a versão leve */
+export function mundo(...a) { return tem3d() ? mundo3d(...a) : (prepara(), mundo2d(...a)); }
+async function mundo3d(space, from, trocaTela, cor = () => {}, barra = []) {
   vez++; para();
+  const v = document.createElement('div'), pess = space === 'personal';
+  v.className = `spaceveil lm-m3 lm-m3--${space}`; v.setAttribute('role', 'status');
+  v.innerHTML = `<p><b>${pess ? 'Pessoal' : 'Trabalho'}</b><small>${pess ? 'Só você vê' : 'Bora resolver'}</small></p>`;
+  document.body.appendChild(v);
+  document.documentElement.classList.add('lm-viajando');
+  const [x, y] = from ? meio(from) : [innerWidth / 2, 60], comp = document.querySelector('.snhbud__fig'), r = comp && comp.getBoundingClientRect();
+  const casa = r && r.width ? [lim(r.left + r.width / 2, 48, innerWidth - 48), lim(r.top + r.height / 2, 120, innerHeight - 110)] : [innerWidth - 52, innerHeight - 130];
+  // a primeira do dia é completa; as seguintes, mais rápidas (quem troca muito não espera)
+  let n = 0; try { const k = 'lembra.m3', d = new Date().toDateString(), o = JSON.parse(localStorage.getItem(k) || '{}'); n = o.d === d ? o.n : 0; localStorage.setItem(k, JSON.stringify({ d, n: n + 1 })); } catch { /* ok */ }
+  let trocou = false;
+  const troca = () => { if (!trocou) { trocou = true; trocaTela(); } }, vib = (q) => { try { navigator.vibrate && navigator.vibrate(q); } catch { /* ok */ } }, t = v.querySelector('b'), sub = v.querySelector('small');
+  v.onclick = () => toca3d.pula && toca3d.pula();
+  try {
+    await toca3d({ mundo: space, x, y, fx: casa[0], fy: casa[1] }, n < 1 ? 1 : n < 4 ? 1.25 : 1.5, (m) => {
+      if (m === 'bate') { vib(14); pulso(); }
+      else if (m === 'cobriu') { cor(pess ? '#FFD9B8' : '#3A1608'); troca(); }
+      else if (m === 'abre') { vib([12, 40, 20]); abreMundo(space); }
+      else if (m === 'pousa') { vib(16); pouso(); anima(t, [{ transform: 'translateY(26px) scale(.8)', opacity: 0 }, { transform: 'translateY(-4px) scale(1.04)', opacity: 1, offset: 0.6 }, { transform: 'none', opacity: 1 }], { duration: 420 }); anima(sub, [{ transform: 'translateY(16px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 360, delay: 110 }); }
+      else if (m === 'sai') {
+        cor(...barra);
+        [t, sub].forEach((e) => anima(e, [{ opacity: 1 }, { opacity: 0, transform: 'translateY(-14px)' }], { duration: 180 }));
+        const nova = document.getElementById('view'), ab = document.querySelector('.tabbar');
+        if (nova) passageiro(nova, [{ transform: 'scale(.94)', opacity: 0.6 }, { transform: 'none', opacity: 1 }], { duration: 560 });
+        if (ab) passageiro(ab, [{ transform: 'translate3d(0, 110px, 0)' }, { transform: 'none' }], { duration: 520, delay: 160 });
+      }
+    });
+  } finally { troca(); cor(...barra); v.remove(); document.documentElement.classList.remove('lm-viajando'); }
+}
+const lim = (x, a, b) => Math.max(a, Math.min(b, x));
+async function mundo2d(space, from, trocaTela, cor = () => {}, barra = []) {
+  vez++; para(); chime(space);
   const c = document.createElement('div');
   c.className = `spaceveil lm-mundo lm-mundo--${space}`;
   c.innerHTML = `<div class="lm-cortina"><i class="lm-onda"></i></div><div class="lm-tinta"></div><div class="lm-cena"><div class="lm-cena__sombra"></div><div class="lm-cena__x"><img class="lm-cena__a" alt="" src="${figura('voa')}"><img class="lm-cena__b" alt="" src="${figura(space === 'personal' ? 'amor' : 'joia')}"></div><span class="lm-cena__de">${OBJ[space === 'work' ? 'personal' : 'work']}</span><span class="lm-cena__para">${OBJ[space]}</span><b>${space === 'personal' ? 'Pessoal' : 'Trabalho'}</b><small>${space === 'personal' ? 'Só você vê' : 'Bora resolver'}</small></div>`;
@@ -230,4 +262,46 @@ export function chuva(n = 30, de = null, brasa = false) {
     fins.push(anima(p, [{ transform: 'translate3d(0,0,0) scale(.3)', opacity: 1, easing: 'cubic-bezier(.1,.8,.3,1)' }, { transform: `translate3d(${dx}px, ${dy}px, 0) rotate(${g / 2}deg) scale(1)`, opacity: 1, offset: 0.32, easing: 'cubic-bezier(.4,0,.8,.6)' }, { transform: `translate3d(${dx * 1.12}px, ${dy + cai}px, 0) rotate(${g}deg) scale(${brasa ? 0.2 : 0.9})`, opacity: 0 }], { duration: 1500 + Math.random() * 900, easing: 'linear' }));
   }
   Promise.all(fins).then(() => c.remove());
+}
+
+/* ---------- 6 · concluir: carimbo, o cartão vai para os feitos e a lista se ajeita deslizando (FLIP) ---------- */
+const CHAVES = '#view .ecard[data-id], #view .prow[data-id], #view .foco, #view .dobra, #view .tl-group__h, #view .pempty';
+const chave = (e) => e.classList[0] + ':' + (e.dataset.id || e.dataset.k || e.textContent.slice(0, 24)) + (e.dataset.date || '');
+const barraDe = () => document.querySelector('#view .foco__bar b, #view .dayprog__bar i');
+/** foto das posições antes de a tela mudar */
+export function antes(cartao) {
+  const m = new Map();
+  document.querySelectorAll(CHAVES).forEach((e) => { const r = e.getBoundingClientRect(); if (r.bottom > -300 && r.top < innerHeight + 300) m.set(chave(e), r.top); });
+  const b = barraDe(), c = cartao && cartao.getBoundingClientRect();
+  return { m, pct: b ? parseFloat(b.style.width) || 0 : null, cartao: c && c.width ? { clone: cartao.cloneNode(true), rect: c, chave: chave(cartao) } : null };
+}
+export function depois(s) {
+  document.querySelectorAll(CHAVES).forEach((e) => {
+    const r = e.getBoundingClientRect(); if (r.bottom < -300 || r.top > innerHeight + 300) return;
+    const k = chave(e), t = s.m.get(k);
+    if (t != null && Math.abs(t - r.top) > 2) passageiro(e, [{ transform: `translate3d(0, ${t - r.top}px, 0)` }, { transform: 'none' }], { duration: 480, delay: 120 });
+    else if (t == null) passageiro(e, [{ transform: 'translate3d(0, 14px, 0) scale(.97)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 420, delay: 200 });
+  });
+  const b = barraDe(), pct = b ? parseFloat(b.style.width) || 0 : 0;
+  if (b && s.pct != null && pct > 0 && Math.abs(pct - s.pct) > 0.5) { passageiro(b, [{ transform: `scaleX(${s.pct / pct})` }, { transform: 'scaleX(1)' }], { duration: 760, delay: 420 }); const l = b.parentElement; passageiro(l, [{ transform: 'scaleY(1)' }, { transform: 'scaleY(1.7)', offset: 0.4 }, { transform: 'scaleY(1)' }], { duration: 620, delay: 520 }); }
+}
+export async function concluir(s) {
+  depois(s);
+  if (!s.cartao) return;
+  const c = camada(), { clone, rect: r } = s.cartao;
+  try {
+    clone.classList.add('lm-feito'); clone.querySelectorAll('canvas').forEach((x) => x.remove());
+    Object.assign(clone.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+    const k = document.createElement('i'); k.className = 'lm-carimbo'; k.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path pathLength="1" stroke-dasharray="1" d="M4.5 12.8l4.9 4.9L19.8 6.6"/></svg>';
+    const esc2 = Math.min(1, (r.height - 8) / 108); k.style.scale = esc2;
+    clone.appendChild(k); c.appendChild(clone);
+    anima(k.querySelector('path'), [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 260, delay: 150 });
+    anima(k, [{ transform: 'scale(2.4) rotate(20deg)', opacity: 0 }, { transform: 'scale(1.7) rotate(10deg)', opacity: 1, offset: 0.2 }, { transform: 'scale(.84) rotate(-10deg)', opacity: 1, offset: 0.62 }, { transform: 'scale(1.06) rotate(-10deg)', opacity: 1, offset: 0.82 }, { transform: 'scale(1) rotate(-10deg)', opacity: 1 }], { duration: 400, easing: 'cubic-bezier(.5,0,.5,1)' });
+    setTimeout(() => { somCarimbo(true); try { navigator.vibrate && navigator.vibrate([16, 30, 10]); } catch { /* ok */ } }, 220);
+    await anima(clone, [{ transform: 'none' }, { transform: 'scale(1)', offset: 0.5 }, { transform: 'scale(.97, .95) rotate(-.6deg)', offset: 0.62 }, { transform: 'scale(1.012, 1.02) rotate(.4deg)', offset: 0.8 }, { transform: 'none' }], { duration: 440, easing: 'ease-out' });
+    const alvo = [...document.querySelectorAll('#view .dobra__ok, #view .foco__bar')].find((e) => { const q = e.getBoundingClientRect(); return q.width && q.top > 0 && q.bottom < innerHeight; }), [x1, y1] = alvo ? meio(alvo) : [innerWidth / 2, innerHeight - 60];
+    const dx = x1 - (r.left + r.width / 2), dy = y1 - (r.top + r.height / 2);
+    await anima(clone, [{ transform: 'none', opacity: 1 }, { transform: `translate3d(${dx * 0.3}px, ${dy * 0.3 - 26}px, 0) scale(.62) rotate(-4deg)`, opacity: 1, offset: 0.45 }, { transform: `translate3d(${dx}px, ${dy}px, 0) scale(.06)`, opacity: 0 }], { duration: 480, easing: 'cubic-bezier(.5,0,.25,1)' });
+    if (alvo) pula(alvo);
+  } finally { c.remove(); }
 }

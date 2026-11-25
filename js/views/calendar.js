@@ -1,4 +1,5 @@
 /* Telas "Hoje" (agenda do dia) e "Calendário" (mês) */
+import { cena, momento } from '../cena.js';
 import { streak } from '../reward.js';
 import { store } from '../store.js';
 import { ui } from '../ui.js';
@@ -131,14 +132,16 @@ export function renderToday() {
   const prog = evs.length ? `<button class="foco__prog" data-action="toggle-types" aria-expanded="${!!ui.showTypes}">
       <span>${done} de ${evs.length} ${date === today ? 'hoje' : ''}</span><i class="foco__bar"><b style="width:${pct}%"></b></i>${dias >= 1 ? `<span>🔥 ${dias} ${dias === 1 ? 'dia' : 'dias'}</span>` : ''}
     </button>${ui.showTypes ? typesHtml : ''}` : '';
-  const foco = `<section class="foco" aria-label="Em foco">
-      <div class="foco__snh"><i class="foco__blob"></i>${sininho(F.mood, { size: 72 })}</div>
-      <p class="foco__lbl">${esc(F.lbl)}</p>
-      <h2 class="foco__tit"${F.id ? ` data-action="open-event" data-id="${F.id}"` : ''}>${esc(F.tit)}</h2>
-      ${F.sub ? `<p class="foco__sub">${esc(F.sub)}</p>` : ''}
+  const tempo = momento();
+  const foco = `<section class="foco foco--cena foco--${tempo}" aria-label="Em foco">
+      <div class="foco__palco">${cena(tempo)}<div class="foco__snh">${sininho(F.mood, { size: 112 })}</div>
+        <p class="foco__lbl">${esc(F.lbl)}</p>
+        <h2 class="foco__tit"${F.id ? ` data-action="open-event" data-id="${F.id}"` : ''}>${esc(F.tit)}</h2>
+        ${F.sub ? `<p class="foco__sub">${esc(F.sub)}</p>` : ''}</div>
+      <div class="foco__base">
       ${atalhos}
       <div class="foco__acts">${F.acts}</div>
-      ${prog}
+      ${prog}</div>
     </section>`;
 
   // Dicas e alertas

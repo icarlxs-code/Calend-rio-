@@ -7,6 +7,7 @@
    - criar e concluir na mesma hora algo marcado para depois quase não rende XP;
    - limite por dia de XP por criar compromisso e por bilhete, e teto de XP por dia.
    Fica salvo na conta (users/{uid}.game): aparece igual em qualquer celular. */
+import { aprende } from './habito.js';
 import { sininho } from './sininho.js';
 import { rankHidden } from './teen.js';
 import { store, saveProfileQuiet } from './store.js';
@@ -305,6 +306,7 @@ export function onEvent(prev, item) {
     settle();
     import('./mascote.js').then((M) => M.react('created')).catch(() => {});
   }
+  if (item.status === 'feito' && prev?.status !== 'feito' && mineEv(item) && item.time) aprende(item.type, (Date.now() - dueOf(item.date, item.time)) / 60e3 - (Number(item.duration) || 0));
   if (item.status === 'feito' && prev?.status !== 'feito' && mineEv(item)) completed({ key: `e:${item.id}`, due: dueOf(item.date, item.time), createdAt: item.createdAt || 0, titulo: item.title || '', hasTime: /^\d{2}:\d{2}$/.test(item.time || '') });
 }
 /* Pessoal: concluiu um lembrete (ou um dia de um lembrete que repete) */

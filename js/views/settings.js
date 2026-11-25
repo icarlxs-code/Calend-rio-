@@ -1,4 +1,5 @@
 /* Ajustes: perfil, lembretes, sincronização, backup */
+import { humorOn } from '../humor.js';
 import { iaStatus } from '../ia-consent.js';
 import { coachTest } from '../coach.js';
 import { fmtLeft } from '../billing.js';
@@ -157,7 +158,7 @@ function themeCard() {
   return `<section class="block">
     <h2 class="block__title">${icon('sun', 16)} Aparência</h2>
     <div class="seg3">${THEMES.map((t) => `<button class="seg3__btn${cur === t.id ? ' is-on' : ''}" data-action="theme" data-v="${t.id}">${icon(t.id === 'dark' ? 'moon' : t.id === 'light' ? 'sun' : 'phone', 18)}<b>${t.label}</b><small>${t.hint}</small></button>`).join('')}</div>
-    <div class="list" style="margin-top:10px"><label class="list__row"><span><b>Sons</b><small>Toque suave ao trocar de modo e ao concluir</small></span><input type="checkbox" class="switch" data-sound ${soundOn() ? 'checked' : ''}></label><label class="list__row"><span><b>Animações</b><small>Trocas de tela, botões e agendamento</small></span><input type="checkbox" class="switch" data-motion ${motionOn() ? 'checked' : ''}></label></div>
+    <div class="list" style="margin-top:10px"><label class="list__row"><span><b>Sons</b><small>Toque suave ao trocar de modo e ao concluir</small></span><input type="checkbox" class="switch" data-sound ${soundOn() ? 'checked' : ''}></label><label class="list__row"><span><b>Animações</b><small>Trocas de tela, botões e agendamento</small></span><input type="checkbox" class="switch" data-motion ${motionOn() ? 'checked' : ''}></label><label class="list__row"><span><b>Piadas do Lembra</b><small>Trocadilhos e brincadeiras nas falas e nos avisos</small></span><input type="checkbox" class="switch" data-humor ${humorOn() ? 'checked' : ''}></label></div>
     ${!isMarketing() && WORK.theme ? `<p class="fhelp">As cores do modo Trabalho combinam com a sua área${WORK.profession ? ` (${esc(professionFor(WORK.profession, store.profile?.pronoun))})` : ''}.</p>` : ''}
   </section>`;
 }

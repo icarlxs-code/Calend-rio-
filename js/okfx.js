@@ -4,6 +4,7 @@
    O símbolo do Lembra aparece junto: a marca fica ligada à sensação de "resolvido" (memória de marca). */
 import { brand } from './brand.js';
 import { esc } from './utils.js';
+import { piada } from './humor.js';
 
 let timer = null;
 export function okFx({ title = 'Marcado!', sub = '', sound = true, item = null } = {}) {
@@ -19,8 +20,8 @@ export function okFx({ title = 'Marcado!', sub = '', sound = true, item = null }
     m.textContent = `${title} ${sub}`;
     document.body.appendChild(m);
     const fim = () => m.remove();
-    setTimeout(() => { M.agendado({ titulo: item.title || title, quando: sub, dia: item.date }).catch(() => {}).then(fim); }, 240);
-    timer = setTimeout(fim, 5000);
+    setTimeout(() => { M.agendado({ titulo: item.title || title, quando: sub, dia: item.date, frase: piada(item.title || '', 'c') }).catch(() => {}).then(fim); }, 240);
+    timer = setTimeout(fim, 6500);
     return;
   }
   const el = document.createElement('div');
