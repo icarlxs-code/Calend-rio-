@@ -2,12 +2,14 @@
    com o Lembra vestido do assunto e a frase em cima, pronta para o story. A arte da tela é a mesma que sai na imagem. */
 import { icon } from './icons.js';
 import { esc, comUtm } from './utils.js';
-import { toast } from './components.js';
+import { toast, openSheet } from './components.js';
 import { CONFIG } from '../config.js';
 import { store } from './store.js';
 import { podeSocial, call } from './social.js';
 import { roupa } from './roupas.js';
-import { sininho, alive, veste, rigDe } from './sininho.js';
+import { sininho, alive, veste, rigDe, retrato } from './sininho.js';
+import { receitaArte, FUNDO, CAT_DO_TEMA, hash, rng } from './receita.js';
+import { pega, guarda, conta, apaga, limpaTudo } from './arte-cache.js';
 
 const SITE = () => (CONFIG.siteUrl || 'https://meulembra.com.br/').replace(/^https?:\/\//, '').replace(/\/$/, '');
 const LINK = () => comUtm(`${(CONFIG.siteUrl || 'https://meulembra.com.br/').replace(/\/?$/, '/')}conheca/`, 'story');
@@ -22,7 +24,7 @@ export function partes(body = '') {
   return { texto: t, ref };
 }
 /* é frase (pra abrir no app)? compromissos e ranking continuam indo pra tela deles; aniversário ganha a página */
-export const ehFrase = (n) => !!n && !!n.remedio || !!n && !!n.body && (n.tag === 'p-amigo' || n.tag === 'coach' || n.tag === 'frase') && n.kind !== 'rank' && (n.kind !== 'agenda' || /anivers|🎂|🎁/i.test(`${n.title} ${n.body}`));
+export const ehFrase = (n) => !!n && (!!n.remedio || !!(n.id && n.cat && n.body)) || !!n && !!n.body && (n.tag === 'p-amigo' || n.tag === 'coach' || n.tag === 'frase') && n.kind !== 'rank' && (n.kind !== 'agenda' || /anivers|🎂|🎁/i.test(`${n.title} ${n.body}`));
 
 /* ---------- qual é o assunto? (primeiro o texto, depois o tipo do aviso) ---------- */
 const TEMAS = [
@@ -43,83 +45,86 @@ export function temaDe(n) {
   return a ? a[0] : POR_TIPO[n.kind] || 'forca';
 }
 
-/* ---------- a arte (a mesma na tela e na imagem) ---------- */
-export const ESTILOS = [
-  { id: 'creme', nome: 'Creme', bg: '#FFF1DF', bolha: '#FFC48A', bolha2: '#FFDDB8', cor: '#210C04', sub: '#5A2A12', marca: '#C2410C', f: ['#F4561A', '#FFB938', '#FFFFFF'] },
-  { id: 'pessego', nome: 'Pêssego', bg: '#FFDDBA', bolha: '#FFF3E2', bolha2: '#FFC78F', cor: '#210C04', sub: '#5A2A12', marca: '#A8340A', f: ['#F4561A', '#FFFFFF', '#FFA62B'] },
-  { id: 'laranja', nome: 'Laranja', bg: '#FF7A2A', bolha: '#FFF1DF', bolha2: '#FF9A52', cor: '#210C04', sub: '#3A1506', marca: '#210C04', f: ['#FFFFFF', '#FFE08A', '#B93B0C'] },
-  { id: 'noite', nome: 'Noite', bg: '#1B1436', bolha: '#4B2F63', bolha2: '#2E2150', cor: '#FFF6EA', sub: '#FFD9B0', marca: '#FFA45C', f: ['#FFE9C4', '#FF8A3D', '#C9A6FF'], estrelas: true },
-];
+/* ---------- a arte (a mesma na tela e na imagem), sempre pela receita ---------- */
 export const FORMATOS = { story: [1080, 1920], post: [1080, 1350] };
-const semente = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
 function linhas(c, texto, larg, eq = false) {
   const out = [];
   for (const par of texto.split(/\n+/)) { let l = ''; for (const w of par.split(/\s+/)) { const t = l ? `${l} ${w}` : w; if (c.measureText(t).width > larg && l) { out.push(l); l = w; } else l = t; } if (l) out.push(l); }
   // linhas equilibradas: a menor largura que mantém o mesmo número de linhas
   if (!eq && out.length > 1) { let a = larg * 0.5, b = larg; for (let i = 0; i < 9; i++) { const m = (a + b) / 2; linhas(c, texto, m, true).length <= out.length ? (b = m) : (a = m); } return linhas(c, texto, b, true); }
-  // nada de palavra sozinha na última linha
-  if (!eq && out.length > 1) { const u = out[out.length - 1], p = out[out.length - 2].split(' '); if (!u.includes(' ') && p.length > 2) { const w = p.pop(); if (c.measureText(`${w} ${u}`).width <= larg) { out[out.length - 2] = p.join(' '); out[out.length - 1] = `${w} ${u}`; } } }
   return out;
 }
 const estrela = (c, x, y, r) => { c.beginPath(); for (let i = 0; i < 4; i++) { const a = (i * Math.PI) / 2 - Math.PI / 2, b = a + Math.PI / 4; c[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * r, y + Math.sin(a) * r); c.quadraticCurveTo(x, y, x + Math.cos(b + Math.PI / 4) * r, y + Math.sin(b + Math.PI / 4) * r); } c.fill(); };
 const BLOBS = ['M-430 60C-470-120-380-300-210-270-110-252-60-320 40-390 170-480 350-440 380-290 400-190 330-150 350-40 366 50 450 90 430 210 406 340 270 360 130 350-40 338-190 380-320 320-420 274-418 150-430 60Z', 'M-400-90C-380-270-230-360-90-300 0-262 60-330 170-350 320-376 430-270 410-120 398-30 450 30 440 140 424 300 280 372 120 344 10 324-60 372-190 366-350 358-452 250-440 100-434 30-408-20-400-90Z'];
-/* parte parada: fundo, bolha, marca e a frase. Devolve onde fica o boneco. */
-export function fundo(c, W, H, n, E, { margemTopo = 0.085, rodape = true } = {}) {
-  const u = W / 1080, M = 80 * u, s = semente(n.texto);
-  c.fillStyle = E.bg; c.fillRect(0, 0, W, H);
-  if (E.estrelas) for (let i = 0; i < 60; i++) { const r = semente(n.texto + i); c.globalAlpha = 0.25 + (r % 60) / 100; c.fillStyle = '#FFE9C4'; c.beginPath(); c.arc((r % 1080) * u, ((r >> 8) % 1000) / 1000 * H * 0.55 + H * 0.45, (1.6 + (r % 3)) * u, 0, 7); c.fill(); } c.globalAlpha = 1;
-  let y = H * margemTopo + 26 * u;
-  c.textBaseline = 'alphabetic'; c.textAlign = 'left'; c.fillStyle = E.marca; c.font = `900 ${30 * u}px Nunito, system-ui, sans-serif`; if ('letterSpacing' in c) c.letterSpacing = `${8 * u}px`; c.fillText('LEMBRA', M, y); if ('letterSpacing' in c) c.letterSpacing = '0px';
-  c.textAlign = 'right'; c.fillStyle = E.sub; c.font = `700 ${28 * u}px Nunito, system-ui, sans-serif`; c.fillText('@meulembra', W - M, y);
-  const rod = rodape ? 120 * u : 24 * u, alto = H - y - rod, areaT = alto * (H / W > 1.5 ? 0.36 : 0.38);
-  let fs = 92, L; const larg = W - M * 2;
-  for (; fs >= 34; fs -= 2) { c.font = `900 ${fs * u}px Nunito, system-ui, sans-serif`; L = linhas(c, n.texto, larg); if (L.length * fs * 1.14 * u + (n.ref ? 64 * u : 0) <= areaT) break; }
-  y += 44 * u; c.textAlign = 'left'; c.fillStyle = E.cor; c.font = `900 ${fs * u}px Nunito, system-ui, sans-serif`;
-  for (const l of L) { y += fs * 1.14 * u; c.fillText(l, M, y); }
-  if (n.ref) { y += 62 * u; c.fillStyle = E.marca; c.font = `800 ${38 * u}px Nunito, system-ui, sans-serif`; c.fillText(n.ref, M, y); }
-  // palco: o que sobra entre a frase e o rodapé, sempre centralizado
-  const t0 = y + 34 * u, t1 = H - rod, tam = Math.min(W, (t1 - t0) * 0.92), cx = W / 2, cy = t0 + (t1 - t0) / 2 + 6 * u;
-  const bl = new Path2D(BLOBS[s % BLOBS.length]), k = Math.min(W / 960, (t1 - t0) / 800);
-  c.save(); c.translate(cx, cy); c.save(); c.scale(k * 1.1, k * 1.04); c.rotate(0.1); c.fillStyle = E.bolha2; c.fill(bl); c.restore(); c.scale(k, k * 0.94); c.fillStyle = E.bolha; c.fill(bl); c.restore();
-  const w = Math.min(W * 0.98, tam * 1.07), h = (w * 1080) / 1160;
-  // sombra no chão
-  c.fillStyle = 'rgba(60,20,0,.16)'; c.beginPath(); c.ellipse(cx, cy + h * 0.455, w * 0.3, h * 0.036, 0, 0, 7); c.fill();
-  if (rodape) { c.textAlign = 'center'; c.fillStyle = E.cor; c.font = `800 ${34 * u}px Nunito, system-ui, sans-serif`; c.fillText(SITE(), W / 2, H - 62 * u); }
-  return { cx, cy, w, h, t0, t1, u, s };
-}
-/* enfeites de cada assunto, em volta do boneco */
-const SIMB = { aniversario: 'confete', conquista: 'confete', amor: 'coracao', saude: 'coracao', agua: 'gota', sono: 'lua', viagem: 'aviao', fe: 'luz', amigos: 'coracao', calma: 'folha', dinheiro: 'moeda', comida: 'coracao' };
-function enfeites(c, A, E, tema, t) {
-  const { cx, cy, w, h, u, s, t0 } = A, tipo = SIMB[tema] || 'brilho';
-  if (tipo === 'luz') { c.save(); c.translate(cx, cy - h * 0.1); c.globalAlpha = 0.4; c.fillStyle = E.f[1]; for (let i = 0; i < 14; i++) { c.rotate(6.2832 / 14); c.beginPath(); c.moveTo(0, -w * 0.34); c.lineTo(-13 * u, -w * 0.47 - Math.sin(t * 2 + i) * 8 * u); c.lineTo(13 * u, -w * 0.47 - Math.sin(t * 2 + i) * 8 * u); c.fill(); } c.restore(); c.globalAlpha = 1; }
-  // pares espelhados: o desenho fica equilibrado dos dois lados
-  for (let i = 0; i < 12; i++) {
-    const lado = i % 2 ? 1 : -1, k = Math.floor(i / 2), r = semente(`${s}${k}`), ang = -1.15 + k * 0.42 + ((r % 20) - 10) / 120, R = w * (0.46 + ((r >> 5) % 9) / 130);
-    let x = cx + lado * Math.cos(ang) * R, y = cy + Math.sin(ang) * R * 0.92; y = Math.max(t0 + 24 * u, y); x = Math.max(40 * u, Math.min(cx * 2 - 40 * u, x)); const bo = Math.sin(t * 1.6 + k * 1.3 + (lado > 0 ? 0.5 : 0)) * 9 * u, z = (18 + (r >> 3) % 16) * u;
-    c.fillStyle = E.f[(i + k) % 3]; c.save(); c.translate(x, y + bo);
-    if (tipo === 'confete') { c.rotate(t * 0.9 * lado + k); if (k % 3 === 0) { c.beginPath(); c.arc(0, 0, z * 0.45, 0, 7); c.fill(); } else c.fillRect(-z * 0.6, -z * 0.3, z * 1.2, z * 0.6); }
-    else if (tipo === 'coracao' && k % 2 === 0) { c.scale(z / 30, z / 30); c.beginPath(); c.moveTo(0, 34); c.bezierCurveTo(-44, 6, -42, -30, -18, -32); c.bezierCurveTo(-6, -33, 0, -24, 0, -18); c.bezierCurveTo(0, -24, 6, -33, 18, -32); c.bezierCurveTo(42, -30, 44, 6, 0, 34); c.fill(); }
-    else if (tipo === 'gota' && k % 2 === 0) { c.fillStyle = '#4FA8E8'; c.beginPath(); c.moveTo(0, -z * 1.3); c.bezierCurveTo(z * 1.1, 0, z * 0.9, z, 0, z); c.bezierCurveTo(-z * 0.9, z, -z * 1.1, 0, 0, -z * 1.3); c.fill(); }
-    else if (tipo === 'folha' && k % 2 === 0) { c.fillStyle = '#39A96B'; c.rotate(lado * 0.7); c.beginPath(); c.moveTo(0, -z * 1.2); c.quadraticCurveTo(z * 1.2, 0, 0, z * 1.2); c.quadraticCurveTo(-z * 1.2, 0, 0, -z * 1.2); c.fill(); }
-    else if (tipo === 'moeda' && k % 2 === 0) { c.fillStyle = '#FFB938'; c.beginPath(); c.arc(0, 0, z, 0, 7); c.fill(); c.strokeStyle = '#E5902A'; c.lineWidth = z * 0.22; c.stroke(); }
-    else if (tipo === 'lua' && k === 0 && lado > 0) { c.fillStyle = '#FFE08A'; c.beginPath(); c.arc(0, 0, z * 1.8, 0.6, 5.2); c.quadraticCurveTo(-z * 0.1, 0, Math.cos(0.6) * z * 1.8, Math.sin(0.6) * z * 1.8); c.fill(); }
-    else if (tipo === 'aviao' && k === 0 && lado < 0) { c.scale(z / 15, z / 15); c.rotate(-0.25); c.fillStyle = '#FFFFFF'; c.fill(new Path2D('M-44 4L-30 0-40-16H-32L-12-3 10-6-6-34H6L30-8 44-10C56-10 56 2 44 4L14 10-8 34H-18L-4 12-30 14Z')); }
-    else estrela(c, 0, 0, z * (0.9 + 0.2 * Math.sin(t * 2.4 + i)));
-    c.restore();
+const imgs = new Map();
+export function imagemDe(nome) { if (!imgs.has(nome)) imgs.set(nome, new Promise((ok) => { const i = new Image(); i.onload = () => (i.decode ? i.decode().then(() => ok(i), () => ok(i)) : ok(i)); i.onerror = () => { imgs.delete(nome); ok(null); }; i.src = `assets/stories/${nome}.webp`; })); return imgs.get(nome); }
+/* parte parada: cenário, bolha de destaque, marca e frase. Devolve onde fica o boneco e onde brilha. */
+export function pintaFundo(c, W, H, n, R, bg, { margem = 150, rodape = true } = {}) {
+  const u = W / 1080, V = H / u, M = 80, P = R.paleta; c.save(); c.scale(u, u); // daqui em diante: 1080 de largura
+  c.fillStyle = P.base; c.fillRect(0, 0, 1080, V);
+  const bk = Math.max(1, V / 1920), by = (V - 1920 * bk) * (V < 1600 ? 0.45 : 0.75);
+  if (bg) c.drawImage(bg, (1080 - 1080 * bk) / 2, by, 1080 * bk, 1920 * bk);
+  // boneco: no mesmo lugar do projeto (y 1350, largura 620), proporcional em telas mais baixas
+  const larg = R.largura * (0.4 + 0.6 * Math.min(1, V / 1920)), cy = V - (1920 - R.y) * Math.max(0.6, Math.min(1.05, V / 1920)) - (rodape ? 0 : -40), k = larg / 772, cab = cy - (460 + ({ aniversario: 125, comida: 90, conquista: 55, estudo: 45, viagem: 25, calma: 40 }[R.roupa] || 0)) * k, b = R.blob; // chapéu alto: a frase respeita o topo dele
+  c.save(); c.translate(540, cy - 10); c.rotate((b.girar * Math.PI) / 180); c.scale(b.escala * (b.espelhar ? -1 : 1) * k * 0.98, b.escala * k * 0.92); c.fillStyle = R.escuro ? 'rgba(255,138,61,.12)' : 'rgba(255,122,46,.2)'; c.fill(new Path2D(BLOBS[b.forma])); c.restore();
+  c.fillStyle = R.escuro ? 'rgba(0,0,0,.5)' : 'rgba(90,30,0,.16)'; c.beginPath(); c.ellipse(540, cy + 452 * k, 300 * k, 34 * k, 0, 0, 7); c.fill();
+  // marca
+  let y = margem; c.textBaseline = 'alphabetic'; c.textAlign = 'left'; // no centro: os cantos dos cenários têm lua, sol e balões
+  const F1 = '900 30px Nunito, system-ui, sans-serif', F2 = '700 28px Nunito, system-ui, sans-serif'; c.font = F1; if ('letterSpacing' in c) c.letterSpacing = '8px'; const l1 = c.measureText('LEMBRA').width; c.font = F2; if ('letterSpacing' in c) c.letterSpacing = '0px'; const l2 = c.measureText('@meulembra').width, x0 = 540 - (l1 + 22 + l2) / 2;
+  c.fillStyle = P.eyebrow; c.font = F1; if ('letterSpacing' in c) c.letterSpacing = '8px'; c.fillText('LEMBRA', x0, y); if ('letterSpacing' in c) c.letterSpacing = '0px'; c.fillStyle = P.texto; c.font = F2; c.fillText('@meulembra', x0 + l1 + 22, y);
+  // frase: no máximo 5 linhas; diminui até caber no espaço livre do cenário
+  const z = R.zona || {}, lt = Math.min(1080 - M * 2, z.larg || 920), esq = R.layout === 'esquerda' && !z.larg, topo = y + 46, fim = z.fim ? by + z.fim * bk : 9e9, alto = Math.max((cab - 30 - topo) * (V < 1700 ? 0.94 : 0.55), Math.min(cab - 30, fim) - topo), eb = n.eyebrow ? 62 : 0, rf = n.ref ? 66 : 0;
+  let fs = R.fonte, L;
+  for (; fs >= 30; fs -= 2) { c.font = `900 ${fs}px Nunito, system-ui, sans-serif`; L = linhas(c, n.texto, lt); if (L.length <= R.linhasMax && L.length * fs * 1.14 + eb + rf <= alto) break; }
+  const ht = L.length * fs * 1.14 + eb + rf, folga = Math.max(0, alto - ht), x = esq ? M : 540; y = topo + (R.layout === 'centro' ? folga / 2 : Math.min(folga, 34)); const y0 = y;
+  if (bg && y0 + ht > fim + 6) { // a frase passa sobre o cenário (tela baixa): véu suave para ler bem
+    const a = P.base, v = c.createLinearGradient(0, topo - 60, 0, y0 + ht + 90), h2 = (o) => a + Math.round(o * 255).toString(16).padStart(2, '0'); v.addColorStop(0, h2(0)); v.addColorStop(0.22, h2(R.fundo === '05-motivacao' ? 0 : 0.86)); v.addColorStop(0.8, h2(R.fundo === '05-motivacao' ? 0 : 0.86)); v.addColorStop(1, h2(0)); c.fillStyle = v; c.fillRect(0, topo - 60, 1080, y0 + ht + 150 - topo);
   }
+  c.textAlign = esq ? 'left' : 'center';
+  if (n.eyebrow) { c.font = '800 36px Nunito, system-ui, sans-serif'; c.fillStyle = P.eyebrow; let e = n.eyebrow; while (c.measureText(e).width > lt && e.length > 8) e = e.slice(0, -2).trim() + '…'; c.fillText(e, x, y + 38); y += eb; }
+  c.fillStyle = P.texto; c.font = `900 ${fs}px Nunito, system-ui, sans-serif`; for (const l of L) { y += fs * 1.14; c.fillText(l, x, y - fs * 0.24); }
+  if (n.ref) { c.font = '800 38px Nunito, system-ui, sans-serif'; c.fillStyle = P.eyebrow; c.fillText(n.ref, x, y + 50); y += rf; }
+  if (rodape) { c.textAlign = 'center'; c.fillStyle = P.texto; c.font = '800 34px Nunito, system-ui, sans-serif'; c.fillText(SITE(), 540, V - 62); }
+  // brilhos: pares espelhados, longe do texto e do boneco
+  const r = rng(R.brilhos.seed), S = [], livre = (px, py) => !(py > y0 - 40 && py < y + 30 && px > 540 - lt / 2 - 20 && px < 540 + lt / 2 + 20) && Math.hypot((px - 540) / (larg * 0.72), (py - cy) / (larg * 0.72)) > 1 && py > margem + 40;
+  for (let i = 0; S.length < R.brilhos.qtd && i < 90; i++) { const px = 46 + r() * 400, py = margem + 60 + r() * (V - margem - 260), t = 11 + r() * 17, d = r() * 60 - 30, f = r() * 6.28, q = Math.floor(r() * 3); if (!livre(px, py) || S.some((o) => Math.hypot(o.x - px, o.y - py) < 90)) continue; S.push({ x: px, y: py, r: t, f, q }); if (S.length < R.brilhos.qtd && livre(1080 - px, py + d)) S.push({ x: 1080 - px, y: py + d, r: t * 0.86, f: f + 1, q: (q + 1) % 3 }); }
+  c.restore();
+  return { u, V, cy, k, S, linhas: L.length, fs, caixa: [y0, y] };
 }
-function zzz(c, A, E, t) { c.fillStyle = E.estrelas ? '#FFE9C4' : '#6B4FA8'; c.textAlign = 'center'; for (let i = 0; i < 3; i++) { const k = (t / 3 + i / 3) % 1; c.globalAlpha = Math.sin(k * Math.PI); c.font = `900 ${(46 + i * 16) * A.u}px Nunito, system-ui, sans-serif`; c.fillText('z', A.cx + A.w * (0.33 + k * 0.08), A.cy - A.h * (0.1 + k * 0.28)); } c.globalAlpha = 1; }
-function boneco(c, A, cv) { if (!cv || !cv.width) return; const k = A.w / 1160; c.drawImage(cv, A.cx - (988 - 238) * k, A.cy - A.h * 0.5 - 190 * k, 1500 * k, 1310 * k); } // o centro do sino (988) fica no centro da arte
-/** imagem final, em tamanho de publicação */
-export async function imagem(n, E, tema, fmt, cvBoneco, t = 0.75) {
+function brilhos(c, A, R, t) { c.save(); c.scale(A.u, A.u); for (const s of A.S) { c.globalAlpha = 0.75 + 0.25 * Math.sin(t * 2 + s.f); c.fillStyle = R.paleta.brilho[s.q]; estrela(c, s.x, s.y, s.r * (0.9 + 0.14 * Math.sin(t * 2.4 + s.f))); } c.restore(); }
+function boneco(c, A, cv) { if (!cv || !cv.width) return; const k = A.k * A.u; c.drawImage(cv, 540 * A.u - (988 - 238) * k, A.cy * A.u - (558 + 230) * k, 1500 * k, 1310 * k); } // o centro do sino (988) fica no centro da arte
+function zzz(c, A, R, t) { c.save(); c.scale(A.u, A.u); c.fillStyle = R.escuro ? '#FFE9C4' : '#6B4FA8'; c.textAlign = 'center'; for (let i = 0; i < 3; i++) { const k = (t / 3 + i / 3) % 1; c.globalAlpha = Math.sin(k * Math.PI); c.font = `900 ${46 + i * 16}px Nunito, system-ui, sans-serif`; c.fillText('z', 540 + 772 * A.k * (0.46 + k * 0.1), A.cy - 772 * A.k * (0.2 + k * 0.4)); } c.restore(); }
+const T0 = 0.75;
+/** imagem final, em tamanho de publicação: a mesma receita dá sempre a mesma imagem */
+export async function imagem(n, R, fmt) {
   const [W, H] = FORMATOS[fmt], cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
-  if (document.fonts) await Promise.all([document.fonts.load('900 60px Nunito'), document.fonts.load('700 30px Nunito')]).catch(() => {});
-  const A = fundo(c, W, H, n, E, { margemTopo: fmt === 'story' ? 0.085 : 0.045 }); enfeites(c, A, E, tema, t); boneco(c, A, cvBoneco); if (tema === 'sono') zzz(c, A, E, t);
+  if (document.fonts) await Promise.all(['900 60px Nunito', '800 36px Nunito', '700 28px Nunito'].map((x) => document.fonts.load(x))).catch(() => {});
+  const [bg, bon] = await Promise.all([imagemDe(R.fundo), retrato(roupa(R.roupa) || roupa('forca'), Math.round(1500 * (R.largura / 772)), T0)]);
+  const A = pintaFundo(c, W, H, n, R, bg, { margem: fmt === 'story' ? 150 : 92 }); brilhos(c, A, R, T0); boneco(c, A, bon); if (R.roupa === 'sono') zzz(c, A, R, T0);
   return cv;
 }
+const emPng = (cv) => new Promise((k) => cv.toBlob(k, 'image/png'));
 
-function guarda(n) { try { const l = JSON.parse(localStorage.getItem(HIST) || '[]').filter((x) => x.body !== n.body); l.unshift({ title: n.title, body: n.body, kind: n.kind || '', tag: n.tag || '', at: Date.now() }); localStorage.setItem(HIST, JSON.stringify(l.slice(0, 30))); } catch { /* ok */ } }
-export const historico = () => { try { return JSON.parse(localStorage.getItem(HIST) || '[]'); } catch { return []; } };
+/* ---------- minhas frases (só neste aparelho) ---------- */
+const idLocal = (n) => 'l' + hash(`${n.title}|${n.body}|${new Date(n.at || Date.now()).toISOString().slice(0, 13)}`).toString(36);
+export const historico = () => { try { return JSON.parse(localStorage.getItem(HIST) || '[]').map((x) => (x.id ? x : { ...x, id: idLocal(x), tag: x.tag || 'p-amigo' })); } catch { return []; } };
+function guardaHist(n) { try { const l = historico().filter((x) => x.id !== n.id); l.unshift({ id: n.id, title: n.title, body: n.body, arte: n.arte || '', eyebrow: n.eyebrow || '', ref: n.ref || '', kind: n.kind || '', tag: n.tag || 'p-amigo', cat: n.cat || '', fid: n.fid || '', t: n.t || '', at: n.at || Date.now() }); localStorage.setItem(HIST, JSON.stringify(l.slice(0, 60))); } catch { /* ok */ } }
+export function minhasFrases() {
+  const L = historico(), urls = [];
+  const a = openSheet({ className: 'sheet--tall sheet--fx', onClose: () => urls.forEach((u) => URL.revokeObjectURL(u)), html: `<div class="fx"><header class="fx__head"><button class="fx__pill" data-close>Fechar</button><h2 class="fx__title">Minhas frases</h2><span class="fx__right"></span></header>
+    ${L.length ? `<p class="fhelp">Guardadas só neste aparelho (até 60).</p><div class="mfr">${L.map((x) => `<button class="mfr__i" data-f="${esc(x.id)}"><span class="mfr__a"><b>${esc((x.arte || partes(x.body).texto).slice(0, 90))}</b></span><small>${esc(new Date(x.at).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }))}</small></button>`).join('')}</div>` : '<p class="fhelp mfr__v">As frases que você abrir pelas notificações ficam aqui.</p>'}</div>` });
+  a.el.querySelectorAll('[data-f]').forEach((b) => { b.onclick = () => { const x = historico().find((y) => y.id === b.dataset.f); if (x) abreFrase(x); }; pega(b.dataset.f).then((x) => { if (!x || !x.story || a.closed) return; const u = URL.createObjectURL(x.story); urls.push(u); b.querySelector('.mfr__a').style.backgroundImage = `url("${u}")`; b.classList.add('tem'); }); });
+  return a;
+}
+/** abre pelo endereço #/frase/<id> */
+export async function abrePorId(id) {
+  if (document.querySelector(`.frp[data-id="${CSS.escape(id)}"]`)) return true;
+  try { const c = await caches.open('lembra-notif'), r = await c.match('/__notif'); if (r) { const n = await r.json(); if (n.id === id) { await c.delete('/__notif'); return abreFrase(n); } } } catch { /* ok */ }
+  if (document.querySelector(`.frp[data-id="${CSS.escape(id)}"]`)) return true;
+  const h = historico().find((x) => x.id === id); if (h) return abreFrase(h);
+  const g = await pega(id); if (g && g.n) return abreFrase(g.n);
+  toast('Essa frase não está guardada neste aparelho.'); return false;
+}
 
 const SV = {
   insta: '<rect x="3.500" y="3.500" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r=".6" fill="currentColor"/>',
@@ -127,33 +132,38 @@ const SV = {
   face: '<path d="M14 21v-7h2.800l.500-3.300H14V8.600c0-1 .500-1.800 1.900-1.800h1.500V4c-.400-.100-1.300-.200-2.200-.200-2.500 0-4.100 1.500-4.100 4.200v2.700H8.300V14h2.800v7" fill="currentColor" stroke="none"/>',
 };
 const sv = (k) => `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SV[k]}</svg>`;
+const DO_BANCO = /^(ia-)?(agua|manha|noite|motivacao|versiculo|aniversario|socializar|estudo|trabalho|contas)-[a-z0-9-]+$/;
+const semEmoji = (t) => (/^lembra$/i.test(String(t || '').trim()) ? '' : String(t || '')).replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, '').replace(/\s{2,}/g, ' ').trim();
 
 /* ---------- a página ---------- */
 export function abreFrase(n) {
   if (!ehFrase(n)) return false;
+  n = { ...n, at: n.at || Date.now() }; if (!n.id) n.id = idLocal(n);
   document.querySelectorAll('.frp').forEach((x) => x.remove());
-  if (n.remedio) n = { ...n, title: n.title, body: n.corpo || `Hora do ${n.remedio}.` }; else guarda(n); // remédio: mostra o nome só aqui dentro, sem histórico e sem compartilhar
-  const f = partes(n.body), tema = n.remedio ? 'saude' : temaDe(n), rp = roupa(tema) || roupa('forca');
-  let ei = tema === 'sono' ? 3 : semente(f.texto) % 3, fmt = 'story', vivo = true, A = null, base = null, arq = null, vez = 0;
-  const soc = podeSocial();
+  if (n.remedio) n = { ...n, arte: n.corpo || `Hora do ${n.remedio}.`, cat: 'remedio', ref: '', eyebrow: '' }; else guardaHist(n); // remédio: o nome só aparece aqui dentro, sem histórico, sem imagem guardada e sem compartilhar
+  const p = partes(n.arte || n.body), f = { texto: (p.texto || n.body).slice(0, 320), ref: n.ref || p.ref, eyebrow: semEmoji(n.eyebrow || n.title) };
+  const tema = temaDe({ ...n, body: f.texto }), cat = FUNDO[n.cat] ? n.cat : CAT_DO_TEMA[tema] || 'geral', h = new Date(n.at).getHours(), turno = n.t || (h >= 5 && h < 12 ? 'manha' : h < 18 && h >= 12 ? 'tarde' : 'noite');
+  let R = receitaArte(n.id, cat, turno, f.texto); if (!n.cat || cat === 'motivacao' || cat === 'geral' || cat === 'lembrete') { const r2 = roupa(tema) ? tema : R.roupa; R = { ...R, roupa: r2 === 'forca' && cat === 'lembrete' ? R.roupa : r2 }; }
+  let fmt = 'story', vivo = true, A = null, base = null, bg = null, arq = null;
+  const soc = podeSocial() && !n.remedio, agenda = ['aniversario', 'contas', 'estudo', 'trabalho', 'remedio'].includes(cat), rp = roupa(R.roupa) || roupa('forca');
   const w = document.createElement('div');
-  w.className = 'frp'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', f.texto);
+  w.className = `frp${R.escuro ? ' is-noite' : ''}`; w.dataset.id = n.id; w.style.setProperty('--bg', R.paleta.base); w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', f.texto);
   const bt = (k, ic, t) => `<button class="frp__b frp__b--${k}" data-vai="${k}"><i>${ic}</i><small>${t}</small></button>`;
+  const naoCurti = DO_BANCO.test(n.fid || '') ? `<button class="frp__op${agenda ? ' frp__op--so' : ''}" data-nao aria-label="Não curti esta frase"><span aria-hidden="true">👎</span>${agenda ? '' : ' Não curti'}</button>` : '';
   w.innerHTML = `<span class="frp__rig">${sininho(rp.mood, { size: 400 })}</span><canvas class="frp__cv" role="img" aria-label="${esc(f.texto)}${f.ref ? ` — ${esc(f.ref)}` : ''}"></canvas>
-    <button class="frp__x" data-x aria-label="Fechar">${icon('x', 22)}</button>
-    <footer class="frp__pe"><div class="frp__ops"><div class="frp__est" role="group" aria-label="Estilo">${ESTILOS.map((m, i) => `<button data-e="${i}" aria-label="${m.nome}" aria-pressed="${i === ei}" style="--ca:${m.bg};--cb:${m.bolha}"></button>`).join('')}</div><div class="frp__fmt" role="group" aria-label="Formato"><button data-f="story" aria-pressed="true">Story</button><button data-f="post" aria-pressed="false">Feed</button></div></div>
-      <div class="frp__bs">${soc ? bt('lembra', icon('bell', 26), 'Seu story') : ''}${bt('insta', sv('insta'), 'Instagram')}${bt('zap', sv('zap'), 'WhatsApp')}${bt('face', sv('face'), 'Facebook')}${bt('mais', icon('share', 24), 'Mais')}</div></footer>`;
+    ${n.remedio ? '' : `<button class="frp__x frp__x--l" data-minhas aria-label="Minhas frases">${icon('note', 21)}</button>`}<button class="frp__x" data-x aria-label="Fechar">${icon('x', 22)}</button>
+    ${n.remedio ? `<footer class="frp__pe"><button class="frp__ver" data-agenda>${icon('calendar', 20)} Ver na agenda</button></footer>` : `<footer class="frp__pe"><div class="frp__ops">${naoCurti}${agenda ? `<button class="frp__op" data-agenda>${icon('calendar', 18)} Agenda</button>` : ''}<span class="frp__esp"></span><div class="frp__fmt" role="group" aria-label="Formato"><button data-f="story" aria-pressed="true">Story</button><button data-f="post" aria-pressed="false">Feed</button></div></div>
+      <div class="frp__bs">${soc ? bt('lembra', icon('bell', 26), 'Seu story') : ''}${bt('insta', sv('insta'), 'Instagram')}${bt('zap', sv('zap'), 'WhatsApp')}${bt('face', sv('face'), 'Facebook')}${bt('mais', icon('share', 24), 'Mais')}</div></footer>`}`;
   document.body.appendChild(w); document.body.classList.add('has-stv');
-  if (n.remedio) w.querySelector('.frp__pe').remove();
-  const cv = w.querySelector('.frp__cv'), c = cv.getContext('2d'), rigEl = w.querySelector('[data-snh]'), nn = { texto: f.texto, ref: f.ref };
+  const cv = w.querySelector('.frp__cv'), c = cv.getContext('2d'), rigEl = w.querySelector('[data-snh]');
   rigEl.dataset.nitido = '1'; rigEl.style.aspectRatio = '1500 / 1310'; alive(); veste(rigEl, rp);
-  const fecha = () => { vivo = false; w.classList.add('is-out'); removeEventListener('keydown', esc27); setTimeout(() => { w.remove(); document.body.classList.remove('has-stv'); }, 240); };
+  const fecha = () => { vivo = false; w.classList.add('is-out'); removeEventListener('keydown', esc27); setTimeout(() => { w.remove(); if (!document.querySelector('.stv, .frp')) document.body.classList.remove('has-stv'); }, 240); };
   const esc27 = (e) => { if (e.key === 'Escape') fecha(); }; addEventListener('keydown', esc27);
   const monta = () => { // parte parada em um quadro à parte: a tela só redesenha o que se mexe
     const d = Math.min(2, devicePixelRatio || 1), r = cv.getBoundingClientRect(); if (!r.width) return;
     cv.width = Math.round(r.width * d); cv.height = Math.round(r.height * d); base = document.createElement('canvas'); base.width = cv.width; base.height = cv.height;
-    const topo = parseFloat(getComputedStyle(w).getPropertyValue('--topo')) || 0;
-    A = fundo(base.getContext('2d'), base.width, base.height, nn, ESTILOS[ei], { margemTopo: Math.max(0.1, (topo + 64) / r.height), rodape: false }); w.style.setProperty('--bg', ESTILOS[ei].bg); w.classList.toggle('is-noite', !!ESTILOS[ei].estrelas);
+    const sob = document.createElement('div'); sob.style.cssText = 'position:absolute;visibility:hidden;height:env(safe-area-inset-top,0px)'; w.appendChild(sob); const topo = sob.offsetHeight; sob.remove();
+    A = pintaFundo(base.getContext('2d'), base.width, base.height, f, R, bg, { margem: ((topo + 92) / r.width) * 1080, rodape: false });
   };
   const red = matchMedia('(prefers-reduced-motion: reduce)').matches, t0 = performance.now(); let ult = 0;
   const pinta = (now) => {
@@ -161,27 +171,36 @@ export function abreFrase(n) {
     requestAnimationFrame(pinta);
     if (document.hidden || !A || (red && now - ult < 500)) return; ult = now;
     const r = rigDe(rigEl); if (r && r.sleeping && !red) r.wake();
-    const t = red ? 0.75 : (now - t0) / 1000; c.drawImage(base, 0, 0); enfeites(c, A, ESTILOS[ei], tema, t); boneco(c, A, rigEl.querySelector('canvas')); if (tema === 'sono') zzz(c, A, ESTILOS[ei], t);
+    const t = red ? T0 : (now - t0) / 1000; c.drawImage(base, 0, 0); brilhos(c, A, R, t); boneco(c, A, rigEl.querySelector('canvas')); if (R.roupa === 'sono') zzz(c, A, R, t);
   };
-  // a imagem fica pronta antes do toque (o celular só deixa compartilhar na hora do toque)
-  const prepara = async () => { const v = ++vez; arq = null; await new Promise((k) => setTimeout(k, rigDe(rigEl) ? 350 : 1400)); if (v !== vez || !vivo) return; const im = await imagem(nn, ESTILOS[ei], tema, fmt, rigEl.querySelector('canvas')); const blob = await new Promise((k) => im.toBlob(k, 'image/png')); if (v === vez && blob) arq = { im, file: new File([blob], `lembra-${tema}.png`, { type: 'image/png' }) }; };
-  (document.fonts ? document.fonts.load('900 60px Nunito').catch(() => {}) : Promise.resolve()).then(() => { if (!vivo) return; monta(); requestAnimationFrame(pinta); prepara(); });
+  const arquivo = (b, k) => new File([b], `lembra-${cat}-${k}.png`, { type: 'image/png' });
+  // as imagens ficam prontas antes do toque (o celular só deixa compartilhar na hora do toque) e guardadas para reabrir iguais
+  const prepara = async () => {
+    if (n.remedio) return;
+    const g = await pega(n.id);
+    if (g && g.story && g.post && g.receita && g.receita.v === R.v) { arq = { story: arquivo(g.story, 'story'), post: arquivo(g.post, 'feed') }; return; }
+    await new Promise((k) => setTimeout(k, 500)); if (!vivo) return;
+    const st = await emPng(await imagem(f, R, 'story')); if (!st) return; arq = { story: arquivo(st, 'story') };
+    const ps = await emPng(await imagem(f, R, 'post')); if (!ps) return; arq.post = arquivo(ps, 'feed');
+    if (await imagemDe(R.fundo)) await guarda({ msgId: n.id, receita: R, n, story: st, post: ps }); // sem o cenário (sem internet), não guarda a versão incompleta
+  };
+  Promise.all([document.fonts ? Promise.all(['900 60px Nunito', '800 36px Nunito'].map((x) => document.fonts.load(x))).catch(() => {}) : 0, pega(n.id).then((g) => { if (g && g.receita && g.receita.v === R.v && !n.remedio) R = g.receita; }).catch(() => {})]).then(async () => { if (!vivo) return; monta(); requestAnimationFrame(pinta); bg = await imagemDe(R.fundo); if (!vivo) return; monta(); prepara(); });
   const ro = 'ResizeObserver' in window ? new ResizeObserver(() => { if (!w.isConnected) return ro.disconnect(); monta(); }) : null; ro && ro.observe(cv);
-  w.querySelector('[data-x]').onclick = fecha;
-  w.querySelectorAll('[data-e]').forEach((b) => (b.onclick = () => { ei = +b.dataset.e; w.querySelectorAll('[data-e]').forEach((x) => x.setAttribute('aria-pressed', x === b)); monta(); prepara(); }));
-  w.querySelectorAll('[data-f]').forEach((b) => (b.onclick = () => { fmt = b.dataset.f; w.querySelectorAll('[data-f]').forEach((x) => x.setAttribute('aria-pressed', x === b)); prepara(); }));
+  const q = (s) => w.querySelector(s);
+  q('[data-x]').onclick = fecha; if (q('[data-minhas]')) q('[data-minhas]').onclick = () => { fecha(); setTimeout(minhasFrases, 260); };
+  if (q('[data-agenda]')) q('[data-agenda]').onclick = () => { fecha(); location.hash = '#/p/hoje'; };
+  if (q('[data-nao]')) q('[data-nao]').onclick = async (e) => { const b = e.currentTarget; b.disabled = true; try { await call('/frase-queixa', { fid: n.fid }); b.innerHTML = agenda ? '✓' : '✓ Anotado'; b.classList.add('is-ok'); toast('Anotado! Essa frase não volta para você.'); } catch (x) { b.disabled = false; toast(x.message || 'Sem internet agora.'); } };
+  w.querySelectorAll('[data-f]').forEach((b) => (b.onclick = () => { fmt = b.dataset.f; w.querySelectorAll('[data-f]').forEach((x) => x.setAttribute('aria-pressed', x === b)); }));
   const txt = `${f.texto}${f.ref ? ` — ${f.ref}` : ''}\n\nvia Lembra · ${LINK()}`;
-  const salva = (msg) => { const a = document.createElement('a'); a.href = URL.createObjectURL(arq.file); a.download = arq.file.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 8000); toast(msg, { ms: 4000 }); };
+  const salva = (file, msg) => { const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 8000); toast(msg, { ms: 4000 }); };
   const feliz = () => import('./mascote.js').then((M) => M.react('story')).catch(() => {});
   w.querySelectorAll('[data-vai]').forEach((b) => (b.onclick = async () => {
-    if (!arq) return toast('Preparando a imagem…');
-    const k = b.dataset.vai;
+    const file = arq && arq[fmt], k = b.dataset.vai; if (!file || (k === 'lembra' && !arq.story)) return toast('Preparando a imagem…');
     if (k === 'lembra') {
       b.disabled = true;
       try {
-        let im = arq.im; if (fmt !== 'story') im = await imagem(nn, ESTILOS[ei], tema, 'story', rigEl.querySelector('canvas'));
-        const p = document.createElement('canvas'); p.width = 810; p.height = 1440; p.getContext('2d').drawImage(im, 0, 0, 810, 1440);
-        let q = 0.86, foto = p.toDataURL('image/jpeg', q); while (foto.length > 400000 && q > 0.4) { q -= 0.1; foto = p.toDataURL('image/jpeg', q); }
+        const im = await createImageBitmap(arq.story), c2 = document.createElement('canvas'); c2.width = 810; c2.height = 1440; c2.getContext('2d').drawImage(im, 0, 0, 810, 1440);
+        let ql = 0.86, foto = c2.toDataURL('image/jpeg', ql); while (foto.length > 400000 && ql > 0.4) { ql -= 0.1; foto = c2.toDataURL('image/jpeg', ql); }
         const pref = (x, d) => { try { const v = localStorage.getItem('lembra.st.' + x); return v === null ? d : v === '1'; } catch { return d; } };
         await call('/friends/story-post', { photo: foto, caption: '', podeCom: pref('com', true), podeRp: pref('rp', false) });
         import('./stories.js').then((m) => m.refreshFeed()).then(() => window.__calRender && window.__calRender()).catch(() => {});
@@ -190,15 +209,15 @@ export function abreFrase(n) {
       b.disabled = false; return;
     }
     try {
-      if (navigator.canShare?.({ files: [arq.file] })) {
+      if (navigator.canShare?.({ files: [file] })) {
         if (k === 'insta') toast('Escolha Instagram e depois Stories'); if (k === 'face') toast('Escolha Facebook na lista'); if (k === 'zap') toast('Escolha WhatsApp na lista');
-        await navigator.share(k === 'insta' || k === 'face' ? { files: [arq.file] } : { files: [arq.file], text: txt }); return feliz();
+        await navigator.share(k === 'insta' || k === 'face' ? { files: [file] } : { files: [file], text: txt }); return feliz();
       }
     } catch (e) { if (e && e.name === 'AbortError') return; }
     // sem a lista de compartilhar (computador)
     if (k === 'zap') return void open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank', 'noopener');
     if (k === 'face') return void open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(LINK())}`, '_blank', 'noopener');
-    salva(k === 'insta' ? 'Imagem salva. Abra o Instagram e poste 📸' : 'Imagem salva ✓');
+    salva(file, k === 'insta' ? 'Imagem salva. Abra o Instagram e poste 📸' : 'Imagem salva ✓');
   }));
   requestAnimationFrame(() => w.classList.add('is-in'));
   return true;
@@ -210,8 +229,8 @@ export async function confereAvisoTocado() {
     const c = await caches.open('lembra-notif');
     const r = await c.match('/__notif'); if (!r) return;
     const n = await r.json(); await c.delete('/__notif');
-    if (Date.now() - (n.at || 0) < 5 * 60e3) abreFrase(n);
+    if (Date.now() - (n.at || 0) < 5 * 60e3 && !(n.id && document.querySelector(`.frp[data-id="${CSS.escape(n.id)}"]`))) abreFrase(n);
   } catch { /* ok */ }
 }
 /* teste local */
-try { if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && localStorage.getItem('cal.emulator') === '1') window.__lembraFrase = { abreFrase, temaDe, store }; } catch { /* ok */ }
+try { if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && localStorage.getItem('cal.emulator') === '1') window.__lembraFrase = { abreFrase, temaDe, store, imagem, receitaArte, pega, guarda, conta, apaga, limpaTudo, historico, pintaFundo, imagemDe }; } catch { /* ok */ }

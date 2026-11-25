@@ -11,8 +11,11 @@ export const FUNDO = {
   lembrete: [['12-lembrete'], ['15-lembrete-noite']], geral: [['02-tarde'], ['15-lembrete-noite']],
 };
 const ESCUROS = new Set(['03-noite', '13-fe-noite', '14-motivacao-noite', '15-lembrete-noite', '16-aniversario-noite', '18-agua-noite', '20-socializar-noite', '22-remedio-noite', '23-estudo-noite', '24-trabalho-noite', '26-refeicao-noite', '27-contas-noite']);
-/* espaço livre para a frase em cada fundo (medido nas imagens, em 1080 × 1920) */
-const ZONA = { '06-aniversario': { larg: 640, y: 300 }, '16-aniversario-noite': { larg: 600, y: 300 }, '12-lembrete': { larg: 640, y: 250 }, '07-viagem': { larg: 820 }, '04-fe-versiculo': { larg: 900 } };
+/* espaço livre para a frase em cada fundo (medido nas imagens, em 1080 × 1920): largura e até onde desce */
+const ZONA = {
+  '01-manha': { fim: 900 }, '02-tarde': { fim: 860, larg: 800 }, '03-noite': { fim: 880 }, '04-fe-versiculo': { fim: 860 }, '05-motivacao': { fim: 700 }, '06-aniversario': { larg: 600, fim: 800 }, '07-viagem': { larg: 820, fim: 690 }, '08-saude-remedio': { fim: 820 }, '09-estudo': { fim: 800 }, '10-trabalho': { larg: 780, fim: 740 }, '11-conquista-semana': { fim: 560 }, '12-lembrete': { larg: 700, fim: 860 },
+  '13-fe-noite': { fim: 600 }, '14-motivacao-noite': { fim: 620 }, '15-lembrete-noite': { fim: 620 }, '16-aniversario-noite': { larg: 600, fim: 820 }, '17-agua': { fim: 700 }, '18-agua-noite': { fim: 880 }, '19-socializar': { fim: 800 }, '20-socializar-noite': { fim: 860 }, '21-contas': { fim: 780 }, '22-remedio-noite': { fim: 880 }, '23-estudo-noite': { fim: 880 }, '24-trabalho-noite': { fim: 880 }, '25-refeicao': { fim: 840 }, '26-refeicao-noite': { fim: 880 }, '27-contas-noite': { fim: 760 }, '28-calma': { fim: 880 }, '29-manha-b': { larg: 820, fim: 860 }, '30-ofensiva': { larg: 800, fim: 820 }, '31-agua-b': { fim: 730 },
+};
 /* assunto → como o Lembra se veste */
 export const ROUPA = { agua: 'agua', manha: 'manha', noite: 'sono', motivacao: 'forca', versiculo: 'fe', palavra: 'calma', aniversario: 'aniversario', socializar: 'amigos', remedio: 'agua', saude: 'saude', estudo: 'estudo', trabalho: 'trabalho', contas: 'dinheiro', refeicao: 'comida', ofensiva: 'conquista', semana: 'conquista', calma: 'calma', viagem: 'viagem', lembrete: 'manha', geral: 'forca' };
 /* assunto achado no texto → categoria do fundo */

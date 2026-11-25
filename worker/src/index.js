@@ -502,6 +502,8 @@ async function handle(req, env) {
       await Promise.all(sts.map((x) => env.CAL.delete(`storyimg:${x.id}`))); await Promise.all(sts.map((x) => env.CAL.delete(`storycom:${x.id}`)));
       for (const x of sts) for (const [u, rid] of Object.entries(x.reps || {})) { const l = (await env.CAL.get(`stories:${u}`, 'json')) || []; await env.CAL.put(`stories:${u}`, JSON.stringify(l.filter((y) => y.id !== rid)), { expirationTtl: 26 * 3600 }); }
       if (env.SOCIAL) env.SOCIAL.apagaConta(me.ws);
+      if (env.FRASES) env.FRASES.apagaPessoa(me.id);
+      await env.CAL.delete(`vh:${me.id}`);
       await Promise.all([`mudo:${me.ws}`, `mcfg:${me.ws}`].map((k) => env.CAL.delete(k)));
       const frs = (await env.CAL.get(`friends:${me.ws}`, 'json')) || [];
       for (const f of frs) { const l = (await env.CAL.get(`friends:${f}`, 'json')) || []; await env.CAL.put(`friends:${f}`, JSON.stringify(l.filter((x) => x !== me.ws))); }

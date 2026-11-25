@@ -300,12 +300,14 @@ export function nextNudge(p, st, now, rand = Math.random) {
     if (anchor.key === 'morning') {
       const count = (p.today || []).filter((x) => !x.done).length;
       msg = viva('manha', 'morning', { title: `☀️ Bom dia, ${n}`, body: fill(pick(T.morning, seed), V), kind: 'morning' });
+      msg.arte = msg.body; // a arte leva só a frase (versículo e contagem ficam no aviso)
       const m0 = cristao ? vivoVerso() : null, v = m0 ? [m0.texto, m0.ref] : prefs.faith && prefs.religion && !cristao ? faithOf(`${br.date}|manha`) : null;
       if (v) { msg.body = `${msg.body}\n${verseText(v)}`; msg.verse = v; msg.vfid = m0?.id; }
       if (count && !msg.body.includes(SL.qtd_hoje)) msg.body += `\nHoje você tem ${count} ${count > 1 ? 'coisas' : 'coisa'} anotada${count > 1 ? 's' : ''}.`;
       if (v) st.verses++;
     } else if (anchor.key === 'night') {
       msg = viva('noite', 'night', { title: KIND_TITLE.night, body: fill(pick(T.night, seed), V), kind: 'night' });
+      msg.arte = msg.body;
       const m0 = cristao ? vivoVerso() : null, v = m0 ? [m0.texto, m0.ref] : prefs.faith && prefs.religion && !cristao ? faithOf(`${br.date}|noite`) : null;
       if (v) { msg.body = `${msg.body}\n${verseText(v)}`; msg.verse = v; msg.vfid = m0?.id; }
     } else {
@@ -383,7 +385,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
     } else if (kind === 'verse') {
       st.verses++;
       const m0 = cristao ? vivoVerso() : null, v = m0 ? [m0.texto, m0.ref] : faithOf(`${br.date}|${br.h}|${st.verses}`), it = m0 ? introducao(p, SL, agora) : '';
-      msg = { title: (m0 && m0.titulo) || KIND_TITLE.verse, body: `${it ? it + '\n' : ''}${verseText(v)}`, kind: 'verse', verse: v, ...(m0 ? { cat: 'versiculo', fid: m0.id, ref: m0.ref } : {}) };
+      msg = { title: (m0 && m0.titulo) || KIND_TITLE.verse, body: `${it ? it + '\n' : ''}${verseText(v)}`, kind: 'verse', verse: v, arte: v[0], ref: v[1], eyebrow: it, ...(m0 ? { cat: 'versiculo', fid: m0.id } : { cat: 'palavra' }) };
     } else {
       const pool = T[kind].filter((s) => !st.recent.includes(fill(s, V)));
       const list = pool.length ? pool : T[kind];
@@ -457,6 +459,17 @@ Responda SÓ com JSON: {"title":"até 38 caracteres, com 1 emoji","body":"até 1
 
 /* Um "amigo" para UMA pessoa (o relógio chama só quando é a vez dela).
    Estado por pessoa em pc:{id}; pedido de teste em pcf:{id}. Retorna quantos avisos saíram e quando olhar de novo. */
+/* assunto da arte quando a mensagem não veio do banco */
+const CAT_TIPO = { water: 'agua', morning: 'manha', night: 'noite', lunch: 'refeicao', dinner: 'refeicao', motivation: 'motivacao', counsel: 'motivacao', mind: 'motivacao', selfcare: 'calma', social: 'socializar', habit: 'lembrete', checkin: 'lembrete', streak: 'ofensiva', verse: 'versiculo' };
+/** id estável da mensagem: a mesma pessoa + frase + hora dá sempre o mesmo */
+export const msgIdDe = (pid, fid, quando) => hashStr(`${pid}|${fid}|${quando}`).toString(36) + hashStr(`${quando}|${fid}|${pid}|2`).toString(36);
+/** dados que vão escondidos no aviso para o app montar a arte; null = aviso comum (recado da agenda, ranking) */
+export function dadosDaArte(msg, pid, br, turno) {
+  const cat = msg.cat || (msg.kind === 'mind' && ['ansiedade', 'descanso'].includes(msg.group) ? 'calma' : CAT_TIPO[msg.kind]); if (!cat || msg.kind === 'rank') return null;
+  const fid = msg.fid || `${msg.kind}-${hashStr(msg.body).toString(36)}`, corta = (x, n) => String(x || '').slice(0, n);
+  return { id: msgIdDe(pid, fid, `${br.date}T${String(br.h).padStart(2, '0')}`), cat, fid, t: turno, arte: corta(msg.arte || msg.body, 320), ...(msg.ref ? { ref: corta(msg.ref, 60) } : {}), ...(msg.eyebrow ? { eyebrow: corta(msg.eyebrow, 80) } : {}) };
+}
+
 export async function amigoOne(env, sendToMember, m, now = Date.now(), rankInfo = null, usage = null) {
   const br = brNow(now);
   const clock = br.h * 60 + br.m;
@@ -505,9 +518,9 @@ export async function amigoOne(env, sendToMember, m, now = Date.now(), rankInfo 
   await env.CAL.put(key, JSON.stringify(r.state));
   if (r.msg.fid || r.msg.vfid) await env.CAL.put(`vh:${m.id}`, JSON.stringify(vh || {}));
   if (usage) usage('amigo', ai);
-  const { kind, fact, verse, cat, fid, vfid, ref, priv, ...push0 } = out;
-  const push = priv ? { ...push0, ...GENERICO, data: { remedio: priv, corpo: out.body } } : push0; // remédio: o nome vai só nos dados, nunca na tela de bloqueio
-  // cat e fid vão no aviso na Etapa 4
+  const { kind, fact, verse, cat, fid, vfid, ref, priv, arte, eyebrow, group, ...push0 } = out;
+  const dd = dadosDaArte(out, m.id, br, turnoDe(relOf(clock, r.state.win || dayWindow(p.prefs || {})), spanOf(r.state.win || dayWindow(p.prefs || {}))));
+  const push = priv ? { ...push0, ...GENERICO, url: `./#/frase/${dd.id}`, data: { id: dd.id, cat: 'remedio', t: dd.t, remedio: priv, corpo: out.body } } : dd ? { ...push0, url: `./#/frase/${dd.id}`, data: dd } : push0; // remédio: o nome vai só nos dados, nunca na tela de bloqueio
   const sent = await sendToMember(env, m.id, push);
   return { sent, nextAt: amigoNextAt(r.state, now) };
 }

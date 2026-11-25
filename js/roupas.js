@@ -58,6 +58,7 @@ const ROS = {
   babador(c) { f(c, '#fff', 'M858 700C900 720 1070 720 1112 704L1096 812C1060 852 918 852 876 812Z'); l(c, C.or, 9, 'M884 806C924 838 1052 838 1088 806'); coracao(c, C.or, 984, 768, 0.9); },
   gravata(c) { c.translate(988, 704); c.scale(0.86, 0.86); c.translate(-988, -704); f(c, '#8C2A0B', 'M944 706H1032L1012 748H964Z'); f(c, '#A83410', 'M964 748H1012L1034 836 988 872 942 836Z'); },
   esteto(c) { l(c, '#4A3A52', 15, 'M800 660C806 780 900 806 960 800M1180 664C1176 770 1090 806 1016 800'); l(c, '#4A3A52', 15, 'M988 800V836'); el(c, '#B9C3CF', 988, 854, 32); el(c, '#E9EEF4', 988, 854, 19); },
+  maos(c) { const g = c.createLinearGradient(0, 640, 0, 900); g.addColorStop(0, '#FF8A3A'); g.addColorStop(1, '#E24A08'); [-1, 1].forEach((k) => { c.save(); c.translate(988, 792); c.scale(k, 1); c.fillStyle = g; c.strokeStyle = 'rgb(176,52,0)'; c.lineWidth = 8; c.lineJoin = 'round'; c.fill(P('M2-118C34-122 58-92 62-54 68-8 150 32 196 58 214 92 176 122 138 110 84 92 30 74 2 70Z')); c.stroke(P('M2-118C34-122 58-92 62-54 68-8 150 32 196 58 214 92 176 122 138 110 84 92 30 74 2 70Z')); c.restore(); }); },
   laco(c) { f(c, C.rosa, 'M988 726C940 690 880 684 874 728S940 780 988 750C1036 780 1108 772 1102 728S1036 690 988 726Z'); el(c, '#E2588A', 988, 738, 24); },
 };
 /* ---------- na mão (o ponto 0,0 é a palma) ---------- */
@@ -76,6 +77,7 @@ const MAO = {
   sacola(c) { l(c, C.tinta, 11, 'M-40 40V14Q-40-14 0-14T40 14V40'); f(c, C.creme, 'M-92 34H92L108 208Q108 218 96 218H-96Q-108 218-108 208Z'); f(c, C.verde, 'M-52 38C-70-6-52-36-30-32-14-30-16 6-18 38Z'); el(c, '#E5383B', 34, 30, 34); coracao(c, C.or, 0, 134, 1); },
   telefone(c, t) { rr(c, C.tinta, -56, -150, 112, 200, 22); rr(c, C.creme, -46, -136, 92, 170, 13); c.save(); c.translate(0, -52); c.rotate(Math.sin(t * 9) * 0.14); f(c, C.or, 'M0-44C28-44 34-20 36 6L48 24H-48L-36 6C-34-20-28-44 0-44Z'); el(c, C.or, 0, 32, 12); c.restore(); },
   presente(c) { rr(c, C.or, -82, -118, 164, 148, 14); rr(c, C.esc, -92, -136, 184, 44, 12); rr(c, C.sol, -15, -136, 30, 166, 0); f(c, C.sol, 'M0-134C-50-196-92-176-78-146-70-132-30-130 0-134ZM0-134C50-196 92-176 78-146 70-132 30-130 0-134Z'); },
+  balao(c, t) { c.save(); c.scale(1 + Math.sin(t * 3) * 0.04, 1 + Math.sin(t * 3) * 0.04); f(c, '#fff', 'M-104-168C-104-210-72-232-30-232H62C106-232 134-206 134-166V-128C134-88 106-64 62-64H2L-46-18-40-64C-80-68-104-92-104-128Z'); [-46, 14, 74].forEach((x, i) => el(c, C.or, x, -148 + Math.sin(t * 5 + i) * 7, 17)); c.restore(); },
   bolha(c, t) { c.globalAlpha = 0.75 + 0.2 * Math.sin(t * 2); el(c, 'rgba(255,255,255,.9)', 0, -60, 62); c.globalAlpha = 1; texto(c, '😌', 0, -56, 70, '#000'); },
 };
 const CAPA = (c, t) => { const m = Math.sin(t * 2.2) * 16; f(c, '#A3200F', `M760 360C650 520 ${560 + m} 720 ${520 + m} 900C640 866 700 880 780 862H1196C1276 880 1336 866 ${1456 - m} 900C${1416 - m} 720 1326 520 1216 360Z`); f(c, '#C93018', `M780 360C690 520 ${620 + m} 720 ${590 + m} 872C680 850 720 860 780 850Z`); };
@@ -85,7 +87,7 @@ const B = { baixo: 12, cima: 4, aberto: 22 };
 export const ROUPAS = {
   aniversario: { mood: 'feliz', boca: 'o', cab: 'festa', ros: 'sogra', l: ['cima'], r: ['baixo'], mao: { l: 'presente' } },
   viagem: { mood: 'feliz', cab: 'palha', l: ['cima'], r: ['baixo', null, -34], mao: { r: 'mala' } },
-  fe: { mood: 'amor', l: ['baixo'], r: ['cima'], mao: { r: 'biblia' } },
+  fe: { mood: 'amor', semBracos: true, ros: 'maos', l: ['baixo'], r: ['baixo'] },
   agua: { mood: 'feliz', l: ['baixo'], r: ['cima'], mao: { r: 'copo' } },
   comida: { mood: 'feliz', boca: 'lingua', cab: 'chef', ros: 'babador', l: ['cima'], r: ['baixo'] },
   treino: { mood: 'feliz', cab: 'faixa', l: ['cima'], r: ['cima'], mao: { r: 'halter' } },
@@ -96,7 +98,7 @@ export const ROUPAS = {
   estudo: { mood: 'feliz', cab: 'formatura', ros: 'oculos', l: ['baixo'], r: ['cima'], mao: { r: 'livro' } },
   trabalho: { mood: 'feliz', ros: 'gravata', l: ['cima'], r: ['baixo', null, -34], mao: { r: 'maleta' } },
   amor: { mood: 'amor', l: ['baixo'], r: ['cima'], mao: { r: 'coracao' } },
-  amigos: { mood: 'feliz', l: ['cima'], r: ['cima'], mao: { r: 'telefone' } },
+  amigos: { mood: 'feliz', l: ['cima'], r: ['cima'], mao: { r: 'balao' } },
   conquista: { mood: 'feliz', boca: 'riso', cab: 'coroa', l: ['cima'], r: ['cima'], mao: { r: 'trofeu' } },
   calma: { mood: 'amor', cab: 'folha', l: ['baixo'], r: ['baixo'] },
   manha: { mood: 'feliz', l: ['cima'], r: ['cima'], mao: { r: 'caneca' } },
@@ -108,7 +110,7 @@ export const ROUPAS = {
 /** monta a roupa no formato que o boneco entende */
 export function roupa(nome) {
   const r = ROUPAS[nome]; if (!r) return null;
-  return { nome, mood: r.mood, boca: r.boca, l: r.l, r: r.r, atras: r.capa ? CAPA : null, cab: r.cab ? CAB[r.cab] : null, ros: r.ros ? ROS[r.ros] : null, mao: { l: r.mao?.l ? MAO[r.mao.l] : null, r: r.mao?.r ? MAO[r.mao.r] : null } };
+  return { nome, mood: r.mood, semBracos: !!r.semBracos, boca: r.boca, l: r.l, r: r.r, atras: r.capa ? CAPA : null, cab: r.cab ? CAB[r.cab] : null, ros: r.ros ? ROS[r.ros] : null, mao: { l: r.mao?.l ? MAO[r.mao.l] : null, r: r.mao?.r ? MAO[r.mao.r] : null } };
 }
 export const gorro = () => ({ cab: CAB.gorro });
 /* palma de cada peça de braço (fração da imagem) */

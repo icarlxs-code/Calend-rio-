@@ -480,7 +480,7 @@ class Rig {
     c.translate(FEET[0] + s.bx.v * (1 - kb), FEET[1] + s.by.v * (1 - kb)); c.rotate((s.lean.v * (1 - kb) * Math.PI) / 180); c.scale(sx, sy); c.translate(-FEET[0], -FEET[1]);
     // braços giram no ombro; normalmente atrás do corpo, mas um gesto pode trazer um braço para a FRENTE
     // (mão na boca, coçar a cabeça): aí ele é desenhado depois do rosto, com sombra e contorno, para ler como "na frente"
-    const drawArms = (front) => [['l', s.aL.v], ['r', s.aR.v]].forEach(([side, ang]) => {
+    const drawArms = (front) => (this.ac && this.ac.semBracos) ? null : [['l', s.aL.v], ['r', s.aR.v]].forEach(([side, ang]) => {
       if (!!(this.front && this.front[side]) !== front) return;
       if (front) { c.save(); c.shadowColor = 'rgba(110,35,0,.55)'; c.shadowBlur = 22; c.shadowOffsetY = 8; }
       const one = (pose, a, alpha) => {
@@ -629,6 +629,17 @@ export function veste(el, v) {
     if (v && v.l) { r.clear(); r.pose = { l: v.l[0], r: v.r[0] }; r.arms([v.l[0], v.l[2] ?? ({ baixo: 12, cima: -16, aberto: 6 })[v.l[0]], v.r[0], v.r[2] ?? ({ baixo: -12, cima: 16, aberto: -6 })[v.r[0]]]); r.front = { l: !!v.frente?.l, r: !!v.frente?.r }; if (v.boca) r.setMouth(v.boca); r.s.aL.v = r.s.aL.t; r.s.aR.v = r.s.aR.t; }
     if (r.sleeping) r.wake(); r.draw();
   });
+}
+/** desenho parado e sempre igual (para a imagem que vai ser guardada ou postada) */
+export async function retrato(v, larg = 1200, t = 0.75) {
+  await load(); if (!IMG) return null;
+  const el = document.createElement('span'); el.className = 'snh'; el.dataset.snh = (v && v.mood) || 'feliz'; el.dataset.nitido = '1'; el.style.setProperty('--s', `${larg / 2}px`); el.innerHTML = '<canvas></canvas>';
+  const r = new Rig(el); r.stop(); el._rig = r; r.calm = true; r.q = [];
+  r.ac = v || null;
+  if (v && v.l) { r.pose = { l: v.l[0], r: v.r[0] }; r.s.aL.t = v.l[2] ?? ({ baixo: 12, cima: -16, aberto: 6 })[v.l[0]]; r.s.aR.t = v.r[2] ?? ({ baixo: -12, cima: 16, aberto: -6 })[v.r[0]]; r.front = { l: false, r: false }; }
+  if (v && v.boca) r.mouth = v.boca;
+  r.pp = null; r.pm = null; Object.values(r.s).forEach((x) => { x.v = x.t; x.vel = 0; }); r.s.mz.v = 1; r.s.px.v = EMO[r.mood]?.look ? r.s.px.v : 0; r.s.py.v = EMO[r.mood]?.look ? r.s.py.v : 0; r.t = t; r.draw();
+  return r.cv;
 }
 export const rigDe = (el) => (el && el._rig && !el._rig.pending ? el._rig : null);
 export function alive() { watch(); load(); document.querySelectorAll('[data-snh]').forEach(mount); }

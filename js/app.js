@@ -383,6 +383,7 @@ const actions = {
     ui.date = b.dataset.k;
     setTab('hoje');
   },
+  'minhas-frases': () => import('./frase.js').then((m) => m.minhasFrases()),
   mensagens: () => import('./privado.js').then((m) => m.openMensagens()),
   visitas: () => import('./stories.js').then((m) => m.openVisitors()).then(() => render()),
   'ui-toggle': (b) => { ui[b.dataset.k] = !ui[b.dataset.k]; render(); },
@@ -837,6 +838,8 @@ function openDeepLink(hash = location.hash, tries = 0) {
     return true;
   }
   if (/^#\/stories$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./stories.js').then((m) => m.openStoriesFeed()); return true; }
+  const fr = /^#\/frase\/([A-Za-z0-9-]{3,40})$/.exec(hash || '');
+  if (fr || /^#\/frases$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); window.PautaIntro && window.PautaIntro.finish(); import('./frase.js').then((m) => (fr ? m.abrePorId(fr[1]) : m.minhasFrases())); return true; }
   const priv = /^#\/privado(?:\/([A-Za-z0-9]{6,64}))?$/.exec(hash || '');
   if (priv) { history.replaceState(null, '', location.pathname + location.search); window.PautaIntro && window.PautaIntro.finish(); import('./privado.js').then((m) => (priv[1] ? m.openConversa(priv[1]) : m.openMensagens())); return true; }
   if (/^#\/visitas$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./stories.js').then((m) => m.openVisitors()); return true; }
@@ -1651,7 +1654,7 @@ navigator.serviceWorker?.addEventListener('message', (ev) => {
 window.addEventListener('hashchange', () => {
   // abriu um convite com o app já aberto
   if (/^#\/convite\//.test(location.hash)) { captureInvite(); return maybeAcceptInvite(); }
-  if (/^#\/((e|d|p)\/|suporte|ranking|vitalicio|amigos|amigo\/|stories|visitas|privado)/.test(location.hash)) return openDeepLink();
+  if (/^#\/((e|d|p)\/|suporte|ranking|vitalicio|amigos|amigo\/|stories|visitas|privado|frase|frases)/.test(location.hash)) return openDeepLink();
   if (/^#\/(c|v)\//.test(location.hash)) location.reload();
 });
 

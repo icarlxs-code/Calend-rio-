@@ -1,13 +1,14 @@
 {
-  "version": "2.30.0",
-  "build": "3u5ilz7u",
+  "version": "2.31.0",
+  "build": "pfozdlk4",
   "date": "2026-11-24",
   "min": "2.22.0",
-  "title": "Frases que viram story",
+  "title": "Notificações vivas",
   "notes": [
-    "Toque na notificação: abre a frase com o Lembra vestido do assunto, pronta para o story.",
-    "Compartilhe no Instagram, WhatsApp, Facebook ou no seu story do Lembra.",
-    "A touca do Lembra agora fica firme na cabeça."
+    "Frases do seu jeito, que não se repetem, com uma arte nova para cada uma.",
+    "Não curtiu? Toque em 👎 e ela não volta.",
+    "Minhas frases: reabra e poste quando quiser.",
+    "O nome do remédio não aparece mais na tela de bloqueio."
   ],
-  "builtAt": "2026-11-25T15:00:05.931Z"
+  "builtAt": "2026-11-25T15:40:28.293Z"
 }

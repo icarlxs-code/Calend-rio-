@@ -77,7 +77,7 @@ test('cron: só manda para quem tem resumo e usa o pedido de teste', async () =>
     const n = await runPersonalCoach(env, async (e, m, msg) => { sent.push([m, msg]); return 1; }, [{ id: 'henrique', name: 'Henrique' }, { id: 'matheus', name: 'Matheus' }]);
     assert.equal(n, 1);
     assert.equal(sent[0][0], 'henrique');
-    assert.equal(sent[0][1].url, './#/p/hoje');
+    assert.match(sent[0][1].url, /^\.\/#\/(p\/hoje|frase\/[a-z0-9]+)$/);
   } finally { Date.now = realNow; }
 });
 

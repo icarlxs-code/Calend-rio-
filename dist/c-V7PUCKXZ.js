@@ -1,0 +1,1 @@
+var r=Object.defineProperty;var u=(o,e)=>{for(var a in e)r(o,a,{get:e[a],enumerable:!0})};var i=["Frases do seu jeito, que n\xE3o se repetem, com uma arte nova para cada uma.","N\xE3o curtiu? Toque em \u{1F44E} e ela n\xE3o volta.","Minhas frases: reabra e poste quando quiser.","O nome do rem\xE9dio n\xE3o aparece mais na tela de bloqueio."];export{u as a,i as b};
