@@ -22,7 +22,7 @@ export function partes(body = '') {
   return { texto: t, ref };
 }
 /* é frase (pra abrir no app)? compromissos e ranking continuam indo pra tela deles; aniversário ganha a página */
-export const ehFrase = (n) => !!n && !!n.body && (n.tag === 'p-amigo' || n.tag === 'coach' || n.tag === 'frase') && n.kind !== 'rank' && (n.kind !== 'agenda' || /anivers|🎂|🎁/i.test(`${n.title} ${n.body}`));
+export const ehFrase = (n) => !!n && !!n.remedio || !!n && !!n.body && (n.tag === 'p-amigo' || n.tag === 'coach' || n.tag === 'frase') && n.kind !== 'rank' && (n.kind !== 'agenda' || /anivers|🎂|🎁/i.test(`${n.title} ${n.body}`));
 
 /* ---------- qual é o assunto? (primeiro o texto, depois o tipo do aviso) ---------- */
 const TEMAS = [
@@ -132,8 +132,8 @@ const sv = (k) => `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" s
 export function abreFrase(n) {
   if (!ehFrase(n)) return false;
   document.querySelectorAll('.frp').forEach((x) => x.remove());
-  guarda(n);
-  const f = partes(n.body), tema = temaDe(n), rp = roupa(tema) || roupa('forca');
+  if (n.remedio) n = { ...n, title: n.title, body: n.corpo || `Hora do ${n.remedio}.` }; else guarda(n); // remédio: mostra o nome só aqui dentro, sem histórico e sem compartilhar
+  const f = partes(n.body), tema = n.remedio ? 'saude' : temaDe(n), rp = roupa(tema) || roupa('forca');
   let ei = tema === 'sono' ? 3 : semente(f.texto) % 3, fmt = 'story', vivo = true, A = null, base = null, arq = null, vez = 0;
   const soc = podeSocial();
   const w = document.createElement('div');
@@ -144,6 +144,7 @@ export function abreFrase(n) {
     <footer class="frp__pe"><div class="frp__ops"><div class="frp__est" role="group" aria-label="Estilo">${ESTILOS.map((m, i) => `<button data-e="${i}" aria-label="${m.nome}" aria-pressed="${i === ei}" style="--ca:${m.bg};--cb:${m.bolha}"></button>`).join('')}</div><div class="frp__fmt" role="group" aria-label="Formato"><button data-f="story" aria-pressed="true">Story</button><button data-f="post" aria-pressed="false">Feed</button></div></div>
       <div class="frp__bs">${soc ? bt('lembra', icon('bell', 26), 'Seu story') : ''}${bt('insta', sv('insta'), 'Instagram')}${bt('zap', sv('zap'), 'WhatsApp')}${bt('face', sv('face'), 'Facebook')}${bt('mais', icon('share', 24), 'Mais')}</div></footer>`;
   document.body.appendChild(w); document.body.classList.add('has-stv');
+  if (n.remedio) w.querySelector('.frp__pe').remove();
   const cv = w.querySelector('.frp__cv'), c = cv.getContext('2d'), rigEl = w.querySelector('[data-snh]'), nn = { texto: f.texto, ref: f.ref };
   rigEl.dataset.nitido = '1'; rigEl.style.aspectRatio = '1500 / 1310'; alive(); veste(rigEl, rp);
   const fecha = () => { vivo = false; w.classList.add('is-out'); removeEventListener('keydown', esc27); setTimeout(() => { w.remove(); document.body.classList.remove('has-stv'); }, 240); };

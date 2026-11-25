@@ -6,6 +6,7 @@
      per:{pessoa} lembretes do Pessoal (pitems:{pessoa}; enviados em psent:{pessoa})
      amg:{pessoa} o "amigo" do Pessoal (pc:{pessoa})
      cch:{pessoa} dicas de trabalho (co:{pessoa}) */
+import { ehRemedio, barra } from '../../functions/remedio.js';
 import { dueOf } from './kvsql.js';
 import { amigoOne, splitLegacyAmigo } from './pcoach.js';
 import { coachOne } from './coach.js';
@@ -54,11 +55,15 @@ async function dueList(env, { itemsKey, sentKey, dueKey, member, send, now, pref
   const due = items.filter((it) => it && Number.isFinite(it.at) && it.at <= now && it.at > now - WINDOW && !sent[it.id]).sort((a, b) => a.at - b.at);
   const batch = due.slice(0, PER_KEY);
   prune(sent, now);
+  // avisos pessoais guardados antes desta versão ainda podem trazer o nome do remédio
+  let nomes = [];
+  if (member && batch.length) { const pr = await env.CAL.get(`pprofile:${member}`, 'json'); nomes = [...(pr?.today || []), ...(pr?.tomorrow || []), ...(pr?.overdue || [])].filter(ehRemedio).map((x) => x.title); }
   for (const it of batch) {
     // marca um por um, logo antes de enviar: nunca repete e, se a rodada for cortada, perde no máximo um
     sent[it.id] = now;
     await env.CAL.put(sentKey, JSON.stringify(sent));
-    await send(env, member || it.member, { title: it.title, body: it.body, tag: it.tag, url: it.url, ...(it.badge !== undefined ? { badge: it.badge } : {}) }, pref ? (it.kind || pref) : undefined);
+    const seguro = barra(it, nomes);
+    await send(env, member || it.member, { title: seguro.title, body: seguro.body, tag: it.tag, url: it.url, ...(it.badge !== undefined ? { badge: it.badge } : {}) }, pref ? (it.kind || pref) : undefined);
   }
   // relê do banco: se a pessoa mandou uma lista nova enquanto os avisos saíam, vale a nova
   const D = dueOf(env);
@@ -126,11 +131,11 @@ export async function upgradeLegacy(env, now = Date.now()) {
 export function usageMeter(env) {
   const day = () => new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
   const u = env.USAGE || (env.USAGE = { date: day(), amigo: { sent: 0, ai: 0 }, coach: { sent: 0, ai: 0 } });
-  return (kind, ai) => {
+  return Object.assign((kind, ai) => {
     if (u.date !== day()) Object.assign(u, { date: day(), amigo: { sent: 0, ai: 0 }, coach: { sent: 0, ai: 0 } });
     u[kind].sent++; if (ai) u[kind].ai++;
     u.dirty = true;
-  };
+  }, { erro: (kind) => { if (u[kind]) { u[kind].aiErr = (u[kind].aiErr || 0) + 1; u.dirty = true; } } });
 }
 
 /* Uma rodada do relógio. Para cedo quando o lote enche: devolve { more: true } e quem chamou

@@ -28,7 +28,7 @@
   "direto",
   "reverente"
  ],
- "regras_fe": "Versículos só para quem marcou fé cristã/católica na ficha; texto nunca é alterado por IA nem vira piada; trocadilho nunca é aplicado à categoria versiculo.",
+ "regras_fe": "Versículos são paráfrases próprias, em palavras nossas, com a referência. Só para quem marcou fé cristã ou católica na ficha. Nunca alterados por IA, nunca viram piada.",
  "titulos": {
   "agua": [
    "💧 Hora do gole",
@@ -2017,7 +2017,7 @@
   ],
   "versiculo": [
    {
-    "texto": "Tudo posso naquele que me fortalece.",
+    "texto": "Com Cristo me sustentando, consigo encarar o que vier.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2025,26 +2025,26 @@
      "trabalho"
     ],
     "ref": "Filipenses 4:13",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-001",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "O Senhor é o meu pastor; nada me faltará.",
+    "texto": "Deus cuida de mim como um pastor cuida do rebanho: não vai me faltar o essencial.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
      "confianca"
     ],
     "ref": "Salmos 23:1",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-002",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Seja forte e corajoso; não tenha medo nem desanime, pois o Senhor, o seu Deus, estará com você por onde você andar.",
+    "texto": "Coragem! Não deixe o medo mandar, porque aonde você for Deus vai junto.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2052,13 +2052,13 @@
      "viagem"
     ],
     "ref": "Josué 1:9",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-003",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Não tema, porque eu sou contigo; não te assombres, porque eu sou o teu Deus; eu te fortaleço e te ajudo.",
+    "texto": "Deus diz: estou do seu lado, então respire. Eu te dou força e te seguro pela mão.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2066,13 +2066,13 @@
      "coragem"
     ],
     "ref": "Isaías 41:10",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-004",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Eu sei os planos que tenho para vocês, diz o Senhor: planos de paz, e não de mal, para dar a vocês esperança e futuro.",
+    "texto": "Deus pensa em você com carinho: o que ele prepara é paz e um amanhã cheio de esperança.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2080,13 +2080,13 @@
      "meta"
     ],
     "ref": "Jeremias 29:11",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-005",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Venham a mim todos os que estão cansados e sobrecarregados, e eu darei descanso a vocês.",
+    "texto": "Jesus convida quem anda exausto e carregando peso demais: chega perto, aqui tem descanso.",
     "tom": "reverente",
     "hora": "noite",
     "tags": [
@@ -2094,52 +2094,52 @@
      "noite"
     ],
     "ref": "Mateus 11:28",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-006",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Confie no Senhor de todo o seu coração e não se apoie no seu próprio entendimento.",
+    "texto": "Confie em Deus por inteiro, mesmo quando a sua cabeça não entende o caminho.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
      "confianca"
     ],
     "ref": "Provérbios 3:5",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-007",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Sabemos que todas as coisas cooperam para o bem daqueles que amam a Deus.",
+    "texto": "Para quem ama a Deus, até os dias difíceis acabam servindo para algo bom.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
      "confianca"
     ],
     "ref": "Romanos 8:28",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-008",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Deus é o nosso refúgio e fortaleza, socorro bem presente na angústia.",
+    "texto": "Quando aperta, Deus é abrigo e força: uma ajuda que está sempre por perto.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
      "ansiedade"
     ],
     "ref": "Salmos 46:1",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-009",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Deus não nos deu espírito de medo, mas de poder, de amor e de equilíbrio.",
+    "texto": "O medo não veio de Deus. Dele vêm a força, o amor e a cabeça no lugar.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2147,13 +2147,13 @@
      "ansiedade"
     ],
     "ref": "2 Timóteo 1:7",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-010",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Entregue o seu caminho ao Senhor, confie nele, e ele tudo fará.",
+    "texto": "Coloque o seu caminho nas mãos de Deus e confie: ele cuida do resto.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2161,13 +2161,13 @@
      "meta"
     ],
     "ref": "Salmos 37:5",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-011",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Os que esperam no Senhor renovam as suas forças; sobem com asas como águias, correm e não se cansam.",
+    "texto": "Quem espera em Deus ganha fôlego novo: levanta voo, corre e segue sem desabar.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2175,26 +2175,26 @@
      "esporte"
     ],
     "ref": "Isaías 40:31",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-012",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Lancem sobre ele toda a ansiedade de vocês, porque ele tem cuidado de vocês.",
+    "texto": "Pode soltar em Deus tudo o que te deixa ansioso. Ele se importa com você.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
      "ansiedade"
     ],
     "ref": "1 Pedro 5:7",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-013",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Este é o dia que o Senhor fez; alegremo-nos e exultemos nele.",
+    "texto": "O dia de hoje é presente de Deus. Que tal receber com alegria?",
     "tom": "reverente",
     "hora": "manha",
     "tags": [
@@ -2202,13 +2202,13 @@
      "alegria"
     ],
     "ref": "Salmos 118:24",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-014",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "As misericórdias do Senhor não têm fim; renovam-se a cada manhã. Grande é a tua fidelidade.",
+    "texto": "O amor de Deus não se esgota: toda manhã vem uma porção nova, e ele não falha.",
     "tom": "reverente",
     "hora": "manha",
     "tags": [
@@ -2216,13 +2216,13 @@
      "recomeco"
     ],
     "ref": "Lamentações 3:22-23",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-015",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Eu te louvo porque de modo tão admirável e maravilhoso fui feito.",
+    "texto": "Obrigado, Deus, por ter me criado de um jeito tão incrível e só meu.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2230,13 +2230,13 @@
      "aniversario"
     ],
     "ref": "Salmos 139:14",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-016",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Deixo com vocês a paz; a minha paz dou a vocês.",
+    "texto": "Jesus deixou um presente de despedida: a paz dele, para ficar com a gente.",
     "tom": "reverente",
     "hora": "noite",
     "tags": [
@@ -2244,13 +2244,13 @@
      "noite"
     ],
     "ref": "João 14:27",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-017",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "O choro pode durar uma noite, mas a alegria vem pela manhã.",
+    "texto": "A tristeza pode dormir aqui uma noite, mas quando amanhece a alegria chega.",
     "tom": "reverente",
     "hora": "noite",
     "tags": [
@@ -2258,13 +2258,13 @@
      "noite"
     ],
     "ref": "Salmos 30:5",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-018",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Confie ao Senhor as suas obras, e os seus planos serão bem-sucedidos.",
+    "texto": "Entregue a Deus o que você faz e veja os seus planos ganharem firmeza.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2272,13 +2272,13 @@
      "meta"
     ],
     "ref": "Provérbios 16:3",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-019",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "O Senhor te abençoe e te guarde.",
+    "texto": "Que Deus abençoe você e proteja os seus passos.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2287,13 +2287,13 @@
      "viagem"
     ],
     "ref": "Números 6:24",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-020",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Tudo o que fizerem, façam de todo o coração, como para o Senhor.",
+    "texto": "Seja qual for a tarefa, capriche de coração, como quem trabalha para Deus.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2301,13 +2301,13 @@
      "estudo"
     ],
     "ref": "Colossenses 3:23",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-021",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Não andem ansiosos por coisa alguma; em tudo, apresentem seus pedidos a Deus em oração, com gratidão.",
+    "texto": "Em vez de se afligir, conte tudo a Deus em oração e agradeça no caminho.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2315,13 +2315,13 @@
      "gratidao"
     ],
     "ref": "Filipenses 4:6",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-022",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "A alegria do Senhor é a força de vocês.",
+    "texto": "A alegria que vem de Deus é o que te mantém de pé.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2329,13 +2329,13 @@
      "forca"
     ],
     "ref": "Neemias 8:10",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-023",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Em paz me deito e logo pego no sono, porque só tu, Senhor, me fazes repousar seguro.",
+    "texto": "Deito tranquilo e o sono chega logo: com Deus por perto, estou seguro.",
     "tom": "reverente",
     "hora": "noite",
     "tags": [
@@ -2343,26 +2343,26 @@
      "sono"
     ],
     "ref": "Salmos 4:8",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-024",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "O meu socorro vem do Senhor, que fez o céu e a terra.",
+    "texto": "A minha ajuda vem de Deus, o mesmo que criou tudo o que existe.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
      "confianca"
     ],
     "ref": "Salmos 121:2",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-025",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "O Senhor guardará a tua saída e a tua entrada, desde agora e para sempre.",
+    "texto": "Deus acompanha você na ida e na volta, hoje e sempre.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2370,13 +2370,13 @@
      "bencao"
     ],
     "ref": "Salmos 121:8",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-026",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Não se preocupem com o amanhã, pois o amanhã trará as suas próprias preocupações. Basta a cada dia o seu próprio mal.",
+    "texto": "Não sofra hoje pelo dia de amanhã. Cada dia já traz o bastante para cuidar.",
     "tom": "reverente",
     "hora": "noite",
     "tags": [
@@ -2384,13 +2384,13 @@
      "noite"
     ],
     "ref": "Mateus 6:34",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-027",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Nunca te deixarei, jamais te abandonarei.",
+    "texto": "Deus prometeu: em nenhum momento vou largar a sua mão.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2398,13 +2398,13 @@
      "confianca"
     ],
     "ref": "Hebreus 13:5",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-028",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Aquele que habita no esconderijo do Altíssimo, à sombra do Onipotente descansará.",
+    "texto": "Quem faz de Deus a sua casa encontra sombra e sossego.",
     "tom": "reverente",
     "hora": "noite",
     "tags": [
@@ -2412,13 +2412,13 @@
      "noite"
     ],
     "ref": "Salmos 91:1",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-029",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "O amigo ama em todos os momentos; é um irmão na hora da dificuldade.",
+    "texto": "Amigo de verdade ama o tempo todo, e vira família quando a vida aperta.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2426,13 +2426,13 @@
      "amizade"
     ],
     "ref": "Provérbios 17:17",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-030",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Melhor é serem dois do que um, porque têm melhor recompensa pelo seu trabalho.",
+    "texto": "Em dupla a vida rende mais: o esforço de um ajuda o outro.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2440,13 +2440,13 @@
      "trabalho"
     ],
     "ref": "Eclesiastes 4:9",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-031",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Ensina-nos a contar os nossos dias, para que alcancemos um coração sábio.",
+    "texto": "Deus, me ensina a dar valor a cada dia, para eu viver com sabedoria.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2454,26 +2454,26 @@
      "sabedoria"
     ],
     "ref": "Salmos 90:12",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-032",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Acima de tudo, guarde o seu coração, pois dele procedem as fontes da vida.",
+    "texto": "Cuide bem do seu coração: é dele que nasce tudo o que você vive.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
      "autocuidado"
     ],
     "ref": "Provérbios 4:23",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-033",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Se algum de vocês tem falta de sabedoria, peça a Deus, que a todos dá com generosidade.",
+    "texto": "Falta sabedoria para decidir? Peça a Deus. Ele dá de boa vontade.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2481,13 +2481,13 @@
      "sabedoria"
     ],
     "ref": "Tiago 1:5",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-034",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "O amor é paciente, o amor é bondoso.",
+    "texto": "Quem ama sabe esperar e trata o outro com bondade.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2495,39 +2495,39 @@
      "social"
     ],
     "ref": "1 Coríntios 13:4",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-035",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Entregue as suas preocupações ao Senhor, e ele o susterá.",
+    "texto": "Entregue a Deus o que pesa. Ele segura você.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
      "ansiedade"
     ],
     "ref": "Salmos 55:22",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-036",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "No mundo vocês terão aflições; mas tenham coragem: eu venci o mundo.",
+    "texto": "Vai haver dificuldade, avisou Jesus. Mas ânimo: ele já saiu vencedor.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
      "coragem"
     ],
     "ref": "João 16:33",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-037",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Assim brilhe a luz de vocês diante dos outros, para que vejam as suas boas obras.",
+    "texto": "Deixe o bem que você faz aparecer: a sua luz ajuda os outros a enxergar.",
     "tom": "reverente",
     "hora": "manha",
     "tags": [
@@ -2535,13 +2535,13 @@
      "manha"
     ],
     "ref": "Mateus 5:16",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-038",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Eu o instruirei e o ensinarei no caminho que você deve seguir; eu o aconselharei.",
+    "texto": "Deus diz: vou te mostrar o caminho e te aconselhar a cada passo.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2549,26 +2549,26 @@
      "estudo"
     ],
     "ref": "Salmos 32:8",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-039",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Alegrem-se na esperança, sejam pacientes na tribulação, perseverem na oração.",
+    "texto": "Mantenha a esperança alegre, a paciência firme e a oração em dia.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
      "perseveranca"
     ],
     "ref": "Romanos 12:12",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-040",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Amado, desejo que você prospere em tudo e tenha saúde, assim como vai bem a sua alma.",
+    "texto": "Que tudo vá bem na sua vida e na sua saúde, tanto quanto vai bem a sua alma.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2577,13 +2577,13 @@
      "aniversario"
     ],
     "ref": "3 João 1:2",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-041",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "O coração alegre é bom remédio.",
+    "texto": "Coração contente faz bem como um bom tratamento.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2592,13 +2592,13 @@
      "alegria"
     ],
     "ref": "Provérbios 17:22",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-042",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Não nos cansemos de fazer o bem, pois no tempo certo colheremos, se não desanimarmos.",
+    "texto": "Não canse de fazer o bem. A colheita vem na hora certa para quem persiste.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2606,13 +2606,13 @@
      "desmotivado"
     ],
     "ref": "Gálatas 6:9",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-043",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Qual de vocês, querendo construir uma torre, não se senta primeiro para calcular o custo?",
+    "texto": "Antes de começar a construir, sente e faça as contas. Planejar também é sabedoria.",
     "tom": "reverente",
     "hora": "qualquer",
     "tags": [
@@ -2620,13 +2620,13 @@
      "planejamento"
     ],
     "ref": "Lucas 14:28",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-044",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Eis que faço uma coisa nova; agora mesmo ela está surgindo.",
+    "texto": "Olhe com atenção: Deus está fazendo algo novo, e já começou a brotar.",
     "tom": "reverente",
     "hora": "manha",
     "tags": [
@@ -2634,13 +2634,13 @@
      "recomeco"
     ],
     "ref": "Isaías 43:19",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-045",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "De manhã, Senhor, ouves a minha voz; de manhã te apresento a minha oração e fico esperando.",
+    "texto": "Logo cedo eu falo com Deus, entrego o meu dia e espero confiante.",
     "tom": "reverente",
     "hora": "manha",
     "tags": [
@@ -2648,13 +2648,13 @@
      "oracao"
     ],
     "ref": "Salmos 5:3",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-046",
     "slots": [],
     "dia": null
    },
    {
-    "texto": "Aos seus amados ele dá o sono.",
+    "texto": "Descansar também é presente de Deus para quem ele ama.",
     "tom": "reverente",
     "hora": "noite",
     "tags": [
@@ -2662,7 +2662,7 @@
      "sono"
     ],
     "ref": "Salmos 127:2",
-    "versao": "paráfrase fiel (estilo Almeida) — conferir em edição de domínio público antes de publicar",
+    "versao": "paráfrase própria do Lembra (não é citação de tradução) — revisão jurídica pendente",
     "id": "versiculo-047",
     "slots": [],
     "dia": null
@@ -5495,5 +5495,6 @@
   "estudo": 42,
   "trabalho": 43,
   "contas": 42
- }
+ },
+ "parafrases_proprias": true
 }

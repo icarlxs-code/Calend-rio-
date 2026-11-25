@@ -31,23 +31,24 @@ export const RELIGIONS = {
 };
 
 /* textos de fé por tradição (citações conhecidas; quando não há texto sagrado único, frases de bênção respeitosas) */
+/* Trechos de livros sagrados abaixo são paráfrases próprias, em palavras nossas, com a referência. */
 export const FAITH = {
   crista: [
-    ['Tudo posso naquele que me fortalece.', 'Filipenses 4:13'], ['Não tema, pois estou com você; não tenha medo, pois sou o seu Deus.', 'Isaías 41:10'],
-    ['Lancem sobre ele toda a sua ansiedade, porque ele tem cuidado de vocês.', '1 Pedro 5:7'], ['O Senhor é o meu pastor; de nada terei falta.', 'Salmos 23:1'],
-    ['Entregue o seu caminho ao Senhor; confie nele, e ele agirá.', 'Salmos 37:5'], ['Eu te louvo porque me fizeste de modo especial e admirável.', 'Salmos 139:14'],
-    ['Venham a mim, todos os que estão cansados e sobrecarregados, e eu darei descanso a vocês.', 'Mateus 11:28'], ['Deixo com vocês a paz; a minha paz dou a vocês.', 'João 14:27'],
-    ['Consagre ao Senhor tudo o que você faz, e os seus planos serão bem-sucedidos.', 'Provérbios 16:3'], ['A alegria do Senhor os fortalecerá.', 'Neemias 8:10'],
-    ['Aqueles que esperam no Senhor renovam as suas forças.', 'Isaías 40:31'], ['Pois Deus não nos deu espírito de covardia, mas de poder, de amor e de equilíbrio.', '2 Timóteo 1:7'],
-    ['Sabemos que Deus age em todas as coisas para o bem daqueles que o amam.', 'Romanos 8:28'], ['O choro pode persistir uma noite, mas de manhã irrompe a alegria.', 'Salmos 30:5'],
+    ['Com Cristo me sustentando, consigo encarar o que vier.', 'Filipenses 4:13'], ['Deus diz: estou do seu lado, então respire. Eu te dou força e te seguro pela mão.', 'Isaías 41:10'],
+    ['Pode soltar em Deus tudo o que te deixa ansioso. Ele se importa com você.', '1 Pedro 5:7'], ['Deus cuida de mim como um pastor cuida do rebanho: não vai me faltar o essencial.', 'Salmos 23:1'],
+    ['Coloque o seu caminho nas mãos de Deus e confie: ele cuida do resto.', 'Salmos 37:5'], ['Obrigado, Deus, por ter me criado de um jeito tão incrível e só meu.', 'Salmos 139:14'],
+    ['Jesus convida quem anda exausto e carregando peso demais: chega perto, aqui tem descanso.', 'Mateus 11:28'], ['Jesus deixou um presente de despedida: a paz dele, para ficar com a gente.', 'João 14:27'],
+    ['Entregue a Deus o que você faz e veja os seus planos ganharem firmeza.', 'Provérbios 16:3'], ['A alegria que vem de Deus é o que te mantém de pé.', 'Neemias 8:10'],
+    ['Quem espera em Deus ganha fôlego novo: levanta voo, corre e segue sem desabar.', 'Isaías 40:31'], ['O medo não veio de Deus. Dele vêm a força, o amor e a cabeça no lugar.', '2 Timóteo 1:7'],
+    ['Para quem ama a Deus, até os dias difíceis acabam servindo para algo bom.', 'Romanos 8:28'], ['A tristeza pode dormir aqui uma noite, mas quando amanhece a alegria chega.', 'Salmos 30:5'],
   ],
   catolica: [
-    ['Tudo posso naquele que me fortalece.', 'Filipenses 4:13'], ['O Senhor é o meu pastor; nada me faltará.', 'Salmo 23'],
+    ['Com Cristo me sustentando, consigo encarar o que vier.', 'Filipenses 4:13'], ['Deus cuida de mim como um pastor cuida do rebanho: não vai me faltar o essencial.', 'Salmo 23'],
     ['Nada te perturbe, nada te espante. Quem a Deus tem, nada lhe falta. Só Deus basta.', 'Santa Teresa de Ávila'],
     ['Reze, espere e não se preocupe.', 'São Padre Pio'], ['Faça o que puder, peça o que não puder, e Deus te dará o poder.', 'Santo Agostinho'],
     ['Comece fazendo o que é necessário, depois o que é possível, e de repente estará fazendo o impossível.', 'São Francisco de Assis'],
     ['Maria, passa na frente e abre os caminhos de hoje.', 'Oração popular'], ['Senhor, fazei de mim um instrumento de vossa paz.', 'Oração de São Francisco'],
-    ['Não tenham medo!', 'São João Paulo II'], ['Deixo com vocês a paz; a minha paz dou a vocês.', 'João 14:27'],
+    ['Não tenham medo!', 'São João Paulo II'], ['Jesus deixou um presente de despedida: a paz dele, para ficar com a gente.', 'João 14:27'],
   ],
   espirita: [
     ['Fora da caridade não há salvação.', 'Allan Kardec'], ['Ninguém pode voltar atrás e fazer um novo começo, mas qualquer um pode recomeçar e fazer um novo fim.', 'Chico Xavier'],
@@ -60,25 +61,25 @@ export const FAITH = {
     ['Que Iemanjá acalme as águas do seu coração. Odoyá!', 'Bênção'], ['Que Xangô traga justiça e equilíbrio às suas decisões. Kaô!', 'Bênção'],
   ],
   judaica: [
-    ['Se eu não for por mim, quem será por mim? E se eu for só por mim, o que sou eu? E se não agora, quando?', 'Hillel, Pirkei Avot 1:14'],
-    ['Não é tua obrigação terminar a obra, mas também não estás livre para desistir dela.', 'Rabi Tarfon, Pirkei Avot 2:16'],
-    ['O Senhor é a minha luz e a minha salvação; a quem temerei?', 'Salmos 27:1'], ['Este é o dia que o Eterno fez; alegremo-nos nele.', 'Salmos 118:24'],
-    ['Quem é sábio? Aquele que aprende com todas as pessoas.', 'Pirkei Avot 4:1'], ['Shalom: que a paz esteja contigo hoje.', 'Bênção'],
+    ['Preciso cuidar de mim, mas não só de mim. E o momento é agora.', 'Hillel, Pirkei Avot 1:14'],
+    ['Você não precisa terminar tudo sozinho, mas também não dá para largar.', 'Rabi Tarfon, Pirkei Avot 2:16'],
+    ['Deus ilumina e salva a minha vida. De quem eu teria medo?', 'Salmos 27:1'], ['O dia de hoje é presente de Deus. Que tal receber com alegria?', 'Salmos 118:24'],
+    ['Sabedoria é conseguir aprender com qualquer pessoa.', 'Pirkei Avot 4:1'], ['Shalom: que a paz esteja contigo hoje.', 'Bênção'],
   ],
   islamica: [
-    ['Com a dificuldade vem a facilidade.', 'Alcorão 94:6'], ['Deus não impõe a nenhuma alma uma carga superior às suas forças.', 'Alcorão 2:286'],
-    ['Lembrai-vos de Mim, que Eu Me lembrarei de vós.', 'Alcorão 2:152'], ['Certamente, com a lembrança de Deus os corações se tranquilizam.', 'Alcorão 13:28'],
-    ['E Ele está convosco onde quer que estejais.', 'Alcorão 57:4'], ['Que a paz esteja contigo — As-salamu alaykum.', 'Saudação'],
+    ['Junto com o aperto, Deus também manda o alívio.', 'Alcorão 94:6'], ['Deus não coloca sobre ninguém um peso maior do que a pessoa aguenta.', 'Alcorão 2:286'],
+    ['Quem se lembra de Deus é lembrado por ele.', 'Alcorão 2:152'], ['Lembrar de Deus acalma o coração.', 'Alcorão 13:28'],
+    ['Onde quer que você esteja, Deus está com você.', 'Alcorão 57:4'], ['Que a paz esteja contigo — As-salamu alaykum.', 'Saudação'],
   ],
   budista: [
-    ['A paz vem de dentro. Não a procure fora.', 'Buda'], ['Somos o que pensamos. Com nossos pensamentos, fazemos o mundo.', 'Dhammapada'],
+    ['A paz vem de dentro. Não a procure fora.', 'Buda'], ['A vida vai tomando a forma do que a gente pensa.', 'Dhammapada'],
     ['Não insista no passado, não sonhe com o futuro: concentre a mente no momento presente.', 'Buda'],
-    ['Melhor do que mil palavras vazias é uma palavra que traz paz.', 'Dhammapada 100'], ['Respire. Você está aqui, agora. Isso basta.', 'Prática de atenção plena'],
-    ['Assim como uma rocha sólida não é abalada pelo vento, o sábio não se abala com elogio ou crítica.', 'Dhammapada 81'],
+    ['Uma palavra que traz paz vale mais que mil palavras vazias.', 'Dhammapada 100'], ['Respire. Você está aqui, agora. Isso basta.', 'Prática de atenção plena'],
+    ['Como pedra firme no vento, quem tem sabedoria não balança com elogio nem com crítica.', 'Dhammapada 81'],
   ],
   hindu: [
-    ['Você tem direito à ação, mas não aos frutos da ação.', 'Bhagavad Gita 2:47'], ['Melhor é cumprir o próprio dever, mesmo imperfeito, do que o dever de outro, bem feito.', 'Bhagavad Gita 3:35'],
-    ['A mente agitada é difícil de controlar, mas com prática ela se acalma.', 'Bhagavad Gita 6:35'], ['Namastê: a luz em mim saúda a luz em você.', 'Saudação'],
+    ['Cuide de agir bem. O resultado não está nas suas mãos.', 'Bhagavad Gita 2:47'], ['Vale mais viver o seu próprio caminho, com falhas, do que o de outra pessoa com perfeição.', 'Bhagavad Gita 3:35'],
+    ['A mente não para quieta, mas com treino e calma ela se aquieta.', 'Bhagavad Gita 6:35'], ['Namastê: a luz em mim saúda a luz em você.', 'Saudação'],
   ],
   espiritual: [
     ['O universo não te dá o que você pede com os pensamentos, te dá o que você pede com as ações.', 'Reflexão'], ['Gratidão transforma o que temos em suficiente.', 'Reflexão'],

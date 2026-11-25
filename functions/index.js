@@ -4,6 +4,7 @@
      e uma cobrança 30 min depois se ainda não foi marcado como feito.
    - Resumo do dia às 8h e da véspera às 20h.
    As chaves de notificação (VAPID) são criadas sozinhas na primeira execução. */
+import { ehRemedio, avisoRemedio, semNome } from './remedio.js';
 import { onDocumentWritten, onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
@@ -174,7 +175,7 @@ export const tick = onSchedule({ schedule: 'every 1 minutes', timeZone: TZ, retr
   // lembretes de cada evento
   for (const { ev, offset } of dueReminders(events, now)) {
     if (!(await once(`r_${ev.id}_${offset}_${ev.date}_${ev.time.replace(':', '')}`))) continue;
-    const msg = reminderMessage(ev, offset, await coName(ev.companyId));
+    const msg = ehRemedio(ev) ? avisoRemedio() : reminderMessage(ev, offset, await coName(ev.companyId));
     const who = ev.assignees?.length ? ev.assignees : TEAM.map((m) => m.id);
     await Promise.all(who.map((m) => sendTo(m, msg, { pref: 'reminders', tag: `rem-${ev.id}`, url: `./#/e/${ev.id}` })));
   }
@@ -187,7 +188,7 @@ export const tick = onSchedule({ schedule: 'every 1 minutes', timeZone: TZ, retr
       if (!(await once(`d_${slot}_${day}_${m.id}`))) continue;
       const mine = events.filter((e) => e.date === day && e.status !== 'feito' && (e.assignees || []).includes(m.id));
       const companyMap = new Map(await Promise.all([...new Set(mine.map((e) => e.companyId))].map(async (id) => [id, await coName(id)])));
-      const msg = dailyMessage(slot, m.name, mine, (e) => companyMap.get(e.companyId));
+      const msg = dailyMessage(slot, m.name, mine.map(semNome), (e) => companyMap.get(e.companyId));
       if (msg) await sendTo(m.id, msg, { pref: 'daily', tag: `daily-${slot}`, url: './' });
     }
   }

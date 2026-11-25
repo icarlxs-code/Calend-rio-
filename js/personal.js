@@ -1,6 +1,7 @@
 /* Espaço Pessoal: privado de cada pessoa. Fica em pessoal/{uid}/itens na nuvem
    (só o dono lê e escreve) e não se mistura com o calendário de trabalho.
    Tipos de documento: compromisso/lembrete (padrão), lista ("list") e preferências ("prefs"). */
+import { ehRemedio, tituloSeguro, avisoRemedio } from '../functions/remedio.js';
 import { iaOk } from './ia-consent.js';
 import { store } from './store.js';
 import { todayKey, addDays, fromKey, pad, uid } from './utils.js';
@@ -315,10 +316,10 @@ const QUOTES = [
   ['Tudo o que você sempre quis está do outro lado do medo.', 'George Addair'],
   ['Comece onde você está. Use o que você tem. Faça o que você pode.', 'Arthur Ashe'],
   ['Aquele que tem saúde tem esperança; e aquele que tem esperança tem tudo.', 'Provérbio árabe'],
-  ['Tudo posso naquele que me fortalece.', 'Filipenses 4:13'],
-  ['Entregue o seu caminho ao Senhor; confie nele, e ele agirá.', 'Salmos 37:5'],
-  ['Há um tempo para tudo, e um momento para cada coisa debaixo do céu.', 'Eclesiastes 3:1'],
-  ['O amor é paciente, o amor é bondoso.', '1 Coríntios 13:4'],
+  ['Com Cristo me sustentando, consigo encarar o que vier.', 'Filipenses 4:13'],
+  ['Coloque o seu caminho nas mãos de Deus e confie: ele cuida do resto.', 'Salmos 37:5'],
+  ['Tudo na vida tem a sua hora, e cada coisa tem o seu momento.', 'Eclesiastes 3:1'],
+  ['Quem ama sabe esperar e trata o outro com bondade.', '1 Coríntios 13:4'],
   ['Escrever é esquecer.', 'Fernando Pessoa'],
   ['Tenho em mim todos os sonhos do mundo.', 'Fernando Pessoa'],
   ['Sei que nada sei.', 'Sócrates, por Platão'],
@@ -422,7 +423,7 @@ const at = (date, time) => Date.parse(`${date}T${time}:00-03:00`);
 const hm = (t) => t.replace(/^0/, '').replace(':00', 'h').replace(':', 'h');
 /* emoji do aviso: o do assunto (💇 cabelo, 💡 conta de luz…) e, se não reconhecer, o da categoria */
 export const emojiOf = (it) => itemLook(it.title || '', it.note || '')?.emoji || (CATS[it.cat] || CATS.lembrete).emoji;
-const short = (o) => `${emojiOf(o.item)} ${o.item.time ? hm(o.item.time) + ' ' : ''}${o.item.title}`;
+const short = (o) => `${ehRemedio(o.item) ? '💊' : emojiOf(o.item)} ${o.item.time ? hm(o.item.time) + ' ' : ''}${tituloSeguro(o.item)}`;
 export function buildPersonalSchedule(now = Date.now()) {
   const t = todayKey();
   const prefs = personal.prefs;
@@ -446,9 +447,11 @@ export function buildPersonalSchedule(now = Date.now()) {
         const many = (Number(store.profile?.index) || 0) >= 70;
         const stages = it.repeat === 'daily' ? [['m0', 0]] : it.repeat && it.repeat !== 'none' ? [['m60', 60], ['m0', 0]] : [...(many ? [['m60', 60]] : []), ['m30', 30], ['m0', 0], ['after', -45]];
         for (const [stage, min] of stages) {
+          if (ehRemedio(it)) { const g = avisoRemedio(stage); add(base - min * 60e3, g.title, g.body, k(stage), tag, url); continue; } // o nome só aparece dentro do app
           add(base - min * 60e3, `${c.emoji} ${TITLES[stage]}`, voice(it, stage, date), k(stage), tag, url);
         }
       } else if (!prefs.morning) {
+        if (ehRemedio(it)) { const g = avisoRemedio(); add(at(date, '08:00'), g.title, g.body, k('d0'), tag, url); continue; }
         add(at(date, '08:00'), `${c.emoji} Não esquece hoje`, voice(it, 'm30', date), k('d0'), tag, url);
       }
     }

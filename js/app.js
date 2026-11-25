@@ -1,4 +1,5 @@
 /* Inicialização, navegação e ações globais */
+import { ehRemedio, avisoRemedio } from '../functions/remedio.js';
 import { cena, momento, boneco3d, pose3d, aquece3d } from './cena.js';
 import { say } from './sininho.js';
 import { brand } from './brand.js';
@@ -733,6 +734,7 @@ function checkReminders() {
     const msg = reminderMessage(ev, offset, store.company(ev.companyId)?.name || '');
     toast(`${msg.title}`, { ms: 7000, action: 'Ver', onAction: () => openEventDetail(ev.id) });
     if (!serverOn && push.permission() === 'granted' && navigator.serviceWorker) {
+      if (ehRemedio(ev)) Object.assign(msg, avisoRemedio());
       navigator.serviceWorker.ready.then((reg) => reg.showNotification(msg.title, { body: msg.body, tag: `rem-${ev.id}`, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', data: { url: `./#/e/${ev.id}` } })).catch(() => {});
     }
   });

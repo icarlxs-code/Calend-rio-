@@ -87,7 +87,7 @@ test('IA escreve a mensagem como amigo e mantém o versículo exato', async () =
   const br = { h: 7, m: 40, date: '2026-11-20', wd: 5 };
   const r = await humanize(env, { kind: 'agenda', fact: 'Cortar cabelo', verse: ['Tudo posso naquele que me fortalece.', 'Filipenses 4:13'] }, { name: 'Henrique', today: [], ia: true }, [], br);
   assert.equal(r.title, 'Bom dia, campeão ☀️');
-  assert.match(r.body, /Vai com fé!\n“Tudo posso naquele que me fortalece.” — Filipenses 4:13/);
+  assert.match(r.body, /Vai com fé!\nTudo posso naquele que me fortalece. — Filipenses 4:13/);
   assert.equal(await humanize({ AI: { run: async () => ({ response: 'sem json' }) } }, { kind: 'water' }, { name: 'H', ia: true }, [], br), null);
   // sem o consentimento da pessoa, nada vai para a IA
   let chamou = false;

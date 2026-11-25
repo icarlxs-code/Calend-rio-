@@ -1,42 +1,45 @@
 /* "Amigo" do modo Pessoal: ao longo do dia (7h20 às 22h15) manda para cada pessoa
    mensagens de ânimo, versículos, água, hora de comer e lembretes do que ela anotou.
    Cada pessoa recebe só sobre a própria agenda pessoal. */
+import { GENERICO, semNome, ehRemedio } from '../../functions/remedio.js';
+import { bloqueado, medico } from './filtro.js';
 import { proxima, daAgenda, slotsDe, turnoDe, feCrista, introducao, inicia } from './vivo.js';
 import { brNow } from './coach.js';
 import { pickMind, pickFaith, mindBrief, hashStr, RELIGIONS } from './mind.js';
 
+/* Paráfrases próprias do Lembra (não são citações de nenhuma tradução). */
 export const VERSES = [
-  ['Tudo posso naquele que me fortalece.', 'Filipenses 4:13'],
-  ['Seja forte e corajoso! Não se apavore nem desanime, pois o Senhor, o seu Deus, estará com você por onde você andar.', 'Josué 1:9'],
-  ['Porque sou eu que conheço os planos que tenho para vocês, diz o Senhor, planos de fazê-los prosperar e não de causar dano, planos de dar a vocês esperança e um futuro.', 'Jeremias 29:11'],
-  ['O Senhor é o meu pastor; de nada terei falta.', 'Salmos 23:1'],
-  ['Não tema, pois estou com você; não tenha medo, pois sou o seu Deus. Eu o fortalecerei e o ajudarei.', 'Isaías 41:10'],
-  ['Venham a mim, todos os que estão cansados e sobrecarregados, e eu darei descanso a vocês.', 'Mateus 11:28'],
-  ['Confie no Senhor de todo o seu coração e não se apoie em seu próprio entendimento.', 'Provérbios 3:5'],
-  ['Sabemos que Deus age em todas as coisas para o bem daqueles que o amam.', 'Romanos 8:28'],
-  ['Deus é o nosso refúgio e a nossa fortaleza, auxílio sempre presente na adversidade.', 'Salmos 46:1'],
-  ['Pois Deus não nos deu espírito de covardia, mas de poder, de amor e de equilíbrio.', '2 Timóteo 1:7'],
-  ['Entregue o seu caminho ao Senhor; confie nele, e ele agirá.', 'Salmos 37:5'],
-  ['Aqueles que esperam no Senhor renovam as suas forças. Voam alto como águias; correm e não ficam exaustos.', 'Isaías 40:31'],
-  ['Lancem sobre ele toda a sua ansiedade, porque ele tem cuidado de vocês.', '1 Pedro 5:7'],
-  ['Este é o dia em que o Senhor agiu; alegremo-nos e exultemos neste dia.', 'Salmos 118:24'],
-  ['As misericórdias do Senhor renovam-se cada manhã. Grande é a tua fidelidade.', 'Lamentações 3:22-23'],
-  ['Eu te louvo porque me fizeste de modo especial e admirável.', 'Salmos 139:14'],
-  ['Deixo com vocês a paz; a minha paz dou a vocês.', 'João 14:27'],
-  ['O choro pode persistir uma noite, mas de manhã irrompe a alegria.', 'Salmos 30:5'],
-  ['Consagre ao Senhor tudo o que você faz, e os seus planos serão bem-sucedidos.', 'Provérbios 16:3'],
-  ['O Senhor te abençoe e te guarde.', 'Números 6:24'],
-  ['Sejam fortes e corajosos. O Senhor, o seu Deus, vai com vocês; nunca os deixará, nunca os abandonará.', 'Deuteronômio 31:6'],
-  ['Tudo o que fizerem, façam de todo o coração, como para o Senhor.', 'Colossenses 3:23'],
-  ['Alegrem-se sempre no Senhor. Novamente direi: alegrem-se!', 'Filipenses 4:4'],
-  ['A alegria do Senhor os fortalecerá.', 'Neemias 8:10'],
+  ['Com Cristo me sustentando, consigo encarar o que vier.', 'Filipenses 4:13'],
+  ['Coragem! Não deixe o medo mandar, porque aonde você for Deus vai junto.', 'Josué 1:9'],
+  ['Deus pensa em você com carinho: o que ele prepara é paz e um amanhã cheio de esperança.', 'Jeremias 29:11'],
+  ['Deus cuida de mim como um pastor cuida do rebanho: não vai me faltar o essencial.', 'Salmos 23:1'],
+  ['Deus diz: estou do seu lado, então respire. Eu te dou força e te seguro pela mão.', 'Isaías 41:10'],
+  ['Jesus convida quem anda exausto e carregando peso demais: chega perto, aqui tem descanso.', 'Mateus 11:28'],
+  ['Confie em Deus por inteiro, mesmo quando a sua cabeça não entende o caminho.', 'Provérbios 3:5'],
+  ['Para quem ama a Deus, até os dias difíceis acabam servindo para algo bom.', 'Romanos 8:28'],
+  ['Quando aperta, Deus é abrigo e força: uma ajuda que está sempre por perto.', 'Salmos 46:1'],
+  ['O medo não veio de Deus. Dele vêm a força, o amor e a cabeça no lugar.', '2 Timóteo 1:7'],
+  ['Coloque o seu caminho nas mãos de Deus e confie: ele cuida do resto.', 'Salmos 37:5'],
+  ['Quem espera em Deus ganha fôlego novo: levanta voo, corre e segue sem desabar.', 'Isaías 40:31'],
+  ['Pode soltar em Deus tudo o que te deixa ansioso. Ele se importa com você.', '1 Pedro 5:7'],
+  ['O dia de hoje é presente de Deus. Que tal receber com alegria?', 'Salmos 118:24'],
+  ['O amor de Deus não se esgota: toda manhã vem uma porção nova, e ele não falha.', 'Lamentações 3:22-23'],
+  ['Obrigado, Deus, por ter me criado de um jeito tão incrível e só meu.', 'Salmos 139:14'],
+  ['Jesus deixou um presente de despedida: a paz dele, para ficar com a gente.', 'João 14:27'],
+  ['A tristeza pode dormir aqui uma noite, mas quando amanhece a alegria chega.', 'Salmos 30:5'],
+  ['Entregue a Deus o que você faz e veja os seus planos ganharem firmeza.', 'Provérbios 16:3'],
+  ['Que Deus abençoe você e proteja os seus passos.', 'Números 6:24'],
+  ['Seja forte, sem pânico: Deus caminha junto e não vai embora.', 'Deuteronômio 31:6'],
+  ['Seja qual for a tarefa, capriche de coração, como quem trabalha para Deus.', 'Colossenses 3:23'],
+  ['Que a sua alegria venha de Deus, hoje e todo dia. Vale repetir: alegre-se!', 'Filipenses 4:4'],
+  ['A alegria que vem de Deus é o que te mantém de pé.', 'Neemias 8:10'],
 ];
 const NIGHT_VERSES = [
-  ['Em paz me deito e logo pego no sono, porque só tu, Senhor, me fazes viver em segurança.', 'Salmos 4:8'],
-  ['Venham a mim, todos os que estão cansados e sobrecarregados, e eu darei descanso a vocês.', 'Mateus 11:28'],
-  ['Lancem sobre ele toda a sua ansiedade, porque ele tem cuidado de vocês.', '1 Pedro 5:7'],
-  ['Deixo com vocês a paz; a minha paz dou a vocês.', 'João 14:27'],
-  ['O choro pode persistir uma noite, mas de manhã irrompe a alegria.', 'Salmos 30:5'],
+  ['Deito tranquilo e o sono chega logo: com Deus por perto, estou seguro.', 'Salmos 4:8'],
+  ['Jesus convida quem anda exausto e carregando peso demais: chega perto, aqui tem descanso.', 'Mateus 11:28'],
+  ['Pode soltar em Deus tudo o que te deixa ansioso. Ele se importa com você.', '1 Pedro 5:7'],
+  ['Jesus deixou um presente de despedida: a paz dele, para ficar com a gente.', 'João 14:27'],
+  ['A tristeza pode dormir aqui uma noite, mas quando amanhece a alegria chega.', 'Salmos 30:5'],
 ];
 
 const T = {
@@ -160,18 +163,20 @@ const pick = (a, seed) => a[Math.abs(seed) % a.length];
 const fill = (s, v) => s.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? '');
 /* palavras no gênero que a pessoa escolheu na ficha: feminino, masculino ou neutro */
 export const genderWords = (pr) => (pr === 'f' ? { lindo: 'linda', campeao: 'campeã' } : pr === 'm' ? { lindo: 'lindo', campeao: 'campeão' } : { lindo: 'incrível', campeao: 'você' });
-const verseText = ([t, ref]) => `“${t}” — ${ref}`;
+const verseText = ([t, ref]) => `${t} — ${ref}`; // paráfrase: sem aspas, porque não é citação
 const hm = (t) => (t ? t.replace(/^0/, '').replace(':00', 'h').replace(':', 'h') : '');
 
 /* Mensagens a partir da agenda pessoal (cabelo, contas atrasadas, listas, aniversários...) */
-export function agendaMessages(p, br, st) {
+export function agendaMessages(p0, br, st) {
+  const seg = (L) => (L || []).filter((x) => !ehRemedio(x)); // remédio só sai pela frase própria, sem o nome na tela de bloqueio
+  const p = { ...p0, today: seg(p0.today), tomorrow: seg(p0.tomorrow), overdue: seg(p0.overdue), lists: p0.lists };
   const out = [];
   const n = p.name || '';
   const nowMin = br.h * 60 + br.m;
   // variações por assunto e por dia: o mesmo lembrete nunca chega com a mesma frase dois dias seguidos
   const v = (key, list) => list[hashStr(`${key}|${br.date}`) % list.length];
   const agora = agoraDe(p, br);
-  for (const x of daAgenda(p, br)) out.push({ ...x, vivo: true });
+  for (const x of daAgenda(p0, br)) out.push({ ...x, vivo: true });
   for (const it of p.today || []) {
     if (it.done || !it.time) continue;
     const [h, m] = it.time.split(':').map(Number);
@@ -208,7 +213,7 @@ export function agendaMessages(p, br, st) {
   for (const m of livres) {
     if (!m.vivo) { prontas.push(m); continue; }
     const f = proxima({ cat: m.cat, perfil: p, slots: m.slots, agora, vh: st.vh });
-    if (f) prontas.push({ key: m.key, every: m.every, title: f.titulo, body: inicia(f.texto), cat: m.cat, fid: f.id, vh: f.vh });
+    if (f) prontas.push({ key: m.key, every: m.every, title: f.titulo, body: inicia(f.texto), cat: m.cat, fid: f.id, vh: f.vh, ...(m.cat === 'remedio' ? { priv: m.slots.remedio } : {}) });
   }
   return prontas;
 }
@@ -350,7 +355,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
       const m = agenda[seed % agenda.length];
       st.asked = { ...st.asked, [m.key]: br.date };
       if (m.vh) st.vh = m.vh;
-      msg = { title: m.title, body: m.body, kind: 'agenda', fact: m.body, ...(m.cat ? { cat: m.cat, fid: m.fid } : {}) };
+      msg = { title: m.title, body: m.body, kind: 'agenda', fact: m.body, ...(m.cat ? { cat: m.cat, fid: m.fid } : {}), ...(m.priv ? { priv: m.priv } : {}) };
     } else if (kind === 'water') {
       st.water++;
       msg = viva('agua', 'water', { title: KIND_TITLE.water, body: fill(pick(T.water, seed), V), kind: 'water' });
@@ -423,7 +428,7 @@ const KIND_TASK = {
 export async function humanize(env, msg, p, recent, br) {
   if (!env.AI || p.ia !== true || msg.kind !== 'agenda' || msg.fid) return null; // só com o consentimento da pessoa, e só recados da agenda (o resto vem do banco, sem gastar IA)
   const g = p.prefs?.pronoun === 'f' ? { dele: 'dela', o: 'a', ele: 'ela' } : p.prefs?.pronoun === 'm' ? { dele: 'dele', o: 'o', ele: 'ele' } : { dele: 'dele(a)', o: 'o(a)', ele: 'ele(a)' };
-  const today = (p.today || []).filter((x) => !x.done).map((x) => `${x.time ? x.time + ' ' : ''}${x.title}`).slice(0, 5).join('; ');
+  const today = (p.today || []).filter((x) => !x.done).map(semNome).map((x) => `${x.time ? x.time + ' ' : ''}${x.title}`).slice(0, 5).join('; ');
   const tone = { carinhoso: 'Tom: carinhoso e acolhedor.', firme: 'Tom: amigo coach, firme e motivador, que puxa para cima.', direto: 'Tom: direto e objetivo, sem rodeios, mas gentil.' }[p.prefs?.tone] || '';
   const work = p.work && p.work.profession ? `${p.name} trabalha como ${p.work.profession}${p.work.goal ? ` e o objetivo ${g.dele} é: ${p.work.goal}` : ''}. Quando fizer sentido, conecte a mensagem com a rotina dessa profissão (sem inventar fatos).` : '';
   const sys = `Você escreve notificações de celular em português do Brasil para ${p.name}${p.prefs?.pronoun === 'f' ? ' (mulher; use o feminino)' : p.prefs?.pronoun === 'm' ? ' (homem; use o masculino)' : ' (use linguagem neutra, sem marcar gênero)'}, como o melhor amigo ${g.dele} — alguém que se importa de verdade, conselheiro, que levanta a autoestima e a moral.${p.prefs?.faith === false || (p.prefs?.religion && (RELIGIONS[p.prefs.religion] || {}).fam === 'secular') ? ' Não fale de religião nem de Deus.' : p.prefs?.religion ? ` A religião da pessoa é ${RELIGIONS[p.prefs.religion]?.label || 'cristã'}: se falar de fé, respeite SÓ essa tradição.` : ' Pode citar fé em Deus com naturalidade.'}${p.mind ? ` Sobre a pessoa: ${mindBrief(p.mind)}.` : ''}${p.age ? ` Ela tem por volta de ${p.age} anos: use referências e jeito de falar dessa idade.` : ''}
@@ -443,6 +448,7 @@ Responda SÓ com JSON: {"title":"até 38 caracteres, com 1 emoji","body":"até 1
       if (!j.title || !j.body) continue;
       let body = String(j.body).replace(/^["“]|["”]$/g, '').slice(0, 220);
       if (msg.verse) body = msg.kind === 'verse' ? `${body}\n${verseText(msg.verse)}` : `${body}\n${verseText(msg.verse)}`;
+      if (bloqueado(`${j.title} ${body}`) || medico(body)) continue; // a IA passa pelo mesmo filtro do banco
       return { title: String(j.title).slice(0, 50), body };
     } catch (e) { console.log('amigo IA', model, e.message); }
   }
@@ -489,9 +495,9 @@ export async function amigoOne(env, sendToMember, m, now = Date.now(), rankInfo 
   if (!r) { if (changed) await env.CAL.put(key, JSON.stringify(st)); return { sent: 0, nextAt: amigoNextAt(st, now) }; }
   // os recados da agenda que não vêm do banco de frases podem ser reescritos pela IA (com consentimento)
   let out = r.msg, ai = false;
-  if (r.msg.kind === 'agenda' && !r.msg.fid && Math.random() < 0.7) {
-    const h = await humanize(env, r.msg, p, st.recent, br).catch(() => null);
-    if (h) { out = { ...r.msg, body: h.body }; ai = true; r.state.recent = [...(r.state.recent || []).slice(0, -1), h.body].slice(-12); }
+  if (r.msg.kind === 'agenda' && !r.msg.fid && !r.msg.priv && Math.random() < 0.7) {
+    const h = await humanize(env, r.msg, p, st.recent, br).catch((e) => { console.log('humanize falhou', e.message); if (usage && usage.erro) usage.erro('amigo'); return null; });
+    if (h) { out = { ...r.msg, body: h.body }; ai = true; r.state.recent = [...(r.state.recent || []), h.body].slice(-40); }
   }
   delete r.state.usage;
   const vh = r.state.vh; delete r.state.vh;
@@ -499,7 +505,9 @@ export async function amigoOne(env, sendToMember, m, now = Date.now(), rankInfo 
   await env.CAL.put(key, JSON.stringify(r.state));
   if (r.msg.fid || r.msg.vfid) await env.CAL.put(`vh:${m.id}`, JSON.stringify(vh || {}));
   if (usage) usage('amigo', ai);
-  const { kind, fact, verse, cat, fid, vfid, ref, ...push } = out; // cat e fid vão no aviso na Etapa 4
+  const { kind, fact, verse, cat, fid, vfid, ref, priv, ...push0 } = out;
+  const push = priv ? { ...push0, ...GENERICO, data: { remedio: priv, corpo: out.body } } : push0; // remédio: o nome vai só nos dados, nunca na tela de bloqueio
+  // cat e fid vão no aviso na Etapa 4
   const sent = await sendToMember(env, m.id, push);
   return { sent, nextAt: amigoNextAt(r.state, now) };
 }

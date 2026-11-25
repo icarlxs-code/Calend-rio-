@@ -39,7 +39,7 @@ test('versículo: texto idêntico ao banco, com referência, só para fé crist�
   const ok = new Map(BANCO.categorias.versiculo.map((v) => [v.ref + v.texto, 1]));
   const ver = (prefs) => { const L = []; for (let i = 0; i < 60; i++) { const r = nextNudge({ name: 'Lia', uid: 'f' + i, prefs: { water: false, ...prefs } }, { day: '2026-11-20', done: { morning: true, lunch: true }, next: 0 }, at('15:10'), () => ((i * 37) % 60) / 60); if (r?.msg.kind === 'verse') L.push(r.msg); } return L; };
   const c = ver({ religion: 'catolica' }); assert.ok(c.length > 3);
-  for (const m of c) { const x = /“([\s\S]+)” — (.+)$/.exec(m.body); assert.ok(x && ok.has(x[2] + x[1]), m.body); assert.equal(m.ref, x[2]); }
+  for (const m of c) { const x = /(?:^|\n)([^\n]+) — ([^\n]+)$/.exec(m.body); assert.ok(x && ok.has(x[2] + x[1]), m.body); assert.equal(m.ref, x[2]); }
   assert.equal(ver({}).length, 0, 'sem religião na ficha'); assert.equal(ver({ religion: 'catolica', faith: false }).length, 0);
   for (const m of ver({ religion: 'judaica' })) assert.ok(!m.fid, 'outras tradições seguem no mind.js');
 });

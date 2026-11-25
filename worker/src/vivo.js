@@ -2,6 +2,8 @@
    Banco em frases-semente.json. Tudo aqui é puro (mesma entrada, mesma saída) e nunca manda um {campo} cru. */
 import SEED from './frases-semente.json' with { type: 'json' };
 import { hashStr } from './mind.js';
+import { bloqueado } from './filtro.js';
+import { ehRemedio } from '../../functions/remedio.js';
 
 export const BANCO = SEED;
 const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
@@ -28,7 +30,13 @@ const faseDe = (q) => (!q ? null : q === 'hoje' ? 'hoje' : q === 'amanhã' ? 'am
 /* "antes" vale para amanhã e para "em N dias"; "hoje" e "amanhã" só para o próprio dia */
 const cabe = (f, fase) => !f || !fase || f === fase || (f === 'antes' && fase === 'amanha');
 /* as últimas 30, ou 60% do que está disponível quando o banco é menor */
-export const janela = (pool) => Math.min(30, Math.floor(pool * 0.6));
+export const janela = (pool) => (pool > 34 ? 30 : Math.floor(pool * 0.6));
+/* se nada couber, uma frase neutra e segura do tema (sem nenhum dado): nunca vazio, nunca erro */
+export const NEUTRAS = {
+  agua: 'Que tal um copo d’água agora?', manha: 'Bom dia! Vamos com calma, uma coisa de cada vez.', noite: 'O dia foi longo. Agora é hora de descansar.', motivacao: 'Um passo pequeno hoje já conta.',
+  aniversario: 'Tem aniversário por perto. Dá uma olhada na agenda.', socializar: 'Que tal mandar um oi para alguém querido?', remedio: 'Hora de cuidar da saúde. Toque para ver.', estudo: 'Uns minutinhos de estudo agora já ajudam.', trabalho: 'Dá uma olhada no que vem por aí na agenda.', contas: 'Tem conta para conferir na agenda.',
+};
+const TIT_NEUTRO = { agua: '💧 Água', manha: '☀️ Bom dia!', noite: '🌙 Boa noite', motivacao: '💜 Motivação', aniversario: '🎂 Aniversário', socializar: '💬 Pessoas', remedio: '💊 Remédio', estudo: '📚 Estudo', trabalho: '💼 Trabalho', contas: '💸 Contas', versiculo: '📖 Uma palavra' };
 
 /** agora = { turno, wd, chave } (chave: "2026-11-25T09", sempre no horário do Brasil) */
 export function candidatas({ cat, perfil = {}, slots = {}, agora, hist = [], lista = BANCO.categorias[cat] || [] }) {
@@ -36,6 +44,7 @@ export function candidatas({ cat, perfil = {}, slots = {}, agora, hist = [], lis
   for (const f of lista) {
     if (f.hora !== 'qualquer' && f.hora !== agora.turno) continue;
     if (f.dia && f.dia !== DIAS[agora.wd]) continue;
+    if (bloqueado(f.texto)) continue;
     if (!cabe(f.quando, fase)) continue;
     if (cat === 'aniversario' && fase && fase !== 'hoje' && !f.quando && !/\{quando\}/.test(f.texto) && /parab[eé]ns/i.test(f.texto)) continue; // "manda o parabéns" só no dia
     const texto = verso ? f.texto : preenche(f.texto, slots); if (!texto || CRU.test(texto)) continue;
@@ -48,7 +57,8 @@ export function candidatas({ cat, perfil = {}, slots = {}, agora, hist = [], lis
   }
   if (!ok.length) return ok;
   const rec = new Set(hist.filter((x) => !x.includes('-g-')).slice(-janela(ok.length)));
-  return ok.filter((c) => !rec.has(c.f.id));
+  const livres = ok.filter((c) => !rec.has(c.f.id));
+  return livres.length ? livres : ok.slice().sort((a, b) => hist.lastIndexOf(a.f.id) - hist.lastIndexOf(b.f.id)).slice(0, 1); // tudo usado: volta a mais antiga
 }
 export function escolhe(o) {
   const L = candidatas(o); if (!L.length) return null;
@@ -79,12 +89,13 @@ export function proxima({ cat, perfil, slots, agora, vh = {} }) {
   if (BANCO.gramaticas[cat] && n % 4 === 3) m = daGramatica(cat, slots, hashStr(`${perfil.uid || perfil.name}|${cat}|g|${n}`), vh._p?.[cat] || []);
   if (m && hist.includes(m.id)) m = null;
   m = m || escolhe({ cat, perfil, slots, agora, hist });
-  if (!m) return null;
+  if (!m || bloqueado(m.texto)) m = NEUTRAS[cat] ? { id: `${cat}-neutra`, cat, texto: NEUTRAS[cat], tom: 'leve', tags: [] } : null;
+  if (!m) return null; // só versículo: sem banco, não se inventa
   const novo = { ...vh, [cat]: [...hist, m.id].slice(-40), _n: { ...(vh._n || {}), [cat]: n + 1 } };
   if (m.partes) novo._p = { ...(vh._p || {}), [cat]: [...(vh._p?.[cat] || []), ...m.partes].slice(-15) };
   const fase = faseDe(slots.quando), L = (BANCO.titulos[cat] || []).filter((x) => cat !== 'aniversario' || (fase === 'hoje' ? !/chegando/i.test(x) : !/\bhoje\b/i.test(x))), r = hashStr(`${m.id}|${agora.chave}|t`);
-  let titulo = ''; for (let i = 0; i < L.length && !titulo; i++) titulo = preenche(L[(r + i) % L.length], slots) || '';
-  return { ...m, titulo, vh: novo };
+  let titulo = ''; if (cat === 'remedio') titulo = '💊 Hora do seu remédio'; for (let i = 0; i < L.length && !titulo; i++) titulo = preenche(L[(r + i) % L.length], slots) || '';
+  return { ...m, titulo: titulo || TIT_NEUTRO[cat] || 'Lembra', vh: novo };
 }
 /** introdução do versículo (o versículo em si nunca muda) */
 export function introducao(perfil, slots, agora) {
@@ -98,9 +109,9 @@ const hm = (t) => (t ? t.replace(/^0/, '').replace(':00', 'h').replace(':', 'h')
 export function slotsDe(p, br) {
   const T = p.today || [], ab = T.filter((x) => !x.done), feitos = T.length - ab.length, agoraM = br.h * 60 + br.m, min = (t) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
   const px = ab.filter((x) => x.time && min(x.time) > agoraM).sort((a, b) => (a.time < b.time ? -1 : 1))[0], am = [...(p.tomorrow || [])].sort((a, b) => ((a.time || '99') < (b.time || '99') ? -1 : 1))[0];
-  return { nome: p.name || '', profissao: p.work?.profession || '', meta: p.work?.goal || '', diasemana: DIA_NOME[br.wd], qtd_hoje: ab.length ? `${ab.length} ${ab.length > 1 ? 'coisas' : 'coisa'}` : '', feitos: feitos ? `${feitos} ${feitos > 1 ? 'tarefas' : 'tarefa'}` : '', primeiro_amanha: am?.title || '', proximo: px?.title || '', hora: px ? hm(px.time) : '' };
+  const S = (x) => (x && !ehRemedio(x) ? x : null);
+  return { nome: p.name || '', profissao: p.work?.profession || '', meta: p.work?.goal || '', diasemana: DIA_NOME[br.wd], qtd_hoje: ab.length ? `${ab.length} ${ab.length > 1 ? 'coisas' : 'coisa'}` : '', feitos: feitos ? `${feitos} ${feitos > 1 ? 'tarefas' : 'tarefa'}` : '', primeiro_amanha: S(am)?.title || '', proximo: S(px)?.title || '', hora: S(px) ? hm(px.time) : '' };
 }
-const NAO_REMEDIO = /dentist|m[eé]dic[oa]|consult|exame|academia|treino|\bpsic|\bpsiq|\bneuro|terap|vacina|hospital|cl[ií]nica|fisio|nutri|cardio|derma|gineco|pediatr|ortop|oftalm|caminh|corrid|pilates|yoga|check-?up|retorno|cirurg|raio|ultrass|doa[cç]/i;
 const ESTUDO = /\bestud|\bprova\b|\baula\b|\bcurso\b|\bler\b|\bleitura|\benem\b|\btcc\b|faculdade|vestibular|\brevis(ar|ão|ao)\b|li[cç][aã]o|dever de casa|\bmatem[aá]tica|\bingl[eê]s\b/i;
 /* tira o verbo do título para ele encaixar na frase: "Tomar Losartana" → "Losartana" */
 const semVerbo = (t, re) => { const x = String(t || '').replace(re, '').trim(); return x ? x : String(t || '').trim(); };
@@ -116,7 +127,7 @@ export function daAgenda(p, br) {
     if (x.done || !x.title) continue;
     const d = x.time ? +x.time.slice(0, 2) * 60 + +x.time.slice(3, 5) - agoraM : null;
     // "hora do remédio" só na hora: do horário marcado até 25 min depois
-    if (x.cat === 'saude' && !NAO_REMEDIO.test(x.title)) { if (d !== null && d <= 0 && d >= -25) out.push({ cat: 'remedio', key: `rm-${x.title}-${x.time}`, slots: { ...base, remedio: nomeRemedio(x.title), hora: hm(x.time) } }); }
+    if (ehRemedio(x)) { if (d !== null && d <= 0 && d >= -25) out.push({ cat: 'remedio', key: `rm-${x.title}-${x.time}`, slots: { ...base, remedio: nomeRemedio(x.title), hora: hm(x.time) } }); }
     else if (x.cat === 'pagar') out.push({ cat: 'contas', key: `ct-${x.title}`, slots: { ...base, conta: nomeConta(x.title), quando: 'hoje' } });
     else if (ESTUDO.test(x.title) && (d === null || (d >= -60 && d <= 90))) out.push({ cat: 'estudo', key: `es-${x.title}`, slots: { ...base, materia: nomeMateria(x.title) } });
   }

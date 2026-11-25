@@ -2,6 +2,7 @@
    - quando alguém marca/muda/conclui/remove algo, avisa o parceiro NA HORA
    - mantém no servidor a lista dos próximos lembretes (ele dispara no horário,
      mesmo com os celulares fechados) */
+import { semNome, avisoRemedio, tituloSeguro } from '../functions/remedio.js';
 import { piadaFixa } from './humor.js';
 import { folga } from './habito.js';
 import { store } from './store.js';
@@ -40,8 +41,9 @@ const whenText = (e) => {
   return `${day}${e.time ? ', ' + e.time.replace(':00', 'h').replace(':', 'h').replace(/^0/, '') : ''}`;
 };
 
-export function onEventChange(before, after) {
+export function onEventChange(before0, after0) {
   if (!active()) return;
+  const before = semNome(before0), after = semNome(after0);
   const ev = after || before;
   const what = `${TYPE_NAME[ev.type] || 'Tarefa'}${coName(ev.companyId) ? ' · ' + coName(ev.companyId) : ''}`;
   const who = (ev.assignees || []).map(nameOf).join(' e ') || 'sem responsável';
@@ -92,12 +94,12 @@ export function onActivity(a) {
   const actor = nameOf(store.me);
   let msg = null;
   if (a.kind === 'deleted' && a.events?.length) {
-    const e = a.events[0];
+    const e = semNome(a.events[0]);
     msg = a.events.length === 1
       ? changeMessage(e, null, { actor, company: coName(e.companyId), now: nowSP() })
       : { title: `${actor} removeu ${a.events.length} itens da agenda`, body: `${coName(e.companyId) ? coName(e.companyId) + ' · ' : ''}a partir de ${e.date.slice(8, 10)}/${e.date.slice(5, 7)}` };
   } else if (a.kind === 'series') {
-    msg = { title: `${actor} adicionou ${a.count} itens repetidos`, body: `${a.label || ''}${coName(a.sample?.companyId) ? ' · ' + coName(a.sample.companyId) : ''}` };
+    msg = { title: `${actor} adicionou ${a.count} itens repetidos`, body: `${tituloSeguro({ title: a.label || '' })}${coName(a.sample?.companyId) ? ' · ' + coName(a.sample.companyId) : ''}` };
   } else if (a.kind === 'series-edit') {
     msg = { title: `${actor} alterou ${a.count} itens repetidos`, body: `${a.label || ''}${coName(a.sample?.companyId) ? ' · ' + coName(a.sample.companyId) : ''}` };
   } else if (a.kind === 'import') {
@@ -114,7 +116,7 @@ export const personaOf = (member) => store.state.settings.find((x) => x.id === `
 export function buildSchedule(now = Date.now()) {
   const items = [];
   const from = addDays(todayKey(), -1), to = addDays(todayKey(), 4);
-  const evs = store.eventsBetween(from, to).filter((e) => e.time && e.status !== 'feito');
+  const evs = store.eventsBetween(from, to).filter((e) => e.time && e.status !== 'feito').map(semNome);
   const pendingOn = (member, date) => store.eventsOn(date, { person: member }).filter((e) => e.status !== 'feito').length;
   evs.forEach((ev) => {
     const at0 = epoch(ev.date, ev.time);
@@ -125,9 +127,10 @@ export function buildSchedule(now = Date.now()) {
       if (offset < 0 && ev.status !== 'pendente') return;
       const at = at0 - offset * 60e3;
       if (at < now - 10 * 60e3 || at > now + 4 * 86400e3) return;
-      const msg = reminderMessage(ev, offset, coName(ev.companyId));
+      const rem = ev.title === 'Seu remédio', msg = rem ? avisoRemedio(offset > 0 ? (offset >= 60 ? 'm60' : offset >= 30 ? 'm30' : 'm20') : 'm0') : reminderMessage(ev, offset, coName(ev.companyId));
+      if (rem && offset > 0 && ![20, 30, 60].includes(offset)) msg.title = '💊 Remédio mais tarde';
       // com 60 minutos ou menos, o texto ganha a voz do Lembra (o título continua dizendo o essencial)
-      if (offset > 0 && offset <= 60) { const p = piadaFixa(ev.title, 'a', `${ev.id}|${offset}|${ev.date}`); if (p) msg.body = `${ev.title ? `“${ev.title}”` : ''}${ev.location ? ` · ${ev.location}` : ''}${ev.title || ev.location ? ' · ' : ''}${p}`; }
+      if (!rem && offset > 0 && offset <= 60) { const p = piadaFixa(ev.title, 'a', `${ev.id}|${offset}|${ev.date}`); if (p) msg.body = `${ev.title ? `“${ev.title}”` : ''}${ev.location ? ` · ${ev.location}` : ''}${ev.title || ev.location ? ' · ' : ''}${p}`; }
       const resp = (ev.assignees || []).map(nameOf).join(' e ');
       store.team.map((m) => m.id).filter((member) => memberOffsets(member).includes(offset) && allowedFor(member, ev.companyId) && (ev.notifyPartner !== false || member === ev.createdBy || (ev.assignees || []).includes(member))).forEach((member) => items.push({
         id: `r_${ev.id}_${offset}_${ev.date}${ev.time.replace(':', '')}_${member}`,
@@ -141,7 +144,8 @@ export function buildSchedule(now = Date.now()) {
       const who = owner ? [owner] : (ev.assignees || []).length ? ev.assignees : [ev.createdBy || store.me].filter(Boolean);
       who.forEach((member) => lateReminders(ev, at0 + folga(ev.type) * 60e3, coName(ev.companyId), personaOf(member), { clientLike: WORK.clientLike }).forEach((r, k) => {
         // a primeira cobrança é sempre leve; o tom escolhido na ficha vale das próximas em diante
-        if (k === 0) { const p = piadaFixa(ev.title, 't', `${ev.id}|${ev.date}`); if (p) r.body = `${ev.title ? ev.title + '. ' : ''}${p}`; }
+        if (ev.title === 'Seu remédio') Object.assign(r, avisoRemedio('after'));
+        else if (k === 0) { const p = piadaFixa(ev.title, 't', `${ev.id}|${ev.date}`); if (p) r.body = `${ev.title ? ev.title + '. ' : ''}${p}`; }
         if (r.at < now - 10 * 60e3 || r.at > now + 4 * 86400e3) return;
         items.push({
           id: `l_${ev.id}_${r.late}_${ev.date}${ev.time.replace(':', '')}_${member}`,
@@ -157,7 +161,7 @@ export function buildSchedule(now = Date.now()) {
       [['morning', day, '08:00'], ['evening', addDays(day, 1), '20:00']].forEach(([kind, target, time]) => {
         const at = epoch(day, time);
         if (at < now - 10 * 60e3) return;
-        const mine = store.eventsOn(target, { person: m.id }).filter((e) => e.status !== 'feito');
+        const mine = store.eventsOn(target, { person: m.id }).filter((e) => e.status !== 'feito').map(semNome);
         const msg = dailyMessage(kind, m.name, mine, (e) => coName(e.companyId));
         if (msg) items.push({ id: `d_${kind}_${target}_${m.id}`, at, member: m.id, title: msg.title, body: msg.body, tag: `daily-${kind}`, url: './', kind: 'daily', badge: pendingOn(m.id, target) });
       });
