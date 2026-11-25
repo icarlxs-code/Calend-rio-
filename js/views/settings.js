@@ -31,7 +31,7 @@ export function renderSettings() {
   if (cloud) setTimeout(() => { fillDevices(); fillUsage(); }, 0);
   return `
   <header class="hdr">
-    <div class="hdr__row"><div class="hdr__titles"><p class="hdr__eyebrow">${esc(CONFIG.appName)}${store.solo ? '' : ' · ' + esc(CONFIG.agencyName)}</p><h1>Ajustes</h1></div></div>
+    <div class="hdr__row"><div class="hdr__titles"><p class="hdr__eyebrow">${esc(CONFIG.appName)}</p><h1>Ajustes</h1></div></div>
   </header>
   <div class="page">
     ${store.solo ? planSection() : ''}
@@ -100,7 +100,7 @@ export function renderSettings() {
       <div class="card card--row ${cloud ? 'card--ok' : 'card--warn'}">
         ${icon(cloud ? 'cloud' : 'phone', 22)}
         <div><strong>${cloud ? 'Sincronizado na nuvem' : 'Salvo só neste aparelho'}</strong>
-        <small>${cloud ? (store.solo ? 'Sua agenda fica salva na sua conta e aparece igual em qualquer celular em que você entrar.' : 'Henrique, Matheus e os links dos clientes veem tudo em tempo real.') : 'Para ver a mesma agenda em celulares diferentes, ative a nuvem (gratuito). Veja o guia no README do projeto.'}</small></div>
+        <small>${cloud ? (store.solo ? 'Sua agenda fica salva na sua conta e aparece igual em qualquer celular em que você entrar.' : 'Sua equipe e os links dos clientes veem tudo em tempo real.') : 'Para ver a mesma agenda em celulares diferentes, ative a nuvem (gratuito). Veja o guia no README do projeto.'}</small></div>
       </div>
     </section>
 

@@ -4,7 +4,6 @@
 export const CONFIG = {
   // Nome que aparece no topo do app e na tela do cliente
   appName: 'Lembra',
-  agencyName: 'Henrique & Matheus',
   // dono do app: vê o painel com todas as contas (Ajustes → Painel do dono)
   adminEmail: 'icarlxs@gmail.com',
   // o mascote Lembra (companheiro, guia do cadastro, telas) para todo mundo
@@ -16,7 +15,7 @@ export const CONFIG = {
   // Se abrir empresa, coloque a razão social e o CNPJ, ex.: 'Lembra Tecnologia LTDA (CNPJ 00.000.000/0001-00)'.
   legalName: 'Lembra',
   // Lei do comércio eletrônico (Decreto 7.962/2013): quem vende online mostra CPF ou CNPJ e um endereço.
-  // Preencha antes de anunciar, ex.: legalId: 'CNPJ 00.000.000/0001-00', legalAddress: 'Rua X, 100 — Rio de Janeiro/RJ'.
+  // Preencha antes de anunciar, ex.: legalId: '', legalAddress: ''.
   legalId: '',
   legalAddress: '',
   // WhatsApp de atendimento (só números, com DDI e DDD), ex.: '5521999998888'. Aparece na página de apresentação e nos Ajustes.

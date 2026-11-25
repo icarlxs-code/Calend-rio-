@@ -40,7 +40,7 @@ function stepHtml(step, i, total) {
   if (step === 'welcome') {
     return `<div class="ob__art"><img class="ob__icon" src="icons/icon-512.png" alt=""></div>
       <h1>Bem-vindo ao ${esc(CONFIG.appName)}</h1>
-      <p>A agenda de conteúdo de ${esc(CONFIG.agencyName)}: posts, stories, reels e captações de todas as empresas, num lugar só.</p>
+      <p>Eu lembro de tudo por você: trabalho, estudos e vida pessoal, num lugar só.</p>
       ${dots}
       <button class="btn btn--primary btn--block" data-next>Começar</button>`;
   }
@@ -67,9 +67,9 @@ function stepHtml(step, i, total) {
       <button class="btn btn--ghost btn--block" data-skip>Agora não</button>`;
     }
     return `<div class="ob__previews">
-        ${preview('Daqui a 2h: Reels · Pura Vida', '18h — postar o Reels “Bastidores”', 'agora')}
-        ${preview(`${partner?.name || 'Seu parceiro'} marcou para você`, 'Story · Café Aroma — amanhã, 16h', 'há 2 min')}
-        ${preview(`Bom dia, ${me?.name || 'Henrique'}! Seu dia hoje`, '5 tarefas · primeira: 11h30 Feed · Studio Fit', '8:00')}
+        ${preview('Daqui a 2h: Reels · Café Aroma', '18h — postar o Reels “Bastidores”', 'agora')}
+        ${preview(`${partner?.name || 'Sua equipe'} marcou para você`, 'Story · Café Aroma — amanhã, 16h', 'há 2 min')}
+        ${preview(`Bom dia, ${me?.name || 'você'}! Seu dia hoje`, '5 tarefas · primeira: 11h30 Feed · Studio Fit', '8:00')}
       </div>
       <h1>Nunca mais esqueça um post</h1>
       <p>Lembretes 2h e 30 min antes de cada post, aviso na véspera das captações, cobrança se algo ficou para trás e aviso quando o parceiro marcar algo para você.</p>

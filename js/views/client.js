@@ -146,7 +146,7 @@ function clientHtml(canGoBack) {
       </div>
       <footer class="client__foot">
         Atualizado em ${new Date(updatedAt || Date.now()).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}<br>
-        Gestão de conteúdo: <b>${esc(CONFIG.agencyName)}</b>
+        Gestão de conteúdo: <b>${esc(CONFIG.appName)}</b>
       </footer>
     </div>
   </div>`;
