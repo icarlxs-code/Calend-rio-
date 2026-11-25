@@ -11,6 +11,7 @@ import { sininho, alive, vivo } from './sininho.js';
 import { leCache, gravaCache } from './cache.js';
 import { ageOf } from './persona.js';
 import { abreAchar } from './achar.js';
+import { anel, bolinha } from './anel.js';
 import { idadeSabida, pedeIdade } from './comeco.js';
 
 const LS = 'lembra.amigo';
@@ -152,7 +153,7 @@ export function openFriends() {
   import('./mascote.js').then((m) => { snhOn = m.mascotOn(); }).catch(() => {});
   const anelDe = (c) => { const st = St && St.feedCache().rows.find((r) => r.uid === c.uid && r.stories.length); return !st ? '' : st.stories.some((x) => !x.seen) ? ' is-story' : ' is-seen'; };
   const card = (c) => `<button class="fxrow" data-fr="${esc(c.uid)}">
-      <span class="fxava${anelDe(c)}"${anelDe(c) ? ` data-ava="${esc(c.uid)}"` : ''}>${foto(c)}${isOnline(c.online) ? '<i class="fxava__on"></i>' : ''}</span>
+      <span class="fxava${anelDe(c)}"${anelDe(c) ? ` data-ava="${esc(c.uid)}"` : ''}>${foto(c)}${(() => { const st = St && St.feedCache().rows.find((r) => r.uid === c.uid && r.stories.length); return st ? anel(st) + bolinha(st) : ''; })()}${isOnline(c.online) ? '<i class="fxava__on"></i>' : ''}</span>
       <span class="fxrow__id"><b>${esc(c.name.split(' ').slice(0, 2).join(' '))}${c.vip ? `<i class="fxcrown">${icon('crown', 12)}</i>` : ''}${c.close ? `<i class="fxstar" title="Amigo próximo">${icon('star', 12)}</i>` : ''}</b>
         <small>${isOnline(c.online) ? `<em class="is-on">online agora</em>${c.job ? ` · ${esc(c.job)}` : ''}` : c.online ? `Ativo ${esc(onlineTxt(c.online).replace('visto ', ''))}${c.job ? ` · ${esc(c.job)}` : ''}` : esc(c.job || `Nível ${c.level || 0}`)}</small></span>
       <span class="fxrow__go">${icon('right', 18)}</span></button>`;

@@ -6,7 +6,8 @@ import { botaoMensagens } from '../social.js';
 import { ajudante, ajudanteHtml } from '../ajudante.js';
 import { cena, boneco3d, momento } from '../cena.js';
 import { postStory } from '../stories.js';
-import { itemLook } from '../itemicons.js';
+import { itemLook, roupaDe } from '../itemicons.js';
+import { roupa } from '../roupas.js';
 import { okFx } from '../okfx.js';
 import {
   personal, CATS, REPEATS, LIST_PRESETS, occurrences, overdue, savePersonal, removePersonal, toggleDone, parseQuick,
@@ -22,7 +23,7 @@ import { usagePlaceholder, fillUsage } from '../usage.js';
 import { onDone, streak } from '../reward.js';
 import { suggestions, addSuggestion, hideSuggestion, forYouLead } from '../foryou.js';
 import { agruparInicio } from '../inicio-pessoal.js';
-import { sininho, greetLine, interactive, say, alive, vivo } from '../sininho.js';
+import { sininho, greetLine, interactive, say, alive, vivo, veste } from '../sininho.js';
 import { offensive } from '../game.js';
 import { esc, todayKey, addDays, dayLabel, fmtTime, fromKey, toKey, diffDays, greeting, fmtDayLong, monthKey, addMonths, fmtMonth, fmtDayShort, WD_SHORT, WD_LETTER, MONTHS } from '../utils.js';
 
@@ -510,7 +511,7 @@ export function openPersonalEditor(id = null, preset = {}) {
     className: 'sheet--tall psheet',
     html: `${sheetHead(old ? 'Editar' : 'Anotar', { left: '<button class="btn-text" data-close>Cancelar</button>', right: '<button class="btn btn--primary btn--sm" data-save>Salvar</button>' })}
     <form class="form" onsubmit="return false">
-      ${old ? '' : ajudanteHtml()}
+      ${old ? `<div class="abre" aria-hidden="true"><span class="abre__s">${sininho('feliz', { size: 122 })}</span></div>` : ajudanteHtml()}
       <div class="fgroup"><label class="flabel">Tipo</label><div class="pcats">
         ${Object.entries(CATS).map(([k, c]) => `<button type="button" class="pcat${d.cat === k ? ' is-on' : ''}" style="--pc:${c.color}" data-cat="${k}">${tile(c.ic, c.g, 30)}<span>${esc(c.label)}</span></button>`).join('')}
       </div></div>
@@ -529,6 +530,7 @@ export function openPersonalEditor(id = null, preset = {}) {
       <div class="form__spacer"></div>
     </form>`,
     onMount: (a) => {
+      { const e = a.el.querySelector('.abre__s [data-snh]'); if (e) { alive(); const rp = roupaDe(d); if (rp) veste(e, roupa(rp)); vivo(e, { gestos: ['pisca', 'olhaLados', 'sim'], cada: [3, 6] }); } }
       const el = a.el, form = el.querySelector('form');
       // o ícone muda enquanto a pessoa escreve (cabelo → secador, conta de luz → lâmpada…)
       let catPicked = !!old;

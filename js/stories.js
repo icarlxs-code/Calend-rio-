@@ -4,6 +4,7 @@
    - a foto some sozinha em 24h (o servidor apaga; nada fica guardado);
    - só os amigos veem; quem viu aparece para o dono do story ("Visto por");
    - visitas ao perfil: cada um vê quem passou pelo perfil nos últimos 7 dias. */
+import { anel, bolinha, rotulo, pulsa, conta } from './anel.js';
 import { store } from './store.js';
 import { api } from './avisos.js';
 import { openSheet, sheetHead, toast, confirmDialog } from './components.js';
@@ -111,12 +112,12 @@ export function storyStrip(rows = feed.rows, { comMeu = true, lembra = true, con
   const meus = rows.find((r) => r.me && r.stories.length);
   const itens = rows.filter((r) => !r.me && r.stories.length);
   const novos = itens.filter((r) => r.stories.some((x) => !x.seen)), vistos = itens.filter((r) => !r.stories.some((x) => !x.seen)); // quem tem story novo vem primeiro
-  const lb = lembra && mascotOn() ? `<button class="ststrip__it" data-st-lembra role="listitem"><span class="stface stface--snh" style="--s:60px">${sininho('feliz', { size: 58 })}</span><i class="ststrip__ring"></i><small>Lembra</small></button>` : '';
+  const lb = lembra && mascotOn() ? `<button class="ststrip__it" data-st-lembra role="listitem"><span class="stface stface--snh" style="--s:60px">${sininho('feliz', { size: 58 })}</span>${anel({ stories: [{}] })}<small>Lembra</small></button>` : '';
   return `<div class="ststrip" role="list">
-    ${comMeu ? `<button class="ststrip__it" data-st-me role="listitem">${face(store.member(store.me) || { name: 'Você' }, 60)}<i class="ststrip__plus" data-st-novo role="button" aria-label="Novo story">${icon('plus', 14)}</i><small>Seu story</small><i class="ststrip__ring${meus ? (meus.stories.some((x) => !x.seen) ? '' : ' is-seen is-mine') : ' is-off'}"></i></button>` : ''}
+    ${comMeu ? `<button class="ststrip__it" data-st-me role="listitem" aria-label="${rotulo(meus, '', true)}">${face(store.member(store.me) || { name: 'Você' }, 60)}<i class="ststrip__plus" data-st-novo role="button" aria-label="Novo story">${icon('plus', 14)}</i><small>Seu story</small>${anel(meus, { meu: true })}</button>` : ''}
     ${!lembraVisto() ? lb : ''}
-    ${novos.map((r) => `<button class="ststrip__it" data-st-owner="${esc(r.uid)}" role="listitem">${face(r, 60)}<i class="ststrip__ring"></i><small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
-    ${vistos.map((r) => `<button class="ststrip__it" data-st-owner="${esc(r.uid)}" role="listitem">${face(r, 60)}<i class="ststrip__ring is-seen"></i><small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
+    ${novos.map((r) => `<button class="ststrip__it${pulsa(r)}" data-st-owner="${esc(r.uid)}" role="listitem" aria-label="${esc(rotulo(r, r.name.split(' ')[0]))}">${face(r, 60)}${anel(r)}${bolinha(r)}<small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
+    ${vistos.map((r) => `<button class="ststrip__it" data-st-owner="${esc(r.uid)}" role="listitem" aria-label="${esc(rotulo(r, r.name.split(' ')[0]))}">${face(r, 60)}${anel(r)}<small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
     ${convidar ? `<button class="ststrip__it ststrip__inv${dot ? ' is-dot' : ''}" data-action="friends" role="listitem" aria-label="Amigos e convites"><span class="ststrip__invc">${icon('plus', 24)}</span><i class="iconbtn__dot"></i><small>Convidar</small></button>` : ''}
   </div>`;
 }
@@ -146,9 +147,9 @@ async function limpaFotos() { // apaga as de stories que já sumiram
 /* a foto de um story: do aparelho se já tiver; senão baixa (e marca visto). "adianta" baixa sem marcar */
 async function fotoDe(r, st, { adianta = false } = {}) {
   const tem = await fotoGuardada(st.id);
-  if (tem) { if (!adianta && !st.seen && !r.me) { st.seen = true; call('/friends/story-view', { owner: r.uid, id: st.id, modo: 'visto' }).catch(() => {}); } return tem; }
+  if (tem) { if (!adianta && !st.seen && !r.me) { st.seen = true; gravaCache('feed', feed); call('/friends/story-view', { owner: r.uid, id: st.id, modo: 'visto' }).catch(() => {}); } return tem; }
   const res = await call('/friends/story-view', { owner: r.uid, id: st.id, ...(adianta ? { modo: 'foto' } : {}) });
-  if (!adianta) st.seen = true;
+  if (!adianta) { st.seen = true; gravaCache('feed', feed); }
   guardaFoto(st.id, res.photo);
   return res.photo;
 }
@@ -339,7 +340,7 @@ function openViewers(id, onClose, foto, st = {}) {
 export async function openStoriesFeed() {
   const html = () => `${sheetHead('Stories', { left: '<button class="btn-text" data-close>Fechar</button>' })}<div class="page page--sheet">
     ${storyStrip()}
-    ${feed.rows.filter((r) => !r.me).length ? `<h3 class="ah">Atualizações recentes</h3><div class="agroup">${feed.rows.filter((r) => !r.me).map((r) => { const novo = r.stories.some((x) => !x.seen); const ult = Math.max(...r.stories.map((x) => x.at)); return `<button class="frow" data-st-owner="${esc(r.uid)}"><span class="frow__ring${novo ? '' : ' is-seen'}">${face(r, 46)}</span><span class="frow__id"><b>${esc(r.name)}</b><small>${desde(ult)} · ${r.stories.length} ${r.stories.length === 1 ? 'story' : 'stories'}</small></span>${novo ? '<i class="frow__new">novo</i>' : ''}</button>`; }).join('')}</div>` : '<p class="fhelp">Nenhum amigo postou nas últimas 24 h. Que tal ser o primeiro? Conclua um compromisso e poste a foto 📸</p>'}
+    ${feed.rows.filter((r) => !r.me).length ? `<h3 class="ah">Atualizações recentes</h3><div class="agroup">${feed.rows.filter((r) => !r.me).map((r) => { const novo = r.stories.some((x) => !x.seen); const ult = Math.max(...r.stories.map((x) => x.at)); return `<button class="frow" data-st-owner="${esc(r.uid)}"><span class="anelf">${face(r, 46)}${anel(r)}${bolinha(r)}</span><span class="frow__id"><b>${esc(r.name)}</b><small>${desde(ult)} · ${novo ? `${conta(r).novos} para ver` : 'tudo visto'}</small></span></button>`; }).join('')}</div>` : '<p class="fhelp">Nenhum amigo postou nas últimas 24 h. Que tal ser o primeiro? Conclua um compromisso e poste a foto 📸</p>'}
   </div>`;
   const a = openSheet({ className: 'sheet--tall sheet--fx sheet--fxl', html: html(), onMount: (x) => bindStrip(x.el, () => { if (!a.closed) a.set(html()); }) });
   await refreshFeed(); if (!a.closed) a.set(html());

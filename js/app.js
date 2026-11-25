@@ -169,7 +169,7 @@ function previaDaAba(id) {
     d.innerHTML = htmlDaAba(pessoal); poeFaixa(d, pessoal); recolhe(d, pessoal);
     const S = window.__stories, rows = S && store.user && store.mode === 'cloud' && (id === 'hoje' || id === 'p-hoje') ? S.feedCache().rows : null;
     if (rows && id === 'hoje') d.querySelector('header.hdr')?.insertAdjacentHTML('beforeend', `<div class="ststrip-wrap">${S.storyStrip(rows, { convidar: true })}</div>`);
-    if (rows && id === 'p-hoje' && rows.some((r) => !r.me)) d.querySelector('.page')?.insertAdjacentHTML('afterbegin', `<div class="ststrip-wrap">${S.storyStrip(rows)}</div>`);
+    if (rows && id === 'p-hoje') d.querySelector('.page')?.insertAdjacentHTML('afterbegin', `<div class="ststrip-wrap">${S.storyStrip(rows)}</div>`);
   } catch (e) { console.warn('prévia', e); } finally { if (pessoal) ui.ptab = era; else ui.tab = era; }
   d.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'));
   return d;
@@ -227,7 +227,6 @@ function render() {
         const tem = rows.some((r) => !r.me && r.stories.some((x) => !x.seen)) || fc.pedidos > 0;
         v.querySelectorAll('.iconbtn--friends').forEach((b) => b.classList.toggle('is-dot', tem));
         if (personalMode) {
-          if (!rows.some((r) => !r.me)) return;
           const host = v.querySelector('.page'); if (!host) return;
           host.insertAdjacentHTML('afterbegin', `<div class="ststrip-wrap">${m.storyStrip(rows)}</div>`);
           return m.bindStrip(host.querySelector('.ststrip-wrap'), pinta);
