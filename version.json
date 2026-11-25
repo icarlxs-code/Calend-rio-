@@ -1,10 +1,13 @@
 {
-  "version": "2.26.0",
-  "build": "swzccdrt",
+  "version": "2.27.0",
+  "build": "4bzkz4d2",
   "date": "2026-11-24",
   "min": "2.22.0",
-  "title": "Lembra mais simples",
+  "title": "O Lembra comemora com você",
   "notes": [
+    "O Lembra fala com calma: termina a frase antes de começar outra.",
+    "Conquistas e ofensiva novas: ele pega a medalha, ergue e vibra com você.",
+    "Visitas novas ao seu perfil aparecem no começo, e os avisos ficaram mais espertos.",
     "Telas mais limpas: uma coisa em destaque por vez, e o resto a um toque.",
     "Nova passagem entre Trabalho e Pessoal, com o Lembra trocando a maleta pelo coração.",
     "Ajustes organizados por assunto.",
@@ -13,10 +16,7 @@
     "O Lembra não some mais da tela quando você arrasta ele.",
     "Modo noturno preto de verdade, com o laranja do Lembra.",
     "A tela Hoje ficou mais simples: stories no topo, semana compacta e o próximo lembrete em destaque.",
-    "O Lembra se mexe com mais jeito e gasta menos bateria.",
-    "App com a cara nova do Lembra: creme, laranja e fonte Nunito.",
-    "Ranking liberado pra todo mundo durante o grátis (até 31/12/2026).",
-    "Quem chega pelo convite já cai em “Criar conta”."
+    "O Lembra se mexe com mais jeito e gasta menos bateria."
   ],
-  "builtAt": "2026-11-25T03:02:52.399Z"
+  "builtAt": "2026-11-25T09:56:32.278Z"
 }

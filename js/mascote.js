@@ -310,6 +310,22 @@ const DONE_LATE = ['Antes tarde do que nunca! 💪', 'Feito! O importante é nã
 const CREATED = ['Anotado! Eu te lembro 🔔', 'Deixa comigo!', 'Marcado! ✍️', 'Pode esquecer que eu lembro 😉', 'Guardei na minha memória de sino 🔔', 'Feito! Agora é comigo'];
 const SPY = ['Psiu… tô de olho 👀', 'Só passando pra ver se tá tudo bem…', 'Shhh 🤫', 'Achei você! 😄', 'Cadê? Achou! 🙈'];
 const outra = (L) => pick(L.filter((x) => x !== ultima));
+/* comemora de um jeito diferente a cada vez (nunca o mesmo gesto duas vezes seguidas) */
+let ultimaFesta = '';
+const comemora = () => (ultimaFesta = pick(['vibra', 'soco', 'orgulho', 'vibra', 'balanca'].filter((x) => x !== ultimaFesta)));
+/* o que ele diz ao concluir depende do que aconteceu DE VERDADE: o nome do que foi feito, quantos já foram e quantos faltam */
+function feito(o = {}) {
+  try {
+    const c = ctx(), n = c.feitos + c.feitoPessoal.length, falta = c.pend.length + c.pessoal.length, L = [];
+    if (o.titulo && o.titulo.length < 34) L.push(`${q(o.titulo)} feito! Que orgulho 🧡`, `Você foi lá e fez: ${q(o.titulo)} ✔️`);
+    if (n >= 2) L.push(`Já são ${n} hoje! Tô vibrando aqui 🎉`, `${n} de hoje riscados. Que ritmo!`);
+    if (falta === 1) L.push('Só falta 1 pra fechar o dia! 🔥', 'Um só! A gente zera hoje 💪');
+    else if (falta > 1 && falta < 4) L.push(`Faltam só ${falta}. Tá voando!`);
+    if (c.nome) L.push(`Isso, ${c.nome}! Mais um vencido 🙌`);
+    if (L.length && Math.random() < 0.75) return outra(L);
+  } catch { /* ok */ }
+  return outra(DONE);
+}
 
 /* ---------- o companheiro na tela ---------- */
 let B = null, ultima = '', hideT = 0, spyT = 0, holdT = 0, busyUntil = 0, cenaT = 0, ultimoGesto = '';
@@ -328,7 +344,7 @@ function balao(line, ms) {
   (line.acoes || []).forEach((a) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'snhbud__ac'; b.textContent = a.label;
     b.onclick = (ev) => {
-      ev.stopPropagation(); box.classList.remove('is-in'); btns.innerHTML = ''; busyUntil = 0;
+      ev.stopPropagation(); box.classList.remove('is-in'); btns.innerHTML = ''; busyUntil = 0; lendoAte = 0;
       import('./sfx.js').then((m) => m.ui('clique')).catch(() => {});
       if (a.go) { act(el(), 'sim'); Promise.resolve().then(a.go).catch(() => {}); } else { act(el(), 'tchau'); }
       setTimeout(settle, 1000);
@@ -336,8 +352,9 @@ function balao(line, ms) {
     btns.appendChild(b);
   });
   box.classList.remove('is-in'); void box.offsetWidth; box.classList.add('is-in');
-  say(el(), line.t, { bubble: txt, speed: 26 });
-  const dura = ms || Math.min(11000, 3400 + line.t.length * 48) + (line.acoes ? 6000 : 0); // com botões, dá tempo de decidir
+  say(el(), line.t, { bubble: txt, speed: DIGITA });
+  lendoAte = Date.now() + minimo(line.t);
+  const dura = ms || leitura(line.t) + (line.acoes ? 6000 : 0); // com botões, dá tempo de decidir
   busyUntil = Date.now() + dura;
   hideT = setTimeout(() => { if (!box.matches(':hover')) { box.classList.remove('is-in'); btns.innerHTML = ''; } }, dura + 200);
   holdT = setTimeout(() => { if (!falando()) settle(); }, dura + 400);
@@ -346,15 +363,29 @@ function balao(line, ms) {
    Uma reação nova substitui a anterior, a não ser que a anterior seja mais importante e ainda esteja valendo. */
 const PRIO = { erro: 6, nivel: 5, perfeito: 4, done: 3, xp: 2, created: 1 };
 let atual = { p: -1, ate: 0, id: 0 };
+/* tempo de leitura: digitar + ler com calma (≈ 13 letras por segundo). Antes do mínimo, nada troca o texto. */
+const DIGITA = 30;
+const leitura = (t) => Math.max(4800, Math.min(15000, 2400 + t.length * (DIGITA + 56)));
+const minimo = (t) => Math.max(3400, 1700 + t.length * (DIGITA + 32));
+let lendoAte = 0, fila = null, filaT = 0;
+function espera(line, gesto) {                       // guarda só a mais importante; a que chega depois com a mesma força vale mais
+  const p = line.p ?? 0;
+  if (fila && fila.p > p) return;
+  fila = { line, gesto, p, ate: Date.now() + 15000 };
+  clearTimeout(filaT);
+  filaT = setTimeout(() => { const f = fila; fila = null; if (f && Date.now() < f.ate) fala(f.line, f.gesto); }, Math.max(200, lendoAte - Date.now() + 250));
+}
 function fala(line, gesto, tentativa = 0, desde = Date.now(), id = 0) {
   if (!B || !line) return;
+  if (line.k === 'visitas' && document.querySelector('#view .visita')) return; // o cartão já está mostrando
   const p = line.p ?? 0;
   if (!tentativa) {
-    if (p < atual.p && Date.now() < atual.ate) return;             // tem coisa mais importante sendo dita
+    if (p < atual.p && Date.now() < atual.ate) { if (p >= PRIO.done) espera(line, gesto); return; } // tem coisa mais importante sendo dita
+    if (Date.now() < lendoAte && p < PRIO.erro) { if (p > 0) espera(line, gesto); return; }           // a pessoa ainda está lendo
     atual = { p, ate: Date.now() + 4000, id: atual.id + 1 }; id = atual.id;
   } else if (id !== atual.id) return;                              // outra reação já tomou o lugar
   // algo aberto por cima (ficha, janela, teclado): espera e fala depois — vale por 4 s (~3 tentativas)
-  if (blocked()) { if (tentativa < 2 && Date.now() - desde < 4000) setTimeout(() => fala(line, gesto, tentativa + 1, desde, id), 1500); return; }
+  if (blocked()) { if (tentativa < 8 && Date.now() - desde < (p >= PRIO.done ? 12000 : 4000)) { if (p >= PRIO.done) atual.ate = Date.now() + 3000; setTimeout(() => fala(line, gesto, tentativa + 1, desde, id), 1200); } return; }
   ultima = line.t;
   if (line.k) lembrou(line.k, line.i);
   state('up');
@@ -434,6 +465,7 @@ function onTap() {
   if (toques.length === 5) return fala({ t: pick(['Ei! Para de me cutucar! 😤', 'Assim eu fico tonto! 😵‍💫', 'Cócegas não! 😆']), m: 'bravo' }, 'nao');
   if (toques.length === 9) return fala({ t: 'Tá bom, tá bom… FESTA! 🎉', m: 'danca' }, 'pulo');
   if (toques.length > 1 && toques.length < 5) return act(el(), pick(['pop', 'sim', 'riso', 'timido', 'pisca']));
+  if (Date.now() < lendoAte) return act(el(), pick(['sim', 'pisca', 'pop'])); // ainda falando: reage, mas termina a frase
   busyUntil = 0;
   return fala(abre(ctx()), pick(['tchau', 'sim', 'pop', 'riso']));
 }
@@ -844,11 +876,10 @@ export function stop() {
 /* o app avisa o que aconteceu; ele reage */
 export function react(kind, o = {}) {
   if (kind === 'created') salvouAgora = Date.now();
-  if (!B || blocked()) return;
-  busyUntil = 0;
+  if (!B || (blocked() && !['done', 'nivel', 'visitas', 'story', 'pedido'].includes(kind))) return;
   if (kind === 'erro') { reactErro(el()); return fala({ t: 'Ops, não salvou. Tento de novo quando a internet voltar.', m: 'triste', p: PRIO.erro }, 'pop'); }
   if (kind === 'nivel') { reactNivel(el()); return fala({ t: o.nivel ? `Nível ${o.nivel}! Subiu de nível 🎉` : 'Subiu de nível! 🎉', m: 'comemora', p: PRIO.nivel }, null); }
-  if (kind === 'done') return fala(o.perfect ? { k: 'perfeito', t: pick(['Dia 100%! Você zerou tudo! 🏆', 'Zerou o dia! Pode comemorar 🎉']), m: 'danca', p: PRIO.perfeito } : o.late ? { t: outra(DONE_LATE), m: 'feliz', p: PRIO.done } : { t: outra(DONE), m: 'comemora', p: PRIO.done }, 'pulo');
+  if (kind === 'done') return fala(o.perfect ? { k: 'perfeito', t: pick(['Dia 100%! Você zerou tudo! 🏆', 'Zerou o dia! Pode comemorar 🎉']), m: 'danca', p: PRIO.perfeito } : o.late ? { t: outra(DONE_LATE), m: 'feliz', p: PRIO.done, gesto: 'alivio' } : { t: feito(o), m: 'feliz', p: PRIO.done }, comemora());
   if (kind === 'created') return fala({ t: outra(CREATED), m: 'feliz', p: PRIO.created }, 'sim');
   if (kind === 'pedido') return fala({ t: pick([`Pedido enviado! Agora é torcer pra ${(o.nome || 'pessoa').split(' ')[0]} aceitar 🤞`, 'Mandei o convite voando! 🕊️ Já já chega no celular da pessoa.', 'Feito! Amizade a um toque de distância 🤝']), m: 'comemora', roteiro: ['balanca'] }, 'pulo');
   if (kind === 'story') return fala({ t: pick(['Postou story! Agora todo mundo vai ver que você fez 😎📸', 'XP em dobro na conta! Fotógrafo(a) profissional, hein 📸', 'Prova registrada! Ninguém pode dizer que você não fez 😏']), m: 'danca', roteiro: ['balanca'] }, 'pulo');

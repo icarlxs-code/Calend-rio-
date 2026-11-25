@@ -51,4 +51,4 @@ function voarXp(el) {
   }, 950);
 }
 const mundo = (...a) => LM.mundo(...a);
-window.__motion = { pronto, trocar, mundo, agendado: LM.agendado, guardar, excluido: sai('excluido'), adiado: sai('adiado'), concluido, voarXp };
+window.__motion = { pronto, trocar, mundo, chuva: (...a) => LM.chuva(...a), agendado: LM.agendado, guardar, excluido: sai('excluido'), adiado: sai('adiado'), concluido, voarXp };

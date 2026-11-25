@@ -254,16 +254,25 @@ export async function openStoriesFeed() {
 }
 
 /* ---------- quem visitou o seu perfil ---------- */
+export const visitasNovas = () => { let v = 0; try { v = +localStorage.getItem('lembra.visitasVistas') || 0; } catch { /* ok */ } return visitasCache().list.filter((x) => x.at > v); };
+/* cartão que chama atenção só quando há visita NOVA de verdade (some depois de vista) */
+export function visitaCard() {
+  const n = visitasNovas(); if (!n.length) return '';
+  const p = (n[0].name || 'Alguém').split(' ')[0];
+  return `<button class="visita" data-action="visitas"><span class="visita__rostos">${n.slice(0, 3).map((c) => `<i class="visita__anel">${face(c, 44)}</i>`).join('')}</span><span class="visita__t"><b>${n.length === 1 ? `${esc(p)} viu seu perfil` : `${esc(p)} e mais ${n.length - 1} viram seu perfil`}</b><small>${desde(n[0].at)} · toque para ver</small></span><em>${n.length}</em></button>`;
+}
 export async function openVisitors() {
   let lista = null;
+  const novos = new Set(visitasNovas().map((x) => x.uid));
   const html = () => `${sheetHead('Quem visitou seu perfil', { left: '<button class="btn-text" data-close>Fechar</button>' })}<div class="page page--sheet">
     ${mascotOn() ? `<div class="atr__hero vis__hero"><div class="atr__fig">${sininho('desconfiado', { size: 84 })}</div><p class="atr__bub"><span data-vbub>Deixa eu ver quem andou xeretando… 🕵️</span></p></div>` : ''}
     <p class="fhelp">Amigos que passaram pelo seu perfil nos últimos 7 dias. Quando você visita o perfil de alguém, essa pessoa também vê 👀</p>
-    ${!lista ? '<p class="fhelp">Carregando…</p>' : lista.length ? `<div class="agroup">${lista.map((c) => `<button class="frow" data-uid="${esc(c.uid)}">${face(c, 46)}<span class="frow__id"><b>${esc(c.name)}</b><small>passou ${desde(c.at).replace('há', 'há')}${c.n > 1 ? ` · ${c.n} vezes` : ''}</small></span>${icon('right', 16)}</button>`).join('')}</div>` : '<p class="fhelp">Ninguém passou por aqui ainda. Poste um story que o povo aparece 😉</p>'}</div>`;
+    ${!lista ? '<p class="fhelp">Carregando…</p>' : lista.length ? `<div class="vis__lista">${lista.map((c, i) => `<button class="frow visrow${novos.has(c.uid) ? ' is-nova' : ''}" style="--i:${Math.min(i, 8)}" data-uid="${esc(c.uid)}"><i class="visita__anel">${face(c, 52)}</i><span class="frow__id"><b>${esc(c.name)}</b><small>passou ${desde(c.at).replace('há', 'há')}${c.n > 1 ? ` · ${c.n} vezes` : ''}</small></span>${novos.has(c.uid) ? '<em class="visrow__novo">novo</em>' : ''}${icon('right', 16)}</button>`).join('')}</div>` : '<p class="fhelp">Ninguém passou por aqui ainda. Poste um story que o povo aparece 😉</p>'}</div>`;
   const a = openSheet({ className: 'sheet--tall sheet--fx sheet--fxl', html: html(), onMount: (x) => {
     x.el.querySelectorAll('[data-uid]').forEach((b) => (b.onclick = async () => { const c = lista.find((v) => v.uid === b.dataset.uid); if (c) (await import('./friends.js')).openFriendProfile(c); }));
   } });
-  await refreshVisitors(); lista = visitas.list; if (!a.closed) a.set(html());
+  await refreshVisitors(); lista = visitas.list; visitasNovas().forEach((x) => novos.add(x.uid)); if (!a.closed) a.set(html());
+  if (novos.size) import('./sound.js').then((s) => s.espia()).catch(() => {});
   try { localStorage.setItem('lembra.visitasVistas', String(Date.now())); } catch { /* ok */ }
   // o Lembra olha pra você, desconfia e solta a fofoca (com a risadinha de quem sabe das coisas)
   const fig = a.el.querySelector('.vis__hero [data-snh]'), bub = a.el.querySelector('[data-vbub]');

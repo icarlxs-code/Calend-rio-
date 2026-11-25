@@ -15,7 +15,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 
 /* ---------- o Lembra em imagens prontas (desenhadas uma vez só) ---------- */
 const CHEGADA = { hoje: 'acena', mes: 'aponta', empresas: 'joia', ajustes: 'pensa', 'p-hoje': 'amor', 'p-agenda': 'aponta', 'p-listas': 'joia', 'p-notas': 'pensa', 'p-ajustes': 'pensa' };
-const fotos = {};
+const fotos = {}, guardadas = [];
 const figura = (pose) => fotos[pose] || (fotos[pose] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(mascoteParado(pose, 160).replace(/<svg(?![^>]*xmlns=)/, '<svg xmlns="http://www.w3.org/2000/svg"')));
 
 /* ---------- palco fixo, criado uma vez ---------- */
@@ -35,7 +35,15 @@ function palco() {
 export function aquecer() {
   const p = palco();
   const lista = [...new Set(Object.values(CHEGADA))];
-  lista.forEach((pose, i) => setTimeout(() => { const im = new Image(); im.src = figura(pose); im.decode && im.decode().catch(() => {}); fotos['_' + pose] = im; }, 60 * i));
+  // o desenho vetorial vira bitmap uma vez só, no tempo livre: na hora da troca não há nada para desenhar
+  ['voa', ...lista].forEach((pose, i) => setTimeout(() => {
+    const im = new Image(); im.width = im.height = 384; im.src = figura(pose);
+    (im.decode ? im.decode() : Promise.reject()).then(() => {
+      const cv = document.createElement('canvas'); cv.width = cv.height = 384;
+      cv.getContext('2d').drawImage(im, 0, 0, 384, 384);
+      cv.toBlob((b) => { if (!b) return; const u = URL.createObjectURL(b), pronta = new Image(); pronta.src = u; (pronta.decode ? pronta.decode() : Promise.resolve()).then(() => { fotos[pose] = u; guardadas.push(pronta); if (pose === 'voa') p.a.src = u; }).catch(() => {}); });
+    }).catch(() => {});
+  }, 140 * i));
   p.a.decode && p.a.decode().catch(() => {});
 }
 
@@ -60,6 +68,8 @@ export function trocar(aba, fazer, origem) {
   const barra = document.querySelector('.tabbar'), chao = (barra ? barra.getBoundingClientRect().top : Math.min(topo0, topo1)) + 9;
   document.documentElement.classList.add('lm-viajando'); // o companheiro do canto dá licença: é ele quem está pulando
 
+  // a pílula da aba desliza de uma para a outra (não pisca de lugar)
+  if (alvo && de && alvo !== de && alvo.closest('.tabbar')) { try { toca(alvo, [{ transform: `translate3d(${x0 - x1}px, 0, 0)` }, { transform: 'translate3d(0, 0, 0)' }], { duration: 420, pseudoElement: '::before' }); } catch { /* navegador antigo: só troca */ } }
   // brilho suave na cor do app, acompanhando o Lembra
   toca(p.brilho, [
     { transform: `translate3d(${x0 - 260}px, ${chao - 260}px, 0) scale(.5)`, opacity: 0 },
@@ -201,4 +211,23 @@ export async function mundo(space, from, trocaTela, cor = () => {}, barra = []) 
     anima(cena, [{ transform: 'none', opacity: 1 }, { transform: `translate3d(0, ${-innerHeight * 0.75}px, 0)`, opacity: 1 }], { duration: 560, easing: 'cubic-bezier(.6,0,.25,1)' });
     await anima(cortina, [{ transform: 'none' }, { transform: 'translate3d(0, -118%, 0)' }], { duration: 600, easing: 'cubic-bezier(.6,0,.2,1)' });
   } finally { clearTimeout(fim); troca(); cor(...barra); c.remove(); document.documentElement.classList.remove('lm-viajando'); }
+}
+
+/* ---------- 5 · confete leve: poucos pedaços, só transform e opacity ---------- */
+export function chuva(n = 30, de = null, brasa = false) {
+  if (reduzido()) return;
+  const c = camada(), r = de && de.getBoundingClientRect ? de.getBoundingClientRect() : null;
+  c.style.zIndex = 9600;
+  const x0 = r ? r.left + r.width / 2 : innerWidth / 2, y0 = r ? r.top + r.height / 2 : innerHeight * 0.32;
+  const cores = brasa ? ['#FFD34D', '#FF8A1E', '#FFF1C2', '#FF5A1F'] : ['#FF6B1A', '#FFC23D', '#FFFFFF', '#FF8FA3', '#FFB054', '#E85A0C'];
+  const fins = [];
+  for (let i = 0; i < Math.min(60, n); i++) {
+    const p = document.createElement('i'), a = (Math.PI * 2 * i) / n + (Math.random() - 0.5), d = 90 + Math.random() * Math.min(230, innerWidth * 0.5), s = 6 + Math.random() * 7;
+    const dx = Math.cos(a) * d, dy = Math.sin(a) * d * 0.8 - 70, cai = brasa ? -120 - Math.random() * 160 : 190 + Math.random() * 220, g = (Math.random() - 0.5) * 720;
+    p.className = 'lm-papel';
+    Object.assign(p.style, { left: x0 - s / 2 + 'px', top: y0 - s / 2 + 'px', width: s + 'px', height: (brasa || i % 3 === 0 ? s : s * 1.7) + 'px', background: cores[i % cores.length], borderRadius: brasa || i % 3 === 0 ? '50%' : '3px' });
+    c.appendChild(p);
+    fins.push(anima(p, [{ transform: 'translate3d(0,0,0) scale(.3)', opacity: 1, easing: 'cubic-bezier(.1,.8,.3,1)' }, { transform: `translate3d(${dx}px, ${dy}px, 0) rotate(${g / 2}deg) scale(1)`, opacity: 1, offset: 0.32, easing: 'cubic-bezier(.4,0,.8,.6)' }, { transform: `translate3d(${dx * 1.12}px, ${dy + cai}px, 0) rotate(${g}deg) scale(${brasa ? 0.2 : 0.9})`, opacity: 0 }], { duration: 1500 + Math.random() * 900, easing: 'linear' }));
+  }
+  Promise.all(fins).then(() => c.remove());
 }

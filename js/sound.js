@@ -120,3 +120,36 @@ export function passo(i = 0) {
   if (!a) return;
   note(a, [523.25, 587.33, 659.25, 783.99][i % 4], a.currentTime + 0.01, 0.22, 0.03);
 }
+
+/* batida grave e macia (impacto) + sopro: dão peso ao momento sem machucar o ouvido */
+function baque(a, at, vol = 0.16) {
+  const o = a.createOscillator(), g = a.createGain();
+  o.frequency.setValueAtTime(170, at); o.frequency.exponentialRampToValueAtTime(48, at + 0.16);
+  g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.3);
+  o.connect(g).connect(a.destination); o.start(at); o.stop(at + 0.34);
+}
+/* conquista: baque no impacto, arpejo na escala do Lembra e um acorde que cresce com a raridade */
+export function conquista(raro = 'comum') {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + 0.01, n = { comum: 3, raro: 4, epico: 5, lendario: 7, nivel: 6, welcome: 5, many: 4 }[raro] || 4;
+  baque(a, t, n > 4 ? 0.18 : 0.13);
+  [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98, 2093].slice(0, n).forEach((f, i) => note(a, f, t + 0.06 + i * 0.07, 0.34, 0.042));
+  [523.25, 783.99, 1046.5].concat(n > 4 ? [1318.51] : []).forEach((f) => soft(a, f, t + 0.1 + n * 0.07, 1.5 + n * 0.1, 0.028));
+}
+/* a chama da ofensiva acende: sobe um tom a cada dia da semana */
+export function chama(dias = 1, grande = false) {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + 0.01, k = Math.pow(2, [0, 2, 4, 5, 7, 9, 12][Math.min(6, (dias - 1) % 7)] / 12);
+  baque(a, t, 0.15);
+  [392, 493.88, 587.33, 783.99].concat(grande ? [987.77, 1174.66] : []).forEach((f, i) => note(a, f * k, t + 0.05 + i * 0.075, 0.36, 0.045));
+  [392, 587.33, 783.99].forEach((f) => soft(a, f * k, t + 0.42, grande ? 2 : 1.4, 0.03));
+}
+/* visita nova: duas notas curiosas, como quem bate na porta */
+export function espia() {
+  const a = audio();
+  if (!a) return;
+  const t = a.currentTime + 0.01;
+  note(a, 659.25, t, 0.18, 0.04); note(a, 880, t + 0.12, 0.26, 0.04);
+}

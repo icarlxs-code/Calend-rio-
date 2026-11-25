@@ -7,6 +7,7 @@
    - criar e concluir na mesma hora algo marcado para depois quase não rende XP;
    - limite por dia de XP por criar compromisso e por bilhete, e teto de XP por dia.
    Fica salvo na conta (users/{uid}.game): aparece igual em qualquer celular. */
+import { sininho } from './sininho.js';
 import { rankHidden } from './teen.js';
 import { store, saveProfileQuiet } from './store.js';
 import { todayKey, addDays, isStandalone } from './utils.js';
@@ -228,7 +229,7 @@ export function progressOf(b) {
 /* ---------- quando algo acontece ---------- */
 const dueOf = (date, time) => new Date(`${date}T${/^\d{2}:\d{2}$/.test(time || '') ? time : '23:59'}:00`).getTime();
 /* concluiu algo (trabalho ou Pessoal) */
-function completed({ key, due, createdAt = 0, kind = 'work', hasTime = false }) {
+function completed({ key, due, createdAt = 0, kind = 'work', hasTime = false, titulo = '' }) {
   load(); dayReset();
   if (S.ids.includes(key)) return; // já deu XP por isso
   S.ids.push(key); if (S.ids.length > 500) S.ids = S.ids.slice(-500);
@@ -288,7 +289,9 @@ function completed({ key, due, createdAt = 0, kind = 'work', hasTime = false }) 
   import('./mascote.js').then((M) => {
     if (!M.mascotOn()) return;
     if (firstToday) import('./streak.js').then((m) => m.showStreak(offensive().days));
-    else M.react('done', { late, perfect: !!perfect });
+    else M.react('done', { late, perfect: !!perfect, titulo });
+    setTimeout(() => import('./sininho.js').then((z) => z.comemoraEm('#view .foco', perfect ? 'vibra' : 'soco')).catch(() => {}), 350);
+    if (perfect) setTimeout(() => window.__motion && window.__motion.chuva(), 500);
   }).catch(() => {});
 }
 /* compromisso criado / concluído (gancho do store) */
@@ -302,17 +305,17 @@ export function onEvent(prev, item) {
     settle();
     import('./mascote.js').then((M) => M.react('created')).catch(() => {});
   }
-  if (item.status === 'feito' && prev?.status !== 'feito' && mineEv(item)) completed({ key: `e:${item.id}`, due: dueOf(item.date, item.time), createdAt: item.createdAt || 0, hasTime: /^\d{2}:\d{2}$/.test(item.time || '') });
+  if (item.status === 'feito' && prev?.status !== 'feito' && mineEv(item)) completed({ key: `e:${item.id}`, due: dueOf(item.date, item.time), createdAt: item.createdAt || 0, titulo: item.title || '', hasTime: /^\d{2}:\d{2}$/.test(item.time || '') });
 }
 /* Pessoal: concluiu um lembrete (ou um dia de um lembrete que repete) */
 export function onPersonal(before, after) {
   if (!after) return;
   if (!after.repeat || after.repeat === 'none') {
-    if (after.done && !before?.done) completed({ key: `p:${after.id}`, due: dueOf(after.date, after.time), createdAt: after.createdAt || 0, kind: 'personal' });
+    if (after.done && !before?.done) completed({ key: `p:${after.id}`, due: dueOf(after.date, after.time), createdAt: after.createdAt || 0, kind: 'personal', titulo: after.title || '' });
     return;
   }
   const had = new Set(before?.doneDates || []);
-  (after.doneDates || []).filter((d) => !had.has(d)).forEach((d) => completed({ key: `p:${after.id}:${d}`, due: dueOf(d, after.time), createdAt: after.createdAt || 0, kind: 'personal' }));
+  (after.doneDates || []).filter((d) => !had.has(d)).forEach((d) => completed({ key: `p:${after.id}:${d}`, due: dueOf(d, after.time), createdAt: after.createdAt || 0, kind: 'personal', titulo: after.title || '' }));
 }
 /* bilhete escrito */
 export function onNote(note) {
@@ -470,34 +473,75 @@ function show(it, done) {
     sub = `${n ? `Com o que você já fez, ganhou <b>${n} ${n === 1 ? 'emblema' : 'emblemas'}</b>. ` : ''}Cada compromisso cumprido vale XP. São 100 níveis e mais de 100 emblemas para colecionar.`;
   }
   const el = document.createElement('div');
-  el.className = 'gx';
+  const raro = it.type === 'level' ? 'nivel' : it.type === 'badge' ? it.b.rarity : it.type;
+  const brasaoNovo = it.type === 'level' && tierOf(it.from || 0).from !== tierOf(it.level).from;
+  el.className = `gx gx--${raro}`;
   el.style.setProperty('--gx', color);
   el.innerHTML = `<div class="gx__rays"></div>
-    <div class="gx__card" role="dialog" aria-label="${esc(kicker)}">
-      <div class="gx__medal">${medalHtml}</div>
+    <div class="gx__card" role="dialog" aria-modal="true" aria-label="${esc(kicker)}">
+      <div class="gx__palco"><i class="gx__onda"></i><i class="gx__onda"></i>
+        <div class="gx__medal">${medalHtml}${brasaoNovo ? `<span class="gx__velho">${crest(it.from || 0, 190)}</span>` : ''}</div>
+        <div class="gx__snh" aria-hidden="true">${sininho('surpreso', { size: 112 })}</div></div>
       <p class="gx__kicker">${esc(kicker)}</p>
       <h2 class="gx__title">${esc(title)}</h2>
       <p class="gx__sub">${sub}</p>
-      ${xp ? `<span class="gx__xp">+${xp} XP</span>` : ''}
-      <div class="gx__bar"><i style="width:${Math.round(L.pct * 100)}%"></i><small>Nível ${L.level} · ${L.xp.toLocaleString('pt-BR')} XP</small></div>
+      ${xp ? `<span class="gx__xp">+<b data-xp>${xp}</b> XP</span>` : ''}
+      <div class="gx__bar"><i data-pct="${Math.round(L.pct * 100)}"></i><small>Nível ${L.level} · ${L.xp.toLocaleString('pt-BR')} XP</small></div>
       <button class="btn gx__go" data-gx-close>Continuar</button>
       <button class="btn-text gx__see" data-gx-see>Ver minhas conquistas</button>
-      <div class="gx__brand">${brand('palavra', { h: 16, on: 'dark' })}</div>
     </div>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('is-in'));
-  import('./sound.js').then((s) => (it.type === 'level' || it.type === 'welcome' ? s.levelUp() : s.achievement())).catch(() => {});
-  try { navigator.vibrate && navigator.vibrate([18, 60, 26, 60, 40]); } catch { /* ok */ }
-  setTimeout(() => import('./reward.js').then((r) => { const m = el.querySelector('.gx__medal'); if (m) r.burst(m, { big: true }); }).catch(() => {}), 650);
+  coreografia(el, { raro, brasaoNovo, xp, festa: it.type !== 'many' });
   let closed = false;
+  const tecla = (e) => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', tecla);
+  setTimeout(() => el.querySelector('[data-gx-close]')?.focus({ preventScroll: true }), 900);
   const close = (see = false) => {
-    if (closed) return; closed = true;
+    if (closed) return; closed = true; document.removeEventListener('keydown', tecla);
     el.classList.remove('is-in'); el.classList.add('is-out');
     setTimeout(() => { el.remove(); done(); if (see) openProfileSoon(); }, 320);
   };
   el.querySelector('[data-gx-close]').onclick = () => close();
   el.querySelector('[data-gx-see]').onclick = () => close(true);
   el.addEventListener('click', (e) => { if (e.target === el) close(); });
+}
+/* a conquista conta uma história curta: o Lembra olha pra cima, a medalha cai, ele pega, ergue e vibra.
+   Som, vibração e imagem acontecem no mesmo instante (o impacto). Quanto mais rara, mais festa. */
+const FESTA = { comum: 14, raro: 22, epico: 32, lendario: 46, nivel: 34, welcome: 30, many: 20 };
+async function coreografia(el, { raro, brasaoNovo, xp, festa }) {
+  const q2 = (x) => el.querySelector(x), medal = q2('.gx__medal'), fig = q2('.gx__snh [data-snh]'), bar = q2('.gx__bar i');
+  const Z = await import('./sininho.js'), snd = await import('./sound.js').catch(() => null);
+  Z.alive();
+  const enche = () => { bar.style.transform = `scaleX(${(+bar.dataset.pct || 0) / 100})`; };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { enche(); Z.setMood(fig, 'feliz'); q2('.gx__velho')?.remove(); if (snd) snd.achievement(); return; }
+  const an = (n, k, o) => n && n.animate(k, { easing: 'cubic-bezier(.16,1,.3,1)', fill: 'both', ...o });
+  const velho = q2('.gx__velho'), T = brasaoNovo ? 760 : 520; // momento do impacto
+  if (brasaoNovo) {
+    const novo = medal.firstElementChild;
+    an(medal, [{ transform: 'scale(.7)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 320 });
+    an(novo, [{ opacity: 0, transform: 'scale(.4)' }, { opacity: 0, transform: 'scale(.4)', offset: 0.01 }, { opacity: 1, transform: 'scale(1.16)', offset: 0.55 }, { opacity: 1, transform: 'none' }], { duration: 520, delay: T });
+    an(velho, [0, -5, 5, -7, 7, -9, 9, 0].map((x, i) => ({ transform: `translateX(${x}px) rotate(${x / 2}deg) scale(${1 + i * 0.012})` })), { duration: 420, delay: 320, easing: 'linear' });
+    an(velho, [{ opacity: 1 }, { opacity: 0 }], { duration: 120, delay: T, fill: 'forwards' });
+  } else an(medal, [{ transform: 'translateY(-320px) rotate(-24deg) scale(.8)', opacity: 0 }, { transform: 'translateY(-200px) rotate(-14deg) scale(.86)', opacity: 1, offset: 0.25, easing: 'cubic-bezier(.5,0,.9,.6)' }, { transform: 'translateY(10px) rotate(0) scale(1.06,.9)', opacity: 1, offset: 0.62, easing: 'cubic-bezier(.2,.7,.3,1)' }, { transform: 'translateY(-9px) scale(.98,1.03)', opacity: 1, offset: 0.8, easing: 'ease-in-out' }, { transform: 'none', opacity: 1 }], { duration: T / 0.62 });
+  const com = (ms, fn) => setTimeout(() => { if (el.isConnected) fn(); }, ms);
+  com(60, () => { const r = Z.rigOf(fig); if (r) { r.s.py.t = -16; r.arms(['aberto', 34, 'aberto', -34]); } });
+  com(T, () => {
+    try { navigator.vibrate && navigator.vibrate([18, 60, 26, 60, 40]); } catch { /* ok */ }
+    if (snd) snd.conquista(raro);
+    const r = Z.rigOf(fig); if (r) { r.setMood('feliz'); r.s.py.t = 0; r.s.sq.vel += 3; r.arms(['cima', 16, 'cima', -16]); }
+    el.querySelectorAll('.gx__onda').forEach((o, i) => an(o, [{ transform: 'scale(.35)', opacity: 0.8 }, { transform: 'scale(1.5)', opacity: 0 }], { duration: 760, delay: i * 130 }));
+    window.__motion ? window.__motion.chuva(FESTA[raro] || 22, medal) : import('./reward.js').then((m) => m.burst(medal, { big: true }));
+  });
+  com(T + 430, () => { // ele ergue e vibra; a medalha sobe e desce com ele
+    if (festa) Z.act(fig, 'vibra', { alto: true, volta: ['cima', 16, 'cima', -16] });
+    an(medal, [{ transform: 'none' }, { transform: 'translateY(8px)', offset: 0.06 }, { transform: 'translateY(-30px) rotate(-3deg)', offset: 0.2 }, { transform: 'translateY(6px) scale(1.03,.96)', offset: 0.34 }, { transform: 'translateY(-15px) rotate(3deg)', offset: 0.5 }, { transform: 'translateY(3px)', offset: 0.6 }, { transform: 'translateY(-13px) rotate(-2deg)', offset: 0.72 }, { transform: 'none' }], { duration: 2000, easing: 'ease-in-out', fill: 'none' });
+  });
+  ['.gx__kicker', '.gx__title', '.gx__sub', '.gx__xp', '.gx__bar', '.gx__go', '.gx__see'].forEach((c, i) => an(q2(c), [{ transform: 'translateY(16px)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 420, delay: T + 60 + i * 70 }));
+  const n = q2('[data-xp]');
+  if (n && xp) { n.textContent = 0; com(T + 320, () => { const t0 = performance.now(); const p = (t) => { const k = Math.min(1, (t - t0) / 700); n.textContent = Math.round(xp * (1 - (1 - k) ** 3)); if (k < 1 && el.isConnected) requestAnimationFrame(p); }; requestAnimationFrame(p); }); }
+  com(T + 520, enche);
+  com(T + 2900, () => Z.vivo(fig, { gestos: ['pisca', 'orgulho', 'soco', 'balanca'], cada: [3, 5] }));
 }
 const openProfileSoon = () => import('./views/profile.js').then((m) => m.openProfilePage({ tab: 'emblemas' })).catch(() => {});
 
@@ -563,4 +607,4 @@ export function previewStory(kind = 'w', ref = '') {
 }
 
 /* só no modo de teste local (emuladores): ganchos para o robô conferir o XP e os emblemas */
-try { if (typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(location.hostname) && localStorage.getItem('cal.emulator') === '1') window.__lembraGame = { estado: () => { load(); return { xp: S.xp, badges: Object.keys(S.badges), dia: S.d.xp }; }, setXp: (x) => { load(); S.xp = x; save(); }, preview: (k, r) => { const p = previewStory(k, r); return { ...p, badges: p.badges.map((b) => b.id), tier: null, L0: null, L1: null }; } }; } catch { /* ok */ }
+try { if (typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(location.hostname) && localStorage.getItem('cal.emulator') === '1') window.__lembraGame = { ofensiva: (d) => { import('./streak.js').then((m) => m.showStreak(d)); }, festa: (t) => { if (t === 'nivel') celebrate({ type: 'level', level: 10, from: 9 }); else celebrate({ type: 'badge', b: BADGES.find((x) => x.rarity === t) }); }, reage: (k, o) => { import('./mascote.js').then((m) => m.react(k, o)); }, estado: () => { load(); return { xp: S.xp, badges: Object.keys(S.badges), dia: S.d.xp }; }, setXp: (x) => { load(); S.xp = x; save(); }, preview: (k, r) => { const p = previewStory(k, r); return { ...p, badges: p.badges.map((b) => b.id), tier: null, L0: null, L1: null }; } }; } catch { /* ok */ }

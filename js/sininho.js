@@ -190,7 +190,7 @@ class Rig {
   act(name, opt = {}) {
     const s = this.s, e = EMO[this.mood];
     if (this.sleeping) this.wake();
-    if (this.calm && ['pulo', 'tchau', 'riso', 'nao', 'balanca', 'dor', 'susto', 'coca', 'aponta', 'apontaEsq', 'boceja', 'cinico', 'maoBoca'].includes(name)) { this.blink(false); return; } // reduzir movimento: só o rosto
+    if (this.calm && ['vibra', 'soco', 'orgulho', 'alivio', 'pulo', 'tchau', 'riso', 'nao', 'balanca', 'dor', 'susto', 'coca', 'aponta', 'apontaEsq', 'boceja', 'cinico', 'maoBoca'].includes(name)) { this.blink(false); return; } // reduzir movimento: só o rosto
     if (name === 'tchau') {
       const back = e.arms;
       s.lean.t = 2.2; s.bx.t = 6;                                  // inclina para o lado oposto ao aceno
@@ -205,6 +205,43 @@ class Rig {
       this.at(0.09 + 0.24 * alto, () => { s.by.t = 0; s.sq.t = 0; });
       this.at(0.21 + 0.24 * alto, () => { s.sq.t = 0.14; s.fL.t = 0; s.fR.t = 0; }); // pouso: achata 100 ms
       this.at(0.31 + 0.24 * alto, () => { s.sq.t = 0; });          // e a mola devolve
+    } else if (name === 'vibra') {                                // vibra de felicidade: agacha, salta com os braços pro alto, dois pulinhos e assenta
+      const back = opt.volta || e.arms, m0 = this.mouth, k = opt.alto ? 1.3 : 1, h0 = e.happy;
+      s.sq.t = 0.12; s.by.t = 14; s.bY.t = (e.brow[2] || 0) - 14;
+      this.at(0.13, () => { s.sq.t = -0.09; s.by.t = -120 * k; s.fL.t = 24; s.fR.t = 24; this.arms(['cima', 18, 'cima', -18]); this.setMouth('riso'); s.happy.t = 1; });
+      this.at(0.13 + 0.26 * k, () => { s.by.t = 0; s.sq.t = 0; });
+      this.at(0.25 + 0.26 * k, () => { s.sq.t = 0.12; s.fL.t = 0; s.fR.t = 0; });
+      this.at(0.35 + 0.26 * k, () => { s.sq.t = 0; });
+      for (let i = 0; i < 2; i++) {
+        const b = 0.82 + i * 0.4;
+        this.at(b, () => { s.sq.t = 0.07; s.lean.t = (i ? 1 : -1) * 4; });
+        this.at(b + 0.08, () => { s.sq.t = -0.05; s.by.t = -56 * k; s[i ? 'fR' : 'fL'].t = 20; });
+        this.at(b + 0.24, () => { s.by.t = 0; s.sq.t = 0.08; s.fL.t = 0; s.fR.t = 0; });
+        this.at(b + 0.33, () => { s.sq.t = 0; });
+      }
+      for (let i = 0; i < 9; i++) this.at(0.6 + i * 0.12, () => { s.aL.t = i % 2 ? 26 : 10; s.aR.t = i % 2 ? -10 : -26; });
+      this.at(1.75, () => { s.lean.t = e.lean || 0; this.arms(back); });
+      this.at(2, () => { s.happy.t = h0; this.setMouth(m0); s.bY.t = e.brow[2]; });
+      this.next.idle = this.t + 2.6; this.loopAt = Math.max(this.loopAt, this.t + 2.6);
+    } else if (name === 'soco') {                                 // "isso!": puxa o braço com vontade, duas vezes, e pisca
+      const back = opt.volta || e.arms, m0 = this.mouth, h0 = e.happy;
+      this.arms([back[0], back[1], 'cima', -18]); s.sq.t = -0.06; s.lean.t = 3; s.bY.t = (e.brow[2] || 0) - 10;
+      [0.24, 0.66].forEach((b) => { this.at(b, () => { s.sq.t = 0.11; s.lean.t = -4; s.aR.t = 8; s.by.t = 8; this.setMouth('riso'); s.happy.t = 0.8; }); this.at(b + 0.17, () => { s.sq.t = -0.07; s.lean.t = 3; s.aR.t = -20; s.by.t = -36; }); this.at(b + 0.32, () => { s.by.t = 0; s.sq.t = 0; }); });
+      this.at(1.1, () => { s.wR.t = 1; s.happy.t = h0; }); this.at(1.5, () => { s.wR.t = 0; });
+      this.at(1.35, () => { this.arms(back); s.lean.t = e.lean || 0; }); this.at(1.8, () => { this.setMouth(m0); s.bY.t = e.brow[2]; });
+      this.next.idle = this.t + 2.2; this.loopAt = Math.max(this.loopAt, this.t + 2.2);
+    } else if (name === 'orgulho') {                              // peito cheio, corado, balança devagar e suspira
+      const m0 = this.mouth, h0 = e.happy, b0 = e.blush || 0;
+      s.sq.t = -0.06; s.blush.t = 1; s.happy.t = 1; this.setMouth('fechada'); s.bY.t = (e.brow[2] || 0) - 6;
+      [[3, 0.25], [-3, 0.75], [2, 1.2], [e.lean || 0, 1.6]].forEach(([v, t]) => this.at(t, () => { s.lean.t = v; }));
+      this.at(1.5, () => { s.sq.t = 0.04; }); this.at(1.8, () => { s.sq.t = 0; s.happy.t = h0; s.blush.t = b0; this.setMouth(m0); s.bY.t = e.brow[2]; });
+      this.next.idle = this.t + 2.3; this.loopAt = Math.max(this.loopAt, this.t + 2.3);
+    } else if (name === 'alivio') {                               // ufa: murcha soltando o ar e abre um sorriso
+      const m0 = this.mouth, h0 = e.happy;
+      s.lid.t = 0.5; s.sq.t = 0.06; this.setMouth('oo'); s.bL.t = 8; s.bR.t = -8; s.lean.t = -1.5;
+      this.at(0.75, () => { s.sq.t = -0.05; s.lid.t = e.lid; this.setMouth('riso'); s.happy.t = 1; s.bL.t = e.brow[0]; s.bR.t = e.brow[1]; s.by.vel -= 160; s.lean.t = 1.5; });
+      this.at(1.1, () => { s.sq.t = 0; s.lean.t = e.lean || 0; }); this.at(1.9, () => { s.happy.t = h0; this.setMouth(m0); });
+      this.next.idle = this.t + 2.2;
     } else if (name === 'riso') {
       const keep = [s.happy.t, this.mouth];
       s.happy.t = 1; this.setMouth('riso'); s.bY.t = -12;
@@ -575,7 +612,7 @@ export function sininho(mood = 'feliz', { size = 120, cls = '', label = 'Lembra'
 }
 export function alive() { watch(); load(); document.querySelectorAll('[data-snh]').forEach(mount); }
 export function setMood(el, mood) { withRig(el, (r) => r.setMood(mood)); return Promise.resolve(); }
-export function act(el, name) { withRig(el, (r) => r.act(name === 'pop' ? 'pop' : name)); }
+export function act(el, name, opt) { withRig(el, (r) => r.act(name, opt)); }
 export function lookAt(el, x, y, hold) { withRig(el, (r) => r.lookAt(x, y, hold)); }
 export const GESTOS = ['revira', 'tchau', 'pulo', 'riso', 'nao', 'sim', 'pop', 'pensa', 'boceja', 'timido', 'pisca', 'olhaLados', 'dor', 'cinico', 'maoBoca', 'susto', 'coca', 'balanca', 'sobrancelha', 'aponta', 'apontaEsq'];
 
@@ -717,3 +754,6 @@ export function reactErro(el) { withRig(el, (r) => { r.act('pop'); r.setMood('tr
 
 /* acesso ao boneco (para o arrasto do companheiro) */
 export function rigOf(el) { const r = el && el._rig; return r && !r.pending ? r : null; }
+
+/* figuras dentro de uma tela (ex.: o Lembra do cartão em foco) também comemoram */
+export function comemoraEm(sel, gesto = 'vibra') { document.querySelectorAll(`${sel} [data-snh]`).forEach((n) => withRig(n, (r) => r.act(gesto))); }

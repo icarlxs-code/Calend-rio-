@@ -57,7 +57,8 @@ export function onEventChange(before, after) {
   if (!before && after) mine = { title: `Novo na agenda: ${what}`, body: `${whenText(after)}${after.title ? ' · ' + after.title : ''} · ${who}` };
   else if (before && after && (before.date !== after.date || before.time !== after.time)) mine = { title: `Horário alterado: ${what}`, body: `${whenText(before)} → ${whenText(after)} · ${who}` };
   else mine = changeMessage(before, after, { actor: 'Você', company: coName(ev.companyId), recipient: null, now: nowSP() }) || generic('Você');
-  if (allowedFor(store.me, ev.companyId)) notify([store.me], mine, `ev-${ev.id}`, after ? `./#/e/${ev.id}` : './', true);
+  // quem acabou de fazer a mudança já viu na tela: o próprio celular não apita por isso
+  if (document.hidden && mine && allowedFor(store.me, ev.companyId)) notify([store.me], mine, `ev-${ev.id}`, after ? `./#/e/${ev.id}` : './', true);
   if (jobs.length && onResult) {
     Promise.all(jobs).then((list) => {
       const missing = list.filter((x) => x.d && !x.d.error && x.d.results && !x.d.results[x.r]).map((x) => nameOf(x.r));
@@ -100,7 +101,7 @@ export function onActivity(a) {
   } else if (a.kind === 'import') {
     msg = { title: `${actor} importou a agenda`, body: `${a.count || 0} itens atualizados.` };
   }
-  notify([...others, ...(allowedFor(store.me, co) ? [store.me] : [])], msg, `act-${a.id || Date.now()}`, './', true);
+  notify([...others, ...(document.hidden && allowedFor(store.me, co) ? [store.me] : [])], msg, `act-${a.id || Date.now()}`, './', true);
   syncSchedule();
 }
 
@@ -156,7 +157,40 @@ export function buildSchedule(now = Date.now()) {
       });
     });
   }
-  return items.sort((a, b) => a.at - b.at);
+  return esperto(items);
+}
+
+/* Avisos espertos: insistem quando importa e calam quando já disseram.
+   1) atraso: as 2 primeiras cobranças vêm no ritmo da pessoa; depois o intervalo dobra, no máximo 5 por compromisso;
+   2) dois ou mais lembretes da mesma pessoa no mesmo minuto viram um aviso só;
+   3) lembrete "daqui a pouco" colado no de "agora" (menos de 5 min) não sai duas vezes. */
+export function esperto(items) {
+  const out = [], porEv = {};
+  const ord = [...items].sort((a, b) => a.at - b.at);
+  for (const it of ord) {
+    if (/^late-/.test(it.tag || '')) {
+      const k = it.member + it.tag, s = porEv[k] || (porEv[k] = { n: 0, ult: 0, vao: 0 });
+      if (s.n >= 5) continue;
+      if (s.n >= 2 && it.at - s.ult < s.vao * 2 - 60e3) continue;
+      if (s.n >= 1) s.vao = it.at - s.ult;
+      s.n++; s.ult = it.at;
+    }
+    if (/^rem-/.test(it.tag || '')) {
+      const antes = out.find((x) => x.member === it.member && x.tag === it.tag && it.at - x.at > 0 && it.at - x.at < 5 * 60e3);
+      if (antes) out.splice(out.indexOf(antes), 1);
+      const junto = out.find((x) => x.member === it.member && /^rem-/.test(x.tag || '') && x.tag !== it.tag && x.at === it.at);
+      if (junto) {
+        junto.juntos = [...(junto.juntos || [junto.title]), it.title];
+        junto.title = `${junto.juntos.length} compromissos ao mesmo tempo`;
+        junto.body = junto.juntos.map((t) => t.replace(/^Daqui a ([^:]+): /, '')).join(' · ').slice(0, 170);
+        junto.url = './';
+        junto.id += '+' + it.id.slice(2, 18);
+        continue;
+      }
+    }
+    out.push({ ...it });
+  }
+  return out.map(({ juntos, ...x }) => x);
 }
 
 let lastSent = '';

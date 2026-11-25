@@ -206,6 +206,14 @@ function render() {
       if (Date.now() - m.feedCache().at > 3 * 60e3) m.refreshFeed().then(pinta);
     }).catch(() => {});
   }
+  // visita nova no perfil: logo abaixo do que importa agora
+  if (store.user && store.mode === 'cloud' && (personalMode ? (ui.ptab || 'p-hoje') === 'p-hoje' : ui.tab === 'hoje')) {
+    import('./stories.js').then((m) => {
+      const poe = () => { const v = document.getElementById('view'); if (!v) return; v.querySelector('.visita')?.remove(); const alvo = v.querySelector('.page > .foco, .page > .pquick'); const h = alvo && m.visitaCard(); if (h) alvo.insertAdjacentHTML('afterend', h); };
+      poe();
+      if (Date.now() - m.visitasCache().at > 3 * 60e3) m.refreshVisitors().then(poe);
+    }).catch(() => {});
+  }
   // Foco visível no Hoje: o mascote do canto não cobre nada (some enquanto o Foco está na tela)
   window.__focoIO?.disconnect(); document.body.classList.remove('foco-visivel');
   const fo = !personalMode && ui.tab === 'hoje' && view.querySelector('.foco');
@@ -243,6 +251,17 @@ function recolhe(view, pessoal) {
     h.dataset.action = 'acc'; h.dataset.k = k; h.setAttribute('role', 'button'); h.tabIndex = 0; h.setAttribute('aria-expanded', !!ui.acc[k]); h.setAttribute('data-allow-locked', '');
     h.insertAdjacentHTML('beforeend', icon('down', 18));
   });
+  const acc = [...view.querySelectorAll('.page > .acc')];
+  if (pessoal || acc.length < 5) return;
+  const GRUPOS = [['Você', /conta|usando|apar|dia de trabalho/i], ['Avisos e ajuda', /notifica|assistente|lembretes|hor[aá]rios/i], ['App e dados', /./]];
+  const marca = document.createComment(''); acc[0].before(marca);
+  let resto = acc;
+  GRUPOS.forEach(([nome, re]) => {
+    const meus = resto.filter((s) => re.test(s.querySelector('.block__title').textContent)); resto = resto.filter((s) => !meus.includes(s));
+    if (!meus.length) return;
+    const g = document.createElement('section'); g.className = 'accg'; g.innerHTML = `<h3 class="accg__t">${nome}</h3>`; g.append(...meus); marca.before(g);
+  });
+  marca.remove();
 }
 document.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-action="acc"]')) { e.preventDefault(); e.target.click(); } });
 function rerenderAll() {
@@ -361,6 +380,7 @@ const actions = {
     ui.date = b.dataset.k;
     setTab('hoje');
   },
+  visitas: () => import('./stories.js').then((m) => m.openVisitors()).then(() => render()),
   'ui-toggle': (b) => { ui[b.dataset.k] = !ui[b.dataset.k]; render(); },
   acc: (b) => { const k = b.dataset.k; ui.acc[k] = !ui.acc[k]; const s = b.closest('.acc'); s.classList.toggle('is-open', ui.acc[k]); b.setAttribute('aria-expanded', !!ui.acc[k]); },
   'toggle-types': () => { ui.showTypes = !ui.showTypes; render(); },
