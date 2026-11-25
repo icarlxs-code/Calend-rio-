@@ -4,7 +4,7 @@ import { brand } from '../brand.js';
 import { icon } from '../icons.js';
 import { esc } from '../utils.js';
 import { PROFESSIONS, ARCHETYPES, TYPE_DEFS, archOf, searchProfessions, profStyle, professionFor } from '../../functions/catalog.js';
-import { DIFFICULTIES, JOURNEYS, GOALS, TONES, METHODS, VOLUMES, PRONOUNS, GENDERS, computePersona, validCPF, maskCPF, maskPhone, validPhone, tidyName, validNameChars, ageOf, g } from '../persona.js';
+import { DIFFICULTIES, JOURNEYS, GOALS, TONES, METHODS, VOLUMES, PRONOUNS, GENDERS, computePersona, maskPhone, validPhone, tidyName, validNameChars, ageOf, g } from '../persona.js';
 import { store, saveUserProfile } from '../store.js';
 import { savePrefs } from '../personal.js';
 import { routine } from '../planner.js';
@@ -17,6 +17,7 @@ import { CONFIG } from '../../config.js';
 import { pickField, openPicker } from '../picker.js';
 import { roleHint } from '../roles.js';
 import { boton, porTime, AVISO_TIME } from '../times.js';
+import { RESP } from '../comeco.js';
 import { escolheTime, sincTime } from './editar-perfil.js';
 
 /* páginas oficiais (Termos e Privacidade) */
@@ -36,7 +37,7 @@ const WATER = [[0, 'Não precisa'], [60, 'A cada 1h'], [90, 'A cada 1h30'], [120
 
 export function openFicha({ initial = {}, onDone, onClose, required = true } = {}) {
   const f = {
-    name: '', nickname: '', birth: '', cpf: '', phone: '', profession: '', role: '', workplace: '',
+    name: '', nickname: '', birth: '', phone: '', profession: '', role: '', workplace: '',
     pronoun: '', gender: '', volume: '', method: '',
     journey: 'comercial', workStart: '08:00', workEnd: '18:00', workDays: [1, 2, 3, 4, 5], wake: '06:30', sleep: '22:30', lunch: '12:00',
     difficulties: [], forget: 3, lead: '', tone: 'firme', freq: '', faith: false, water: true, meals: true, goal: 'lembrar', consent: false,
@@ -131,12 +132,12 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     voce: () => `<h2>Sobre você</h2><p class="ficha__sub">Seus dados ficam guardados só na sua conta.</p>
       <label class="flabel" for="fi-name">Nome completo</label><input id="fi-name" class="input" data-f="name" value="${esc(f.name)}" autocomplete="name" maxlength="80">
       <label class="flabel" for="fi-nick">Como prefere que o Lembra te chame?</label><input id="fi-nick" class="input" data-f="nickname" value="${esc(f.nickname)}" maxlength="30" placeholder="Ex.: Rafa" autocomplete="nickname">
-      <div class="row2"><div><label class="flabel" for="fi-birth">Nascimento</label><input id="fi-birth" class="input" type="date" data-f="birth" value="${esc(f.birth)}" min="1900-01-01" max="${new Date().toISOString().slice(0, 10)}" autocomplete="bday"></div>
-      <div><label class="flabel" for="fi-cpf">CPF</label><input id="fi-cpf" class="input" inputmode="numeric" data-f="cpf" value="${esc(maskCPF(f.cpf))}" placeholder="000.000.000-00" maxlength="20" autocomplete="off"></div></div>
+      <div class="row2"><div><label class="flabel" for="fi-birth">Nascimento</label><input id="fi-birth" class="input" type="date" data-f="birth" value="${esc(f.birth)}" min="1900-01-01" max="${new Date().toISOString().slice(0, 10)}" autocomplete="bday"></div></div>
+      ${(() => { const a = ageOf(f.birth); return a !== null && a >= 13 && a < 18 ? `<label class="idd__r"><input type="checkbox" data-chk="responsavel" ${f.responsavel ? 'checked' : ''}><span>${RESP}</span></label>` : ''; })()}
       <div class="row2">${field('gender')}${field('pronoun')}</div>
       <p class="fhelp">Isso muda o jeito de falar (pronta, pronto ou “tudo pronto”) e as sugestões do seu modo Pessoal. Ninguém mais vê.</p>
       <label class="flabel" for="fi-phone">Celular (opcional)</label><input id="fi-phone" class="input" type="tel" inputmode="tel" data-f="phone" value="${esc(maskPhone(f.phone))}" placeholder="(00) 00000-0000" maxlength="20" autocomplete="tel-national">
-      <p class="fhelp">O CPF serve só para identificar sua conta e garantir um teste grátis por pessoa. Ele não aparece para ninguém.</p>${nav()}`,
+      ${nav()}`,
     trabalho: () => {
       return `<h2>Com o que você trabalha?</h2><p class="ficha__sub">O Lembra se adapta à sua profissão: nomes, tipos de compromisso, dicas e cobranças.</p>
       <div class="ficha__search">${icon('search', 18)}<input class="input" data-q type="search" enterkeyhint="done" placeholder="Busque: enfermeiro, professor, sargento…" value="${esc(q)}" autocomplete="off" autocorrect="off" spellcheck="false"></div>
@@ -329,7 +330,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       const age = ageOf(f.birth);
       if (age === null || age > 110 || f.birth > new Date().toISOString().slice(0, 10)) return 'Data de nascimento inválida. Confira o dia, o mês e o ano.';
       if (age < 13) return 'O Lembra é para maiores de 13 anos (menores de 18 com autorização dos responsáveis).';
-      if (!validCPF(f.cpf)) return 'CPF inválido. Confira os números.';
+      if (age < 18 && !f.responsavel) return 'Marque a autorização do seu responsável para continuar.';
       if (!f.gender) return 'Escolha como você se identifica (pode ser “Prefiro não dizer”).';
       if (!f.pronoun) return 'Escolha como o Lembra fala com você.';
       if (!validPhone(f.phone)) return 'Celular inválido. Use DDD + número, ex.: (11) 98765-4321 — ou deixe em branco.';
@@ -353,11 +354,11 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
     const $ = (sel) => wrap.querySelectorAll(sel);
     bindPick();
     { const b = wrap.querySelector('[data-ftime]'); if (b) b.onclick = () => escolheTime(f, () => { saveDraft(); render(); }); }
+    { const b = wrap.querySelector('[data-f="birth"]'); if (b) b.addEventListener('change', () => { saveDraft(); render(); }); }
     $('[data-f]').forEach((el) => (el.oninput = () => {
       const k = el.dataset.f;
       // corrigiu o campo: some o aviso de erro
       if (err) { err = ''; const e = wrap.querySelector('.ficha__err'); if (e) e.hidden = true; }
-      if (k === 'cpf') { el.value = maskCPF(el.value); f.cpf = el.value.replace(/\D/g, ''); }
       else if (k === 'phone') { el.value = maskPhone(el.value); f.phone = el.value; }
       else if (k === 'forget') { f.forget = +el.value; wrap.querySelector('.ficha__rangev b').textContent = FORGET[f.forget]; }
       else if (k === 'perDay') { f.perDay = +el.value; wrap.querySelector('[data-perday]').textContent = `${f.perDay} por dia`; }
@@ -429,7 +430,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
 }
 
 /* ---------- salvar e quando pedir a ficha ---------- */
-const KEYS = ['name', 'nickname', 'pronoun', 'gender', 'birth', 'cpf', 'phone', 'profession', 'area', 'arch', 'role', 'workplace', 'journey', 'volume', 'method', 'workStart', 'workEnd', 'workDays',
+const KEYS = ['name', 'nickname', 'pronoun', 'gender', 'birth', 'phone', 'profession', 'area', 'arch', 'role', 'workplace', 'journey', 'volume', 'method', 'workStart', 'workEnd', 'workDays',
   'wake', 'sleep', 'lunch', 'difficulties', 'forget', 'lead', 'tone', 'freq', 'faith', 'water', 'meals', 'goal',
   'motivationLevel', 'selfesteem', 'anxiety', 'traits', 'focus', 'likes', 'wantsMotivation', 'religion', 'perDay', 'waterEvery', 'teamId', 'teamOther', 'teamAvisos'];
 
@@ -439,6 +440,7 @@ export async function saveFicha(r) {
   const p = r.persona;
   const data = {};
   KEYS.forEach((k) => (data[k] = typeof r[k] === 'string' ? r[k].trim() : r[k]));
+  if (r.responsavel && ageOf(r.birth) < 18) data.responsavelOk = { at: now, versao: CONFIG.termsVersion || '1.0' };
   Object.assign(data, { index: p.index, consentAt: store.profile?.consentAt || now, fichaConsentAt: now, termsVersion: CONFIG.termsVersion || '1.0', onboardedAt: store.profile?.onboardedAt || now, fichaAt: now });
   await saveUserProfile(data);
   if (data.teamId) sincTime().catch(() => {});
@@ -463,15 +465,16 @@ const waitIntro = () => new Promise((res) => {
 });
 export const fichaDone = () => !!store.profile?.onboardedAt;
 
-/* Conta própria: a ficha é obrigatória antes de usar. Dupla: oferecida uma vez. */
+/* A ficha é oferecida uma vez, depois do primeiro lembrete, e pode ser pulada (o rascunho fica guardado). */
 export async function ensureFicha() {
   if (store.mode !== 'cloud' || fichaDone()) return;
   const key = `lembra.fichaOffer.${store.user?.uid || 'x'}`;
-  if (!store.solo) { try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch { return; } }
+  if (store.solo && (await import('../comeco.js')).semNada()) return; // primeiro prova o valor: anota algo
+  try { if (Date.now() - (Number(localStorage.getItem(key)) || 0) < 7 * 864e5) return; localStorage.setItem(key, String(Date.now())); } catch { return; }
   await waitIntro();
   return new Promise((resolve) => openFicha({
     initial: initialFicha(),
-    required: store.solo,
+    required: false,
     onDone: async (r) => { await saveFicha(r); resolve(true); },
     onClose: () => resolve(false),
   }));

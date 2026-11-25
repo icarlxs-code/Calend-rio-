@@ -301,6 +301,7 @@ const backend = {
   saveProfile(uid, data) {
     return fs.setDoc(fs.doc(db, 'users', uid), clean(data), { merge: true });
   },
+  tiraCampo(uid, campo) { return fs.updateDoc(fs.doc(db, 'users', uid), { [campo]: fs.deleteField() }); },
   idToken: () => (auth.currentUser ? auth.currentUser.getIdToken() : null),
   /* ---------- agenda compartilhada (teams/{dono}) ---------- */
   async getTeam(owner) {

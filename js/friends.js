@@ -11,6 +11,7 @@ import { sininho, alive, vivo } from './sininho.js';
 import { leCache, gravaCache } from './cache.js';
 import { ageOf } from './persona.js';
 import { abreAchar } from './achar.js';
+import { idadeSabida, pedeIdade } from './comeco.js';
 
 const LS = 'lembra.amigo';
 const call = (path, body = {}) => api(path, { ws: '', ...body }); // sempre a própria conta (nunca a agenda de outra pessoa)
@@ -143,6 +144,7 @@ function localizacao() {
   });
 }
 export function openFriends() {
+  if (!idadeSabida()) { pedeIdade().then((ok) => ok && openFriends()); return null; }
   let data = leCache('friends'), err = '', busca = '', sug = leCache('fsug') || [], perto = null, pertoErr = '', aba = 'amigos';
   const S = import('./stories.js');
   let St = null, snhOn = false, G = null;

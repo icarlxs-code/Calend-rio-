@@ -141,7 +141,7 @@ test('chat grátis (IA do Cloudflare) responde com a agenda', async () => {
   const data = await r.json();
   assert.equal(r.status, 200, JSON.stringify(data));
   assert.equal(data.answer, 'Amanhã: 13h Feed · Garcia Hortifruti');
-  assert.match(got.model, /llama-3\.3-70b/);
+  assert.match(got.model, /llama-3\.1-8b/);
   assert.match(got.input.messages[0].content, /Quem pergunta: Henrique[\s\S]*13h Feed Garcia/);
   const h = await handle(new Request('https://w.dev/health'), { ...env, AI });
   assert.equal((await h.json()).chat, true);

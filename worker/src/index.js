@@ -23,7 +23,7 @@ import { brNow, fusoOk } from './coach.js';
 import { meuId, trocaId, limpaId, esqueceAchado, guardaCodigos } from './achar.js';
 import { regGet, regPut, regDel, regAll, idOfWs } from './registry.js';
 import { boardOf } from './leaderboard.js';
-import { startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling, untilOf, statusOf, grantComp, markVipSent, vipMigrate, vipCompacta } from './billing.js';
+import { marcaCpf, startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling, untilOf, statusOf, grantComp, markVipSent, vipMigrate, vipCompacta } from './billing.js';
 
 const SUBJECT = 'mailto:avisos@calendario.app';
 
@@ -371,6 +371,7 @@ async function handle(req, env) {
     if (me.ws !== 'main') { const cur = await regGet(env, me.id); if ((cur || me.founder) && cur?.until !== untilOf(st)) await registerUser(env, me, st); }
     return reply(env, req, st);
   }
+  if (url.pathname === '/billing/cpf') return reply(env, req, { ok: await marcaCpf(env, me, clean(body.cpf, 20)) });
   if (url.pathname === '/billing/trial') {
     const st = await startTrial(env, me, { deviceId: clean(body.deviceId, 80), ip: req.headers.get('CF-Connecting-IP') || '', cpf: clean(body.cpf, 20) });
     await registerUser(env, me, st);
@@ -379,7 +380,7 @@ async function handle(req, env) {
   let plan = null;
   if (['/notify', '/schedule', '/coach', '/personal', '/ask', '/tidy', '/test', '/coach-test', '/pnudge-test'].includes(url.pathname)) {
     plan = await entitled(env, me);
-    if (!plan.active) return reply(env, req, LOCKED, 402);
+    if (!plan.active && !(plan.livre && ['/personal', '/schedule', '/notify', '/test'].includes(url.pathname))) return reply(env, req, LOCKED, 402);
     // assistente com IA: recurso do plano Profissional
     if (['/ask', '/tidy'].includes(url.pathname) && plan.tier === 'essencial') return reply(env, req, { error: 'O assistente com IA faz parte do plano Profissional.', upgrade: true }, 402);
   }
@@ -527,7 +528,7 @@ async function handle(req, env) {
 
   if (url.pathname === '/test') {
     const statuses = [];
-    const sent = await sendToMember(env, me.id, { title: 'Notificações ativadas ✓', body: 'É assim que os lembretes e os avisos do parceiro vão chegar.', tag: 'teste', url: './' }, null, statuses);
+    const sent = await sendToMember(env, me.id, { title: body.primeiro ? 'Oi, sou o Lembra 🧡' : 'Notificações ativadas ✓', body: body.primeiro ? 'Tocou aqui se chegou.' : 'É assim que os lembretes e os avisos vão chegar.', tag: 'teste', url: './' }, null, statuses);
     return reply(env, req, { ok: true, sent, devices: Object.keys(await getDevices(env, me.id)).length, statuses });
   }
 

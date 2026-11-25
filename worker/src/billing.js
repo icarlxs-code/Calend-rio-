@@ -72,12 +72,14 @@ export const basePaid = (b, now = Date.now()) => !!b && (!!b.lifetime || (!!b.pr
 /* Situação da conta: team | lifetime | monthly | trial | expired | blocked | none */
 /* Lançamento: tudo grátis para todo mundo até 31/12/2026 23:59 (horário de Brasília).
    Quem já pagou continua com o plano dele; quem não tem plano fica com "gratis" (tudo liberado, IA inclusa). */
+export const FOUNDERS_UNTIL = Date.UTC(2027, 1, 1, 3, 0, 0);
 export const FREE_UNTIL_DEFAULT = Date.UTC(2027, 0, 1, 3, 0, 0);
 export const freeUntil = () => (globalThis.__LEMBRA_FREE_UNTIL ?? FREE_UNTIL_DEFAULT);
 const gratis = (now, extra = {}) => (now < freeUntil() ? { plan: 'gratis', active: true, tier: 'pro', freeUntil: freeUntil(), ...extra } : null);
+export const livreEm = (now = Date.now()) => now >= FREE_UNTIL_DEFAULT;
 export function statusOf(b, me, now = Date.now()) {
   if (me.ws === 'main') return { plan: 'team', active: true };
-  if (!b) return gratis(now) || { plan: 'none', active: false };
+  if (!b) return gratis(now) || { plan: 'none', active: false, ...(livreEm(now) ? { livre: true } : {}) };
   const addon = addonOf(b, now);
   const extra = addon ? { addon } : {};
   if (b.lifetime) return { plan: 'lifetime', active: true, tier: 'pro', ...(b.founder ? { founder: true } : {}), ...(b.comp ? { comp: true } : {}), ...(b.comp && b.vip ? { vip: { no: b.vip.no, at: b.vip.at, ...(Number.isFinite(b.vip.sent) ? { sent: b.vip.sent } : {}) } } : {}), ...extra };
@@ -89,13 +91,15 @@ export function statusOf(b, me, now = Date.now()) {
   if (b.pending && now - b.pending.at < 4 * 864e5) extra.pending = b.pending.plan;
   if (b.trialEndsAt && b.trialEndsAt > now) return { plan: 'trial', active: true, tier: 'pro', trialEndsAt: b.trialEndsAt, ...extra };
   { const g = gratis(now, extra); if (g) return g; }
-  if (b.trialDenied) return { plan: 'blocked', active: false, reason: b.trialDenied, ...extra };
-  return { plan: 'expired', active: false, trialEndsAt: b.trialEndsAt || null, ...extra };
+  const lv = livreEm(now) ? { livre: true } : {}; // depois do lançamento: continua no plano grátis, com limite
+  if (b.trialDenied) return { plan: 'blocked', active: false, reason: b.trialDenied, ...lv, ...extra };
+  return { plan: 'expired', active: false, trialEndsAt: b.trialEndsAt || null, ...lv, ...extra };
 }
 
 /* Até quando a conta tem direito aos lembretes, mensagens e assistente (0 = sem plano) */
 export const FOREVER = 8.64e15;
 export function untilOf(st, now = Date.now()) {
+  if (st && st.livre) return now + 32 * 864e5;
   if (!st || !st.active) return 0;
   if (st.plan === 'team' || st.plan === 'lifetime') return FOREVER;
   if (st.plan === 'monthly') return st.paidUntil ? st.paidUntil + 3 * 864e5 : now + 32 * 864e5;
@@ -151,6 +155,8 @@ export function validCPF(raw) {
   return dv(9) === +c[9] && dv(10) === +c[10];
 }
 
+/** guarda só o código embaralhado do CPF (para a regra de um teste por pessoa) */
+export async function marcaCpf(env, me, cpf, now = Date.now()) { if (!validCPF(cpf)) return false; const doc = await sha(`cpf:${env.CPF_SALT || 'lembra'}:${String(cpf).replace(/\D/g, '')}`), k = `trial-cpf:${doc}`; if (!(await env.CAL.get(k))) await env.CAL.put(k, JSON.stringify({ uid: me.ws, at: now })); return true; }
 export async function startTrial(env, me, { deviceId, ip, cpf, now = Date.now() }) {
   if (me.ws === 'main') return statusOf(null, me, now);
   const uid = me.ws;
@@ -254,6 +260,7 @@ export async function createCheckout(env, me, { plan, returnUrl }, fetchImpl = f
   if (!p.addon && p.mode === 'subscription' && prepaidLeft > 10 * 864e5) throw Object.assign(new Error(`Seu plano pago no Pix vale até ${new Date(b.prepaidUntil).toLocaleDateString('pt-BR')}. Faltando 10 dias, você renova no Pix ou passa para o cartão sem perder nenhum dia.`), { status: 409 });
   if (!p.addon && p.mode === 'subscription' && basePaid(b) && !(prepaidLeft > 0)) throw Object.assign(new Error('Você já tem uma assinatura. Para trocar de plano, use “Gerenciar assinatura”.'), { status: 409 });
   if (p.prepaidDays && b.subActive) throw Object.assign(new Error('Você já tem uma assinatura no cartão. Para trocar para o Pix, cancele em “Gerenciar assinatura” e pague o anual no Pix quando ela terminar.'), { status: 409 });
+  if (p.founder && Date.now() >= FOUNDERS_UNTIL) throw Object.assign(new Error('As vagas de Fundadores acabaram.'), { status: 409 });
   if (p.founder && Number(await env.CAL.get('founders-count') || 0) >= FOUNDERS_MAX) throw Object.assign(new Error('As vagas de Fundadores acabaram.'), { status: 409 });
   if (p.addon) {
     if (!basePaid(b)) throw Object.assign(new Error('A agenda compartilhada é um complemento: primeiro assine o plano Mensal ou o Vitalício.'), { status: 409 });

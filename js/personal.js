@@ -1,6 +1,7 @@
 /* Espaço Pessoal: privado de cada pessoa. Fica em pessoal/{uid}/itens na nuvem
    (só o dono lê e escreve) e não se mistura com o calendário de trabalho.
    Tipos de documento: compromisso/lembrete (padrão), lista ("list") e preferências ("prefs"). */
+import { semAviso, podeCriar, textoLimite } from './limite.js';
 import { occursOn } from './inicio-pessoal.js';
 import { marca, desmarca, novoLote, apagado, conteudo, vencido } from './lixeira-core.js';
 import { ehRemedio, tituloSeguro, avisoRemedio } from '../functions/remedio.js';
@@ -93,6 +94,7 @@ const saveLocal = () => { try { localStorage.setItem(LS, JSON.stringify([...item
 export function savePersonal(it) {
   // sem plano ativo: nada é gravado (só as preferências da ficha)
   if (personal.gate && it.kind !== 'prefs' && !personal.gate(it)) return null;
+  if (personal.limitado?.() && !items.some((x) => x.id === it.id && !x.done) && !podeCriar(personal.events, it, todayKey(), true)) { personal.aoLimite?.(textoLimite()); return null; }
   it = { ...it, updatedAt: Date.now() };
   if (!it.id) it.id = uid('p_');
   if (!it.createdAt) it.createdAt = Date.now();
@@ -446,7 +448,7 @@ export function buildPersonalSchedule(now = Date.now()) {
   const prefs = personal.prefs;
   const out = [];
   const add = (when, title, body, id, tag, url) => { if (when > now - 60e3) out.push({ id, at: when, title, body, tag, url }); };
-  const occ = occurrences(addDays(t, -1), addDays(t, 35));
+  const mudos = semAviso(personal.events, t, !!personal.limitado?.()), occ = occurrences(addDays(t, -1), addDays(t, 35)).filter((o) => !mudos.has(o.item.id));
   if (prefs.reminders) {
     for (const { item: it, date, done } of occ) {
       if (done || it.remind === 'none') continue;

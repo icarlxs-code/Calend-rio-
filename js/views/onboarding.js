@@ -60,7 +60,7 @@ function stepHtml(step, i, total) {
         ${preview(`Bom dia, ${me?.name || ''}! Seu dia hoje`, `4 compromissos · primeiro: 8h ${tl(1)}`, '7:20')}
       </div>
       <h1>Nunca mais esqueça um compromisso</h1>
-      <p>Avisos antes de cada ${esc(tlist(2))} — calculados pela sua ficha —, uma pergunta na hora exata e cobrança se algo ficar para trás.</p>
+      <p>Avisos antes de cada ${esc(tlist(2))}, uma pergunta na hora exata e cobrança se algo ficar para trás.</p>
       <div data-notify-msg></div>
       ${dots}
       <button class="btn btn--primary btn--block" data-enable>${icon('bell', 18)} Ativar notificações</button>
@@ -150,7 +150,7 @@ function show(steps) {
           msg('Ativado neste celular. Para os avisos chegarem com o app fechado e no celular do parceiro, falta ligar o servidor de notificações (Ajustes → Notificações).', 'ok');
         } else {
           msg('Pronto! Você vai receber uma notificação de teste em instantes.', 'ok');
-          push.sendTest().catch(() => {});
+          import('../comeco.js').then((m) => m.checkup());
         }
         en.outerHTML = `<button class="btn btn--primary btn--block" data-next>Continuar</button>`;
         card.querySelector('[data-skip]')?.remove();

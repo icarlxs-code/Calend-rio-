@@ -28,7 +28,7 @@ import { maybeOnboard } from './views/onboarding.js';
 import { showInstallGuide } from './install.js';
 import { onDone } from './reward.js';
 import { chime, setSound } from './sound.js';
-import { checkBilling, trialBanner, openPlans, confirmPayment, openPortal, buying, clearBuying, hasAccess, requireAccess, lastKnown, emLancamento } from './billing.js';
+import { checkBilling, trialBanner, openPlans, confirmPayment, openPortal, buying, clearBuying, hasAccess, requireAccess, lastKnown, emLancamento, limitado } from './billing.js';
 import { captureInvite, maybeAcceptInvite, startTeam, openShare, pendingInvite } from './equipe.js';
 import { personaOf } from './notifier.js';
 import { applyProfTheme, applyThemePref, setThemePref } from './theme.js';
@@ -146,6 +146,12 @@ function syncWork() {
   return true;
 }
 const htmlDaAba = (personalMode) => (personalMode ? renderPersonalSpace() : ui.tab === 'mes' ? renderMonth() : ui.tab === 'empresas' ? renderCompanies() : ui.tab === 'ajustes' ? renderSettings() : renderToday());
+function poeComeco(view, personalMode) {
+  if (!(personalMode ? (ui.ptab || 'p-hoje') === 'p-hoje' : ui.tab === 'hoje') || !window.__comeco) return;
+  const C = window.__comeco, h = C.cartaoPrimeiro() || C.cartaoCheckup() || C.cartaoEnquete(); if (!h) return;
+  const alvo = view.querySelector(personalMode ? '.page > .pquick' : '.page > .foco'); if (alvo) alvo.insertAdjacentHTML(/class="prim"/.test(h) ? 'beforebegin' : 'afterend', h); else view.querySelector('.page')?.insertAdjacentHTML('afterbegin', h);
+}
+import('./comeco.js').then((m) => { window.__comeco = m; m.avisoDados(); }).catch(() => {});
 function poeFaixa(view, personalMode) {
   // em Ajustes o plano já aparece em "Seu plano": sem a faixa repetida
   const tb = !hasAccess() ? lockBanner() : ui.tab === 'ajustes' && !personalMode ? '' : trialBanner();
@@ -205,6 +211,7 @@ function render() {
   const locked = !hasAccess();
   document.documentElement.classList.toggle('is-locked', locked);
   poeFaixa(view, personalMode);
+  poeComeco(view, personalMode);
   recolhe(view, personalMode);
   bindSwipes();
   bindStrip(view);
@@ -305,6 +312,9 @@ function setTab(tab, from) {
 
 /* ---------- ações (delegação de cliques) ---------- */
 const actions = {
+  prim: (b) => window.__comeco?.criaPrimeiro(b.dataset.id),
+  checkup: () => window.__comeco?.checkup(),
+  enq: (b) => window.__comeco?.respondeEnquete(b.dataset.v),
   'snh-toggle': async () => {
     const M = await import('./mascote.js'); let off = false;
     try { off = localStorage.getItem('lembra.companheiroOff') === '1'; off ? localStorage.removeItem('lembra.companheiroOff') : localStorage.setItem('lembra.companheiroOff', '1'); } catch { /* ok */ }
@@ -775,6 +785,7 @@ function requirePhoto(tries = 0) {
   if (!store.solo || store.mode !== 'cloud' || !store.user || store.shared) return;
   const me = store.member(store.me) || {};
   const created = store.user.metadata?.creationTime ? Date.parse(store.user.metadata.creationTime) : 0;
+  if (window.__comeco?.semNada() && tries < 200) { setTimeout(() => requirePhoto(tries + 1), 15000); return; } // primeiro o 1º lembrete
   if (me.photo || created < PHOTO_FROM || document.querySelector('.photogate')) return;
   // espera a ficha, os termos e a tela de planos saírem da frente
   // (e também perguntas abertas, como "entrar na agenda de quem te convidou?", e comemorações de conquistas)
@@ -1308,7 +1319,7 @@ function startApp() {
   if (store.solo && store.mode === 'cloud' && !store.billing) store.billing = lastKnown() || (founder ? { plan: 'lifetime', active: true, tier: 'pro', comp: true } : { plan: 'checking', active: false });
   // portão do plano: sem plano ativo nada é criado, alterado ou apagado (a ficha e os ajustes de rotina podem)
   store.gate = (col) => col === 'settings' || requireAccess();
-  personal.gate = () => requireAccess();
+  personal.gate = () => requireAccess(); personal.limitado = () => limitado(); personal.aoLimite = (t) => toast(t, { ms: 6000, action: 'Ver planos', onAction: () => openPlans() });
   syncWork();
   shell();
   render();
@@ -1332,6 +1343,7 @@ function startApp() {
   // equipe interna: quem tem cargo vê o "Painel da equipe" em Ajustes
   setTimeout(() => import('./views/staff.js').then(async (S) => { window.__equipe = await S.minhaEquipe(); if (window.__equipe?.perms?.length && ui.tab === 'ajustes') render(); }).catch(() => {}), 4000);
   setTimeout(() => import('./friends.js').then((f) => { f.publishCard(); f.processFriendLink(); f.pingOnline(); setTimeout(f.pertoAuto, 15e3); setInterval(f.pingOnline, 60e3); document.addEventListener('visibilitychange', f.pingOnline); import('./game.js').then((gm) => gm.onGame(() => { clearTimeout(window.__cardT); window.__cardT = setTimeout(f.publishCard, 8000); })); }).catch(() => {}), 5000);
+  setTimeout(() => { window.__comeco?.contaAbertura(); if (window.__comeco?.faltaCheckup() && !window.__comeco.semNada()) render(); }, 2000);
   setTimeout(askReinstall, 2500); // aviso de instalar a versão nova (só para quem precisa)
   // versão: confere se há nova ao voltar para o app (atualiza sozinho) e mostra as novidades uma vez
   import('./version.js').then((v) => {
@@ -1434,7 +1446,9 @@ function startApp() {
       if (joined) return;
       render();
       // boas-vindas / permissão de notificações (depois da ficha)
-      setTimeout(maybeOnboard, 400);
+      // conta nova: primeiro o 1º lembrete; os avisos são oferecidos logo depois dele (ou em 90 s)
+      const t0 = Date.now(), oferece = () => (window.__comeco?.semNada() && store.mode === 'cloud' && store.solo && Date.now() - t0 < 90e3 ? setTimeout(oferece, 1500) : setTimeout(maybeOnboard, 1200));
+      setTimeout(oferece, 400);
       if (store.solo) startBilling();
     });
   // resumo de uso da conta (para o Painel do dono)
@@ -1539,7 +1553,7 @@ function watchConflicts() {
    Só para o dono medir a divulgação; nenhum rastreador de terceiros. */
 function captureOrigin() {
   try {
-    if (localStorage.getItem('lembra.origem')) return;
+    if (localStorage.getItem('lembra.origem') && (localStorage.getItem('lembra.jaentrou') || JSON.parse(localStorage.getItem('lembra.origem')).medium)) return; // um link marcado antes do cadastro ainda vale
     const q = new URLSearchParams(location.search);
     const o = {};
     for (const k of ['source', 'medium', 'campaign', 'content', 'term']) { const v = q.get(`utm_${k}`); if (v) o[k] = v.slice(0, 60); }

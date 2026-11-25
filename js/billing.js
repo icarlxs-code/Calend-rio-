@@ -1,5 +1,6 @@
-/* Plano da conta no app: teste grátis de 24h, tela de planos (mensal / vitalício) e confirmação do pagamento.
-   A dupla Henrique + Matheus não paga. Quem verifica e libera é o servidor (Stripe). */
+/* Plano da conta no app. Essencial R$ 12,90/mês ou R$ 119,90/ano; Profissional R$ 19,90/mês ou R$ 179,90/ano;
+   Fundadores R$ 199 (200 vagas); complemento Dupla R$ 7,90 e Equipe R$ 29,90 (vitalício e Fundadores: R$ 4,90 e R$ 19,90);
+   teste de 7 dias; tudo grátis até 31/12/2026. Quem verifica e libera é o servidor (Stripe). */
 import { CONFIG } from '../config.js';
 import { store } from './store.js';
 import { server, api } from './avisos.js';
@@ -7,6 +8,7 @@ import { icon } from './icons.js';
 import { brand } from './brand.js';
 import { esc } from './utils.js';
 import { vipBanner } from './vip.js';
+import { fundadoresAbertos } from './limite.js';
 
 const LS_DEV = 'lembra.device', LS_LAST = 'lembra.plan';
 export function deviceId() {
@@ -30,10 +32,12 @@ export const lastKnown = () => { try { const j = JSON.parse(localStorage.getItem
 /* Lançamento: tudo grátis para todo mundo até 31/12/2026 às 23:59 (horário de Brasília) */
 export const FREE_UNTIL = Date.UTC(2027, 0, 1, 3, 0, 0);
 export const emLancamento = (now = Date.now()) => now < FREE_UNTIL;
+export const limitado = () => !!(store.solo && store.mode === 'cloud' && !emLancamento() && store.billing?.livre && !store.billing?.active);
 export function hasAccess() {
   if (!store.solo || store.mode !== 'cloud') return true;
   if (emLancamento()) return true;
   const b = store.billing;
+  if (b && b.livre) return true; // plano grátis de 2027 (com limite de lembretes)
   if (!b || !b.active) return false;
   if (b.plan === 'trial' && !(b.trialEndsAt > Date.now())) return false;
   if (b.plan === 'comp' && !(b.compUntil > Date.now())) return false;
@@ -100,7 +104,7 @@ export function trialBanner() {
   const left = b.trialEndsAt - Date.now();
   return `<button class="trialbar${left < 3 * 3600e3 ? ' is-ending' : ''}" data-action="plans">
     <span class="trialbar__ic">${icon('clock', 16)}</span>
-    <span><b>Teste grátis: ${esc(fmtLeft(left))}</b><small>Depois, a partir de R$ 9,99/mês no plano anual</small></span>
+    <span><b>Teste grátis: ${esc(fmtLeft(left))}</b><small>Depois, a partir de R$ 12,90 por mês ou R$ 119,90 por ano</small></span>
     <span class="trialbar__go">Assinar</span>
   </button>`;
 }
@@ -146,7 +150,7 @@ export function openPlans({ blocking = false } = {}) {
   const offline = b.plan === 'offline';
   const prepaid = b.plan === 'monthly' && !!b.prepaid; // pagou 12 meses no Pix: pode renovar o mesmo plano
   const isMonthly = b.plan === 'monthly' && !prepaid;
-  const founders = (b.foundersLeft ?? 200) > 0 && b.plan !== 'lifetime';
+  const founders = fundadoresAbertos() && (b.foundersLeft ?? 200) > 0 && b.plan !== 'lifetime';
   const title = prepaid ? 'Renove seu plano' : offline ? 'Não consegui conferir seu plano'
     : canTrial ? 'Experimente o Lembra grátis por 7 dias'
       : isMonthly ? 'Mude de plano quando quiser'
@@ -162,6 +166,13 @@ export function openPlans({ blocking = false } = {}) {
             : 'Sua agenda, seus lembretes e o seu modo Pessoal estão guardados, esperando você. Escolha um plano e continue de onde parou.';
   let yearly = true, chosen = prepaid && b.tier === 'essencial' ? 'essencial_ano' : 'pro_ano', pm = prepaid ? 'pix' : 'card';
   // o que vai para o pagamento: no anual com Pix, o plano de 12 meses no Pix
+  /* antes de pagar: o que é, quanto, se renova, como cancela, quem vende */
+  const legal = () => {
+    const k = finalPlan(), p = PLAN_INFO[k] || {}, ano = /_ano$/.test(k), mes = /_mes$/.test(k), pix = /_pix$/.test(k), v = { essencial_mes: 'R$ 12,90 por mês', essencial_ano: 'R$ 119,90 por ano', pro_mes: 'R$ 19,90 por mês', pro_ano: 'R$ 179,90 por ano', fundador: 'R$ 199, uma vez', essencial_ano_pix: 'R$ 119,90 no Pix', pro_ano_pix: 'R$ 179,90 no Pix' }[k] || '';
+    const em = new Date(); em.setMonth(em.getMonth() + (ano ? 12 : 1));
+    return `<b>${esc(p.name || '')}: ${v}</b><span>${mes || ano ? `Renova sozinho no cartão em ${em.toLocaleDateString('pt-BR')}, pelo mesmo valor, até você cancelar.` : pix ? 'Vale 12 meses. O Pix não renova sozinho.' : 'Pagamento único. Profissional enquanto o Lembra existir. Intransferível.'}</span><span>Cancele quando quiser em Ajustes → Seu plano → Gerenciar.</span><span>7 dias para desistir, com devolução de tudo.${ano || pix ? ' Depois disso não há devolução proporcional: o acesso vai até o fim do período pago.' : ''}</span><span>Você recebe o recibo por e-mail. <a href="termos/" target="_blank" rel="noopener">Termos</a> e <a href="privacidade/" target="_blank" rel="noopener">Privacidade</a>.</span>${CONFIG.legalId && CONFIG.legalAddress ? `<small>Vendido por ${esc(CONFIG.legalName)} · ${esc(CONFIG.legalId)} · ${esc(CONFIG.legalAddress)}${CONFIG.supportEmail ? ` · ${esc(CONFIG.supportEmail)}` : ''}</small>` : ''}`;
+  };
+  const pintaLegal = () => { const n = document.querySelector('.paywall [data-legal]'); if (n) n.innerHTML = legal(); };
   const finalPlan = () => (pm === 'pix' && /_ano$/.test(chosen) ? `${chosen}_pix` : chosen);
   const tick = (on) => (on ? `<span class="cmp__yes">${icon('check', 15)}</span>` : '<span class="cmp__no">—</span>');
   const w = document.createElement('div');
@@ -185,6 +196,7 @@ export function openPlans({ blocking = false } = {}) {
       <div class="cmp__row cmp__row--head"><span>O que vem</span><span>Essencial</span><span>Pro</span></div>
       ${COMPARE.map(([t, m, v]) => `<div class="cmp__row"><span>${esc(t)}</span>${tick(m)}${tick(v)}</div>`).join('')}
     </div>
+    <div class="pw-legal" data-legal></div>
     <div class="pw-guar"><span class="pw-guar__seal">${icon('shield', 22)}<b>7</b></span><div><b>Garantia de 7 dias</b><small>Não gostou? Devolvemos 100% do valor, sem perguntas.</small></div></div>
     <div class="pw-team">
       <div class="pw-team__top"><span class="pw-team__faces"><i style="--c:#7C5CFF">A</i><i style="--c:#0E9F6E">B</i><i style="--c:#D9480F">C</i><i class="pw-team__plus">+</i></span><span class="pw-team__tag">Para quem trabalha com alguém</span></div>
@@ -211,7 +223,7 @@ export function openPlans({ blocking = false } = {}) {
       <div class="pw-trust"><span>${icon('lock', 11)} Pagamento seguro</span><span>${icon('check', 11)} Cancele quando quiser</span><span>${icon('shield', 11)} Garantia de 7 dias</span></div>
     </div>
   </div>`;
-  document.body.appendChild(w);
+  document.body.appendChild(w); setTimeout(pintaLegal, 0); w.addEventListener('click', () => setTimeout(pintaLegal, 0));
   requestAnimationFrame(() => w.classList.add('is-open'));
   const err = w.querySelector('[data-err]');
   const buy = w.querySelector('[data-buy]');

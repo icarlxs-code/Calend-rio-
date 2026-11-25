@@ -313,6 +313,20 @@ function errorsHtml(errors) {
 /* Cada conta grava o próprio resumo: o painel trata tudo como não confiável (números viram números, foto só imagem) */
 const N = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const S = (v, n = 120) => (typeof v === 'string' ? v.slice(0, n) : '');
+let testes = (() => { try { return JSON.parse(localStorage.getItem('lembra.testes') || '{}'); } catch { return {}; } })(), visao = 'reais';
+function northHtml(todos) {
+  const L = filtra(todos, visao), M = metricas(L), E = resumoEnquete(L), t = (x) => `${x.pct === null ? '—' : x.pct + '%'}`, sub = (x) => `${x.n} de ${x.de}${x.pequena ? ' · base pequena' : ''}`, r = (a, b, c) => `<div class="arow"><span>${a}<small>${c}</small></span><b>${b}</b></div>`, w = (v) => metricas(filtra(todos, v)).wau3;
+  return `<div class="aseg aseg--3" role="tablist">${[['reais', 'Só reais'], ['teste', 'Só teste'], ['todas', 'Todas']].map(([k, l]) => `<button role="tab" class="${visao === k ? 'is-on' : ''}" data-visao="${k}"><span>${l}</span></button>`).join('')}</div>
+  <h3 class="ah">Hábito</h3><div class="agroup">
+    ${r('WAU-3', M.wau3, `3 ou mais dias diferentes nos últimos 7 · ${w('reais')} reais · ${w('teste')} teste · ${w('todas')} todas`)}
+    ${r('WAU', M.wau, `1 ou mais dias · média ${M.media7.toFixed(1)} · ainda novas demais: ${M.inelegiveis}`)}
+    ${r('Dias por conta', M.dist.join(' · '), 'contas com 1, 2, 3, 4, 5, 6 e 7 dias')}
+    ${r('Ativação em 24 h', t(M.ativacao), `${sub(M.ativacao)} · 1º compromisso em até 24 h`)}
+    ${M.estimativa.de ? r('Ativação (estimativa)', t(M.estimativa), `${sub(M.estimativa)} · contas antigas, sem firstEventAt`) : ''}
+    ${r('Retenção D1', t(M.d1), sub(M.d1))}${r('Retenção D7', t(M.d7), sub(M.d7))}${r('Voltou em 7 dias', t(M.semana), sub(M.semana))}
+    ${r('Sem nenhum compromisso', M.zero, 'contas')}${r('Não recebem avisos', M.semAviso, `permissão ${M.checkup.permissao} · teste ${M.checkup.teste} · chegou ${M.checkup.chegou} · falhou ${M.checkup.falhou}`)}</div>
+  <h3 class="ah">Intenção 2027${E.indicativo ? ' · indicativo (base pequena)' : ''}</h3><div class="agroup">${r('Respostas', E.n, `${t(E.taxa)} das ativas em 7 dias · viram ${E.viram} · fecharam ${E.fecharam} · não viram ${E.naoViram}`)}${E.opcoes.map(([l, n]) => r(l, n, E.n ? `${Math.round((n / E.n) * 100)}%` : '—')).join('')}</div>`;
+}
 function cleanStat(u) {
   const c = u.counts || {}, d = u.device || {}, p = u.profile || {};
   return {
@@ -323,7 +337,8 @@ function cleanStat(u) {
     activeDays: Array.isArray(u.activeDays) ? u.activeDays.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)).slice(-40) : [],
     counts: Object.fromEntries(['companies', 'events', 'myEvents', 'thisWeek', 'done30', 'late', 'posts30', 'notes', 'personal', 'lists', 'birthdays', 'timed30', 'delaySum30', 'onTime30'].map((k) => [k, N(c[k])])),
     usage: u.usage && typeof u.usage === 'object' ? Object.fromEntries(Object.entries(u.usage).filter(([k]) => /^[a-z0-9:_-]{1,40}$/.test(k)).slice(0, 80).map(([k, v]) => [k, Math.max(0, Math.min(1e5, N(v)))])) : {},
-    vipSeen: u.vipSeen === true,
+    vipSeen: u.vipSeen === true, firstEventAt: N(u.firstEventAt), teste: testes[u.uid], checkup: u.checkup && typeof u.checkup === 'object' ? { enviado: N(u.checkup.enviado), chegou: u.checkup.chegou === true ? true : u.checkup.chegou === false ? false : null } : null,
+    intent2027: u.intent2027 && typeof u.intent2027 === 'object' ? { choice: ['gratis', 'essencial', 'profissional', 'fundadores'].includes(u.intent2027.choice) ? u.intent2027.choice : '', shownAt: N(u.intent2027.shownAt), dismissedAt: N(u.intent2027.dismissedAt) } : null,
     device: { platform: S(d.platform, 20), installed: !!d.installed, notifications: S(d.notifications, 20), registered: !!d.registered },
     app: u.app && typeof u.app === 'object' && /^\d+\.\d+\.\d+$/.test(u.app.v || '') ? { v: S(u.app.v, 20), b: S(u.app.b, 12).replace(/[^a-z0-9]/gi, ''), since: N(u.app.since) } : null,
     game: u.game && typeof u.game === 'object' ? { level: Math.max(0, Math.min(100, Math.round(N(u.game.level)))), xp: N(u.game.xp), badges: N(u.game.badges) } : null,
@@ -334,6 +349,7 @@ function cleanStat(u) {
   };
 }
 
+import { metricas, filtra, resumoEnquete } from '../metricas.js';
 export async function openAdmin() {
   let stop = null, tick = null, plansAt = Date.now(), raw = null, lastSig = '';
   let users = null, err = null, openUid = null, q = '', plans = {}, errors = null, tab = 'resumo';
@@ -382,6 +398,7 @@ export async function openAdmin() {
         <div><b>${monthly + lifetime}</b><small>pagantes</small></div>
         <div><b>${trial}</b><small>em teste</small></div>
       </div>
+      ${northHtml(users)}
       <h3 class="ah">Dinheiro</h3>
       <div class="agroup">
         ${row('Total já recebido', brl(received), 'soma de tudo que as pessoas pagaram (menos reembolsos)')}
@@ -456,6 +473,7 @@ export async function openAdmin() {
       };
       const sup = a.el.querySelector('[data-support-inbox]');
       if (sup) sup.onclick = async () => (await import('./support.js')).openSupportInbox();
+      (a?.el || document).querySelectorAll('[data-visao]').forEach((b) => (b.onclick = () => { visao = b.dataset.visao; (a || api).set(html()); }));
       a.el.querySelectorAll('[data-tab-admin]').forEach((b) => (b.onclick = () => { tab = b.dataset.tabAdmin; a.set(html()); a.el.scrollTop = 0; }));
       a.el.querySelectorAll('[data-goto]').forEach((b) => (b.onclick = () => {
         tab = 'pessoas'; q = ''; openUid = b.dataset.goto; a.set(html());

@@ -399,6 +399,7 @@ export async function initCloud(cloud, user) {
   if (!profOk) { busca.then((p) => { if (p && store.user?.uid === user.uid) { store.profile = { ...store.profile, ...p }; guardaPerfil(); refreshMe(); store.emit(); } }).catch(() => {}); }
   store.profile = (profOk ? prof : guardado) || {};
   guardaPerfil();
+  if (profOk && store.profile.cpf && cloud.tiraCampo) { const c = store.profile.cpf; import('./avisos.js').then((a) => a.api('/billing/cpf', { ws: '', cpf: c })).then(() => cloud.tiraCampo(user.uid, 'cpf')).then(() => { delete store.profile.cpf; }).catch(() => {}); } // o CPF não fica mais aberto na conta
   // fundadores já usavam o app antes da ficha existir: nunca são tratados como conta nova
   if (founder && profOk && !store.profile.onboardedAt) {
     const at = Date.parse(user.metadata?.creationTime || '') || Date.now();

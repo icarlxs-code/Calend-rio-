@@ -2599,8 +2599,7 @@ html:not(.intro-done), html:not(.intro-done) body { overflow: hidden !important;
 html:not(.intro-done) .intro { z-index: 99999; top: -50px; bottom: -50px; height: auto; min-height: calc(100lvh + 100px); background: #FFFFFF; }
 html:not(.intro-done) #app, html:not(.intro-done) .login { visibility: hidden; }
 /* fonte de detalhe (só em selos curtos do Vitalício: discreta, larga, elegante) */
-@font-face { font-family: 'Azonix'; src: url('../media/fonts/azonix.otf') format('opentype'); font-display: swap; }
-.vcard__tier, .vip__kick, .fprof__vip span, .prof__vipline, .freq__vip, .frow__vip, .vcard__no, .vcard__ed { font-family: 'Azonix', -apple-system, sans-serif; letter-spacing: .14em; }
+.vcard__tier, .vip__kick, .fprof__vip span, .prof__vipline, .freq__vip, .frow__vip, .vcard__no, .vcard__ed { font-family: -apple-system, sans-serif; letter-spacing: .14em; }
 .vcard__tier, .vip__kick, .fprof__vip span { font-size: 10px; }
 .prof__vipline, .freq__vip, .frow__vip { font-size: 10px; }
 /* "Instalar o app": chamativo, mas elegante */

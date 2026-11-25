@@ -52,9 +52,9 @@ export const FAITH = {
     ['Não tenham medo!', 'São João Paulo II', { fonte: 'São João Paulo II, homilia de início do pontificado, 22/10/1978', revisaoJuridica: true }], ['Jesus deixou um presente de despedida: a paz dele, para ficar com a gente.', 'João 14:27'],
   ],
   espirita: [
-    ['Fora da caridade não há salvação.', 'Allan Kardec', { fonte: 'Allan Kardec, O Evangelho segundo o Espiritismo, cap. XV', revisaoJuridica: true }], ['Ninguém pode voltar atrás e fazer um novo começo, mas qualquer um pode recomeçar e fazer um novo fim.', 'Chico Xavier', { fonte: 'Atribuída a Chico Xavier; autoria contestada', revisaoJuridica: true }],
-    ['Embora ninguém possa voltar atrás, todos podem começar agora.', 'Chico Xavier', { fonte: 'Atribuída a Chico Xavier; autoria contestada', revisaoJuridica: true }], ['A gente pode morar numa casa mais ou menos, mas não pode viver uma vida mais ou menos.', 'Chico Xavier', { fonte: 'Atribuída a Chico Xavier; fonte não confirmada', revisaoJuridica: true }],
-    ['Nascer, morrer, renascer ainda e progredir sempre, tal é a lei.', 'Allan Kardec', { fonte: 'Inscrição no túmulo de Allan Kardec (Paris)', revisaoJuridica: true }], ['Tudo passa, exceto Deus. Deus é o suficiente.', 'Chico Xavier', { fonte: 'Atribuída a Chico Xavier; fonte não confirmada', revisaoJuridica: true }],
+    ['Fora da caridade não há salvação.', 'Allan Kardec', { fonte: 'Allan Kardec, O Evangelho segundo o Espiritismo, cap. XV', revisaoJuridica: true }],
+    ['Nascer, morrer, renascer ainda e progredir sempre, tal é a lei.', 'Allan Kardec', { fonte: 'Inscrição no túmulo de Allan Kardec (Paris)', revisaoJuridica: true }],
+    ['Cada dia é uma nova chance de fazer o bem, começando por perto.', 'Reflexão do Lembra'], ['O que a gente planta de carinho hoje volta em paz amanhã.', 'Reflexão do Lembra'],
   ],
   afro: [
     ['Que Oxalá te dê paz e sabedoria para hoje. Axé!', 'Bênção'], ['Que os bons caminhos se abram e a proteção dos seus orixás esteja contigo. Axé!', 'Bênção'],

@@ -1,8 +1,8 @@
 {
   "version": "2.32.0",
-  "build": "e4vnajs6",
+  "build": "eyiahiao",
   "date": "2026-11-25",
-  "min": "2.22.0",
+  "min": "2.30.0",
   "title": "Mais perto de você",
   "notes": [
     "Ache amigos por telefone, e-mail ou ID, edite o perfil inteiro e conte qual é o seu time.",
@@ -11,5 +11,5 @@
     "Minhas frases: reabra e poste quando quiser.",
     "O nome do remédio não aparece mais na tela de bloqueio."
   ],
-  "builtAt": "2026-11-25T18:02:07.439Z"
+  "builtAt": "2026-11-25T18:07:31.467Z"
 }

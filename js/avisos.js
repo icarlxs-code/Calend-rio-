@@ -141,10 +141,10 @@ export async function setPrefs(prefs) {
 }
 
 /* Pede ao servidor uma notificação de teste para este aparelho */
-export async function sendTest() {
+export async function sendTest({ primeiro = false } = {}) {
   if (store.mode === 'cloud' && server()) {
     if (!localStorage.getItem(LS_DEVICE)) return { kind: 'not-registered' };
-    const r = await api('/test');
+    const r = await api('/test', { primeiro });
     return { kind: 'server', ...r };
   }
   // sem servidor: mostra uma notificação local, só para conferir a aparência

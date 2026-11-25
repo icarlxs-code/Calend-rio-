@@ -1,6 +1,6 @@
 /* Resumo de uso desta conta, enviado ao abrir o app (o dono do app vê no Painel do dono).
    Só números e dados da conta — nunca o conteúdo da agenda pessoal. */
-import { store } from './store.js';
+import { store, saveProfileQuiet } from './store.js';
 import { personal, birthdays } from './personal.js';
 import { todayKey, addDays, isStandalone } from './utils.js';
 import { TYPES } from './constants.js';
@@ -41,6 +41,9 @@ export function reportStats({ open = false, force = false } = {}) {
   if (!newDay && !novaVersao && now - Math.max(lastFull, sameUser ? prev.at || 0 : 0) < 20 * 60e3) return;
   if (!open && !force && !novaVersao && now - lastFull < 60e3) return;
   lastFull = now;
+  // carimbo do 1º compromisso e de onde veio: uma vez só, sem conteúdo nenhum
+  if (store.profile && !store.profile.firstEventAt && (store.state.events.some((e) => (e.createdBy || store.me) === store.me) || (personal.events || []).length)) { const nova = store.user.metadata?.creationTime && now - Date.parse(store.user.metadata.creationTime) < 2 * 864e5; if (nova) saveProfileQuiet({ firstEventAt: now }).catch(() => {}); }
+  if (store.profile && !store.profile.origem) try { const o = JSON.parse(localStorage.getItem('lembra.origem') || 'null'); if (o && o.source) saveProfileQuiet({ origem: { source: String(o.source).slice(0, 60), medium: String(o.medium || '').slice(0, 60), campaign: String(o.campaign || '').slice(0, 60) } }).catch(() => {}); } catch { /* ok */ }
   try { localStorage.setItem(LS_STATS, JSON.stringify({ uid: store.user.uid, at: now, day: todayKey(), b: build })); } catch { /* ok */ }
   const t = todayKey(), weekEnd = addDays(t, 6), monthAgo = addDays(t, -30);
   const me = store.member(store.me) || {};
@@ -59,8 +62,9 @@ export function reportStats({ open = false, force = false } = {}) {
     space: document.documentElement.dataset.space || 'work',
     // ficha (sem dados sensíveis: nada de CPF, telefone ou data exata de nascimento)
     profile: profileSummary(),
+    ...(store.profile?.teste !== undefined ? {} : {}), ...(store.profile?.firstEventAt ? { firstEventAt: store.profile.firstEventAt } : {}), ...(store.profile?.intent2027 ? { intent2027: store.profile.intent2027 } : {}), ...(store.profile?.checkup ? { checkup: store.profile.checkup } : {}),
     // de onde veio (anúncio, Instagram…): para o dono medir a divulgação
-    origin: (() => { try { const o = JSON.parse(localStorage.getItem('lembra.origem') || 'null'); return o ? { source: String(o.source || '').slice(0, 60), medium: String(o.medium || '').slice(0, 60), campaign: String(o.campaign || '').slice(0, 60), content: String(o.content || '').slice(0, 60) } : null; } catch { return null; } })(),
+    origin: store.profile?.origem || (() => { try { const o = JSON.parse(localStorage.getItem('lembra.origem') || 'null'); return o ? { source: String(o.source || '').slice(0, 60), medium: String(o.medium || '').slice(0, 60), campaign: String(o.campaign || '').slice(0, 60), content: String(o.content || '').slice(0, 60) } : null; } catch { return null; } })(),
     counts: {
       companies: store.state.companies.length,
       events: evs.length,

@@ -25,6 +25,7 @@ export async function muda(uid, campo, on, nome = '') {
 }
 
 export async function openMensagens({ modo = '' } = {}) {
+  if (!(await (await import('./comeco.js')).pedeIdade())) return null;
   if (!podeSocial()) return toast('Entre na sua conta para conversar com amigos.');
   if (modo === 'tra' && !(await tranca('Conversas trancadas'))) return null;
   let amigos = null, q = '', achado = null, vez = 0, aberta = null, arrasta = false, pendente = false;
