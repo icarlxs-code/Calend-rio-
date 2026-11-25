@@ -4,17 +4,22 @@
 import { sininho, alive, setMood, act, say, veste } from './sininho.js';
 import { roupa, cachecol } from './roupas.js';
 import { icon } from './icons.js';
+import { anel, bolinha } from './anel.js';
 
 export const NOVIDADES = {
   '2.32.0': [
-    { t: 'Eu mudei!', s: 'Cheguei com novidade boa. Vem ver, é rapidinho.', m: 'feliz', g: 'tchau', c: 'abre' },
+    { t: 'Eu mudei!', s: 'Cheguei com muita novidade. Vem ver, é rapidinho.', m: 'feliz', g: 'tchau', c: 'abre' },
+    { t: 'Deslize o dedo', s: 'Agora é possível trocar de aba e voltar só arrastando.', m: 'feliz', g: 'olhaLados', c: 'desliza' },
+    { t: 'Abro sem internet', s: 'Sua agenda aparece na hora. O que você mudar sobe depois.', m: 'feliz', g: 'sim', c: 'offline' },
+    { t: 'Seu Pessoal limpo', s: 'Cada coisa uma vez só, com o ícone certo.', m: 'feliz', g: 'pisca', c: 'limpo' },
+    { t: 'Assistente mais claro', s: 'Mostra tudo antes. Nada muda sem você confirmar.', m: 'feliz', g: 'sobrancelha', c: 'assist' },
     { t: 'Nada some sem querer', s: 'Apagou? Fica 24 horas na lixeira e volta com um toque.', m: 'surpreso', g: 'sim', c: 'lixeira' },
-    { t: 'Frases que não se repetem', s: 'Agora é possível dizer 👎 e aquela frase nunca mais volta.', m: 'feliz', g: 'pisca', c: 'frase' },
     { t: 'Eu fico na conversa', s: 'Escrevo, gravo e leio junto com vocês.', m: 'feliz', c: 'conversa', v: 'digita' },
     { t: 'Arraste a conversa', s: 'Fixe, silencie, arquive ou tranque com PIN. E mande foto para ver uma vez só.', m: 'feliz', g: 'sim', c: 'arrasta' },
+    { t: 'Stories com número', s: 'O anel mostra quantos faltam ver.', m: 'surpreso', g: 'olhaLados', c: 'stories' },
     { t: 'Achou, é só tocar', s: 'Telefone, e-mail ou ID: tudo no mesmo lugar, do jeito que você escrever.', m: 'feliz', g: 'olhaLados', c: 'achar' },
     { t: 'Seu perfil do seu jeito', s: 'Nome, ID, bairro, idade: edite tudo e escolha o que aparece.', m: 'feliz', g: 'sobrancelha', c: 'perfil' },
-    { t: 'Meu time, seu time', s: 'Me conta o seu time e eu lembro você dos jogos dele.', m: 'feliz', c: 'time', v: 'torcida' },
+    { t: 'Meu time, seu time', s: 'Conta qual é o seu time no Editar perfil. Vou torcer com você.', m: 'feliz', c: 'time', v: 'torcida' },
   ],
 };
 const num = (v) => String(v).split('.').map((x) => parseInt(x, 10) || 0);
@@ -22,7 +27,7 @@ const maior = (a, b) => { const A = num(a), B = num(b); for (let i = 0; i < 3; i
 /** quadros de tudo que é novo entre a versão que a pessoa tinha e a de agora */
 export function quadrosDesde(antes, agora, lista = NOVIDADES) {
   const vs = Object.keys(lista).filter((v) => maior(v, antes) && !maior(v, agora)).sort((a, b) => (maior(a, b) ? -1 : 1));
-  return vs.flatMap((v) => lista[v]).slice(0, 9);
+  return vs.flatMap((v) => lista[v]).slice(0, 12);
 }
 
 const d = (n) => `style="--d:${n}s"`;
@@ -32,6 +37,11 @@ const CENAS = {
   lixeira: () => `<div class="nvc nvc--lix"><span class="nvc__card">${icon('calendar', 20)}<b>Reunião às 15h</b></span><span class="nvc__bin">${icon('trash', 34)}</span><span class="nvc__undo">Desfazer</span></div>`,
   frase: () => '<div class="nvc nvc--frase"><span class="is-a"><b>Um passo pequeno hoje já conta.</b></span><span class="is-b"><b>Descansar também é cuidar de você.</b></span><em>👎</em></div>',
   conversa: () => `<div class="nvc nvc--conv"><span class="is-eu" ${d(0.2)}>Bora sábado?</span><span ${d(0.9)}>Bora! Que horas?</span><span class="is-dig" ${d(1.6)}><i></i><i></i><i></i></span></div>`,
+  desliza: () => '<div class="nvc nvc--des"><span class="nvc__tela"><i></i><i></i><i></i></span><span class="nvc__tela is-b"><i></i><i></i></span><u></u></div>',
+  offline: () => `<div class="nvc nvc--off"><span class="nvc__faixa">Sem internet: sua agenda está aqui</span><span class="nvc__lin"><u>${icon('calendar', 22)}</u><span><b>Dentista</b><small>15h</small></span></span><span class="nvc__lin"><u>${icon('check', 22)}</u><span><b>Pagar a luz</b><small>feito</small></span></span></div>`,
+  limpo: () => `<div class="nvc nvc--arr">${[['droplet', '#0A8AD8', 'Beber água', 'todo dia 10h'], ['hospital', '#12894B', 'Levar no hospital', 'segunda 14h'], ['scissors', '#D9367A', 'Cortar cabelo', 'sexta 18h']].map(([ic, c, t, q], i) => `<span class="nvc__lin nvc__lin--e" style="--d:${0.15 + i * 0.25}s"><u style="background:${c}">${icon(ic, 24)}</u><span><b>${t}</b><small>${q}</small></span></span>`).join('')}</div>`,
+  assist: () => '<div class="nvc nvc--ass"><span class="nvc__pede">Quando acaba o empréstimo?</span><span class="nvc__card2"><b>Quer que eu crie?</b><small>Desconto do empréstimo · todo dia 15</small><em><i>Confirmar</i><i>Agora não</i></em></span></div>',
+  stories: () => `<div class="nvc nvc--st">${[['A', '#0A8AD8', [0, 0, 0]], ['B', '#6D3AE0', [1, 0]], ['C', '#05855F', [1]]].map(([n, c, v], i) => { const r = { uid: n, stories: v.map((x, k) => ({ id: n + k, seen: !!x })) }; return `<span style="--d:${0.15 + i * 0.2}s"><u style="background:${c}">${n}</u>${anel(r)}${bolinha(r)}</span>`; }).join('')}</div>`,
   arrasta: () => `<div class="nvc nvc--arr"><span class="nvc__tras">${icon('lock', 24)}<b>Trancar</b></span><span class="nvc__lin"><u>L</u><span><b>Lia Moraes</b><small>Bora sábado?</small></span></span><span class="nvc__lin"><u>C</u><span><b>Caio Prado</b><small>① Foto</small></span></span></div>`,
   achar: () => `<div class="nvc nvc--achar"><span class="nvc__campo">${icon('search', 20)}<b><i>21 98888 7777</i><i>(21) 98888-7777</i><i>lia@exemplo.com</i><i>@lia.moraes</i></b></span><span class="nvc__achou"><u>L</u><b>Lia Moraes</b><em>${icon('check', 16)}</em></span></div>`,
   perfil: () => `<div class="nvc nvc--perf">${[['Nome', 'Lia Moraes'], ['ID', '@lia.moraes'], ['Cidade', 'Rio de Janeiro'], ['Bairro', 'Centro']].map(([a, b], i) => `<span ${d(0.15 + i * 0.22)}><small>${a}</small><b>${b}</b><em>${icon('check', 14)}</em></span>`).join('')}</div>`,

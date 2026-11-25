@@ -62,10 +62,10 @@ let uidN = 0;
 export function medal(o, size = 96, { locked = false, cls = '' } = {}) {
   const id = `b${++uidN}`;
   const M = METALS[o.metal] || METALS.bronze;
-  const hue = o.hue || '#0A84FF';
+  const hue = o.hue || '#E85A0C';
   const d = SHAPES[o.shape] || SHAPES.circle;
   const faceStops = o.rainbow
-    ? `<stop offset="0" stop-color="#FF7AB6"/><stop offset=".35" stop-color="#8E7CFF"/><stop offset=".7" stop-color="#2FC7FF"/><stop offset="1" stop-color="#2BD9A4"/>`
+    ? `<stop offset="0" stop-color="#FF7AB6"/><stop offset=".35" stop-color="#FFB020"/><stop offset=".7" stop-color="#2FC7FF"/><stop offset="1" stop-color="#2BD9A4"/>`
     : `<stop offset="0" stop-color="${light(hue, 0.38)}"/><stop offset=".55" stop-color="${hue}"/><stop offset="1" stop-color="${dark(hue, 0.42)}"/>`;
   const rays = o.rays ? Array.from({ length: 16 }, (_, i) => {
     const a = (Math.PI * 2 * i) / 16, b = a + Math.PI / 32;
@@ -128,38 +128,38 @@ const pr = () => (typeof window !== 'undefined' && window.__pronoun) || 'n';
 export const TIERS = [
   { from: 0, name: () => 'Iniciante', hue: '#7C8597', metal: 'glass' },
   { from: 1, name: () => 'Aprendiz', hue: '#B4572E', metal: 'bronze' },
-  { from: 10, name: () => g('Organizado', 'Organizada', 'Organização', pr()), hue: '#2F6FED', metal: 'silver', laurel: true },
-  { from: 20, name: () => 'Pontual', hue: '#12A150', metal: 'gold', laurel: true },
-  { from: 30, name: () => g('Focado', 'Focada', 'Foco total', pr()), hue: '#0E9AA7', metal: 'gold', laurel: true },
-  { from: 40, name: () => g('Disciplinado', 'Disciplinada', 'Disciplina', pr()), hue: '#4F46E5', metal: 'gold', laurel: true, rays: true },
-  { from: 50, name: () => 'Mestre do Tempo', hue: '#8B3FD9', metal: 'gold', laurel: true, rays: true },
-  { from: 60, name: () => 'Imparável', hue: '#E5484D', metal: 'prism', laurel: true, rays: true },
-  { from: 70, name: () => 'Lenda', hue: '#1F2937', metal: 'prism', laurel: true, rays: true, crown: true },
-  { from: 80, name: () => 'Mente Blindada', hue: '#0F766E', metal: 'prism', laurel: true, rays: true, crown: true },
-  { from: 90, name: () => 'Ícone', hue: '#C026D3', metal: 'prism', laurel: true, rays: true, crown: true, sparkles: true },
-  { from: 100, name: () => 'Lembra Supremo', hue: '#8E7CFF', metal: 'prism', laurel: true, rays: true, crown: true, sparkles: true, rainbow: true },
+  { from: 10, name: () => g('Organizado', 'Organizada', 'Organização', pr()), hue: '#E85A0C', metal: 'silver', laurel: true },
+  { from: 20, name: () => 'Pontual', hue: '#C9820A', metal: 'gold', laurel: true },
+  { from: 30, name: () => g('Focado', 'Focada', 'Foco total', pr()), hue: '#FF8A1A', metal: 'gold', laurel: true },
+  { from: 40, name: () => g('Disciplinado', 'Disciplinada', 'Disciplina', pr()), hue: '#C94A0C', metal: 'gold', laurel: true, rays: true },
+  { from: 50, name: () => 'Mestre do Tempo', hue: '#E89A0C', metal: 'gold', laurel: true, rays: true },
+  { from: 60, name: () => 'Imparável', hue: '#D9480F', metal: 'prism', laurel: true, rays: true },
+  { from: 70, name: () => 'Lenda', hue: '#8C4A20', metal: 'prism', laurel: true, rays: true, crown: true },
+  { from: 80, name: () => 'Mente Blindada', hue: '#B8730A', metal: 'prism', laurel: true, rays: true, crown: true },
+  { from: 90, name: () => 'Ícone', hue: '#FF6B1A', metal: 'prism', laurel: true, rays: true, crown: true, sparkles: true },
+  { from: 100, name: () => 'Lembra Supremo', hue: '#FFB020', metal: 'prism', laurel: true, rays: true, crown: true, sparkles: true, rainbow: true },
 ];
 export const tierOf = (level) => [...TIERS].reverse().find((t) => level >= t.from) || TIERS[0];
 /* brasão do nível (o número fica no centro) */
 /* arte nova (pacote "conquista"): cada brasão é uma imagem; não conquistado = preto e branco com cadeado */
 const pad3 = (n) => String(n).padStart(3, '0');
-const artImg = (src, size, opts, alt) => `<span class="bart${opts.locked ? ' is-locked' : ''}" style="--s:${size}px"><img src="${src}" alt="${alt || ''}" width="${size}" height="${size}" decoding="async" draggable="false" onerror="this.onerror=null;setTimeout(()=>{this.src=this.src.split('?')[0]+'?r='+Date.now()},1200)">${opts.locked ? '<i class="bart__lock" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></i>' : ''}</span>`;
+const artImg = (src, size, opts, alt) => `<span class="bart${opts.locked ? ' is-locked' : ''}" style="--s:${size}px"${opts.rar ? ` data-r="${opts.rar}"` : ''}><img src="${src}" alt="${alt || ''}" width="${size}" height="${size}" decoding="async" draggable="false" onerror="this.onerror=null;setTimeout(()=>{this.src=this.src.split('?')[0]+'?r='+Date.now()},1200)">${opts.locked ? '<i class="bart__lock" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></i>' : ''}</span>`;
 export const crestSrc = (level) => `media/emblemas/brasoes/nivel-${pad3(tierOf(level).from)}.webp`;
 export const crest = (level, size = 96, opts = {}) => artImg(crestSrc(level), size, opts, tierOf(level).name());
 
 /* ---------- os 105 emblemas ---------- */
 export const CATS = {
-  inicio: { name: 'Primeiros passos', hue: '#0A84FF', shape: 'circle' },
-  pontual: { name: 'Pontualidade', hue: '#1FAD55', shape: 'shield' },
+  inicio: { name: 'Primeiros passos', hue: '#E85A0C', shape: 'circle' },
+  pontual: { name: 'Pontualidade', hue: '#C9820A', shape: 'shield' },
   sequencia: { name: 'Sequência', hue: '#FF8A00', shape: 'hex' },
   perfeito: { name: 'Dias perfeitos', hue: '#E8A900', shape: 'rosette' },
-  planejador: { name: 'Planejamento', hue: '#5856D6', shape: 'squircle' },
+  planejador: { name: 'Planejamento', hue: '#C94A0C', shape: 'squircle' },
   horario: { name: 'Hora certa', hue: '#FF6B3D', shape: 'circle' },
-  pessoal: { name: 'Vida pessoal', hue: '#FF2D55', shape: 'heart' },
+  pessoal: { name: 'Vida pessoal', hue: '#F4561A', shape: 'heart' },
   bilhetes: { name: 'Bilhetes', hue: '#D9A400', shape: 'squircle' },
-  clientes: { name: 'Clientes', hue: '#0891B2', shape: 'shield' },
-  constancia: { name: 'Constância', hue: '#AF52DE', shape: 'rosette' },
-  nivel: { name: 'Níveis', hue: '#2F6FED', shape: 'crest' },
+  clientes: { name: 'Clientes', hue: '#B8730A', shape: 'shield' },
+  constancia: { name: 'Constância', hue: '#D9480F', shape: 'rosette' },
+  nivel: { name: 'Níveis', hue: '#E85A0C', shape: 'crest' },
   equipe: { name: 'Equipe', hue: '#16A3B8', shape: 'hex' },
   ranking: { name: 'Ranking', hue: '#FF9F0A', shape: 'star' },
   especial: { name: 'Especiais', hue: '#BF5AF2', shape: 'diamond' },
@@ -258,4 +258,4 @@ export { BADGES };
 export const badgeById = (id) => BADGES.find((b) => b.id === id);
 /* desenha um emblema da lista (metal pela raridade) */
 export const badgeSrc = (b) => `media/emblemas/${b.id}.webp`;
-export function badgeArt(b, size = 96, opts = {}) { return artImg(badgeSrc(b), size, opts, b.name()); }
+export function badgeArt(b, size = 96, opts = {}) { return artImg(badgeSrc(b), size, { ...opts, rar: b.rarity }, b.name()); }

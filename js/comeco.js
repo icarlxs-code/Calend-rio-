@@ -19,7 +19,7 @@ const nuvem = () => store.mode === 'cloud' && store.solo && !!store.user;
 
 /* ---------- 1º lembrete ---------- */
 const PRONTOS = [
-  { id: 'agua', ic: 'drop', t: 'Beber água', quando: () => ({ date: todayKey(), time: '10:00', repeat: 'daily', cat: 'saude' }), s: 'todo dia, 10h' },
+  { id: 'agua', ic: 'droplet', t: 'Beber água', quando: () => ({ date: todayKey(), time: '10:00', repeat: 'daily', cat: 'saude' }), s: 'todo dia, 10h' },
   { id: 'rem', ic: 'pill', t: 'Tomar meu remédio', quando: () => ({ date: todayKey(), time: '08:00', repeat: 'daily', cat: 'saude' }), s: 'todo dia, 8h' },
   { id: 'lig', ic: 'phone', t: 'Ligar para alguém querido', quando: () => ({ date: addDays(todayKey(), 1), time: '18:00', repeat: 'none', cat: 'lembrete' }), s: 'amanhã, 18h' },
 ];

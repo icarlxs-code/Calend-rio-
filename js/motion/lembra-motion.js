@@ -251,7 +251,7 @@ export function chuva(n = 30, de = null, brasa = false) {
   const c = camada(), r = de && de.getBoundingClientRect ? de.getBoundingClientRect() : null;
   c.style.zIndex = 9600;
   const x0 = r ? r.left + r.width / 2 : innerWidth / 2, y0 = r ? r.top + r.height / 2 : innerHeight * 0.32;
-  const cores = brasa ? ['#FFD34D', '#FF8A1E', '#FFF1C2', '#FF5A1F'] : ['#FF6B1A', '#FFC23D', '#FFFFFF', '#FF8FA3', '#FFB054', '#E85A0C'];
+  const cores = brasa ? ['#FFD34D', '#FF8A1E', '#FFF1C2', '#FF5A1F'] : ['#FF6B1A', '#FFC23D', '#FFFFFF', '#FFE0B8', '#FFB054', '#E85A0C'];
   const fins = [];
   for (let i = 0; i < Math.min(60, n); i++) {
     const p = document.createElement('i'), a = (Math.PI * 2 * i) / n + (Math.random() - 0.5), d = 90 + Math.random() * Math.min(230, innerWidth * 0.5), s = 6 + Math.random() * 7;

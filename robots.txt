@@ -1,4 +1,14 @@
 User-agent: *
 Allow: /
+Disallow: /pages/
+Disallow: /scripts/
+Disallow: /functions/
+Disallow: /worker/
+Disallow: /README.md
+Disallow: /LANCAMENTO.md
+Disallow: /LOJAS.md
+Disallow: /LOJAS-TEXTOS.md
+Disallow: /package.json
+Disallow: /firestore.rules
 
 Sitemap: https://meulembra.com.br/sitemap.xml
