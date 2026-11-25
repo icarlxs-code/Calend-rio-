@@ -1,4 +1,7 @@
 /* Telas "Hoje" (agenda do dia) e "Calendário" (mês) */
+import { disposicao, acessorios, fraseDaHora } from '../hora.js';
+import { quoteOfDay, personal } from '../personal.js';
+import { conversas } from '../social.js';
 import { botaoMensagens } from '../social.js';
 import { cena, momento } from '../cena.js';
 import { streak } from '../reward.js';
@@ -134,13 +137,23 @@ export function renderToday() {
   const prog = evs.length ? `<button class="foco__prog" data-action="toggle-types" aria-expanded="${!!ui.showTypes}">
       <span>${done} de ${evs.length} ${date === today ? 'hoje' : ''}</span><i class="foco__bar"><b style="width:${pct}%"></b></i>${dias >= 1 ? `<span>🔥 ${dias} ${dias === 1 ? 'dia' : 'dias'}</span>` : ''}
     </button>${ui.showTypes ? typesHtml : ''}` : '';
-  const tempo = momento();
-  const foco = `<section class="foco foco--cena foco--${tempo}" aria-label="Em foco">
-      <div class="foco__palco">${cena(tempo)}<div class="foco__snh">${sininho(F.mood, { size: 112 })}</div>
+  const tempo = momento(), disp = disposicao(date === today ? F.mood : F.mood === 'comemora' ? 'feliz' : F.mood);
+  // faixa de recados: a frase do dia, o ânimo da hora e os avisos que importam
+  const qd = quoteOfDay(today), nMsg = conversas().total, nAm = store.eventsOn(amanha).filter((e) => ui.person === 'all' || (e.assignees || []).includes(ui.person)).length;
+  const recados = date !== today ? [] : [
+    { ic: 'sparkle', t: `“${esc(qd.t)}”`, s: esc(qd.a) },
+    ...(personal.prefs?.nudges === false ? [] : [{ ic: 'bell', t: esc(fraseDaHora()), s: 'Lembra' }]),
+    ...(nMsg ? [{ ic: 'mail', t: `${nMsg} ${nMsg === 1 ? 'mensagem nova' : 'mensagens novas'}`, s: 'Somem em 24 h', go: 'mensagens' }] : []),
+    ...(nAm && new Date().getHours() >= 16 ? [{ ic: 'calendar', t: `Amanhã: ${nAm} ${nAm === 1 ? 'compromisso' : 'compromissos'}`, s: 'Já dá para se preparar' }] : []),
+  ];
+  const faixa = recados.length ? `<div class="hrf" data-falas-hora><div class="hrf__c">${recados.map((r, k) => `<div class="hrf__i${k ? '' : ' is-on'}" aria-hidden="${!!k}"${r.go ? ` data-action="${r.go}" role="button"` : ''}><span class="hrf__ic">${icon(r.ic, 18)}</span><p><span class="hrf__t">${r.t}</span><small>${r.s}</small></p></div>`).join('')}</div>${recados.length > 1 ? `<button class="hrf__p" aria-label="Próximo recado">${recados.map((_, k) => `<i${k ? '' : ' class="is-on"'}></i>`).join('')}</button>` : ''}</div>` : '';
+  const foco = `<section class="foco foco--cena${tempo === 'noite' ? ' hr--escuro' : ''}" aria-label="Em foco">
+      <div class="foco__palco">${cena(tempo)}<div class="foco__snh" data-hr-fig data-base="${F.mood}">${sininho(disp.mood, { size: 112 })}${acessorios(disp)}</div>
         <p class="foco__lbl">${esc(F.lbl)}</p>
         <h2 class="foco__tit"${F.id ? ` data-action="open-event" data-id="${F.id}"` : ''}>${esc(F.tit)}</h2>
         ${F.sub ? `<p class="foco__sub">${esc(F.sub)}</p>` : ''}</div>
       <div class="foco__base">
+      ${faixa}
       ${atalhos}
       <div class="foco__acts">${F.acts}</div>
       ${prog}</div>

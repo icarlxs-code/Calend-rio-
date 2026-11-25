@@ -217,6 +217,7 @@ function render() {
   }
   // Foco visível no Hoje: o mascote do canto não cobre nada (some enquanto o Foco está na tela)
   window.__focoIO?.disconnect(); document.body.classList.remove('foco-visivel');
+  import('./hora.js').then((m) => m.liga(view));
   const fo = !personalMode && ui.tab === 'hoje' && view.querySelector('.foco');
   if (fo && 'IntersectionObserver' in window) { window.__focoIO = new IntersectionObserver(([e]) => document.body.classList.toggle('foco-visivel', e.isIntersecting)); window.__focoIO.observe(fo); }
   // conta sem nenhum lembrete: uma vez, um balão sobre o + da barra

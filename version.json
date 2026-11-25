@@ -1,10 +1,12 @@
 {
   "version": "2.29.0",
-  "build": "dnrt6kis",
+  "build": "4qoro7dr",
   "date": "2026-11-24",
   "min": "2.22.0",
   "title": "Stories e privado",
   "notes": [
+    "O cartão do dia segue o relógio: amanhece, anoitece, e o Lembra fica com sono de verdade.",
+    "Frase do dia e avisos no cartão de Hoje.",
     "O assistente de cima e o de baixo agora são o mesmo, e ele pergunta: agenda ou nota?",
     "Trabalho e Pessoal com nome escrito no topo.",
     "Stories: curta, comente para todo mundo ver, responda só para a pessoa e reposte no seu (quando ela liberar).",
@@ -14,9 +16,7 @@
     "Concluir ganhou carimbo, o Hoje virou uma cena e o cadastro ficou mais simples. Para desligar as piadas: Ajustes → Aparência.",
     "O Lembra fala com calma: termina a frase antes de começar outra.",
     "Conquistas e ofensiva novas: ele pega a medalha, ergue e vibra com você.",
-    "Visitas novas ao seu perfil aparecem no começo, e os avisos ficaram mais espertos.",
-    "Telas mais limpas: uma coisa em destaque por vez, e o resto a um toque.",
-    "Nova passagem entre Trabalho e Pessoal, com o Lembra trocando a maleta pelo coração."
+    "Visitas novas ao seu perfil aparecem no começo, e os avisos ficaram mais espertos."
   ],
-  "builtAt": "2026-11-25T13:05:15.565Z"
+  "builtAt": "2026-11-25T13:27:28.885Z"
 }
