@@ -126,6 +126,7 @@ export async function openProfilePage({ tab = 'emblemas' } = {}) {
         ${earned.slice(0, 8).map((b) => `<button class="prof2__hlit" data-badge="${b.id}"><span class="prof2__hlc">${badgeArt(b, 56)}</span><small>${esc(b.name())}</small></button>`).join('')}
       </div>`;
       })()}
+      ${window.__retro?.cartaoRetro({ perfil: true }) || ''}
       <div class="prof__tabs" role="tablist">
         <button role="tab" class="${cur === 'emblemas' ? 'is-on' : ''}" data-tab="emblemas" aria-label="Emblemas">${icon('grid', 20)}</button>
         <button role="tab" class="${cur === 'niveis' ? 'is-on' : ''}" data-tab="niveis" aria-label="Níveis">${icon('trophy', 20)}</button>

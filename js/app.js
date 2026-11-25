@@ -148,9 +148,10 @@ function syncWork() {
 const htmlDaAba = (personalMode) => (personalMode ? renderPersonalSpace() : ui.tab === 'mes' ? renderMonth() : ui.tab === 'empresas' ? renderCompanies() : ui.tab === 'ajustes' ? renderSettings() : renderToday());
 function poeComeco(view, personalMode) {
   if (!(personalMode ? (ui.ptab || 'p-hoje') === 'p-hoje' : ui.tab === 'hoje') || !window.__comeco) return;
-  const C = window.__comeco, h = C.cartaoPrimeiro() || C.cartaoCheckup() || C.cartaoEnquete(); if (!h) return;
+  const C = window.__comeco, h = C.cartaoPrimeiro() || window.__retro?.cartaoRetro() || C.cartaoCheckup() || C.cartaoEnquete(); if (!h) return;
   const alvo = view.querySelector(personalMode ? '.page > .pquick' : '.page > .foco'); if (alvo) alvo.insertAdjacentHTML(/class="prim"/.test(h) ? 'beforebegin' : 'afterend', h); else view.querySelector('.page')?.insertAdjacentHTML('afterbegin', h);
 }
+import('./retro-telas.js').then((m) => { window.__retro = m; }).catch(() => {});
 import('./comeco.js').then((m) => { window.__comeco = m; m.avisoDados(); }).catch(() => {});
 function poeFaixa(view, personalMode) {
   // em Ajustes o plano já aparece em "Seu plano": sem a faixa repetida
@@ -311,6 +312,8 @@ function setTab(tab, from) {
 
 /* ---------- ações (delegação de cliques) ---------- */
 const actions = {
+  retro: () => window.__retro?.abreRetro(),
+  'retro-nao': () => window.__retro?.naoQuero(),
   prim: (b) => window.__comeco?.criaPrimeiro(b.dataset.id),
   checkup: () => window.__comeco?.checkup(),
   enq: (b) => window.__comeco?.respondeEnquete(b.dataset.v),
@@ -876,6 +879,7 @@ function openDeepLink(hash = location.hash, tries = 0) {
   if (/^#\/stories$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./stories.js').then((m) => m.openStoriesFeed()); return true; }
   const fr = /^#\/frase\/([A-Za-z0-9-]{3,40})$/.exec(hash || '');
   if (fr || /^#\/frases$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); window.PautaIntro && window.PautaIntro.finish(); import('./frase.js').then((m) => (fr ? m.abrePorId(fr[1]) : m.minhasFrases())); return true; }
+  if (/^#\/retro\/2026$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); window.PautaIntro && window.PautaIntro.finish(); import('./retro-telas.js').then((m) => m.abreRetro()); return true; }
   const priv = /^#\/privado(?:\/([A-Za-z0-9]{6,64}))?$/.exec(hash || '');
   if (priv) { history.replaceState(null, '', location.pathname + location.search); window.PautaIntro && window.PautaIntro.finish(); import('./privado.js').then((m) => (priv[1] ? m.openConversa(priv[1]) : m.openMensagens())); return true; }
   if (/^#\/visitas$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./stories.js').then((m) => m.openVisitors()); return true; }
@@ -1698,7 +1702,7 @@ navigator.serviceWorker?.addEventListener('message', (ev) => {
 window.addEventListener('hashchange', () => {
   // abriu um convite com o app já aberto
   if (/^#\/convite\//.test(location.hash)) { captureInvite(); return maybeAcceptInvite(); }
-  if (/^#\/((e|d|p)\/|suporte|ranking|vitalicio|amigos|amigo\/|stories|visitas|privado|frase|frases)/.test(location.hash)) return openDeepLink();
+  if (/^#\/((e|d|p)\/|suporte|ranking|vitalicio|amigos|amigo\/|stories|visitas|privado|frase|frases|retro\/)/.test(location.hash)) return openDeepLink();
   if (/^#\/(c|v)\//.test(location.hash)) location.reload();
 });
 
