@@ -1,0 +1,1 @@
+var e=Object.defineProperty;var s=(r,a)=>{for(var o in a)e(r,o,{get:a[o],enumerable:!0})};var b=["Toque na notifica\xE7\xE3o: abre a frase com o Lembra vestido do assunto, pronta para o story.","Compartilhe no Instagram, WhatsApp, Facebook ou no seu story do Lembra.","A touca do Lembra agora fica firme na cabe\xE7a."];export{s as a,b};

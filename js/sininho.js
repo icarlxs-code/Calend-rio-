@@ -6,10 +6,12 @@
    - aceno: braço sobe rápido, a mão balança ±7° a ~4,5 Hz por ~1 s, corpo inclina para o lado oposto;
    - movimento secundário: o rosto chega atrasado em relação ao corpo, braços e pés passam do ponto e voltam (molas).
    Cada parte é um canal com mola (frequência + amortecimento), desenhado em canvas a cada quadro da tela (60/120 Hz). */
+import { PALMA } from './roupas.js';
 import { esc } from './utils.js';
 
 const R = (() => { try { return new URL('../assets/mascot/rig/', import.meta.url).href; } catch { return 'assets/mascot/rig/'; } })(); // funciona no app e em qualquer página (ex.: /conheca/)
 const VIEW = { x: 400, y: -40, w: 1160, h: 1080 };         // área do desenho (espaço das peças)
+const VIEWG = { x: 238, y: -230, w: 1500, h: 1310 };                              // quadro folgado (com roupa e objetos na mão)
 const FEET = [965, 1009];                                  // ponto de apoio (inclinação e achatamento)
 const SKIN = 'rgb(253,109,21)', SKIN_EDGE = 'rgb(232,84,10)', INK = '#3B2620';
 const SH = { l: [668, 612], r: [1272, 620] };              // ombros: por dentro da borda do sino (medido no vídeo: o braço nasce atrás do corpo)
@@ -117,10 +119,10 @@ class Rig {
   }
   stop() { RIGS.delete(this); this.dead = true; clearTimeout(this.wakeT); this.io && this.io.disconnect(); this.ro && this.ro.disconnect(); }
   resize() {
-    const dpr = Math.min(2, window.devicePixelRatio || 1), w = this.el.clientWidth || parseFloat(this.el.style.getPropertyValue('--s')) || 120;
-    const W = Math.round(w * dpr), H = Math.round(w * VIEW.h / VIEW.w * dpr);
+    const VIEW2 = this.el.dataset.nitido ? VIEWG : VIEW; this.vista = VIEW2; const dpr = this.el.dataset.nitido ? 2 : Math.min(2, window.devicePixelRatio || 1), w = this.el.clientWidth || parseFloat(this.el.style.getPropertyValue('--s')) || 120;
+    const W = Math.round(w * dpr), H = Math.round(w * VIEW2.h / VIEW2.w * dpr);
     if (this.cv.width !== W || this.cv.height !== H) { this.cv.width = W; this.cv.height = H; }
-    this.scale = this.cv.width / VIEW.w;
+    this.scale = this.cv.width / VIEW2.w;
   }
   get xf() { return this._xf; }
   set xf(v) { this._xf = v; if (this.sleeping) this.wake(); }
@@ -458,7 +460,7 @@ class Rig {
   draw() {
     const c = this.ctx, s = this.s, L = LAY, e = EMO[this.mood];
     c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, this.cv.width, this.cv.height);
-    c.setTransform(this.scale, 0, 0, this.scale, -VIEW.x * this.scale, -VIEW.y * this.scale);
+    c.setTransform(this.scale, 0, 0, this.scale, -this.vista.x * this.scale, -this.vista.y * this.scale);
     const img = (n, x, y, w, h) => { const i = IMG[n]; if (i && i.naturalWidth) c.drawImage(i, x, y, w, h); };
     const at = (n, dx = 0, dy = 0) => { const [x, y, w, h] = L[n]; img(n, x + dx, y + dy, w, h); };
     const X = Object.assign({ eye: 1, eyeDx: 0, eyeDy: 0, pupil: 1, pupilDx: 0, pupilDy: 0, brow: 1, browDy: 0, mouth: 1, mouthDy: 0, body: 1, limbs: 1 }, this.xf || {}); // deformação peça a peça (abertura)
@@ -484,15 +486,20 @@ class Rig {
       const one = (pose, a, alpha) => {
         const n = `braco-${pose}-${side}`; alpha *= X.limbs; if (!L[n] || alpha <= 0.01) return;
         const [, , w, h] = L[n], [ax, ay] = ARM[`${pose}-${side}`], [px, py] = SH[side];
-        c.save(); c.globalAlpha = alpha; c.translate(px + (side === 'l' ? 1 : -1) * (1 - X.limbs) * 60, py); c.rotate((a * Math.PI) / 180); c.scale(lerpN(0.5, 1, X.limbs), lerpN(0.5, 1, X.limbs)); img(n, -ax * w, -ay * h, w, h); c.restore();
+        c.save(); c.globalAlpha = alpha; c.translate(px + (side === 'l' ? 1 : -1) * (1 - X.limbs) * 60, py); c.rotate((a * Math.PI) / 180); c.scale(lerpN(0.5, 1, X.limbs), lerpN(0.5, 1, X.limbs)); const mao = this.ac && this.ac.mao && this.ac.mao[side], pm = mao && PALMA[`${pose}-${side}`];
+        if (pm) { c.save(); c.translate((pm[0] - ax) * w, (pm[1] - ay) * h); c.rotate((-a * Math.PI) / 180); c.scale(1.32, 1.32); mao(c, this.t); c.restore(); }
+        img(n, -ax * w, -ay * h, w, h); c.restore();
       };
       const old = this.pp && this.pp[side], k = old ? Math.min(1, (this.t - old[1]) / 0.12) : 1;
       if (old && k < 1) one(old[0], old[2] + (ang - old[2]) * 0.4, 1 - k);
       one(this.pose[side], ang, k < 1 ? 0.35 + 0.65 * k : 1);
       if (front) c.restore();
     });
+    const V = this.ac; // roupa (js/roupas.js): desenhada nas medidas do corpo, vai junto com ele
+    if (V && V.atras) { c.save(); V.atras(c, this.t); c.restore(); }
     drawArms(false);
     { const r = lerpR(L.corpo, X.abs && X.abs.r && X.abs.r.body, kb); c.save(); c.globalAlpha = aOf(X, 'body'); img('corpo', r[0], r[1], r[2], r[3]); c.restore(); }
+    if (V && V.cab && kb < 0.05) { c.save(); V.cab(c, this.t); c.restore(); }
     // rosto: chega atrasado em relação ao corpo (movimento secundário)
     const fk = 1 - Math.max(kb, kOf(X, 'eyeL'));
     const fx = (-s.lean.vel * 1.1 + s.px.v * 0.12) * fk, fy = -s.by.vel * 0.012 * fk;
@@ -567,6 +574,7 @@ class Rig {
         c.save(); c.globalAlpha = a; c.translate(cx, cy + X.mouthDy); c.scale(z * (1 + (z - 1) * -0.6) * X.mouth, z * X.mouth); img(n, -w / 2, -h / 2, w, h); c.restore(); };
       if (this.pm && k < 1) one(this.pm, 1 - k);
       one(this.mouth, k); }
+    if (V && V.ros) { c.save(); V.ros(c, this.t); c.restore(); }
     // mãozinha na frente da boca (segurando a risada)
     if (s.hand.v > 0.03) {
       const [x, y, w, h] = L['boca-aberta'], cx = x + w * 0.62, cy = y + h * 0.55 + X.mouthDy + (1 - s.hand.v) * 120;
@@ -613,6 +621,16 @@ export function sininho(mood = 'feliz', { size = 120, cls = '', label = 'Lembra'
   const m = EMO[mood] ? mood : 'feliz';
   return `<span class="snh ${cls}" style="--s:${size}px" data-snh="${m}" role="img" aria-label="${esc(label)}"><canvas></canvas></span>`;
 }
+/** veste o boneco: peças de roupas.js; com braço e boca definidos, a pose fica parada nela */
+export function veste(el, v) {
+  withRig(el, (r) => {
+    r.ac = v || null; r.pausado = !!(v && v.l);
+    if (v && v.mood) r.setMood(v.mood, true);
+    if (v && v.l) { r.clear(); r.pose = { l: v.l[0], r: v.r[0] }; r.arms([v.l[0], v.l[2] ?? ({ baixo: 12, cima: -16, aberto: 6 })[v.l[0]], v.r[0], v.r[2] ?? ({ baixo: -12, cima: 16, aberto: -6 })[v.r[0]]]); r.front = { l: !!v.frente?.l, r: !!v.frente?.r }; if (v.boca) r.setMouth(v.boca); r.s.aL.v = r.s.aL.t; r.s.aR.v = r.s.aR.t; }
+    if (r.sleeping) r.wake(); r.draw();
+  });
+}
+export const rigDe = (el) => (el && el._rig && !el._rig.pending ? el._rig : null);
 export function alive() { watch(); load(); document.querySelectorAll('[data-snh]').forEach(mount); }
 export function setMood(el, mood) { withRig(el, (r) => r.setMood(mood)); return Promise.resolve(); }
 export function act(el, name, opt) { withRig(el, (r) => r.act(name, opt)); }

@@ -53,7 +53,7 @@ export function disposicao(base = '', h = horaAgora()) {
   const d = DISPO[periodo(h)], per = periodo(h), forte = ['desconfiado', 'triste'].includes(base) || (['comemora', 'danca'].includes(base) && h < 14.5);
   return { ...d, mood: forte && !d.gorro && per !== 'acordando' ? base : d.mood };
 }
-export const acessorios = (d) => `${d.gorro ? '<svg class="hr__gorro" viewBox="0 0 120 92" aria-hidden="true"><path d="M14 74C18 34 44 8 78 12c24 3 34 20 34 44 0 4-6 4-8 0-4-10-10-14-18-14 6 10 9 22 10 34Z" fill="#6B4FA8"/><path d="M30 46c6-14 16-24 30-28l7 1C52 26 43 36 38 52ZM62 40c2-9 6-15 12-19l8 3c-6 5-9 10-10 18Z" fill="#9A7FD6"/><rect x="6" y="66" width="98" height="20" rx="10" fill="#FFF3E2"/><circle cx="109" cy="62" r="10" fill="#FFF3E2"/></svg>' : ''}${d.zzz ? '<span class="hr__z" aria-hidden="true"><i>z</i><i>z</i><i>Z</i></span>' : ''}`;
+export const acessorios = (d) => `${d.zzz ? '<span class="hr__z" aria-hidden="true"><i>z</i><i>z</i><i>Z</i></span>' : ''}`;
 
 /* ---------- frases da hora (as mesmas ideias dos avisos de ânimo) ---------- */
 const FRASES = {
@@ -80,9 +80,10 @@ export function aplica(raiz = document) {
 export async function liga(view) {
   clearInterval(timer); clearInterval(giro);
   const fig = view.querySelector('[data-hr-fig]'); if (!fig) return;
-  const { setMood, act, vivo, alive } = await import('./sininho.js'); if (!fig.isConnected) return;
+  const { setMood, act, vivo, alive, veste } = await import('./sininho.js'); if (!fig.isConnected) return;
   const bon = fig.querySelector('[data-snh]'), base = fig.dataset.base || ''; let d = disposicao(base), per = periodo(), acordou = 0;
-  alive(); if (bon && d.gestos.length) vivo(bon, { gestos: d.gestos, cada: d.cada });
+  alive(); if (bon && d.gorro) veste(bon, (await import('./roupas.js')).gorro());
+  if (bon && d.gestos.length) vivo(bon, { gestos: d.gestos, cada: d.cada });
   const faixa = view.querySelector('[data-falas-hora]'), L = faixa ? [...faixa.querySelectorAll('.hrf__i')] : []; let i = 0;
   const vai = (n) => { if (!L.length) return; i = (n + L.length) % L.length; L.forEach((x, k) => { x.classList.toggle('is-on', k === i); x.setAttribute('aria-hidden', k !== i); }); faixa.querySelectorAll('.hrf__p i').forEach((x, k) => x.classList.toggle('is-on', k === i)); };
   if (faixa) {
