@@ -7,6 +7,7 @@
    - criar e concluir na mesma hora algo marcado para depois quase não rende XP;
    - limite por dia de XP por criar compromisso e por bilhete, e teto de XP por dia.
    Fica salvo na conta (users/{uid}.game): aparece igual em qualquer celular. */
+import * as retro from './retro.js';
 import { aprende } from './habito.js';
 import { sininho } from './sininho.js';
 import { rankHidden } from './teen.js';
@@ -298,6 +299,7 @@ function completed({ key, due, createdAt = 0, kind = 'work', hasTime = false, ti
 /* compromisso criado / concluído (gancho do store) */
 export function onEvent(prev, item) {
   if (!item || store.mode === 'local' && !store.me) return;
+  if (mineEv(item)) try { retro.aoEvento(prev, item); } catch { /* ok */ } // livro-razão do ano, só neste aparelho
   load(); dayReset();
   if (!prev && mineEv(item) && item.createdBy === store.me) {
     S.d.created++;
@@ -312,6 +314,7 @@ export function onEvent(prev, item) {
 /* Pessoal: concluiu um lembrete (ou um dia de um lembrete que repete) */
 export function onPersonal(before, after) {
   if (!after) return;
+  try { retro.aoPessoal(before, after); } catch { /* ok */ }
   if (!after.repeat || after.repeat === 'none') {
     if (after.done && !before?.done) completed({ key: `p:${after.id}`, due: dueOf(after.date, after.time), createdAt: after.createdAt || 0, kind: 'personal', titulo: after.title || '' });
     return;
@@ -610,3 +613,5 @@ export function previewStory(kind = 'w', ref = '') {
 
 /* só no modo de teste local (emuladores): ganchos para o robô conferir o XP e os emblemas */
 try { if (typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(location.hostname) && localStorage.getItem('cal.emulator') === '1') window.__lembraGame = { ofensiva: (d) => { import('./streak.js').then((m) => m.showStreak(d)); }, festa: (t) => { if (t === 'nivel') celebrate({ type: 'level', level: 10, from: 9 }); else celebrate({ type: 'badge', b: BADGES.find((x) => x.rarity === t) }); }, reage: (k, o) => { import('./mascote.js').then((m) => m.react(k, o)); }, estado: () => { load(); return { xp: S.xp, badges: Object.keys(S.badges), dia: S.d.xp }; }, setXp: (x) => { load(); S.xp = x; save(); }, preview: (k, r) => { const p = previewStory(k, r); return { ...p, badges: p.badges.map((b) => b.id), tier: null, L0: null, L1: null }; } }; } catch { /* ok */ }
+/* dias ativos e datas dos emblemas (para o livro-razão do ano, só neste aparelho) */
+export const diasAtivos = () => { load(); return { dias: [...new Set([...(S.od || []), ...(S.days || [])])], emblemas: Object.values(S.badges || {}) }; };

@@ -189,7 +189,7 @@ export function toggleDone(it, day) {
     s.has(day) ? s.delete(day) : s.add(day);
     return savePersonal({ ...it, doneDates: [...s] }); // o histórico fica inteiro (a Retrospectiva usa)
   }
-  return savePersonal({ ...it, done: !it.done });
+  return savePersonal({ ...it, done: !it.done, doneAt: it.done ? null : Date.now() });
 }
 /* Todos os aniversários, do mais próximo ao mais distante */
 export function birthdays() {

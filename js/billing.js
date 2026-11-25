@@ -1,5 +1,6 @@
 /* Plano da conta no app: teste grátis de 24h, tela de planos (mensal / vitalício) e confirmação do pagamento.
    A dupla Henrique + Matheus não paga. Quem verifica e libera é o servidor (Stripe). */
+import { CONFIG } from '../config.js';
 import { store } from './store.js';
 import { server, api } from './avisos.js';
 import { icon } from './icons.js';
@@ -200,6 +201,7 @@ export function openPlans({ blocking = false } = {}) {
     </div>
     <p class="paywall__err" data-err hidden></p>
     <p class="pw-fine">${icon('lock', 11)} Pagamento seguro pela Stripe. Cartão de crédito (renova sozinho até você cancelar) ou Pix no anual e no Fundadores (vale 12 meses, sem renovação automática). Cancele quando quiser em Ajustes → Gerenciar assinatura. Reembolso integral em até 7 dias. Preços em reais, com impostos.</p>
+    <p class="pw-legal">${esc([CONFIG.legalName, CONFIG.legalId, CONFIG.legalAddress].filter(Boolean).join(' · '))}</p>
     <div class="pw-links">
       <button data-paid>${icon('refresh', 13)} Já paguei? Verificar</button>${window.Capacitor?.isNativePlatform?.() ? `<button data-restore>${icon('refresh', 13)} Restaurar compras</button>` : ''}
       ${blocking ? '<span>·</span><button data-pclose>Só olhar o app</button><span>·</span><button data-action="logout">Sair da conta</button>' : '<span>·</span><button data-pclose>Agora não</button>'}

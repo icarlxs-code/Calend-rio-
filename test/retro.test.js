@@ -1,0 +1,24 @@
+import './_base.js';
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import * as R from '../js/retro.js';
+const br = (s) => Date.parse(`${s}-03:00`);
+const limpa = () => { for (let i = localStorage.length - 1; i >= 0; i--) localStorage.removeItem(localStorage.key(i)); };
+test('trava: só no aparelho, sem servidor nem métricas, sem título', () => {
+  const s = fs.readFileSync(new URL('../js/retro.js', import.meta.url), 'utf8'); assert.doesNotMatch(s, /^import |stats\.js|\btrack\(|reportStats|touchStats|writeStats|fetch\(|saveProfile|usage30/m);
+  limpa(); R.aoEvento(null, { id: 'e1', status: 'feito', title: 'Segredo do cliente', date: '2026-11-25', time: '10:00', type: 'reuniao' }, br('2026-11-25T10:10:00')); R.aoPessoal(null, { id: 'p1', title: 'Aniversário da Bia', cat: 'aniversario', date: '2026-11-25', done: true }, br('2026-11-25T11:00:00')); assert.doesNotMatch(localStorage.getItem('lembra.retro.2026'), /Segredo|Bia|e1|p1/);
+});
+test('marcar, desmarcar e marcar de novo conta uma vez só', () => { limpa(); const e = { id: 'e', date: '2026-11-25', time: '10:00', type: 'x' }, F = { ...e, status: 'feito' }, P = { ...e, status: 'pendente' }; R.aoEvento(P, F, br('2026-11-25T10:00:00')); R.aoEvento(F, P, br('2026-11-25T10:05:00')); assert.equal(R.totaisDoAno(2026).conclusoes, 0); R.aoEvento(P, F, br('2026-11-25T10:06:00')); assert.equal(R.totaisDoAno(2026).conclusoes, 1); });
+test('reconstrói só o ano, uma vez, sem usar contador vitalício', () => {
+  limpa(); const ev = (id, date, o = {}) => ({ id, date, time: '09:00', status: 'feito', type: 'reuniao', ...o }); const o = { eventos: [ev('a', '2026-03-01', { doneAt: br('2026-03-01T09:05:00') }), ev('b', '2025-12-31'), ev('c', '2026-05-02'), ev('d', '2026-06-01', { status: 'pendente' }), ev('z', '2026-07-01', { de: 'outro' })], meu: (e) => e.de !== 'outro', pessoal: [{ id: 'p', title: 'x', cat: 'saude', date: '2026-01-10', done: true }, { id: 'r', cat: 'lembrete', date: '2025-01-01', repeat: 'daily', doneDates: ['2025-12-31', '2026-01-01', '2026-01-02', '2026-01-03'] }, { id: 'n', cat: 'aniversario', date: '2000-05-01', repeat: 'yearly', doneDates: ['2026-05-01'] }, { kind: 'memo', id: 'm', done: true }], dias: ['2026-01-04', '2025-01-01'], emblemas: [br('2026-02-01T12:00:00'), br('2025-02-01T12:00:00')] };
+  R.reconstroi(2026, o); R.reconstroi(2026, o); const t = R.totaisDoAno(2026); assert.equal(t.conclusoes, 7); assert.equal(t.trabalho, 2); assert.equal(t.pessoal, 5); assert.equal(t.emblemas, 1); assert.equal(R.maiorOfensiva(2026), 4); assert.equal(t.aniversarios, null, 'sem hora real não inventa'); assert.equal(R.horarioFavorito(2026), null); assert.equal(t.noHorario, null);
+});
+test('aniversário no dia ou no dia seguinte; água só com toque; sem amostra some', () => {
+  limpa(); const a = (id, d) => ({ id, cat: 'aniversario', date: '1990-11-20', repeat: 'yearly', doneDates: d ? ['2026-11-20'] : [] }); R.aoPessoal(a('x'), a('x', 1), br('2026-11-21T20:00:00')); R.aoPessoal(a('y'), a('y', 1), br('2026-11-25T20:00:00')); assert.equal(R.totaisDoAno(2026).aniversarios, 1); assert.equal(R.totaisDoAno(2026).copos, null); R.bebi(br('2026-11-25T10:00:00')); R.bebi(br('2026-11-25T23:30:00')); assert.equal(R.totaisDoAno(2026).copos, 2); assert.equal(R.totaisDoAno(2026).diasAgua, 1);
+});
+test('virada do ano e fuso: 31/12 23h30 conta em 2026; 1/1 abre 2027', () => { limpa(); R.bebi(br('2026-12-31T23:30:00')); R.bebi(br('2027-01-01T00:10:00')); assert.equal(R.totaisDoAno(2026).copos, 1); assert.equal(R.totaisDoAno(2027).copos, 1); });
+test('perfis e horário favorito', () => {
+  const p = (o) => R.perfilDoAno(2026, { v: 1, x: {}, a: {}, d: [], b: 0, ...o }), dias = (n, ini = '2026-01-01') => Array.from({ length: n }, (_, i) => new Date(Date.parse(ini + 'T12:00:00Z') + i * 864e5).toISOString().slice(0, 10)), L = (n, f) => Object.fromEntries(Array.from({ length: n }, (_, i) => ['k' + i, f(i)])), alt = (n) => Array.from({ length: n }, (_, i) => dias(n * 2)[i * 2]);
+  assert.equal(p({}), 'Primeiro Capítulo'); assert.equal(p({ d: dias(120) }), 'Diamante da Rotina'); assert.equal(p({ d: dias(40) }), 'Mestre da Ofensiva'); assert.equal(p({ d: alt(20), x: L(10, (i) => ['2026-03-02', 't', 6, null, 'x', 0]) }), 'Sininho Madrugador'); assert.equal(p({ d: alt(20), x: L(10, () => ['2026-03-02', 't', 23, null, 'x', 0]) }), 'Coruja do Sininho'); assert.equal(p({ d: alt(20), x: L(30, () => ['2026-03-02', 't', 14, 1, 'x', 0]) }), 'Relógio de Ponto'); assert.equal(p({ d: alt(20), x: L(30, () => ['2026-03-07', 't', 14, null, 'x', 0]) }), 'Fim de Semana em Dia'); assert.equal(p({ d: alt(20), x: L(6, () => ['2026-03-02', 'p', 14, null, 'aniversario', 1]) }), 'Guardião dos Aniversários'); assert.equal(p({ d: [...alt(5), ...Array.from({ length: 12 }, (_, i) => dias(40, '2026-06-01')[i * 2])] }), 'Volta por Cima'); assert.equal(p({ d: alt(20) }), 'Sininho Constante');
+});

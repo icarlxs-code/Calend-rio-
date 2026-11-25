@@ -1321,6 +1321,7 @@ function startApp() {
     if (hiddenAt && Date.now() - hiddenAt > 30 * 60e3) { askedThisOpen = false; window.__vipAskedNotif = false; setTimeout(askNotifications, 3000); }
   });
   setTimeout(() => import('./social.js').then((m) => m.inicia()).catch(() => {}), 3500); // mensagens em tempo real
+  setTimeout(() => Promise.all([import('./retro.js'), import('./game.js')]).then(([r, g]) => { r.usaDono(store.user?.uid || ''); r.reconstroi(2026, { eventos: store.state.events, pessoal: personal.items, ...g.diasAtivos(), meu: (e) => (e.assignees || []).includes(store.me) || e.createdBy === store.me }); }).catch(() => {}), 12e3);
   setTimeout(() => import('./backup.js').then((m) => m.backupDiario()).catch(() => {}), 30e3);
   startPresence();
   personal.on(() => { if (ui.space === 'personal' || document.querySelector('.atrcard')) rerenderAll(); }); // o cartão "ficou pra trás" do Trabalho também mostra o Pessoal

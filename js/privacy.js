@@ -1,5 +1,6 @@
 /* Privacidade e dados (LGPD): aceite dos Termos, baixar meus dados, excluir minha conta.
    Direitos do titular (art. 18): acesso, portabilidade, correção (Sua ficha) e eliminação. */
+import * as retro from './retro.js';
 import { brand } from './brand.js';
 import { store, saveUserProfile } from './store.js';
 import { personal } from './personal.js';
@@ -61,6 +62,7 @@ export async function exportMyData() {
       ? { grupos: store.state.companies, compromissos: store.state.events, bilhetes: store.state.notes, ajustes: store.state.settings }
       : { compromissosCadastradosPorVoce: store.state.events.filter(mine), bilhetesSeus: store.state.notes.filter((n) => n.author === store.me) },
     pessoal: personal.items,
+    retrospectiva: retro.exporta(), // livro-razão do ano, que só existe neste aparelho
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const name = `meus-dados-lembra-${todayKey()}.json`;
