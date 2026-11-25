@@ -1,10 +1,11 @@
 {
-  "version": "2.24.3",
-  "build": "256a4h45",
+  "version": "2.25.0",
+  "build": "45ehoewf",
   "date": "2026-11-24",
   "min": "2.22.0",
-  "title": "Hoje mais simples",
+  "title": "O Lembra ganhou movimento",
   "notes": [
+    "Cada aba abre do seu jeito, os botões respondem ao toque e o compromisso marcado voa até o dia. Para desligar: Ajustes → Aparência → Animações.",
     "Arrastar o Lembra ficou liso: ele cola no seu dedo, sem atraso.",
     "O Lembra não some mais da tela quando você arrasta ele.",
     "Modo noturno preto de verdade, com o laranja do Lembra.",
@@ -15,8 +16,7 @@
     "Quem chega pelo convite já cai em “Criar conta”.",
     "“Perto de você” agora é opcional: você liga se quiser.",
     "Painel da equipe: cargos (Suporte, Moderação, Marketing, Dados, Financeiro, RH, Produto, Administração), cada um vê só o que precisa.",
-    "Tudo grátis até 31 de dezembro de 2026, inclusive o assistente com IA.",
-    "Tocou na notificação da frase? Ela abre no app e fica até você fechar, com 6 modelos de imagem pra compartilhar."
+    "Tudo grátis até 31 de dezembro de 2026, inclusive o assistente com IA."
   ],
-  "builtAt": "2026-11-24T02:29:46.953Z"
+  "builtAt": "2026-11-25T01:41:40.566Z"
 }

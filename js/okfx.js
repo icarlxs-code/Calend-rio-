@@ -6,10 +6,23 @@ import { brand } from './brand.js';
 import { esc } from './utils.js';
 
 let timer = null;
-export function okFx({ title = 'Marcado!', sub = '', sound = true } = {}) {
+export function okFx({ title = 'Marcado!', sub = '', sound = true, item = null } = {}) {
   if (typeof document === 'undefined') return;
   document.querySelectorAll('.okfx').forEach((x) => x.remove());
   clearTimeout(timer);
+  // Lembra Motion: o bilhete voa até o dia (o .okfx escondido avisa o resto do app para não comemorar junto)
+  const M = window.__motion;
+  if (item && M && M.pronto()) {
+    const m = document.createElement('div');
+    m.className = 'okfx okfx--motion';
+    m.setAttribute('role', 'status');
+    m.textContent = `${title} ${sub}`;
+    document.body.appendChild(m);
+    const fim = () => m.remove();
+    setTimeout(() => { M.agendado({ titulo: item.title || title, quando: sub, dia: item.date }).catch(() => {}).then(fim); }, 240);
+    timer = setTimeout(fim, 5000);
+    return;
+  }
   const el = document.createElement('div');
   el.className = 'okfx';
   el.setAttribute('role', 'status');

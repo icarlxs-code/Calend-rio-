@@ -227,11 +227,9 @@ function rerenderAll() {
   openSheets().forEach((s) => s.refresh && s.refresh());
 }
 
-function setTab(tab) {
-  ui.tab = tab;
-  saveUi();
-  render();
-  window.scrollTo(0, 0);
+function setTab(tab, from) {
+  const go = () => { ui.tab = tab; saveUi(); render(); window.scrollTo(0, 0); };
+  if (window.__motion && ui.tab !== tab && document.getElementById('view')) window.__motion.trocar(tab, go, from); else go();
 }
 
 /* ---------- ações (delegação de cliques) ---------- */
@@ -249,7 +247,7 @@ const actions = {
     render();
   },
   atrasados: () => import('./views/atrasados.js').then((m) => m.openAtrasados()),
-  tab: (b) => setTab(b.dataset.tab),
+  tab: (b) => setTab(b.dataset.tab, b),
   space: (b) => switchSpace(b.dataset.space, b),
   'edit-profile': async () => (await import('./views/profile.js')).openProfile(),
   profile: async () => (await import('./views/profile.js')).openProfilePage(),
@@ -346,7 +344,9 @@ const actions = {
     const e = store.event(b.dataset.id); if (!e) return;
     if (!e.time) return openEventEditor({ id: e.id }); // sem horário: escolhe no editor
     const m = Math.min(23 * 60 + 59, toMin(e.time) + 60), t = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    const M = window.__motion, g = M && M.guardar(b.closest('.foco, .ecard'));
     await store.upsert('events', { ...e, time: t });
+    if (M && store.event(e.id)?.time === t) M.adiado(g);
     toast(`Adiado para ${t}`);
   },
   'toggle-tips': () => {
@@ -481,6 +481,7 @@ document.addEventListener('click', (ev) => {
   fn(b);
 });
 document.addEventListener('change', (ev) => {
+  if (ev.target.matches('[data-motion]')) { try { localStorage.setItem('lembra.motion', ev.target.checked ? '1' : '0'); } catch { /* ok */ } }
   if (ev.target.matches('[data-sound]')) { setSound(ev.target.checked); if (ev.target.checked) chime(ui.space); }
   if (ev.target.matches('[data-action-change="import"]')) settingsActions.import(ev.target);
   if (ev.target.closest('[data-notify-form]')) settingsActions.notifyPrefs(ev.target.closest('[data-notify-form]'));
@@ -1220,6 +1221,7 @@ function startApp() {
   render();
   store.on(rerenderAll);
   startPersonal();
+  import('./motion/auto.js').catch((e) => console.warn('animações', e));
   personal.onSaved = (b, a) => { import('./rank.js').then((r) => r.rankPersonal(b, a)); import('./game.js').then((gm) => gm.onPersonal(b, a)).catch(() => {}); };
   // conquistas: XP, níveis e emblemas (concluir, marcar, bilhetes); começa depois que a agenda carregou
   store.hooks.game = (b, a) => {

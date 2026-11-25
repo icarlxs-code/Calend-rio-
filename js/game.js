@@ -395,6 +395,7 @@ function xpFly(n, why) {
   el.className = 'xpfly';
   el.innerHTML = `<b>+${n} XP</b>${why ? `<span>${esc(why)}</span>` : ''}`;
   document.body.appendChild(el);
+  if (window.__motion) window.__motion.voarXp(el);
   setTimeout(() => el.remove(), 1700);
 }
 

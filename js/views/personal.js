@@ -297,8 +297,8 @@ export function bindPersonal(view) {
     f.q.value = '';
     const it = savePersonal({ ...parseQuick(q), remind: 'auto' });
     if (!it) { f.q.value = q; return false; } // sem plano ativo: nada foi salvo
-    okFx({ title: 'Anotado!', sub: `${dayLabel(it.date)}${it.time ? ' às ' + fmtTime(it.time) : ''}` });
-    setTimeout(() => toast(`${it.title}`, { action: 'Ajustar', onAction: () => openPersonalEditor(it.id), ms: 3500 }), 1600);
+    okFx({ title: 'Anotado!', sub: `${dayLabel(it.date)}${it.time ? ' às ' + fmtTime(it.time) : ''}`, item: it });
+    setTimeout(() => toast(`${it.title}`, { action: 'Ajustar', onAction: () => openPersonalEditor(it.id), ms: 3500 }), window.__motion && window.__motion.pronto() ? 3300 : 1600);
     return false;
   };
   const mf = view.querySelector('[data-form="memo"]');
@@ -307,7 +307,7 @@ export function bindPersonal(view) {
     const it = addMemo(mf.t.value);
     if (!it) { mf.t.focus(); return false; }
     mf.t.value = '';
-    okFx({ title: 'Anotado!', sub: `Hoje às ${fmtTime(it.time)}` });
+    okFx({ title: 'Anotado!', sub: `Hoje às ${fmtTime(it.time)}`, item: { title: it.text, date: it.date } });
     return false;
   };
   const mq = view.querySelector('[data-memoq]');
@@ -335,7 +335,10 @@ export function bindPersonal(view) {
 }
 
 export const personalActions = {
-  ptab: (b) => { ui.ptab = b.dataset.tab; saveUi(); window.__calRender && window.__calRender(); window.scrollTo(0, 0); },
+  ptab: (b) => {
+    const tab = b.dataset.tab, go = () => { ui.ptab = tab; saveUi(); window.__calRender && window.__calRender(); window.scrollTo(0, 0); };
+    if (window.__motion && (ui.ptab || 'p-hoje') !== tab) window.__motion.trocar(tab, go, b); else go();
+  },
   pview: (b) => { ui.pView = b.dataset.v; window.__calRender && window.__calRender(); },
   pmonth: (b) => { ui.pMonth = addMonths(ui.pMonth || monthKey(todayKey()), +b.dataset.d); window.__calRender && window.__calRender(); },
   psel: (b) => {
@@ -526,7 +529,7 @@ export function openPersonalEditor(id = null, preset = {}) {
         if (!title) { form.title.focus(); return toast('Escreva o que é'); }
         const ok = savePersonal({ ...d, title, date: form.date.value || todayKey(), time: form.time.value || null, repeat: form.repeat.value, note: form.note.value.trim(), birthYear: +form.birthYear.value || null, remind: form.remind.checked ? 'auto' : 'none' });
         a.close();
-        if (ok) { if (!id) okFx({ title: 'Anotado!', sub: `${dayLabel(ok.date || todayKey())}${ok.time ? ' às ' + fmtTime(ok.time) : ''}` }); else toast('Salvo ✓'); }
+        if (ok) { if (!id) okFx({ title: 'Anotado!', sub: `${dayLabel(ok.date || todayKey())}${ok.time ? ' às ' + fmtTime(ok.time) : ''}`, item: ok }); else toast('Salvo ✓'); }
       };
       const del = el.querySelector('[data-del]');
       if (del) del.onclick = async () => {

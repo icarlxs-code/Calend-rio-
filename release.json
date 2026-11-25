@@ -1,9 +1,10 @@
 {
-  "version": "2.24.3",
+  "version": "2.25.0",
   "date": "2026-11-24",
   "min": "2.22.0",
-  "title": "Hoje mais simples",
+  "title": "O Lembra ganhou movimento",
   "notes": [
+    "Cada aba abre do seu jeito, os botões respondem ao toque e o compromisso marcado voa até o dia. Para desligar: Ajustes → Aparência → Animações.",
     "Arrastar o Lembra ficou liso: ele cola no seu dedo, sem atraso.",
     "O Lembra não some mais da tela quando você arrasta ele.",
     "Modo noturno preto de verdade, com o laranja do Lembra.",

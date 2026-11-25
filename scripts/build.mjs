@@ -5,6 +5,7 @@
 import { build } from 'esbuild';
 import { rmSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, relative } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const root = resolve(import.meta.dirname, '..');
 const out = resolve(root, 'dist');
@@ -53,7 +54,7 @@ writeFileSync(swPath, readFileSync(swPath, 'utf8')
   .replace(/\/\*FILES\*\/.*$/m, `/*FILES*/ ${files.map((f) => `'${f}'`).join(', ')},`));
 
 /* Páginas públicas (convite, pagamento, termos, privacidade) com o endereço oficial do config.js */
-const { CONFIG } = await import(resolve(root, 'config.js') + `?v=${Date.now()}`);
+const { CONFIG } = await import(`${pathToFileURL(resolve(root, 'config.js'))}?v=${Date.now()}`);
 const site = (CONFIG.siteUrl || '').replace(/\/?$/, '/');
 const style = readFileSync(resolve(root, 'pages/_style.css'), 'utf8').replace(/\s*\n\s*/g, '');
 for (const name of ['convite', 'pago', 'termos', 'privacidade', 'conheca', 'excluir-conta', 'suporte']) {

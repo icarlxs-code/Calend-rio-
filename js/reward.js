@@ -73,6 +73,8 @@ export function onDone({ el = null, left = null } = {}) {
   try { window.dispatchEvent(new Event('lembra:done')); } catch { /* ok */ }
   try { navigator.vibrate && navigator.vibrate(left === 0 ? [12, 40, 18] : 10); } catch { /* ok */ }
   pop(left === 0 || (after !== before && !!MILESTONES[after]));
+  const rm = window.__motion;
+  if (rm && el) rm.concluido(el.getBoundingClientRect ? el.getBoundingClientRect() : el);
   burst(el, { big: left === 0 || (after !== before && MILESTONES[after]) });
   if (after !== before && MILESTONES[after]) return MILESTONES[after];
   if (left === 0) return g('Dia 100% concluído! Pode descansar tranquilo 🏆', 'Dia 100% concluído! Pode descansar tranquila 🏆', 'Dia 100% concluído! Hora de descansar 🏆', pr());

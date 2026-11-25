@@ -134,7 +134,9 @@ async function deleteEvent(id, api) {
     } else if (!(await confirmDialog({ title: `Excluir este ${EV()}?`, ok: 'Excluir', danger: true }))) return;
   } else if (!(await confirmDialog({ title: `Excluir este ${EV()}?`, text: store.team.length > 1 ? 'Ele some da agenda de todos.' : 'Ele some da sua agenda.', ok: 'Excluir', danger: true }))) return;
   const backup = ids.map((i) => ({ ...store.event(i) }));
+  const M = window.__motion, g = M && M.guardar([...document.querySelectorAll('#view .ecard')].find((x) => x.dataset.id === id));
   await store.removeMany('events', ids);
+  if (M && !store.event(id)) M.excluido(g);
   api && api.close();
   toast(ids.length > 1 ? `${ids.length} ${EV()}s excluídos` : `${EVc()} excluído`, {
     action: 'Desfazer',
@@ -478,13 +480,13 @@ function mountEditor(api, d, original, rep) {
         activity: { notifyPartner: d.notifyPartner, kind: 'series', count: use.length, label: `${TYPES[d.type].label} ${REPEATS.find((x) => x.v === rep.mode)?.label.toLowerCase() || ''} às ${fmtTime(d.time)}`, sample: { companyId: d.companyId, date: use[0] } },
       });
       api.close();
-      okFx({ title: `${use.length} ${EV()}s marcados`, sub: `${REPEATS.find((x) => x.v === rep.mode)?.label || ''}${d.time ? ' · ' + fmtTime(d.time) : ''}`.replace(/^ · /, '') });
+      okFx({ title: `${use.length} ${EV()}s marcados`, sub: `${REPEATS.find((x) => x.v === rep.mode)?.label || ''}${d.time ? ' · ' + fmtTime(d.time) : ''}`.replace(/^ · /, ''), item: { title: `${use.length} ${EV()}s`, date: use[0] } });
       return;
     } else {
       if (!(await checkBeforeSave(d, true, api, refreshAll))) return;
       await store.upsert('events', { ...d });
       api.close();
-      okFx({ title: `${EVc()} marcado`, sub: `${dayLabel(d.date)}${d.time ? ' · ' + fmtTime(d.time) : ''}` });
+      okFx({ title: `${EVc()} marcado`, sub: `${dayLabel(d.date)}${d.time ? ' · ' + fmtTime(d.time) : ''}`, item: { title: d.title || TYPES[d.type]?.label, date: d.date } });
       return;
     }
     api.close();
