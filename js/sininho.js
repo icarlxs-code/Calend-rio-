@@ -181,7 +181,9 @@ class Rig {
     };
     go('l', pl, al); go('r', pr, ar);
   }
-  setMouth(m) { if (m && m !== this.mouth && this.imgOk('boca-' + m)) { this.pm = this.mouth; this.pmT = this.t; this.mouth = m; this.s.mz.v = 0.9; } }
+  /* boca falando (novidades): manda sobre os gestos enquanto houver voz */
+  fala(m) { if (m === null) { if (this.voz) { this.voz = null; this.mouth = this.antes || 'aberta'; this.pm = null; } return; } if (!this.voz) this.antes = this.mouth; this.voz = m; if (this.imgOk('boca-' + m)) { this.mouth = m; this.pm = null; } }
+  setMouth(m) { if (this.voz) return; if (m && m !== this.mouth && this.imgOk('boca-' + m)) { this.pm = this.mouth; this.pmT = this.t; this.mouth = m; this.s.mz.v = 0.9; } }
   imgOk(n) { return IMG && IMG[n] && IMG[n].naturalWidth; }
   blink(dbl) {
     if (this.sleeping) this.wake();
@@ -648,7 +650,7 @@ export function act(el, name, opt) { withRig(el, (r) => r.act(name, opt)); }
 export function lookAt(el, x, y, hold) { withRig(el, (r) => r.lookAt(x, y, hold)); }
 export const GESTOS = ['revira', 'tchau', 'pulo', 'riso', 'nao', 'sim', 'pop', 'pensa', 'boceja', 'timido', 'pisca', 'olhaLados', 'dor', 'cinico', 'maoBoca', 'susto', 'coca', 'balanca', 'sobrancelha', 'aponta', 'apontaEsq'];
 
-/* balão do app: o texto aparece digitado; o Sininho NÃO fala (sem boca mexendo, sem som),
+/* balão do app: o texto aparece digitado; aqui o Sininho não fala (a voz só existe nas novidades, em voz-novidades.js),
    só reage com o corpo quando a mensagem chega, como o Duo faz no Duolingo */
 export function say(el, text, { bubble, speed = 28 } = {}) {
   const b = bubble || el?.closest('.snhwrap')?.querySelector('.snhb__txt');

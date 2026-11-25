@@ -4,22 +4,23 @@
 import { sininho, alive, setMood, act, say, veste } from './sininho.js';
 import { roupa, cachecol } from './roupas.js';
 import { icon } from './icons.js';
+import { locutor, temVoz, vozLigada, ligaVoz, duracao, carrega } from './voz-novidades.js';
 import { anel, bolinha } from './anel.js';
 
 export const NOVIDADES = {
   '2.32.0': [
-    { t: 'Eu mudei!', s: 'Cheguei com muita novidade. Vem ver, é rapidinho.', m: 'feliz', g: 'tchau', c: 'abre' },
-    { t: 'Deslize o dedo', s: 'Agora é possível trocar de aba e voltar só arrastando.', m: 'feliz', g: 'olhaLados', c: 'desliza' },
-    { t: 'Abro sem internet', s: 'Sua agenda aparece na hora. O que você mudar sobe depois.', m: 'feliz', g: 'sim', c: 'offline' },
-    { t: 'Seu Pessoal limpo', s: 'Cada coisa uma vez só, com o ícone certo.', m: 'feliz', g: 'pisca', c: 'limpo' },
-    { t: 'Assistente mais claro', s: 'Mostra tudo antes. Nada muda sem você confirmar.', m: 'feliz', g: 'sobrancelha', c: 'assist' },
-    { t: 'Nada some sem querer', s: 'Apagou? Fica 24 horas na lixeira e volta com um toque.', m: 'surpreso', g: 'sim', c: 'lixeira' },
-    { t: 'Eu fico na conversa', s: 'Escrevo, gravo e leio junto com vocês.', m: 'feliz', c: 'conversa', v: 'digita' },
-    { t: 'Arraste a conversa', s: 'Fixe, silencie, arquive ou tranque com PIN. E mande foto para ver uma vez só.', m: 'feliz', g: 'sim', c: 'arrasta' },
-    { t: 'Stories com número', s: 'O anel mostra quantos faltam ver.', m: 'surpreso', g: 'olhaLados', c: 'stories' },
-    { t: 'Achou, é só tocar', s: 'Telefone, e-mail ou ID: tudo no mesmo lugar, do jeito que você escrever.', m: 'feliz', g: 'olhaLados', c: 'achar' },
-    { t: 'Seu perfil do seu jeito', s: 'Nome, ID, bairro, idade: edite tudo e escolha o que aparece.', m: 'feliz', g: 'sobrancelha', c: 'perfil' },
-    { t: 'Meu time, seu time', s: 'Conta qual é o seu time no Editar perfil. Vou torcer com você.', m: 'feliz', c: 'time', v: 'torcida' },
+    { t: 'Eu mudei!', s: 'Senhoras, senhores e distraídos… chegou novidade! Vem ver, é rapidinho.', m: 'feliz', g: 'tchau', c: 'abre' },
+    { t: 'Deslize o dedo', s: 'Agora é possível trocar de aba só deslizando o dedo. Que elegância!', m: 'feliz', g: 'olhaLados', c: 'desliza' },
+    { t: 'Abro sem internet', s: 'Sem internet? Eu abro mesmo assim. O que você mudar, sobe depois.', m: 'feliz', g: 'sim', c: 'offline' },
+    { t: 'Seu Pessoal limpo', s: 'O seu Pessoal ficou limpo: cada coisa uma vez só, com o ícone certo.', m: 'feliz', g: 'pisca', c: 'limpo' },
+    { t: 'Assistente mais claro', s: 'Meu lado assistente mostra tudo antes. Nada muda sem você confirmar.', m: 'feliz', g: 'sobrancelha', c: 'assist' },
+    { t: 'Nada some sem querer', s: 'Apagou sem querer? 24 horas na lixeira, e volta com um toque.', m: 'surpreso', g: 'sim', c: 'lixeira' },
+    { t: 'Eu fico na conversa', s: 'E na conversa, adivinha? Eu escrevo, gravo e leio junto com vocês.', m: 'feliz', c: 'conversa', v: 'digita' },
+    { t: 'Arraste a conversa', s: 'Arraste a conversa: fixe, arquive ou tranque. E mande foto para ver uma vez só.', m: 'feliz', g: 'sim', c: 'arrasta' },
+    { t: 'Stories com número', s: 'Nos stories, o anel agora conta quantos faltam ver. Curiosos agradecem.', m: 'surpreso', g: 'olhaLados', c: 'stories' },
+    { t: 'Achou, é só tocar', s: 'Também é possível achar alguém por telefone, e-mail ou ID. Simples assim.', m: 'feliz', g: 'olhaLados', c: 'achar' },
+    { t: 'Seu perfil do seu jeito', s: 'Seu perfil, do seu jeito: edite tudo e escolha o que aparece.', m: 'feliz', g: 'sobrancelha', c: 'perfil' },
+    { t: 'Meu time, seu time', s: 'E conte para mim: qual é o seu time? Eu lembro. Você vive.', m: 'feliz', c: 'time', v: 'torcida' },
   ],
 };
 const num = (v) => String(v).split('.').map((x) => parseInt(x, 10) || 0);
@@ -52,21 +53,37 @@ export function abreNovidades(quadros, aoFechar) {
   if (aberta || !quadros.length) return null;
   let i = 0, vez = 0; const antes = document.activeElement;
   const w = document.createElement('div'); w.className = 'nv'; w.tabIndex = -1; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', 'Novidades do Lembra');
-  w.innerHTML = `<div class="nv__bars">${quadros.map(() => '<i><b></b></i>').join('')}</div><button class="nv__pula" data-pula>Pular</button>
+  w.innerHTML = `<div class="nv__bars">${quadros.map(() => '<i><b></b></i>').join('')}</div><div class="nv__topo"><button class="nv__som" data-som></button><button class="nv__pula" data-pula>Pular</button></div>
     <div class="nv__palco" data-palco></div>
     <div class="nv__baixo snhwrap"><h2 data-t></h2><div class="snhb nv__fala"><span class="snhb__txt" aria-live="polite"></span></div><span class="nv__snh">${sininho('feliz', { size: 220 })}</span></div>
     <button class="nv__zona nv__zona--l" data-volta tabindex="-1" aria-label="Voltar"></button><button class="nv__zona nv__zona--r" data-vai tabindex="-1" aria-label="Próxima novidade"></button>
     <button class="nv__ok" data-ok><span></span></button>`;
   document.body.appendChild(w); document.body.classList.add('has-nv'); aberta = w; alive();
   const q = (s) => w.querySelector(s), snh = () => q('.nv__snh [data-snh]');
-  const fecha = () => { if (!aberta) return; aberta = null; document.removeEventListener('keydown', tecla, true); w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-nv'); }, 260); if (antes && antes.focus) antes.focus({ preventScroll: true }); if (aoFechar) aoFechar(); };
+  const fecha = () => { if (!aberta) return; aberta = null; voz.fim(); document.removeEventListener('keydown', tecla, true); w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-nv'); }, 260); if (antes && antes.focus) antes.focus({ preventScroll: true }); if (aoFechar) aoFechar(); };
+  const voz = locutor(); let espera = false;
+  const rapidez = (s) => (vozLigada() && temVoz(s.c) ? Math.round((duracao(s.c) * 0.85) / s.s.length) : 20);
+  const rotulo = () => {
+    const on = vozLigada(), b = q('[data-som]'); b.hidden = !temVoz(quadros[i].c);
+    b.innerHTML = icon(on ? 'volume' : 'mudo', 24); b.setAttribute('aria-label', on ? 'Desligar a voz' : 'Ligar a voz');
+    q('[data-ok] span').textContent = espera ? 'Ouvir' : i < quadros.length - 1 ? 'Próxima' : 'Bora!';
+  };
+  /* sem toque antes, o celular segura o som: o primeiro toque vira "Ouvir" */
+  const fala = async () => {
+    const minha = vez, s = quadros[i]; espera = false;
+    if (!vozLigada() || !temVoz(s.c)) { voz.para(); rotulo(); return; }
+    const ok = await voz.fala(s.c, snh);
+    if (minha !== vez || !aberta || !vozLigada()) return;
+    espera = !ok; rotulo();
+    if (quadros[i + 1]) carrega(quadros[i + 1].c);
+  };
   const mostra = (dir = 1) => {
     const s = quadros[i], minha = ++vez; w.dataset.c = s.c; w.style.setProperty('--dir', dir);
     w.querySelectorAll('.nv__bars i').forEach((b, k) => b.classList.toggle('is-on', k <= i));
     const velho = q('[data-palco] .nvc:not(.is-sai)'); if (velho) { velho.classList.add('is-sai'); setTimeout(() => velho.remove(), 220); }
     setTimeout(() => { if (minha === vez) q('[data-palco]').insertAdjacentHTML('beforeend', (CENAS[s.c] || CENAS.abre)()); }, velho ? 160 : 0);
     const t = q('[data-t]'); t.textContent = s.t; t.classList.remove('is-in'); void t.offsetWidth; t.classList.add('is-in');
-    q('[data-ok] span').textContent = i < quadros.length - 1 ? 'Próxima' : 'Bora!';
+    voz.para(); espera = false; rotulo();
     const e = snh();
     if (e) {
       const r = s.v ? roupa(s.v) : { mood: s.m || 'feliz', l: ['baixo'], r: ['baixo'] };
@@ -74,11 +91,13 @@ export function abreNovidades(quadros, aoFechar) {
       setMood(e, s.m || 'feliz');
       if (!s.v) { veste(e, null); setTimeout(() => minha === vez && act(e, s.g || 'sim'), 380); }
     }
-    say(e, s.s, { bubble: q('.snhb__txt'), speed: 20 });
+    say(e, s.s, { bubble: q('.snhb__txt'), speed: rapidez(s) });
+    fala();
   };
-  const anda = (n) => { if (i + n < 0) return; if (i + n >= quadros.length) { fecha(); return; } i += n; mostra(n); import('./sound.js').then((m) => m.msgVai && m.msgVai()).catch(() => {}); };
-  const tecla = (e) => { if (e.key === 'Escape') { e.preventDefault(); fecha(); } else if (e.key === 'ArrowRight' || (e.key === 'Enter' && document.activeElement === w)) anda(1); else if (e.key === 'ArrowLeft') anda(-1); else if (e.key === 'Tab') { const f = [q('[data-pula]'), q('[data-ok]')]; e.preventDefault(); f[document.activeElement === f[1] ? 0 : 1].focus(); } };
+  const anda = (n) => { if (espera && n > 0) { const s = quadros[i]; say(snh(), s.s, { bubble: q('.snhb__txt'), speed: rapidez(s) }); fala(); return; } if (i + n < 0) return; if (i + n >= quadros.length) { fecha(); return; } i += n; mostra(n); import('./sound.js').then((m) => m.msgVai && m.msgVai()).catch(() => {}); };
+  const tecla = (e) => { if (e.key === 'Escape') { e.preventDefault(); fecha(); } else if (e.key === 'ArrowRight' || (e.key === 'Enter' && document.activeElement === w)) anda(1); else if (e.key === 'ArrowLeft') anda(-1); else if (e.key === 'Tab') { const f = [q('[data-som]'), q('[data-pula]'), q('[data-ok]')].filter((x) => !x.hidden), k = f.indexOf(document.activeElement); e.preventDefault(); f[k < 0 ? f.length - 1 : (k + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus(); } };
   document.addEventListener('keydown', tecla, true);
+  q('[data-som]').onclick = () => { ligaVoz(!vozLigada()); fala(); };
   q('[data-pula]').onclick = fecha; q('[data-ok]').onclick = () => anda(1); q('[data-vai]').onclick = () => anda(1); q('[data-volta]').onclick = () => anda(-1);
   requestAnimationFrame(() => w.classList.add('is-in')); mostra(); w.focus({ preventScroll: true });
   return { fecha };
