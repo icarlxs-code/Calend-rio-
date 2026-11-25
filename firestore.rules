@@ -11,15 +11,56 @@ service cloud.firestore {
         && request.auth.token.email in ['icarlxs@gmail.com', 'contatopedrazzi1@gmail.com'];
     }
 
+    // ---------- nada some sem a pessoa pedir ----------
+    // Apagar = marcar "deletedAt" (o conteúdo fica) por 24 h. Só depois disso dá para apagar de vez.
+    function naLixeira(d) { return d.get('deletedAt', null) != null; }
+    // criar: nunca já apagado, nunca a marca antiga "_del"
+    function criaOk() { return !('_del' in request.resource.data) && !naLixeira(request.resource.data); }
+    // marca da lixeira: por quem está logado e com 24 h exatas
+    function marcaOk() {
+      return request.resource.data.deletedBy == request.auth.uid
+        && request.resource.data.deletedAt is int && request.resource.data.purgeAt is int
+        && request.resource.data.purgeAt == request.resource.data.deletedAt + 86400000
+        && request.resource.data.deletedAt <= request.time.toMillis() + 600000;
+    }
+    // o essencial de um item nunca é tirado numa edição
+    function fica(k) { return !(k in resource.data) || k in request.resource.data; }
+    function editaOk() {
+      return !('_del' in request.resource.data)
+        && fica('title') && fica('date') && fica('name') && fica('text') && fica('kind') && fica('entries')
+        && (naLixeira(resource.data)
+          // está na lixeira: continua nela (edição de outro aparelho) ou é restaurado de propósito (deletedAt: null)
+          ? ('deletedAt' in request.resource.data
+             && (request.resource.data.deletedAt == null
+                 || (request.resource.data.deletedAt == resource.data.deletedAt && request.resource.data.purgeAt == resource.data.purgeAt && request.resource.data.deletedBy == resource.data.deletedBy)))
+          : (!naLixeira(request.resource.data) || marcaOk()));
+    }
+    // apagar de vez: só depois das 24 h na lixeira
+    function venceu() {
+      return resource.data.get('deletedAt', null) is int && resource.data.get('purgeAt', null) is int
+        && resource.data.purgeAt >= resource.data.deletedAt + 86400000
+        && resource.data.purgeAt < request.time.toMillis();
+    }
+    // exceção (LGPD): a própria pessoa excluindo a conta, com login e marca feitos há menos de 10 minutos
+    function apagandoConta(uid) {
+      return request.auth.uid == uid
+        && request.time.toMillis() - request.auth.token.auth_time * 1000 < 600000
+        && get(/databases/$(database)/documents/users/$(uid)).data.get('accountDeletion', null) != null
+        && request.time.toMillis() - get(/databases/$(database)/documents/users/$(uid)).data.accountDeletion.at.toMillis() < 600000;
+    }
+
     // Dados internos da dupla: só Henrique e Matheus leem e escrevem
-    match /companies/{id} { allow read, write: if isTeam(); }
-    match /events/{id}    { allow read, write: if isTeam(); }
-    match /notes/{id}     { allow read, write: if isTeam(); }
-    match /settings/{id}  { allow read, write: if isTeam(); }
+    match /companies/{id} { allow read: if isTeam(); allow create: if isTeam() && criaOk(); allow update: if isTeam() && editaOk(); allow delete: if isTeam() && venceu(); }
+    match /events/{id}    { allow read: if isTeam(); allow create: if isTeam() && criaOk(); allow update: if isTeam() && editaOk(); allow delete: if isTeam() && venceu(); }
+    match /notes/{id}     { allow read: if isTeam(); allow create: if isTeam() && criaOk(); allow update: if isTeam() && editaOk(); allow delete: if isTeam() && venceu(); }
+    match /settings/{id}  { allow read: if isTeam(); allow create: if isTeam() && criaOk(); allow update: if isTeam() && editaOk(); allow delete: if isTeam() && venceu(); }
 
     // Agenda pessoal: cada um vê só a sua (nem o parceiro acessa)
     match /pessoal/{uid}/{rest=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid && criaOk();
+      allow update: if request.auth != null && request.auth.uid == uid && editaOk();
+      allow delete: if request.auth != null && request.auth.uid == uid && (venceu() || apagandoConta(uid));
     }
 
     // Notificações: aparelhos cadastrados, pedidos de teste e registro de atividade
@@ -49,7 +90,10 @@ service cloud.firestore {
         && request.auth.uid in teamOf(owner).members;
     }
     match /ws/{uid}/{rest=**} {
-      allow read, write: if request.auth != null && (request.auth.uid == uid || inTeam(uid));
+      allow read: if request.auth != null && (request.auth.uid == uid || inTeam(uid));
+      allow create: if request.auth != null && (request.auth.uid == uid || inTeam(uid)) && criaOk();
+      allow update: if request.auth != null && (request.auth.uid == uid || inTeam(uid)) && editaOk();
+      allow delete: if request.auth != null && ((request.auth.uid == uid && (venceu() || apagandoConta(uid))) || (inTeam(uid) && venceu()));
     }
 
     // Equipe da agenda compartilhada: o dono controla; o convidado só entra (gastando um convite válido,

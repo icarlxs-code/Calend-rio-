@@ -6,6 +6,7 @@ import * as fsMod from 'firebase/firestore';
 import * as authMod from 'firebase/auth';
 import * as fnMod from 'firebase/functions';
 import { CONFIG } from '../config.js';
+import { mudancas, vencido } from './lixeira-core.js';
 
 let fs, auth, db, authApi, functions;
 
@@ -58,7 +59,7 @@ export async function connect(config) {
     confirmReset: (code, pass) => authApi.confirmPasswordReset(auth, code, pass),
     applyCode: (code) => authApi.applyActionCode(auth, code),
     // sair: a agenda guardada neste celular é apagada (celular emprestado não guarda nada de ninguém)
-    signOut: async () => { while (subs.length) subs.pop().stop(); await idb.clear().catch(() => {}); return authApi.signOut(auth); },
+    signOut: async () => { while (subs.length) subs.pop().stop(); await idb.clear().catch(() => {}); try { indexedDB.deleteDatabase('lembra-backup'); } catch { /* ok */ } return authApi.signOut(auth); },
     signUp: async (email, pass, name) => {
       const cred = await authApi.createUserWithEmailAndPassword(auth, email, pass);
       if (name) await authApi.updateProfile(cred.user, { displayName: name }).catch(() => {});
@@ -92,9 +93,10 @@ const ref = (name, id) => fs.doc(db, ...base, name, id);
 /* ---------- agenda guardada no celular: ao abrir, o banco manda SÓ o que mudou ----------
    Cada gravação leva "_u" (hora do servidor). O celular guarda tudo (IndexedDB) e, ao abrir, pede só os
    documentos com _u depois da última vez — em vez de reler a agenda inteira a cada abertura (economiza a
-   cota grátis de leituras do Firebase). Apagar vira uma marca "_del" (os outros celulares ficam sabendo).
+   cota grátis de leituras do Firebase). Apagar vira uma marca "deletedAt" com o conteúdo inteiro (lixeira de 24 h).
+   A marca antiga "_del" só é lida: nunca mais é gravada.
    A cada 3 dias relê tudo, para conferir. Se o armazenamento do celular falhar, funciona como antes. */
-const SYNC_V = 1, FULL_EVERY = 3 * 864e5, OVERLAP = 10 * 60e3;
+const SYNC_V = 2, FULL_EVERY = 3 * 864e5, OVERLAP = 10 * 60e3;
 const stamp = (item) => ({ ...clean(item), _u: fs.serverTimestamp() });
 const idb = (() => {
   let dbp = null;
@@ -123,7 +125,7 @@ function syncCollection(path, onList, onErr) {
   const list = () => [...docs.values()];
   const emit = () => onList(list());
   const save = () => { clearTimeout(saveT); saveT = setTimeout(() => idb.put(key, { docs: Object.fromEntries(docs), since, fullAt }).catch(() => {}), 1500); };
-  const me = { docs, emit, save };
+  const me = { docs, emit, save, hora: () => since };
   live.set(liveKey(path), me);
   const ready = new Promise((resolve) => {
     const start = (full) => {
@@ -168,9 +170,19 @@ function syncCollection(path, onList, onErr) {
 function localApply(path, id, item) {
   const l = live.get(liveKey(path));
   if (!l) return;
-  if (item) l.docs.set(id, { ...clean(item), id }); else l.docs.delete(id);
+  l.docs.set(id, { ...(l.docs.get(id) || {}), ...clean(item), id });
   l.emit(); l.save();
 }
+/* grava só o que mudou (campo a campo): um aparelho desatualizado não apaga o que outro escreveu,
+   e uma edição nunca tira um item da lixeira */
+function campos(path, item) {
+  const base = live.get(liveKey(path))?.docs.get(item.id), { por, tira } = mudancas(base, item), dados = { ...clean(por), _u: fs.serverTimestamp() };
+  for (const k of tira) dados[k] = fs.deleteField();
+  if (!base) dados._del = fs.deleteField();
+  return [dados, { mergeFields: Object.keys(dados) }];
+}
+const marcaEm = (d) => [{ ...d, _u: fs.serverTimestamp() }, { mergeFields: [...Object.keys(d), '_u'] }];
+async function emLotes(lista, n, fn) { for (let i = 0; i < lista.length; i += n) { const batch = fs.writeBatch(db); lista.slice(i, i + n).forEach((x) => fn(batch, x)); await batch.commit(); } }
 const subs = [];
 
 /* ---------- celular por SMS (Firebase Phone Auth) ----------
@@ -318,15 +330,15 @@ const backend = {
     if (joins) await Promise.all(joins.docs.map((d) => fs.deleteDoc(d.ref).catch(() => {})));
     await fs.deleteDoc(fs.doc(db, 'teams', owner)).catch(() => {});
   },
-  async deletePersonal() {
-    const u = auth.currentUser;
-    const snap = await fs.getDocs(fs.collection(db, 'pessoal', u.uid, 'itens'));
-    for (let i = 0; i < snap.docs.length; i += 20) {
-      const batch = fs.writeBatch(db);
-      snap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
-      await batch.commit();
-    }
+  /* única exclusão direta do app: a conta que a própria pessoa mandou apagar (senha conferida há menos de 10 min) */
+  async contaLe() {
+    const u = auth.currentUser, out = [];
+    for (const p of [...['events', 'companies', 'notes', 'settings'].map((c) => ['ws', u.uid, c]), ['pessoal', u.uid, 'itens']]) { const snap = await fs.getDocs(fs.collection(db, ...p)); snap.docs.forEach((d) => out.push({ path: [...p, d.id], data: d.data() })); }
+    return out;
   },
+  async contaMarca(on) { const u = auth.currentUser; await fs.setDoc(fs.doc(db, 'users', u.uid), { accountDeletion: on ? { at: fs.serverTimestamp() } : null }, { merge: true }); },
+  async contaApaga(lista) { await emLotes(lista, 100, (bt, x) => bt.delete(fs.doc(db, ...x.path))); },
+  async contaRepoe(lista) { await emLotes(lista, 100, (bt, x) => bt.set(fs.doc(db, ...x.path), x.data)); },
   async deleteOwnDocs(uid) {
     await fs.deleteDoc(fs.doc(db, 'stats', uid)).catch(() => {});
     await fs.deleteDoc(fs.doc(db, 'users', uid));
@@ -355,39 +367,44 @@ const backend = {
     return s.stop;
   },
   writePersonal(item) {
-    const path = ['pessoal', auth.currentUser.uid, 'itens'];
+    const path = ['pessoal', auth.currentUser.uid, 'itens'], g = campos(path, item);
     localApply(path, item.id, item);
-    return fs.setDoc(fs.doc(db, ...path, item.id), stamp(item));
+    return fs.setDoc(fs.doc(db, ...path, item.id), ...g);
   },
-  delPersonal(id) {
+  /* lixeira: marca (ou tira a marca) sem tocar no conteúdo */
+  markPersonal(ids, marca) {
     const path = ['pessoal', auth.currentUser.uid, 'itens'];
-    localApply(path, id, null);
-    return fs.setDoc(fs.doc(db, ...path, id), { _del: true, _u: fs.serverTimestamp() });
+    for (const id of ids) localApply(path, id, marca);
+    return emLotes(ids, 400, (bt, id) => bt.set(fs.doc(db, ...path, id), ...marcaEm(marca)));
   },
   write(name, item) {
+    const g = campos([...base, name], item);
     localApply([...base, name], item.id, item);
-    return fs.setDoc(ref(name, item.id), stamp(item));
+    return fs.setDoc(ref(name, item.id), ...g);
   },
   async writeMany(ops) {
     // até 400 por lote (cada item gravado uma vez só)
-    for (const { col: name, item } of ops) localApply([...base, name], item.id, item);
-    for (let i = 0; i < ops.length; i += 400) {
-      const batch = fs.writeBatch(db);
-      ops.slice(i, i + 400).forEach(({ col: name, item }) => batch.set(ref(name, item.id), stamp(item)));
-      await batch.commit();
-    }
+    const L = ops.map(({ col: name, item }) => { const g = campos([...base, name], item); localApply([...base, name], item.id, item); return [ref(name, item.id), g]; });
+    await emLotes(L, 400, (bt, [r, g]) => bt.set(r, ...g));
   },
-  del(name, id) {
-    localApply([...base, name], id, null);
-    return fs.setDoc(ref(name, id), { _del: true, _u: fs.serverTimestamp() });
+  async mark(name, ids, marca) {
+    for (const id of ids) localApply([...base, name], id, marca);
+    await emLotes(ids, 400, (bt, id) => bt.set(ref(name, id), ...marcaEm(marca)));
   },
-  async delMany(name, ids) {
-    for (const id of ids) localApply([...base, name], id, null);
-    for (let i = 0; i < ids.length; i += 400) {
-      const batch = fs.writeBatch(db);
-      ids.slice(i, i + 400).forEach((id) => batch.set(ref(name, id), { _del: true, _u: fs.serverTimestamp() }));
-      await batch.commit();
+  /* passadas as 24 h: apaga de vez o que já venceu. Usa a hora do SERVIDOR (última gravação vista), não a do celular;
+     a regra do banco confere de novo e recusa antes da hora. */
+  async purga(cols) {
+    const u = auth.currentUser; if (!u) return 0;
+    let n = 0;
+    const paths = [...(cols || []).map((c) => [...base, c]), ['pessoal', u.uid, 'itens']];
+    for (const p of paths) {
+      const l = live.get(liveKey(p)); if (!l) continue;
+      const h = Math.min(l.hora() || 0, Date.now()), ids = [...l.docs.values()].filter((d) => vencido(d, h) && d.purgeAt - d.deletedAt >= 24 * 36e5).map((d) => d.id).slice(0, 200);
+      if (!ids.length) continue;
+      try { await emLotes(ids, 100, (bt, id) => bt.delete(fs.doc(db, ...p, id))); n += ids.length; } catch (e) { console.warn('purga', e.code || e.message); }
     }
+    if (n) fs.setDoc(fs.doc(db, 'stats', u.uid), { purged: fs.increment(n) }, { merge: true }).catch(() => {});
+    return n;
   },
   /* sair da conta: apaga a agenda guardada neste celular */
   clearLocal: () => idb.clear().catch(() => {}),

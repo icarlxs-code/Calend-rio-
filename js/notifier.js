@@ -98,7 +98,9 @@ export function onActivity(a) {
     const e = semNome(a.events[0]);
     msg = a.events.length === 1
       ? changeMessage(e, null, { actor, company: coName(e.companyId), now: nowSP() })
-      : { title: `${actor} removeu ${a.events.length} itens da agenda`, body: `${coName(e.companyId) ? coName(e.companyId) + ' · ' : ''}a partir de ${e.date.slice(8, 10)}/${e.date.slice(5, 7)}` };
+      : { title: `${actor} removeu ${a.count || a.events.length} itens da agenda`, body: `${coName(e.companyId) ? coName(e.companyId) + ' · ' : ''}a partir de ${e.date.slice(8, 10)}/${e.date.slice(5, 7)}` };
+  } else if (a.kind === 'restored') {
+    msg = { title: `${actor} restaurou ${a.count === 1 ? 'um item' : `${a.count} itens`} da agenda`, body: a.events?.[0] ? `${coName(a.events[0].companyId) ? coName(a.events[0].companyId) + ' · ' : ''}a partir de ${a.events[0].date.slice(8, 10)}/${a.events[0].date.slice(5, 7)}` : '' };
   } else if (a.kind === 'series') {
     msg = { title: `${actor} adicionou ${a.count} itens repetidos`, body: `${tituloSeguro({ title: a.label || '' })}${coName(a.sample?.companyId) ? ' · ' + coName(a.sample.companyId) : ''}` };
   } else if (a.kind === 'series-edit') {

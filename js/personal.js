@@ -1,6 +1,7 @@
 /* Espaço Pessoal: privado de cada pessoa. Fica em pessoal/{uid}/itens na nuvem
    (só o dono lê e escreve) e não se mistura com o calendário de trabalho.
    Tipos de documento: compromisso/lembrete (padrão), lista ("list") e preferências ("prefs"). */
+import { marca, desmarca, novoLote, apagado, conteudo, vencido } from './lixeira-core.js';
 import { ehRemedio, tituloSeguro, avisoRemedio } from '../functions/remedio.js';
 import { iaOk } from './ia-consent.js';
 import { store } from './store.js';
@@ -41,7 +42,7 @@ export const listIcon = (l) => (l && LIST_ICONS[l.ic] ? l.ic : OLD_EMOJI[l?.emoj
 const DEFAULT_PREFS = { reminders: true, morning: true, night: true, nudges: true, water: true, meals: true, faith: true, freq: 'normal' };
 
 const LS = 'cal.pessoal.v1';
-let items = [], started = false;
+let items = [], lixo = [], started = false;
 const listeners = new Set();
 const isEvent = (x) => !x.kind || x.kind === 'event';
 
@@ -50,13 +51,17 @@ export const personal = {
   get events() { return items.filter(isEvent); },
   // anotações do dia a dia ("deixei o tênis em cima da mesa"): mais novas primeiro
   get memos() { return items.filter((x) => x.kind === 'memo').sort((a, b) => (b.at || 0) - (a.at || 0)); },
-  get lists() { return items.filter((x) => x.kind === 'list').sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)); },
+  get trash() { return lixo; },
+  get entradasNaLixeira() { const o = []; for (const l of items) if (l.kind === 'list') for (const e of l.entries || []) if (apagado(e)) o.push({ lista: l, entry: e }); return o; },
+  get lists() { return items.filter((x) => x.kind === 'list').map(semLixo).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)); },
   get prefs() { return { ...DEFAULT_PREFS, ...(items.find((x) => x.kind === 'prefs') || {}) }; },
   ready: false,
   gate: null, // portão do plano (definido pelo app)
   on(fn) { listeners.add(fn); return () => listeners.delete(fn); },
-  item: (id) => items.find((x) => x.id === id),
+  item: (id) => semLixo(items.find((x) => x.id === id)),
 };
+/* a lista como a pessoa vê (sem os itens que estão na lixeira) */
+function semLixo(l) { return l && l.kind === 'list' && (l.entries || []).some(apagado) ? { ...l, entries: l.entries.filter((e) => !apagado(e)) } : l; }
 const emit = () => { listeners.forEach((f) => f()); syncPersonalSchedule(); };
 const cloud = () => (store.mode === 'cloud' && store.backendApi && store.backendApi.writePersonal ? store.backendApi : null);
 
@@ -65,14 +70,14 @@ export function startPersonal() {
   started = true;
   const c = cloud();
   if (c) {
-    c.subscribePersonal((list) => { items = list; personal.ready = true; personal.error = null; emit(); }, (err) => {
+    c.subscribePersonal((list) => { items = list.filter((x) => !apagado(x)); lixo = list.filter(apagado); personal.ready = true; personal.error = null; emit(); }, (err) => {
       console.error('pessoal', err);
       personal.error = /permission/i.test(String(err?.code || err?.message)) ? 'rules' : 'net';
       personal.ready = true;
       emit();
     });
   } else {
-    try { items = JSON.parse(localStorage.getItem(LS) || '[]'); } catch { items = []; }
+    try { const t = JSON.parse(localStorage.getItem(LS) || '[]'); items = t.filter((x) => !apagado(x)); lixo = t.filter((x) => apagado(x) && !vencido(x)); } catch { items = []; }
     personal.ready = true;
     emit();
   }
@@ -82,7 +87,7 @@ function writeFailed(e) {
   if (/permission/i.test(String(e?.code || e?.message))) { personal.error = 'rules'; emit(); }
   else if (store.onError) store.onError(e);
 }
-const saveLocal = () => { try { localStorage.setItem(LS, JSON.stringify(items)); } catch { /* cheio */ } };
+const saveLocal = () => { try { localStorage.setItem(LS, JSON.stringify([...items, ...lixo])); } catch { /* cheio */ } };
 
 export function savePersonal(it) {
   // sem plano ativo: nada é gravado (só as preferências da ficha)
@@ -91,6 +96,8 @@ export function savePersonal(it) {
   if (!it.id) it.id = uid('p_');
   if (!it.createdAt) it.createdAt = Date.now();
   const i = items.findIndex((x) => x.id === it.id);
+  // lista: os itens que estão na lixeira continuam guardados dentro dela (saem de vez depois de 24 h)
+  if (it.kind === 'list' && i >= 0) { const tem = new Set((it.entries || []).map((e) => e.id)); it.entries = [...(it.entries || []), ...(items[i].entries || []).filter((e) => apagado(e) && !tem.has(e.id) && !vencido(e))]; }
   if (personal.onSaved) try { personal.onSaved(i >= 0 ? items[i] : null, it); } catch { /* ok */ }
   items = i >= 0 ? items.map((x) => (x.id === it.id ? it : x)) : [...items, it];
   const c = cloud();
@@ -98,12 +105,24 @@ export function savePersonal(it) {
   emit();
   return it;
 }
-export function removePersonal(id) {
-  if (personal.gate && !personal.gate({ id })) return;
-  items = items.filter((x) => x.id !== id);
+/* Apagar = lixeira de 24 h, com o conteúdo inteiro. Devolve o lote (para o Desfazer). */
+export function removePersonal(id, { via = 'manual', lote = novoLote(), agora = Date.now() } = {}) {
+  if (personal.gate && !personal.gate({ id })) return null;
+  const it = items.find((x) => x.id === id); if (!it) return null;
+  const m = marca({ por: store.user?.uid || store.me || '', via, lote, agora });
+  items = items.filter((x) => x.id !== id); lixo = [...lixo.filter((x) => x.id !== id), { ...it, ...m }];
   const c = cloud();
-  if (c) c.delPersonal(id).catch(writeFailed); else saveLocal();
+  if (c) c.markPersonal([id], m).catch(writeFailed); else saveLocal();
   emit();
+  return lote;
+}
+export function restorePersonal(ids) {
+  const L = lixo.filter((x) => ids.includes(x.id) && !vencido(x)); if (!L.length) return 0;
+  const S = new Set(L.map((x) => x.id)); lixo = lixo.filter((x) => !S.has(x.id)); items = [...items.filter((x) => !S.has(x.id)), ...L.map(conteudo)];
+  const c = cloud();
+  if (c) c.markPersonal([...S], desmarca()).catch(writeFailed); else saveLocal();
+  emit();
+  return L.length;
 }
 export const savePrefs = (p) => savePersonal({ ...personal.prefs, ...p, id: 'prefs', kind: 'prefs' });
 
@@ -124,8 +143,15 @@ export function addEntry(list, text) {
   return savePersonal({ ...list, entries: [...(list.entries || []), { id: uid('i'), text: t.slice(0, 200), done: false }] });
 }
 export const toggleEntry = (list, eid) => savePersonal({ ...list, entries: list.entries.map((e) => (e.id === eid ? { ...e, done: !e.done } : e)) });
-export const removeEntry = (list, eid) => savePersonal({ ...list, entries: list.entries.filter((e) => e.id !== eid) });
-export const clearDone = (list) => savePersonal({ ...list, entries: list.entries.filter((e) => !e.done) });
+function apagaEntradas(listId, quais, via) {
+  const l = items.find((x) => x.id === listId); if (!l) return null;
+  const lote = novoLote(), m = marca({ por: store.user?.uid || store.me || '', via, lote }); let n = 0;
+  const entries = (l.entries || []).map((e) => (!apagado(e) && quais(e) ? (n++, { ...e, ...m }) : e));
+  if (!n) return null; savePersonal({ ...l, entries }); return lote;
+}
+export const removeEntry = (list, eid) => apagaEntradas(list.id, (e) => e.id === eid, 'manual');
+export const clearDone = (list) => apagaEntradas(list.id, (e) => e.done, 'lote');
+export function restoreEntries(pares) { let n = 0; const por = {}; pares.forEach(([l, e]) => (por[l] = por[l] || new Set()).add(e)); for (const [lid, S] of Object.entries(por)) { const l = items.find((x) => x.id === lid); if (!l) continue; savePersonal({ ...l, entries: l.entries.map((e) => (S.has(e.id) && apagado(e) && !vencido(e) ? (n++, conteudo(e)) : e)) }); } return n; }
 
 /* ---------- compromissos e repetições ---------- */
 export function occursOn(it, day) {
@@ -151,6 +177,7 @@ export function occurrences(from, to) {
   }
   return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.item.time || '99') < (b.item.time || '99') ? -1 : 1));
 }
+/* só o que aparece como atrasado (até 60 dias); nada mais antigo é apagado */
 export function overdue() {
   const t = todayKey();
   return personal.events.filter((it) => (it.repeat || 'none') === 'none' && !it.done && it.date < t && it.date >= addDays(t, -60))
@@ -160,7 +187,7 @@ export function toggleDone(it, day) {
   if (it.repeat && it.repeat !== 'none') {
     const s = new Set(it.doneDates || []);
     s.has(day) ? s.delete(day) : s.add(day);
-    return savePersonal({ ...it, doneDates: [...s].filter((d) => d >= addDays(todayKey(), -60)) });
+    return savePersonal({ ...it, doneDates: [...s] }); // o histórico fica inteiro (a Retrospectiva usa)
   }
   return savePersonal({ ...it, done: !it.done });
 }

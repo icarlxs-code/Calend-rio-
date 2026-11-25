@@ -1,4 +1,5 @@
 /* Ajustes: perfil, lembretes, sincronização, backup */
+import { avisaApagado, listaHtml } from '../lixeira.js';
 import { humorOn } from '../humor.js';
 import { iaStatus } from '../ia-consent.js';
 import { coachTest } from '../coach.js';
@@ -131,6 +132,7 @@ export function renderSettings() {
         <button class="list__row" data-action="export">${icon('download', 18)}<span>Exportar backup (.json)</span>${icon('right', 16, 'muted')}</button>
         <label class="list__row">${icon('upload', 18)}<span>Importar backup</span><input type="file" accept="application/json,.json" data-action-change="import" hidden>${icon('right', 16, 'muted')}</label>
         ${store.demo ? `<button class="list__row" data-action="clear-demo">${icon('sparkle', 18)}<span>Apagar dados de exemplo</span>${icon('right', 16, 'muted')}</button>` : ''}
+        <button class="list__row" data-action="lixeira">${icon('trash', 18)}<span>Lixeira (24 horas)</span>${icon('right', 16, 'muted')}</button>
         <button class="list__row is-danger" data-action="clear-all">${icon('trash', 18)}<span>Apagar tudo</span>${icon('right', 16, 'muted')}</button>
       </div>
       <p class="fhelp">${store.state.companies.length} empresas · ${store.state.events.length} eventos · ${store.state.notes.length} bilhetes</p>
@@ -363,8 +365,9 @@ export const settingsActions = {
         ],
       });
       if (!mode) return;
-      await store.importData(text, { replace: mode === 'replace' });
-      toast('Backup importado');
+      if (mode === 'replace') { const n = store.state.events.length + store.state.companies.length + store.state.notes.length; if (n && !(await confirmDialog({ title: 'Substituir tudo?', text: `${n} ${n === 1 ? 'item atual vai' : 'itens atuais vão'} para a lixeira por 24 horas e o backup entra no lugar.`, html: listaHtml([...store.state.events, ...store.state.companies, ...store.state.notes]), ok: 'Substituir', danger: true, digite: 'APAGAR' }))) return; }
+      const lote = await store.importData(text, { replace: mode === 'replace' });
+      if (lote) avisaApagado(lote, 'Backup importado · o que havia antes'); else toast('Backup importado');
     } catch (e) {
       toast('Arquivo inválido');
     } finally {
@@ -372,9 +375,10 @@ export const settingsActions = {
     }
   },
   async clearAll() {
-    const ok = await confirmDialog({ title: 'Apagar TUDO?', text: 'Empresas, eventos e bilhetes serão apagados. Exporte um backup antes, se precisar.', ok: 'Apagar tudo', danger: true });
-    if (!ok) return;
-    await store.clearAll();
-    toast('Tudo apagado');
+    const L = [...store.state.events, ...store.state.companies, ...store.state.notes];
+    if (!L.length) return toast('Não há nada para apagar.');
+    if (!(await confirmDialog({ title: 'Apagar TUDO?', text: `${L.length} ${L.length === 1 ? 'item vai' : 'itens vão'} para a lixeira por 24 horas. Depois disso, saem de vez.`, html: listaHtml(L), ok: 'Continuar', danger: true }))) return;
+    if (!(await confirmDialog({ title: `Confirmar: apagar ${L.length} ${L.length === 1 ? 'item' : 'itens'}`, ok: `Apagar ${L.length}`, danger: true, digite: 'APAGAR' }))) return;
+    avisaApagado(await store.clearAll(), 'Tudo apagado');
   },
 };

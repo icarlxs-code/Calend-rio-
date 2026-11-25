@@ -5,6 +5,7 @@
    - Conversa com o Claude dentro do app (/ask), se houver chave da Anthropic
    Dados guardados num Durable Object com SQLite (veja entry.js e kvsql.js): chaves VAPID, aparelhos,
    listas de lembretes e a fila do relógio. O código usa a mesma interface do KV (env.CAL). */
+import { purgaLixeira } from './lixeira.js';
 import { escondeNome } from '../../functions/remedios-lista.js';
 import { loteDiario } from './lote.js';
 import { socialRoute } from './social.js';
@@ -186,7 +187,7 @@ export function splitActions(raw) {
   if (m) {
     try {
       const j = JSON.parse(m[1].replace(/^[^\[{]*/, '').replace(/[^\]}]*$/, ''));
-      actions = (Array.isArray(j) ? j : [j]).filter((a) => a && typeof a === 'object' && typeof a.acao === 'string').slice(0, 20);
+      actions = (Array.isArray(j) ? j : [j]).filter((a) => a && typeof a === 'object' && typeof a.acao === 'string').slice(0, 20).map((a) => (Array.isArray(a.ids) ? { ...a, ids: a.ids.filter((x) => typeof x === 'string').slice(0, 101) } : a));
     } catch { /* sem ações válidas */ }
     text = text.replace(m[0], '').trim();
   }
@@ -1170,6 +1171,7 @@ export async function cronTick(env, { now = Date.now(), meter = { pushes: 0 }, m
     await safe('aviso único', oneShot(env));
     await safe('vitalício (quem ganhou antes da surpresa)', vipMigrate(env, (uid) => vipNotify(env, uid)));
     await safe('vitalício (numeração sem buracos)', vipCompacta(env));
+    await safe('lixeira', purgaLixeira(env, now));
     await safe('lote de frases', loteDiario(env, now));
     await safe('ranking', monthlyAward(env, { stripe: stripeApi, getBill, putBill, notify: (id, msg) => send(env, id, msg) }));
   }

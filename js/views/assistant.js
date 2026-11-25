@@ -4,11 +4,13 @@ import { ui } from '../ui.js';
 import { TYPES, TYPE_ORDER, isPost, isMarketing } from '../constants.js';
 import { esc, todayKey, addDays, fromKey, fmtTime, fmtDuration, dayLabel, WD_SHORT, toMin, nowMin } from '../utils.js';
 import { icon } from '../icons.js';
-import { openSheet, sheetHead, avatar, toast } from '../components.js';
+import { openSheet, sheetHead, avatar, toast, confirmDialog } from '../components.js';
 import { dayBrief, freeTime, bestSlots, routine, evLabel } from '../planner.js';
 import { personConflicts } from '../insights.js';
 import { askClaude, presets } from '../claude-link.js';
-import { planAction } from '../agent.js';
+import { planAction, congela, mudou, executa, desfaz, quantosApaga, pedeSegunda } from '../agent.js';
+import { avisaApagado, listaHtml } from '../lixeira.js';
+import { novoLote } from '../lixeira-core.js';
 import { entende } from '../destino.js';
 import { personal, savePersonal, removePersonal, addMemo, guessCat } from '../personal.js';
 import { hasPro } from '../billing.js';
@@ -19,7 +21,10 @@ const LS_CHAT = 'cal.chat';
 let chat = (() => {
   try {
     // mensagens de erro antigas não ficam na conversa
-    return JSON.parse(localStorage.getItem(LS_CHAT) || '[]').filter((m) => !m.error && !/chave do Claude/.test(m.text || '')).slice(-30);
+    const L = JSON.parse(localStorage.getItem(LS_CHAT) || '[]');
+    // passadas as 24 h da lixeira, a conversa também não guarda o conteúdo do que foi apagado
+    for (const m of L) if (m.undo && Date.now() - (m.undo.at || 0) > 864e5) { delete m.undo; if (m.plan?.some((x) => x.apaga)) { m.plan = m.plan.map((x) => (x.apaga ? { ...x, text: 'Itens apagados', apaga: null, a: { acao: 'excluir' } } : x)); m.actions = m.plan.map((x) => x.a); } }
+    return L.filter((m) => !m.error && !/chave do Claude/.test(m.text || '')).slice(-30);
   } catch {
     return [];
   }
@@ -48,14 +53,16 @@ const md = (t) => esc(t)
   .replace(/\n/g, '<br>');
 /* Cartão com o que o assistente vai fazer na agenda */
 function actionsCard(m, i) {
-  const plans = m.actions.map((a) => { try { return planAction(a); } catch (e) { return { ok: false, text: 'Não entendi uma das ações.' }; } });
+  if (!m.plan) m.plan = congela(m.actions); // congelado: o cartão e o Confirmar usam a mesma lista
+  const plans = m.plan;
   const okCount = plans.filter((p) => p.ok).length;
   const st = m.actStatus || 'pending';
-  return `<div class="acard acard--${st}">
-    <div class="acard__head">${icon(st === 'done' ? 'check' : 'sparkle', 15)} ${st === 'done' ? 'Feito na agenda' : st === 'cancelled' ? 'Cancelado' : 'Vou fazer na agenda:'}</div>
-    ${plans.map((p) => `<div class="acard__row${p.ok ? '' : ' is-bad'}">${icon(p.ok ? 'calendar' : 'alert', 14)}<span>${esc(p.text)}${p.warn && st === 'pending' ? `<small>${esc(p.warn)}</small>` : ''}</span></div>`).join('')}
+  return `<div class="acard acard--${st === 'undone' ? 'cancelled' : st}">
+    <div class="acard__head">${icon(st === 'done' ? 'check' : 'sparkle', 15)} ${st === 'done' ? 'Feito na agenda' : st === 'undone' ? 'Desfeito' : st === 'cancelled' ? 'Cancelado' : 'Vou fazer na agenda:'}</div>
+    ${plans.map((p) => `<div class="acard__row${p.ok ? '' : ' is-bad'}">${icon(p.ok ? 'calendar' : 'alert', 14)}<span>${esc(p.text)}${p.warn && st === 'pending' ? `<small>${esc(p.warn)}</small>` : ''}</span>${p.apaga ? '<em class="apaga">APAGA</em>' : ''}</div>${p.apaga && st === 'pending' ? listaHtml(p.apaga) : ''}`).join('')}
     ${st === 'pending' && okCount ? `<div class="acard__btns"><button class="btn btn--primary btn--sm" data-act-ok="${i}">Confirmar</button><button class="btn btn--soft btn--sm" data-act-no="${i}">Cancelar</button></div>` : ''}
-    ${st === 'done' && m.actResult ? `<small class="acard__res">${esc(m.actResult)}</small>` : ''}
+    ${(st === 'done' || st === 'undone') && m.actResult ? `<small class="acard__res">${esc(m.actResult)}</small>` : ''}
+    ${st === 'done' && m.undo ? `<button class="btn-text btn-text--sm" data-act-undo="${i}">Desfazer</button>` : ''}
   </div>`;
 }
 /* Agenda ou nota? A pessoa escolhe antes de qualquer coisa ser guardada */
@@ -96,7 +103,7 @@ async function guarda(m, onde) {
     const it = savePersonal({ title: x.titulo, date: x.data, time: x.hora, cat: x.cat || guessCat(x.texto), repeat: x.repetir || 'none', remind: 'auto' }); if (!it) return false;
     m.desfaz = { pessoal: it.id };
   }
-  if (x.nota && personal.item(x.nota)) removePersonal(x.nota); // a nota virou compromisso
+  if (x.nota && personal.item(x.nota)) { const lt = removePersonal(x.nota, { via: 'assistente' }); m.notaLote = lt; } // a nota virou compromisso (fica na lixeira por 24 h)
   m.escStatus = 'feito'; m.escResult = `Na agenda ${x.espaco === 'work' ? 'de trabalho' : 'pessoal'}: ${quandoTxt(x)}`;
   okFx({ title: 'Na agenda!', sub: quandoTxt(x), item: { title: x.titulo, date: x.data, time: x.hora } });
   return true;
@@ -278,6 +285,11 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
       const send = async (q) => {
         q = (q || '').trim();
         if (!q || thinking) return;
+        // "desfaz" / "volta como estava": o último que o assistente fez nesta conversa
+        if (/^(desfaz(er|e|)?|desfa[cç]a|volta como (estava|era)|desfaz isso|volta tudo)[.! ]*$/i.test(q)) {
+          const u = [...chat].reverse().find((m) => m.undo);
+          chat.push({ role: 'user', text: q }); if (u) await desfazMsg(u, null); chat.push({ role: 'assistant', text: u ? u.actResult : 'Não tenho nada recente para desfazer.' }); saveChat(); redrawChat(a); return;
+        }
         // coisa para guardar: pergunta o lugar (ou vai direto quando a pessoa já disse)
         const x = entende(q, ui.space === 'personal' ? 'personal' : 'work');
         if (x) {
@@ -335,6 +347,11 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
     const c = a.el.querySelector('.chat');
     if (c) c.lastElementChild?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
+  async function desfazMsg(m, a) {
+    if (!m || !m.undo) return;
+    const n = await desfaz(m.undo); m.undo = null; m.actStatus = 'undone'; m.actResult = n ? 'Desfeito: voltou como estava.' : 'Não deu para desfazer: já saiu da lixeira.';
+    saveChat(); toast(n ? 'Voltou como estava ✓' : 'Já saiu da lixeira.'); if (a && !a.closed) redrawChat(a);
+  }
   function bindChat(a, send) {
     a.send = send;
     const el = a.el;
@@ -343,14 +360,16 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
       const m = chat[+b.dataset.actOk];
       if (!m || m.actStatus !== 'pending') return;
       b.disabled = true;
-      let n = 0, fails = 0;
-      for (const a of m.actions) {
-        try { const p = planAction(a); if (p.ok) n += (await p.run()) || 0; else fails++; } catch (e) { console.error(e); fails++; }
-      }
-      m.actStatus = 'done';
-      m.actResult = `${n} alteraç${n === 1 ? 'ão feita' : 'ões feitas'}${fails ? ` · ${fails} não deu para fazer` : ''}.`;
+      m.plan = m.plan || congela(m.actions);
+      if (mudou(m.plan)) { m.plan = congela(m.actions); saveChat(); toast('A agenda mudou. Confira a lista de novo.'); redrawChat(a); return; }
+      const q = quantosApaga(m.plan);
+      if (pedeSegunda(m.plan) && !(await confirmDialog({ title: `Apagar ${q} ${q === 1 ? 'item' : 'itens'}?`, text: 'Vão para a lixeira por 24 horas.', html: listaHtml(m.plan.filter((x) => x.ok && x.apaga).flatMap((x) => x.apaga)), ok: `Apagar ${q}`, danger: true }))) { b.disabled = false; return; }
+      if (mudou(m.plan)) { m.plan = congela(m.actions); saveChat(); toast('A agenda mudou. Confira a lista de novo.'); redrawChat(a); return; }
+      const lote = novoLote(), r = await executa(m.plan, { lote });
+      m.undo = r.undo; m.actStatus = 'done';
+      m.actResult = `${r.apagou ? `${r.apagou} ${r.apagou === 1 ? 'item' : 'itens'} na lixeira` : ''}${r.apagou && r.n > r.apagou ? ' · ' : ''}${r.n > r.apagou || !r.apagou ? `${r.n - r.apagou} alteraç${r.n - r.apagou === 1 ? 'ão feita' : 'ões feitas'}` : ''}${r.fails ? ` · ${r.fails} não deu para fazer` : ''}.`;
       saveChat();
-      toast(n ? 'Pronto! Agenda atualizada ✓' : 'Nada foi alterado');
+      toast(r.n ? (r.apagou ? `✓ ${r.apagou} ${r.apagou === 1 ? 'item' : 'itens'} na lixeira` : 'Pronto! Agenda atualizada ✓') : 'Nada foi alterado', r.n ? { action: 'Desfazer', ms: 10000, onAction: () => desfazMsg(m, a) } : {});
       redrawChat(a);
     }));
     const esco = (attr, fn) => el.querySelectorAll(`[data-esc-${attr}]`).forEach((b) => { const k = 'esc' + attr[0].toUpperCase() + attr.slice(1); b[b.tagName === 'INPUT' ? 'onchange' : 'onclick'] = async () => { const m = chat[+b.dataset[k]]; if (!m || !m.escolha || m._b) return; m._b = 1; try { await fn(m, b); } finally { delete m._b; } saveChat(); redrawChat(a); }; });
@@ -359,7 +378,8 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
     esco('nota', (m) => guarda(m, 'nota'));
     esco('dia', (m, b) => { m.escolha.data = b.dataset.d; return guarda(m, 'agenda'); });
     esco('data', (m, b) => { if (!b.value) return null; m.escolha.data = b.value; return guarda(m, 'agenda'); });
-    esco('undo', async (m) => { const d = m.desfaz || {}; if (d.pessoal) removePersonal(d.pessoal); if (d.trab) await store.removeMany('events', [d.trab]); if (m.escolha.nota) addMemo(m.escolha.texto); m.escStatus = 'cancelado'; m.desfaz = null; });
+    esco('undo', async (m) => { const d = m.desfaz || {}; if (d.pessoal) removePersonal(d.pessoal, { via: 'assistente' }); if (d.trab) await store.removeMany('events', [d.trab], { via: 'assistente' }); if (m.notaLote) { const { restauraLote } = await import('../lixeira.js'); await restauraLote(m.notaLote); m.notaLote = null; } m.escStatus = 'cancelado'; m.desfaz = null; });
+    el.querySelectorAll('[data-act-undo]').forEach((b) => (b.onclick = () => { b.disabled = true; desfazMsg(chat[+b.dataset.actUndo], a); }));
     const redo = el.querySelector('[data-redo]');
     if (redo) redo.onclick = () => {
       const pend = pendingOrders();

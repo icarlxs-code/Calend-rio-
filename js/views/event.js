@@ -1,4 +1,5 @@
 /* Detalhe do evento e editor (criar/editar) */
+import { avisaApagado, listaHtml } from '../lixeira.js';
 import { ajudante, ajudanteHtml } from '../ajudante.js';
 import { postStory } from '../stories.js';
 import { previewStory } from '../game.js';
@@ -125,6 +126,7 @@ async function deleteEvent(id, api) {
     if (next.length > 1) {
       const r = await chooseDialog({
         title: `Excluir ${EV()} repetido`,
+        bodyHtml: listaHtml(store.state.events.filter((x) => x.seriesId === e.seriesId && x.date >= e.date).sort((a, b) => (a.date < b.date ? -1 : 1))),
         options: [
           { label: 'Só este', value: 'one', danger: true },
           { label: `Este e os próximos (${next.length})`, value: 'next', danger: true },
@@ -134,16 +136,12 @@ async function deleteEvent(id, api) {
       if (r === 'next') ids = next;
     } else if (!(await confirmDialog({ title: `Excluir este ${EV()}?`, ok: 'Excluir', danger: true }))) return;
   } else if (!(await confirmDialog({ title: `Excluir este ${EV()}?`, text: store.team.length > 1 ? 'Ele some da agenda de todos.' : 'Ele some da sua agenda.', ok: 'Excluir', danger: true }))) return;
-  const backup = ids.map((i) => ({ ...store.event(i) }));
+  const itens = ids.map((i) => store.event(i)).filter(Boolean);
   const M = window.__motion, g = M && M.guardar([...document.querySelectorAll('#view .ecard')].find((x) => x.dataset.id === id));
-  await store.removeMany('events', ids);
+  const lote = await store.removeMany('events', ids, { via: itens.length > 1 ? 'lote' : 'manual' });
   if (M && !store.event(id)) M.excluido(g);
   api && api.close();
-  toast(ids.length > 1 ? `${ids.length} ${EV()}s excluídos` : `${EVc()} excluído`, {
-    action: 'Desfazer',
-    onAction: () => store.upsertMany('events', backup),
-    ms: 4500,
-  });
+  avisaApagado(lote, ids.length > 1 ? `${ids.length} ${EV()}s excluídos` : `${EVc()} excluído`);
 }
 
 /* ======================== EDITOR ======================== */

@@ -91,18 +91,20 @@ async function deleteEverything(password) {
     await Promise.all(invites.map((i) => b.deleteInvite(i.id).catch(() => {})));
     await b.deleteTeam?.(uid).catch(() => {});
   }
-  // 3) dados: espaço próprio inteiro (a agenda da dupla principal é compartilhada e fica)
-  if (store.solo && store.workspace === uid) {
-    for (const col of ['events', 'companies', 'notes', 'settings']) {
-      const ids = store.state[col].map((x) => x.id);
-      if (ids.length) await b.delMany(col, ids);
-    }
+  // 3) dados: lê tudo antes; se o login não puder ser encerrado no fim, devolve tudo (nunca fica conta viva e vazia)
+  const copia = await b.contaLe(), perfil = { ...(store.profile || {}) };
+  await b.contaMarca(true); // a regra do banco só aceita este apagar com a marca feita há menos de 10 minutos
+  try {
+    await b.contaApaga(copia);
+    await b.deleteOwnDocs?.(uid);
+    await account.deleteUser();
+  } catch (e) {
+    await b.saveProfile(uid, perfil).catch(() => {});
+    await b.contaRepoe(copia.filter((x) => !x.data._del && !x.data.deletedAt)).catch((x) => console.error('devolver agenda', x));
+    await b.contaMarca(false).catch(() => {});
+    throw e;
   }
-  await b.deletePersonal?.().catch(() => {});
-  await b.deleteOwnDocs?.(uid).catch(() => {});
-  // 4) login (a tela de entrada mostra que a conta foi excluída)
   try { sessionStorage.setItem('lembra.deleted', '1'); } catch { /* ok */ }
-  await account.deleteUser();
   try { Object.keys(localStorage).filter((k) => /^(lembra|cal\.|pauta)/.test(k)).forEach((k) => localStorage.removeItem(k)); } catch { /* ok */ }
 }
 

@@ -1,5 +1,6 @@
 /* Modo Pessoal: um "outro app" dentro do Calendário. Visual, telas e menu próprios,
    mesmo login. Só o dono vê o que está aqui (nem o parceiro, nem o trabalho). */
+import { avisaApagado, listaHtml } from '../lixeira.js';
 import { disposicao, acessorios, fraseDaHora } from '../hora.js';
 import { botaoMensagens } from '../social.js';
 import { ajudante, ajudanteHtml } from '../ajudante.js';
@@ -250,6 +251,7 @@ function renderPSettings() {
       <ol><li>Abra este endereço no <b>Safari</b> com o modo Pessoal aberto.</li><li>Toque em <b>Compartilhar</b> → <b>Adicionar à Tela de Início</b>.</li><li>Vai aparecer o ícone <b>“Pessoal”</b>, que abre direto aqui. Entre com o mesmo e-mail e senha.</li></ol></div>`)}
 
     ${section(`${icon('lock', 16)} Privacidade`, `<div class="pcard"><p>Tudo aqui fica guardado só na sua conta: ${totals.events} anotaç${totals.events === 1 ? 'ão' : 'ões'}, ${totals.lists} lista${totals.lists === 1 ? '' : 's'} e ${totals.bdays} aniversário${totals.bdays === 1 ? '' : 's'}. ${store.team.length > 1 ? 'Nem o parceiro nem os clientes conseguem ver.' : 'Ninguém mais consegue ver: nem clientes, nem quem divide a agenda de trabalho com você.'}</p></div>`)}
+    <button class="btn btn--soft btn--block" data-action="lixeira">${icon('trash', 16)} Lixeira (24 horas)</button>
     <button class="btn btn--soft btn--block" data-action="logout">Sair da conta</button>
     <div style="height:28px"></div>
   </div>`;
@@ -349,8 +351,8 @@ export const personalActions = {
   'memo-agenda': (b) => { const m = personal.item(b.dataset.id); if (m) import('./assistant.js').then((x) => x.openAssistant(m.text, { agenda: true, nota: m.id })); },
   'memo-del': async (b) => {
     const m = personal.item(b.dataset.id);
-    if (!m || !(await confirmDialog({ title: 'Apagar esta nota?', text: m.text, ok: 'Apagar', danger: true }))) return;
-    removePersonal(m.id);
+    if (!m || !(await confirmDialog({ title: 'Apagar esta nota?', text: `${m.text}\n\nFica na lixeira por 24 horas.`, ok: 'Apagar', danger: true }))) return;
+    avisaApagado(removePersonal(m.id), 'Nota apagada');
   },
   'p-done': (b) => {
     const it = personal.item(b.dataset.id);
@@ -423,9 +425,9 @@ function openList(id) {
     const f = el.querySelector('[data-form="entry"]');
     f.onsubmit = () => { const v = f.t.value; if (v.trim()) { addEntry(personal.item(id), v); refresh(true); } return false; };
     el.querySelectorAll('[data-entry]').forEach((b) => (b.onclick = () => { toggleEntry(personal.item(id), b.dataset.entry); refresh(); }));
-    el.querySelectorAll('[data-del-entry]').forEach((b) => (b.onclick = () => { removeEntry(personal.item(id), b.dataset.delEntry); refresh(); }));
+    el.querySelectorAll('[data-del-entry]').forEach((b) => (b.onclick = () => { const lt = removeEntry(personal.item(id), b.dataset.delEntry); refresh(); avisaApagado(lt, 'Item apagado'); }));
     const clr = el.querySelector('[data-clear]');
-    if (clr) clr.onclick = () => { clearDone(personal.item(id)); refresh(); };
+    if (clr) clr.onclick = async () => { const F = personal.item(id).entries.filter((e) => e.done); if (!(await confirmDialog({ title: `Limpar ${F.length} ${F.length === 1 ? 'item feito' : 'itens feitos'}?`, text: 'Vão para a lixeira por 24 horas.', html: listaHtml(F), ok: 'Limpar', danger: true }))) return; const lt = clearDone(personal.item(id)); refresh(); avisaApagado(lt, 'Itens feitos apagados'); };
     el.querySelector('[data-list-more]').onclick = () => openListForm(id);
   };
   const api = openSheet({ className: 'sheet--tall psheet', html: listHtml(personal.item(id)), onMount: mount });
@@ -470,11 +472,10 @@ function openListForm(id = null) {
       const del = el.querySelector('[data-del]');
       if (del) del.onclick = async () => {
         if (!(await confirmDialog({ title: 'Apagar a lista?', text: cur.name, ok: 'Apagar', danger: true }))) return;
-        const backup = personal.item(id);
-        removePersonal(id);
+        const lt = removePersonal(id);
         a.close();
         document.querySelectorAll('.psheet').length && [...document.querySelectorAll('.sheet-wrap.is-open [data-close]')].forEach((x) => x.click());
-        toast('Lista apagada', { action: 'Desfazer', onAction: () => savePersonal(backup) });
+        avisaApagado(lt, 'Lista apagada');
       };
       if (!cur) setTimeout(() => form.name.focus(), 300);
     },
@@ -538,9 +539,9 @@ export function openPersonalEditor(id = null, preset = {}) {
       const del = el.querySelector('[data-del]');
       if (del) del.onclick = async () => {
         if (!(await confirmDialog({ title: 'Apagar?', text: old.title, ok: 'Apagar', danger: true }))) return;
-        removePersonal(old.id);
+        const lt = removePersonal(old.id);
         a.close();
-        toast('Apagado', { action: 'Desfazer', onAction: () => savePersonal(old) });
+        avisaApagado(lt, 'Apagado');
       };
       if (!old) setTimeout(() => form.title.focus(), 300);
     },

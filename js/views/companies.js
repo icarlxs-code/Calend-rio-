@@ -1,4 +1,6 @@
 /* Empresas: lista, página da empresa, cadastro e link do cliente */
+import { avisaApagado, listaHtml } from '../lixeira.js';
+import { novoLote } from '../lixeira-core.js';
 import { nicheOf } from '../coach.js';
 import { store } from '../store.js';
 import { TYPES, PALETTE, isPost, WORK, ent, isMarketing, novo, nenhum, entFem } from '../constants.js';
@@ -229,15 +231,18 @@ export function openCompanyEditor(id = null, onSaved = null) {
       const evs = store.state.events.filter((e) => e.companyId === d.id);
       const ok = await confirmDialog({
         title: `Excluir ${d.name}?`,
-        text: evs.length ? `Os ${evs.length} compromissos daqui também serão apagados e o link do cliente deixará de funcionar.` : 'O link do cliente deixará de funcionar.',
+        text: evs.length ? `${evs.length === 1 ? 'O compromisso daqui vai' : `Os ${evs.length} compromissos daqui vão`} junto para a lixeira por 24 horas. O link do cliente deixa de funcionar.` : 'Vai para a lixeira por 24 horas. O link do cliente deixa de funcionar.',
+        html: evs.length ? listaHtml([...evs].sort((a, b) => (a.date < b.date ? -1 : 1))) : '',
         ok: 'Excluir',
         danger: true,
       });
       if (!ok) return;
-      await store.removeMany('events', evs.map((e) => e.id));
-      await store.remove('companies', d.id);
+      if (!store.canEdit('companies', store.company(d.id) || {})) { store._denied('companies', store.company(d.id)); return; }
+      const lote = novoLote();
+      if (evs.length) await store.removeMany('events', evs.map((e) => e.id), { via: 'empresa', lote });
+      await store.remove('companies', d.id, { via: 'empresa', lote });
       api.close();
-      toast('Excluído');
+      avisaApagado(lote, `${d.name} excluída${evs.length ? ` com ${evs.length} ${evs.length === 1 ? 'compromisso' : 'compromissos'}` : ''}`);
     };
     el.querySelector('[data-save]').onclick = async () => {
       read();

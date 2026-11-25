@@ -3,6 +3,7 @@ import { CONFIG } from '../config.js';
 import { todayKey, addDays, uid, randomToken, debounce, toMin, nowMin } from './utils.js';
 import { buildClientPayload } from './share.js';
 import { sanitizeItem } from './sanitize.js';
+import { marca, desmarca, novoLote, separa, conteudo, vencido } from './lixeira-core.js';
 
 const LS_DATA = 'pauta.data.v1';
 const LS_ME = 'pauta.me';
@@ -21,6 +22,7 @@ const readLocal = () => {
 
 export const store = {
   state: { companies: [], events: [], notes: [], settings: [] },
+  trash: [], // { col, item }: apagados pela pessoa nas últimas 24 h, com o conteúdo inteiro
   hooks: { eventChange: null, activity: null },
   mode: 'local',
   me: null,
@@ -149,35 +151,44 @@ export const store = {
     if (activity) logActivity(activity);
     this.emit();
   },
-  async remove(col, id) {
-    if (this._locked(col)) return;
-    const target = this.state[col]?.find((x) => x.id === id);
-    if (target && !this.canEdit(col, target)) {
-      this._denied(col, target);
-      return;
-    }
-    const old = this.state[col].find((x) => x.id === id);
-    if (col === 'events' && old) logActivity({ kind: 'deleted', events: [compactEvent(old)] });
-    this.state[col] = this.state[col].filter((x) => x.id !== id);
-    persist(() => backend.del(col, id));
-    if (col === 'companies' && old?.shareToken && backend.unpublish) persist(() => backend.unpublish(old.shareToken));
-    if (old) touch(col, old);
-    this.emit();
+  /* Apagar = lixeira de 24 h (o conteúdo fica inteiro). Devolve o código do lote, usado no Desfazer. */
+  async remove(col, id, opts = {}) {
+    return this.removeMany(col, [id], opts);
   },
   async removeMany(col, ids, opts = {}) {
-    if (this._locked(col)) return;
+    if (this._locked(col)) return null;
     const blocked = this.state[col].filter((x) => ids.includes(x.id) && !this.canEdit(col, x));
     if (blocked.length) {
-      if (!opts.silent) this._denied(col, blocked[0]);
+      this._denied(col, blocked[0]);
       ids = ids.filter((id) => !blocked.some((b) => b.id === id));
-      if (!ids.length) return;
     }
     const olds = this.state[col].filter((x) => ids.includes(x.id));
-    if (col === 'events' && olds.length && !opts.silent) logActivity({ kind: 'deleted', events: olds.slice(0, 20).map(compactEvent) });
-    this.state[col] = this.state[col].filter((x) => !ids.includes(x.id));
-    if (ids.length) persist(() => backend.delMany(col, ids));
-    olds.forEach((o) => touch(col, o));
+    if (!olds.length) return null;
+    return this._lixo(col, olds, opts);
+  },
+  _lixo(col, olds, { via = olds.length > 1 ? 'lote' : 'manual', lote = novoLote(), agora = Date.now(), quieto = false } = {}) {
+    const m = marca({ por: this.user?.uid || this.me || '', via, lote, agora }), ids = new Set(olds.map((x) => x.id));
+    if (col === 'events' && !quieto) logActivity({ kind: 'deleted', events: olds.slice(0, 20).map(compactEvent), count: olds.length });
+    this.state[col] = this.state[col].filter((x) => !ids.has(x.id));
+    this.trash = [...this.trash.filter((t) => !(t.col === col && ids.has(t.item.id))), ...olds.map((item) => ({ col, item: { ...item, ...m } }))];
+    persist(() => backend.mark(col, [...ids], m));
+    for (const old of olds) { if (col === 'companies' && old.shareToken && backend.unpublish) persist(() => backend.unpublish(old.shareToken)); touch(col, old); }
     this.emit();
+    return lote;
+  },
+  /* volta da lixeira, idêntico. Só quem apagou ou quem é dono (ou qualquer um com acesso, se não há dono). */
+  async restore(col, ids) {
+    if (this._locked(col)) return 0;
+    const L = this.trash.filter((t) => t.col === col && ids.includes(t.item.id) && !vencido(t.item) && (this.canEdit(col, t.item) || t.item.deletedBy === (this.user?.uid || this.me)));
+    if (!L.length) return 0;
+    const ok = new Set(L.map((t) => t.item.id));
+    this.trash = this.trash.filter((t) => !(t.col === col && ok.has(t.item.id)));
+    L.forEach((t) => { const o = conteudo(t.item), x = sanitizeItem(col, o); if (!x) return; for (const k of Object.keys(x)) if (!(k in o)) delete x[k]; applyLocal(col, x); }); // volta como era, sem campos a mais
+    persist(() => backend.mark(col, [...ok], desmarca()));
+    L.forEach((t) => touch(col, t.item));
+    if (col === 'events') logActivity({ kind: 'restored', count: L.length, events: L.slice(0, 20).map((t) => compactEvent(t.item)) });
+    this.emit();
+    return L.length;
   },
 
   /* Assistente (Claude) — só com a nuvem ligada */
@@ -244,7 +255,7 @@ export const store = {
   async importData(json, { replace = false } = {}) {
     const data = typeof json === 'string' ? JSON.parse(json) : json;
     if (!data || !Array.isArray(data.events) || !Array.isArray(data.companies)) throw new Error('Arquivo inválido');
-    if (replace) await this.clearAll();
+    const lote = replace ? await this.clearAll() : null; // "Substituir tudo" = o atual vai para a lixeira e o backup entra
     for (const col of COLS) {
       const items = (data[col] || []).filter((x) => x && typeof x.id === 'string').map((x) => sanitizeItem(col, x)).filter(Boolean);
       const stamp = Date.now();
@@ -260,16 +271,15 @@ export const store = {
     this.state.companies.forEach((c) => c.shareToken && pendingPublish.add(c.id));
     flushPublish();
     this.emit();
+    return lote;
   },
-  async clearAll() {
-    for (const col of COLS) {
-      const ids = this.state[col].map((x) => x.id);
-      this.state[col] = [];
-      if (ids.length) persist(() => backend.delMany(col, ids));
-    }
+  async clearAll({ lote = novoLote() } = {}) {
+    let n = 0;
+    for (const col of COLS) { const L = this.state[col].filter((x) => this.canEdit(col, x)); if (L.length) { this._lixo(col, L, { via: 'tudo', lote, quieto: true }); n += L.length; } }
     this.demo = false;
     saveLocalFlags();
     this.emit();
+    return n ? lote : null;
   },
   async clearDemo() {
     await this.clearAll();
@@ -336,7 +346,7 @@ function touch(col, item) {
 /* ---------- backend local ---------- */
 function saveLocal() {
   try {
-    localStorage.setItem(LS_DATA, JSON.stringify({ ...store.state, demo: store.demo }));
+    localStorage.setItem(LS_DATA, JSON.stringify({ ...store.state, trash: store.trash, demo: store.demo }));
   } catch (err) {
     // Ex.: memória do navegador cheia (muitas logos grandes)
     store.onError && store.onError(err);
@@ -349,8 +359,7 @@ function saveLocalFlags() {
 const localBackend = {
   async write() { saveLocal(); },
   async writeMany() { saveLocal(); },
-  async del() { saveLocal(); },
-  async delMany() { saveLocal(); },
+  async mark() { saveLocal(); },
 };
 
 export async function initLocal() {
@@ -360,6 +369,7 @@ export async function initLocal() {
   const saved = readLocal();
   if (saved && !saved.demo) {
     COLS.forEach((c) => (store.state[c] = (Array.isArray(saved[c]) ? saved[c] : []).map((x) => sanitizeItem(c, x)).filter(Boolean)));
+    store.trash = (Array.isArray(saved.trash) ? saved.trash : []).filter((t) => t && COLS.includes(t.col) && t.item && typeof t.item.id === 'string' && !vencido(t.item)); // passadas as 24 h, sai de vez
     store.demo = false;
   } else {
     // Começa zerado. Se o celular ainda tinha os exemplos antigos, eles são removidos.
@@ -429,10 +439,13 @@ export async function initCloud(cloud, user) {
   }
   store.ready = false;
   await cloud.subscribe(COLS, (col, items) => {
-    store.state[col] = items.map((x) => sanitizeItem(col, x)).filter(Boolean);
+    const { ok, lixo } = separa(items);
+    store.state[col] = ok.map((x) => sanitizeItem(col, x)).filter(Boolean);
+    store.trash = [...store.trash.filter((t) => t.col !== col), ...lixo.map((item) => ({ col, item }))];
     store.emit();
   }, (err) => store.onError && store.onError(err));
   store.ready = true;
+  if (cloud.purga) setTimeout(() => cloud.purga(store.workspace === user.uid ? COLS : []).catch((e) => console.warn('lixeira', e)), 20e3); // só o que é da própria pessoa e já passou de 24 h
   if (founder && store.workspace === user.uid) setTimeout(() => repairFounder(cloud, user, founder).catch((e) => console.warn("fotos do fundador", e)), 5000);
 }
 

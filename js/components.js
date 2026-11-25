@@ -222,18 +222,21 @@ export function toast(msg, { action, onAction, ms = 2600 } = {}) {
 }
 
 /* ---------- Diálogos ---------- */
-export function confirmDialog({ title, text = '', ok = 'Confirmar', danger = false }) {
+/* html = conteúdo já tratado (ex.: lista do que vai sair); digite = palavra que a pessoa precisa escrever */
+export function confirmDialog({ title, text = '', ok = 'Confirmar', danger = false, html = '', digite = '' }) {
   return new Promise((resolve) => {
     const s = openSheet({
       className: 'sheet--dialog',
       html: `<div class="dialog">
-        <h3>${esc(title)}</h3>${text ? `<p>${esc(text)}</p>` : ''}
+        <h3>${esc(title)}</h3>${text ? `<p>${esc(text)}</p>` : ''}${html}${digite ? `<label class="ddig">Escreva <b>${esc(digite)}</b> para confirmar<input class="input" data-dig autocomplete="off" autocapitalize="characters"></label>` : ''}
         <button class="btn ${danger ? 'btn--danger' : 'btn--primary'} btn--block" data-ok>${esc(ok)}</button>
         <button class="btn btn--ghost btn--block" data-close>Cancelar</button>
       </div>`,
       onClose: () => resolve(false),
       onMount: (api) => {
-        api.el.querySelector('[data-ok]').onclick = () => {
+        const okb = api.el.querySelector('[data-ok]'), dg = api.el.querySelector('[data-dig]');
+        if (dg) { okb.disabled = true; dg.oninput = () => { okb.disabled = dg.value.trim().toUpperCase() !== digite.toUpperCase(); }; }
+        okb.onclick = () => {
           resolve(true);
           api.close();
         };

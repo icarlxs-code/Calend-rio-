@@ -1,4 +1,5 @@
 /* Inicialização, navegação e ações globais */
+import { avisaApagado, openLixeira } from './lixeira.js';
 import { ehRemedio, avisoRemedio } from '../functions/remedio.js';
 import { cena, momento, boneco3d, pose3d, aquece3d } from './cena.js';
 import { say } from './sininho.js';
@@ -383,6 +384,7 @@ const actions = {
     ui.date = b.dataset.k;
     setTab('hoje');
   },
+  lixeira: () => openLixeira(),
   'minhas-frases': () => import('./frase.js').then((m) => m.minhasFrases()),
   mensagens: () => import('./privado.js').then((m) => m.openMensagens()),
   visitas: () => import('./stories.js').then((m) => m.openVisitors()).then(() => render()),
@@ -447,9 +449,8 @@ const actions = {
   'open-company': (b) => openCompany(b.dataset.id),
   'new-company': () => openCompanyEditor(),
   'del-note': async (b) => {
-    const n = store.state.notes.find((x) => x.id === b.dataset.id);
-    await store.remove('notes', b.dataset.id);
-    if (n) toast('Bilhete apagado', { action: 'Desfazer', onAction: () => store.upsert('notes', n) });
+    const lote = await store.remove('notes', b.dataset.id);
+    if (lote) avisaApagado(lote, 'Bilhete apagado');
   },
   'set-me': (b) => {
     store.setMe(b.dataset.p);
@@ -1320,6 +1321,7 @@ function startApp() {
     if (hiddenAt && Date.now() - hiddenAt > 30 * 60e3) { askedThisOpen = false; window.__vipAskedNotif = false; setTimeout(askNotifications, 3000); }
   });
   setTimeout(() => import('./social.js').then((m) => m.inicia()).catch(() => {}), 3500); // mensagens em tempo real
+  setTimeout(() => import('./backup.js').then((m) => m.backupDiario()).catch(() => {}), 30e3);
   startPresence();
   personal.on(() => { if (ui.space === 'personal' || document.querySelector('.atrcard')) rerenderAll(); }); // o cartão "ficou pra trás" do Trabalho também mostra o Pessoal
   store.onDenied = (msg) => toast(msg, { ms: 5000 });

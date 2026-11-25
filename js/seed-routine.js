@@ -52,10 +52,8 @@ export async function ensureSeedRoutine() {
   if (!store.company(COMPANY)) return; // a empresa entra primeiro (pré-cadastro)
   running = true;
   try {
-    // tira a versão anterior (deduzida do PDF de setembro), sem avisar o parceiro
-    const old = store.state.events.filter((e) => e.seedRoutine === true || /^e_garcia_\d/.test(e.id)).map((e) => e.id);
-    if (old.length) await store.removeMany('events', old, { silent: true });
-    const items = buildGarciaRoutine().filter((e) => !store.event(e.id));
+    // nunca apaga nada: só cria o que falta (o que já existe, mesmo de uma versão antiga, fica)
+    const items = buildGarciaRoutine().filter((e) => !store.event(e.id) && !store.trash.some((t) => t.col === 'events' && t.item.id === e.id)); // o que a pessoa apagou não volta sozinho
     if (items.length) await store.upsertMany('events', items);
     const notes = NOTES.filter((n) => !store.state.notes.some((x) => x.date === n.date && x.text === n.text))
       .map((n) => ({ id: uid('n_'), date: n.date, text: n.text, author: 'henrique' }));

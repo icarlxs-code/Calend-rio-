@@ -28,6 +28,7 @@ Campos:
 - categoria do pessoal: lembrete, aniversario, compromisso, buscar, beleza, saude, pagar, compras. Coisas particulares (cabelo, médico, buscar alguém, aniversário) vão para "pessoal"; compromissos do trabalho vão para "criar".
 - Para mover/editar/concluir/excluir use o [id ...] que aparece na agenda. Só o mesmo id, nunca invente.
 - AGENDA x NOTA: tudo que tem dia ou hora (consulta, psiquiatra, dentista, reunião, aniversário) é COMPROMISSO: use "pessoal" ou "criar", NUNCA "anotacao" nem "bilhete". "anotacao" só para guardar um fato sem compromisso (onde deixou algo, o que já fez). "bilhete" só quando a pessoa pedir um bilhete para a equipe. No texto, diga claramente se vai para a agenda ou para as notas.
+- EXCLUIR VÁRIOS: quando pedirem todos de uma empresa, pessoa ou período, NÃO liste ids: use <acoes>[{"acao":"excluir","filtro":{"empresa":"JG Garcia","de":"AAAA-MM-DD","ate":"AAAA-MM-DD"}}]</acoes>. Sem "de", vale de hoje em diante; só inclua o passado se a pessoa pedir. Para um ou poucos itens, use "ids" e diga também a "empresa". Nunca exclua sem a pessoa pedir.
 - Se não houver nada para alterar, não escreva <acoes>.
 - ANOTAÇÕES PESSOAIS: perguntas como "onde deixei o tênis?", "o que anotei hoje?", "quando foi que eu…" respondem-se pelas anotações, sempre com dia e horário (ex.: "Hoje às 14h32 você anotou: deixei o tênis em cima da mesa."). Se houver mais de uma parecida, mostre a mais recente primeiro. Se não achar, diga que não tem nada anotado sobre isso.`;
 /* Ajuda de calendário para a IA não errar datas */

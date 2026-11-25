@@ -124,12 +124,28 @@ export function planAction(a) {
     return { ok: true, text: `${kind === 'mover' ? 'Mover' : 'Alterar'} ${label}${desc ? ' → ' + desc : ''}`, run: async () => { await store.upsert('events', { ...store.event(ev.id), ...patch }); return 1; } };
   }
   if (kind === 'excluir') {
-    const idsList = (Array.isArray(a.ids) ? a.ids : [a.id]).filter(Boolean);
-    const evs = idsList.map((id) => store.event(id)).filter(Boolean);
-    if (!evs.length) return { ok: false, text: 'Não achei o que excluir.' };
-    const mine = evs.filter(own);
+    let evs, aviso = '', alcance = '';
+    const co = a.empresa || a.filtro?.empresa ? resolveCompany(a.empresa || a.filtro.empresa) : null;
+    if ((a.empresa || a.filtro?.empresa) && !co) return { ok: false, text: `Não achei a empresa “${a.empresa || a.filtro.empresa}”.` };
+    if (a.filtro && typeof a.filtro === 'object') { // o alcance é resolvido aqui, sobre a agenda inteira
+      const de = isDate(a.filtro.de) ? a.filtro.de : todayKey(), ate = isDate(a.filtro.ate) ? a.filtro.ate : null, p = a.filtro.pessoa ? resolvePeople(a.filtro.pessoa) : null;
+      if (!co && !p && !ate) return { ok: false, text: 'Preciso saber de qual empresa, pessoa ou período.' };
+      evs = store.state.events.filter((e) => (!co || e.companyId === co.id) && (!p || (e.assignees || []).some((x) => p.includes(x))) && e.date >= de && (!ate || e.date <= ate));
+      const ult = evs.reduce((m, e) => (e.date > m ? e.date : m), de); const dt = (k) => k.split('-').reverse().join('/');
+      alcance = `${evs.length} ${evs.length === 1 ? 'item' : 'itens'}${co ? ` da ${co.name}` : ''} de ${de === todayKey() ? 'hoje' : dt(de)} até ${dt(ate || ult)}`;
+    } else {
+      const idsList = [...new Set((Array.isArray(a.ids) ? a.ids : [a.id]).filter((x) => typeof x === 'string'))];
+      evs = idsList.map((id) => store.event(id)).filter(Boolean);
+      const p = a.pessoa ? resolvePeople(a.pessoa) : null, fora = evs.filter((e) => (co && e.companyId !== co.id) || (p && !(e.assignees || []).some((x) => p.includes(x))));
+      if (fora.length) { evs = evs.filter((e) => !fora.includes(e)); aviso = `${fora.length} ${fora.length === 1 ? 'item não é' : 'itens não são'} ${co ? `da ${co.name}` : 'dessa pessoa'} e ${fora.length === 1 ? 'ficou' : 'ficaram'}.`; }
+    }
+    if (!evs.length) return { ok: false, text: aviso || 'Não achei o que excluir.' };
+    const mine = evs.filter(own).sort((x, y) => (x.date + (x.time || '') < y.date + (y.time || '') ? -1 : 1));
     if (!mine.length) return { ok: false, text: 'Esses compromissos foram cadastrados pelo parceiro; só ele pode excluir.' };
-    return { ok: true, text: `Excluir ${mine.length === 1 ? `“${mine[0].title}” (${dayLabel(mine[0].date)})` : `${mine.length} compromissos`}`, warn: mine.length < evs.length ? `${evs.length - mine.length} são do parceiro e ficam.` : '', run: async () => { await store.removeMany('events', mine.map((e) => e.id)); return mine.length; } };
+    if (mine.length > 100) return { ok: false, text: `São ${mine.length} itens. Pelo assistente o limite é 100 de uma vez: apague pela agenda ou peça um período menor.` };
+    const ids = mine.map((e) => e.id);
+    return { ok: true, apaga: mine.map((e) => ({ id: e.id, title: e.title || TYPES[e.type]?.label || '', date: e.date, time: e.time || '', serie: !!e.seriesId })), text: alcance ? `Apagar ${alcance}` : `Apagar ${mine.length === 1 ? `“${mine[0].title}” (${dayLabel(mine[0].date)})` : `${mine.length} compromissos`}`,
+      warn: [aviso, mine.length < evs.length ? `${evs.length - mine.length} são do parceiro e ficam.` : ''].filter(Boolean).join(' '), run: async (o = {}) => { const antes = store.state.events.filter((e) => ids.includes(e.id)).length; await store.removeMany('events', ids, { via: 'assistente', lote: o.lote }); return antes - store.state.events.filter((e) => ids.includes(e.id)).length; } };
   }
   if (kind === 'pessoal') {
     const dates = expandDates(a);
@@ -149,7 +165,7 @@ export function planAction(a) {
   if (kind === 'excluir pessoal' || kind === 'excluir_pessoal') {
     const it = personal.item(a.id);
     if (!it) return { ok: false, text: 'Não achei essa anotação.' };
-    return { ok: true, text: `Apagar do Pessoal: “${it.title}”`, run: async () => { removePersonal(it.id); return 1; } };
+    return { ok: true, apaga: [{ id: it.id, title: it.title || it.text || it.name || '', date: it.date || '', time: it.time || '', serie: !!it.repeat && it.repeat !== 'none' }], text: `Apagar do Pessoal: “${it.title || it.text || it.name || ''}”`, run: async (o = {}) => (removePersonal(it.id, { via: 'assistente', lote: o.lote }) ? 1 : 0) };
   }
   if (kind === 'bilhete') {
     const text = String(a.texto || '').slice(0, 280);
@@ -158,4 +174,38 @@ export function planAction(a) {
     return { ok: true, text: `${store.team.length > 1 ? 'Bilhete para a equipe' : 'Bilhete'} (${dayLabel(date)}): “${text}”`, run: async () => { await store.upsert('notes', { id: uid('n_'), date, text, author: store.me }); return 1; } };
   }
   return { ok: false, text: `Ação desconhecida: ${a?.acao || '?'}` };
+}
+
+/* ---------- o plano mostrado é o plano executado ---------- */
+/** congela as ações: o que aparece no cartão é exatamente o que será feito */
+export function congela(acoes) { return acoes.map((a) => { try { const p = planAction(a); return { a, ok: !!p.ok, text: p.text, warn: p.warn || '', apaga: p.apaga || null }; } catch { return { a, ok: false, text: 'Não entendi uma das ações.', warn: '', apaga: null }; } }); }
+const chaveApaga = (L) => (L || []).map((x) => `${x.id}|${x.title}|${x.date}|${x.time}`).sort().join('~');
+/** a agenda mudou desde que o cartão apareceu? */
+export function mudou(plano) { return congela(plano.map((x) => x.a)).some((n, i) => n.ok !== plano[i].ok || n.text !== plano[i].text || chaveApaga(n.apaga) !== chaveApaga(plano[i].apaga)); }
+export const quantosApaga = (plano) => plano.filter((x) => x.ok).reduce((n, x) => n + (x.apaga ? x.apaga.length : 0), 0);
+export const pedeSegunda = (plano) => quantosApaga(plano) > 3 || plano.some((x) => x.ok && x.apaga && x.apaga.some((y) => y.serie));
+const copia = (x) => JSON.parse(JSON.stringify(x));
+/** executa o plano congelado e guarda como desfazer */
+export async function executa(plano, { lote }) {
+  const antesE = new Map(store.state.events.map((e) => [e.id, copia(e)])), antesP = new Map(personal.items.map((e) => [e.id, copia(e)])), antesN = new Set(store.state.notes.map((x) => x.id));
+  let n = 0, fails = 0, apagou = 0;
+  for (const x of plano) {
+    if (!x.ok) { fails++; continue; }
+    try { const p = x.apaga ? planAction(x.a.id && !x.a.ids && !x.a.filtro ? x.a : { acao: x.a.acao, ids: x.apaga.map((y) => y.id), id: x.apaga[0].id }) : planAction(x.a); if (!p.ok) { fails++; continue; } const k = (await p.run({ lote })) || 0; n += k; if (x.apaga) apagou += k; } catch (e) { console.error(e); fails++; }
+  }
+  const dif = (m, L) => L.filter((e) => m.has(e.id) && JSON.stringify(m.get(e.id)) !== JSON.stringify(e)).map((e) => m.get(e.id));
+  const undo = { at: Date.now(), lote: apagou ? lote : null, events: dif(antesE, store.state.events), pessoal: dif(antesP, personal.items).filter((x) => x.kind !== 'prefs'), criados: store.state.events.filter((e) => !antesE.has(e.id)).map((e) => e.id), criadosP: personal.items.filter((e) => !antesP.has(e.id)).map((e) => e.id), criadosN: store.state.notes.filter((x) => !antesN.has(x.id)).map((x) => x.id) };
+  return { n, fails, apagou, undo };
+}
+/** volta tudo como estava antes do plano (o criado vai para a lixeira) */
+export async function desfaz(undo) {
+  if (!undo) return 0;
+  let n = 0;
+  if (undo.lote) { const { restauraLote } = await import('./lixeira.js'); n += await restauraLote(undo.lote); }
+  if (undo.events?.length) { await store.upsertMany('events', undo.events.map(copia)); n += undo.events.length; }
+  for (const x of undo.pessoal || []) { savePersonal(copia(x)); n++; }
+  if (undo.criados?.length && (await store.removeMany('events', undo.criados, { via: 'assistente' }))) n += undo.criados.length;
+  for (const id of undo.criadosP || []) if (removePersonal(id, { via: 'assistente' })) n++;
+  if (undo.criadosN?.length && (await store.removeMany('notes', undo.criadosN, { via: 'assistente' }))) n += undo.criadosN.length;
+  return n;
 }

@@ -1,0 +1,11 @@
+/* navegador de mentira para testar a camada de dados sem tela e sem rede */
+const m = new Map();
+globalThis.localStorage = { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k), get length() { return m.size; }, key: (i) => [...m.keys()][i] };
+globalThis.sessionStorage = globalThis.localStorage;
+const el = () => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => '' : k === 'classList' ? { add() {}, remove() {}, toggle() {}, contains: () => false } : k === 'style' ? { setProperty() {} } : k === 'dataset' ? {} : k === 'querySelectorAll' ? () => [] : k === 'querySelector' ? () => null : k === 'length' ? 0 : el()), set: () => true, apply: () => el() });
+globalThis.document = { querySelectorAll: () => [], querySelector: () => null, getElementById: () => null, createElement: () => el(), documentElement: el(), body: el(), addEventListener() {}, hidden: false, readyState: 'complete', head: el() };
+globalThis.window = globalThis; globalThis.location = { hostname: 'x', href: 'https://x/', origin: 'https://x', hash: '', pathname: '/', search: '' }; globalThis.addEventListener = () => {}; globalThis.dispatchEvent = () => true; globalThis.matchMedia = () => ({ matches: false, addEventListener() {} }); globalThis.requestAnimationFrame = () => 0; globalThis.MutationObserver = class { observe() {} disconnect() {} }; globalThis.CustomEvent = globalThis.CustomEvent || class {}; globalThis.Image = class {}; globalThis.ResizeObserver = class { observe() {} disconnect() {} };
+globalThis.fetch = async () => { throw new Error('sem rede no teste'); };
+export const igual = (a) => JSON.parse(JSON.stringify(a));
+export async function nova() { m.clear(); const { store, initLocal } = await import('../js/store.js'); store.trash = []; Object.keys(store.state).forEach((k) => (store.state[k] = [])); await initLocal(); store.trash = []; store.gate = null; return store; }
+export const ev = (id, o = {}) => ({ id, type: 'reuniao', title: 'Reunião ' + id, date: '2027-01-10', time: '09:00', status: 'pendente', assignees: ['henrique', 'matheus'], companyId: 'c1', description: 'com legenda ção', internalNote: 'nota', location: 'Rua A', seriesId: 's1', duration: 60, reminder: 30, createdBy: 'henrique', createdAt: 1, ...o });
