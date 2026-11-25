@@ -3,7 +3,7 @@
    - O nome muda a cada versão: o iPhone nunca fica preso numa versão antiga.
    Uso: npm run build  (rodar depois de qualquer mudança em js/ ou config.js) */
 import { build } from 'esbuild';
-import { rmSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { rmSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { resolve, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -48,10 +48,14 @@ writeFileSync(idxPath, readFileSync(idxPath, 'utf8')
   .replace(/\/\*APP\*\/'[^']*'\/\*APP\*\//, `/*APP*/'./${entry}'/*APP*/`)
   .replace(/<!--PRELOAD-->[\s\S]*?<!--\/PRELOAD-->/, `<!--PRELOAD-->\n  ${preload}\n  <!--/PRELOAD-->`));
 
+/* a abertura (js/abertura.js e o que ela usa) e as letras também abrem sem internet */
+const ab = await build({ entryPoints: [resolve(root, 'js/abertura.js')], bundle: true, format: 'esm', write: false, metafile: true, logLevel: 'silent', outdir: resolve(root, '.x') });
+const abertura = Object.keys(ab.metafile.inputs).map((f) => relative(root, resolve(process.cwd(), f)).replace(/\\/g, '/')).filter((f) => /^(js|functions|config)/.test(f));
+const fontes = readdirSync(resolve(root, 'media/fonts')).filter((f) => f.endsWith('.woff2')).map((f) => `media/fonts/${f}`);
 const swPath = resolve(root, 'sw.js');
 writeFileSync(swPath, readFileSync(swPath, 'utf8')
   .replace(/\/\*CACHE\*\/'[^']*'\/\*CACHE\*\//, `/*CACHE*/'cal-${version}'/*CACHE*/`)
-  .replace(/\/\*FILES\*\/.*$/m, `/*FILES*/ ${files.map((f) => `'${f}'`).join(', ')},`));
+  .replace(/\/\*FILES\*\/.*$/m, `/*FILES*/ ${[...files, ...abertura, ...fontes].map((f) => `'${f}'`).join(', ')},`));
 
 /* Páginas públicas (convite, pagamento, termos, privacidade) com o endereço oficial do config.js */
 const { CONFIG } = await import(`${pathToFileURL(resolve(root, 'config.js'))}?v=${Date.now()}`);

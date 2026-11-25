@@ -75,7 +75,7 @@ export async function checkVersion({ force = false } = {}) {
 /* limpa o que estiver guardado e abre de novo (resolve celular preso numa versão antiga) */
 export async function hardReload() {
   try { const rs = await navigator.serviceWorker?.getRegistrations(); await Promise.all((rs || []).map((r) => r.update().catch(() => {}))); } catch { /* ok */ }
-  try { const ks = await caches.keys(); await Promise.all(ks.map((k) => caches.delete(k))); } catch { /* ok */ }
+  try { const ks = await caches.keys(); await Promise.all(ks.filter((k) => k.startsWith('cal-')).map((k) => caches.delete(k))); } catch { /* ok */ }
   location.replace(`${location.pathname}?r=${Date.now()}${location.hash}`);
 }
 function mustUpdate(j) {

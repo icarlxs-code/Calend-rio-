@@ -1,25 +1,38 @@
 /* Service worker: funciona offline, recebe notificações e abre o app no lugar certo */
-const CACHE = /*CACHE*/'cal-qxpo356t'/*CACHE*/;
+const CACHE = /*CACHE*/'cal-owkihmnd'/*CACHE*/;
 const MEDIA = 'lembra-media-v1';
 const SHELL = [
   './', 'index.html', 'css/app.css', 'css/arte.css', 'css/motion.css', 'css/marca.css', 'css/social.css', 'assets/mascot/3d/acena.webp', 'assets/mascot/3d/voa.webp', 'assets/mascot/3d/joia.webp', 'assets/mascot/3d/aponta.webp', 'assets/mascot/3d/pensa.webp', 'assets/mascot/3d/amor.webp', 'assets/mascot/3d/festa.webp', 'manifest.webmanifest', 'media/intro-poster5.jpg',
   ...Array.from({ length: 67 }, (_, i) => `media/intro5/f${String(i + 1).padStart(3, '0')}.webp`),
   'media/logos/pura-vida.jpg', 'media/lembra-logo.jpg', 'media/marca/completa-preto.png', 'assets/fundos/raios.webp', 'assets/fundos/leque.webp', 'media/marca/completa-branco.png', 'media/marca/simbolo-preto.png', 'media/marca/simbolo-branco.png', 'media/marca/palavra-preto.png', 'media/marca/palavra-branco.png', 'media/marca/letra-preto.png', 'media/marca/letra-branco.png', 'version.json', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/favicon-64.png',
-  /*FILES*/ 'dist/c-GUK2KC7Q.js', 'dist/c-V2BVRYZP.js', 'dist/c-B3NW52H6.js', 'dist/c-L6LXEU43.js', 'dist/c-KCDXUNQF.js', 'dist/c-DTRJ5QB4.js', 'dist/c-NRS7IKCC.js', 'dist/c-CV6KCBWW.js', 'dist/c-Y5KEBQ7P.js', 'dist/c-345PFVI2.js', 'dist/c-UAJ54YLI.js', 'dist/c-4OXH3ZSK.js', 'dist/c-JNTDC7OY.js', 'dist/c-5GHNVFSR.js', 'dist/c-R2Q3RO3Q.js', 'dist/c-EP5JQTDR.js', 'dist/c-VJLPG5WF.js', 'dist/c-YKRRX6UC.js', 'dist/c-7X7ECAFQ.js', 'dist/c-PO5OS5AA.js', 'dist/c-6CPST7YG.js', 'dist/c-Y7VTQYGX.js', 'dist/c-BHI2MLZM.js', 'dist/c-JXAOS7BS.js', 'dist/c-CNMAVNLK.js', 'dist/c-5YTBNBF6.js', 'dist/c-PUQTDXHZ.js', 'dist/c-NBDMF6QB.js', 'dist/c-DG7QUTUH.js', 'dist/c-LYO6PQGS.js', 'dist/c-2A7KC4QN.js', 'dist/c-JSEZPSSX.js', 'dist/c-OEM4NLPU.js', 'dist/c-UXA2FOZA.js', 'dist/c-CEVUKNEH.js', 'dist/c-WM7Q5OWA.js', 'dist/c-I75AAJN7.js', 'dist/c-BRYA7D7U.js', 'dist/c-ROW2W44R.js', 'dist/c-QCLGRYHG.js', 'dist/c-STSUKRN6.js', 'dist/c-STHICVM2.js', 'dist/c-C3GSQTQ6.js', 'dist/c-53FRI2E5.js', 'dist/c-M2KGVPHO.js', 'dist/c-3KSHDHHT.js', 'dist/c-5SC2LNQI.js', 'dist/c-HGLWH6Q3.js', 'dist/c-ABD7GVHR.js', 'dist/c-KER4ZXEC.js', 'dist/c-Z4XTQYQQ.js', 'dist/c-MIULXWXY.js', 'dist/c-OF374IT2.js', 'dist/c-LE4IT3Z2.js', 'dist/c-PFW4T6BS.js', 'dist/c-44AO5NHY.js', 'dist/c-JU5IFTEZ.js', 'dist/c-HCEBFXPU.js', 'dist/c-3VPOOFJN.js', 'dist/a-QXPO356T.js', 'dist/c-RNJYWLZ7.js', 'dist/c-2LUKOVJP.js', 'dist/c-U255YENN.js', 'dist/c-ME62A5NG.js', 'dist/c-V5WOYJRJ.js', 'dist/c-AHW5YTUT.js', 'dist/c-6RTM5T7W.js', 'dist/c-VZBBLIM6.js', 'dist/c-2MH6JZZ7.js', 'dist/c-MNCYKSVR.js', 'dist/c-I7JIKRYT.js', 'dist/c-RMQK7F65.js', 'dist/c-A2X63JAT.js', 'dist/c-GZQSSGN2.js', 'dist/c-FQ3DTYVO.js', 'dist/c-IEKSAGMW.js', 'dist/c-PZQLNNS6.js', 'dist/c-EYQLKLV7.js', 'dist/c-54XAP6BJ.js', 'dist/c-N3JJKH6S.js', 'dist/c-PGHLFVNL.js', 'dist/c-RI3KL5PA.js', 'dist/c-6PVVLET6.js', 'dist/c-KV2UEH3H.js', 'dist/c-XFLFLBQ4.js', 'dist/c-5KDN44MS.js', 'dist/c-HL4LGT7D.js', 'dist/c-J6PDATOP.js', 'dist/c-FJWD3IX2.js', 'dist/c-7NREOAUD.js', 'dist/c-QCJG7YNU.js', 'dist/c-PGR7OM7D.js', 'dist/c-2NRRIKNO.js', 'dist/c-CRQDPG7K.js', 'dist/c-JAI6M6PY.js', 'dist/c-2FZ7LH5I.js', 'dist/c-67WMPW24.js', 'dist/c-H6PM4QRI.js', 'dist/c-OSUPC35O.js', 'dist/c-VWQ7URYC.js', 'dist/c-NPXXLJRE.js', 'dist/c-L4SNDX7B.js', 'dist/c-EZP3IJBN.js', 'dist/c-WNSGKG2J.js', 'dist/c-DO7SGJNJ.js', 'dist/c-CIEJVWQB.js', 'dist/c-WWTNKPRM.js', 'dist/c-5PVYAXQB.js', 'dist/c-JRZKGWYQ.js', 'dist/c-S22CTDX7.js', 'dist/c-MPTN5RTT.js', 'dist/c-V3MHWQEV.js', 'dist/c-MPQC26Q2.js', 'dist/c-HQN2OXJP.js', 'dist/c-IRRLC4F2.js', 'dist/c-FQJ5CCBF.js', 'dist/c-DWBEWQEH.js', 'dist/c-X2DG7C6C.js',
+  /*FILES*/ 'dist/c-TMI4TLFX.js', 'dist/c-ZZJFDZLI.js', 'dist/c-J6RH5VVO.js', 'dist/c-B3NW52H6.js', 'dist/c-BTPAPM5R.js', 'dist/c-URN7UJ3Y.js', 'dist/c-2BRD7P5L.js', 'dist/c-HIL4RHV2.js', 'dist/c-HXGYXZKP.js', 'dist/c-H5CT7CIQ.js', 'dist/c-KACPQRDP.js', 'dist/c-7J4OH4CD.js', 'dist/c-5KY6FEND.js', 'dist/c-P4PMURYP.js', 'dist/c-MT4P7GC4.js', 'dist/c-TTNP4EIJ.js', 'dist/c-XM6SQLXK.js', 'dist/c-VUOX3EDZ.js', 'dist/c-HR3QI7H2.js', 'dist/c-V2W3CEFM.js', 'dist/c-JOE6YB7J.js', 'dist/c-RB7MJSRV.js', 'dist/c-JVLSVVWH.js', 'dist/c-G6TFKJOC.js', 'dist/c-34F7KNEJ.js', 'dist/c-QZ4FRUPZ.js', 'dist/c-SMZVKTF3.js', 'dist/c-YZK44DLU.js', 'dist/c-2OZII2VM.js', 'dist/c-GD5HFW36.js', 'dist/c-BJG7RHUK.js', 'dist/c-RI3RLH45.js', 'dist/c-LYO6PQGS.js', 'dist/c-YHVV6KAO.js', 'dist/c-MDCP6LUQ.js', 'dist/c-66XZN5VB.js', 'dist/c-UXA2FOZA.js', 'dist/c-L6IQCQ7S.js', 'dist/c-X27VORYC.js', 'dist/c-I75AAJN7.js', 'dist/c-IHE53EBR.js', 'dist/c-DIIAPW6M.js', 'dist/c-KC2WGTBW.js', 'dist/c-D3RLMENL.js', 'dist/c-C3GSQTQ6.js', 'dist/c-ZDIJHAMS.js', 'dist/c-M2KGVPHO.js', 'dist/c-SELANCIA.js', 'dist/c-EVLTHHNL.js', 'dist/c-LDXKA4WL.js', 'dist/c-JGJPAXBI.js', 'dist/c-TO5M5LI5.js', 'dist/c-HQN2OXJP.js', 'dist/c-MIULXWXY.js', 'dist/c-C4VTWYNA.js', 'dist/c-ISCRWSQY.js', 'dist/c-3SCO52ZT.js', 'dist/c-ZESC73KU.js', 'dist/c-5AKE2DPD.js', 'dist/c-7KBSWGN2.js', 'dist/a-OWKIHMND.js', 'dist/c-4EAZYCON.js', 'dist/c-DTO6Z3MP.js', 'dist/c-R4NMLI33.js', 'dist/c-KPDURJDZ.js', 'dist/c-KULG35EH.js', 'dist/c-AIFIG3IL.js', 'dist/c-Z2U3SKYO.js', 'dist/c-QHTUBQBG.js', 'dist/c-MUYNEFV5.js', 'dist/c-RKPZEPXF.js', 'dist/c-6RFERHNB.js', 'dist/c-FAWLCIDX.js', 'dist/c-76P7MRXH.js', 'dist/c-XDJHPEV5.js', 'dist/c-XE25DS64.js', 'dist/c-FQ3DTYVO.js', 'dist/c-GEVRIRGK.js', 'dist/c-PZQLNNS6.js', 'dist/c-ADXAEEPG.js', 'dist/c-54XAP6BJ.js', 'dist/c-N3JJKH6S.js', 'dist/c-TARKOFTK.js', 'dist/c-YNH3E5IK.js', 'dist/c-6PVVLET6.js', 'dist/c-7XLCSM6O.js', 'dist/c-S55T25MU.js', 'dist/c-5KDN44MS.js', 'dist/c-ZTNL4KVL.js', 'dist/c-Z75ALAOL.js', 'dist/c-IRRLC4F2.js', 'dist/c-FJWD3IX2.js', 'dist/c-HB23C54E.js', 'dist/c-2HCH7U2G.js', 'dist/c-FMVQK54J.js', 'dist/c-2NOQULDL.js', 'dist/c-FQJ5CCBF.js', 'dist/c-UE4IICJM.js', 'dist/c-YK2GP5ZA.js', 'dist/c-DWBEWQEH.js', 'dist/c-67WMPW24.js', 'dist/c-H6PM4QRI.js', 'dist/c-OSUPC35O.js', 'dist/c-VWQ7URYC.js', 'dist/c-NPXXLJRE.js', 'dist/c-L4SNDX7B.js', 'dist/c-F2WBRTAH.js', 'dist/c-ECAJ5DDA.js', 'dist/c-MQ7ZTTHJ.js', 'dist/c-AXMDIFHN.js', 'dist/c-CIEJVWQB.js', 'dist/c-WWTNKPRM.js', 'dist/c-5PVYAXQB.js', 'dist/c-JRZKGWYQ.js', 'dist/c-S22CTDX7.js', 'dist/c-MPTN5RTT.js', 'dist/c-V3MHWQEV.js', 'dist/c-MPQC26Q2.js', 'dist/c-X2DG7C6C.js', 'js/roupas.js', 'js/utils.js', 'js/sininho.js', 'js/sfx.js', 'js/abertura.js', 'media/fonts/nunito-latin-ext-wght-normal.woff2', 'media/fonts/nunito-latin-wght-normal.woff2',
 ];
 
+/* o que precisa estar no celular para o app abrir: se faltar um, a versão nova não entra no lugar da antiga */
+const OBRIGATORIO = (u) => u === 'index.html' || /\.(css|js|woff2|webmanifest)$/.test(u);
+const limpa = async (res) => (res.redirected ? unredirect(res) : res);
 self.addEventListener('install', (e) => {
-  // guarda o app no celular (cada arquivo já "limpo": nunca uma resposta redirecionada)
-  e.waitUntil(caches.open(CACHE).then((c) => Promise.all(SHELL.map((u) => fetch(u, { cache: 'no-cache' }).then(async (res) => {
-    if (!res.ok) return;
-    await c.put(u, res.redirected ? await unredirect(res) : res);
-  }).catch(() => {})))).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(async (c) => {
+    const pega = async (u) => {
+      if (u.startsWith('dist/')) { const v = await caches.match(u); if (v) return c.put(u, v); } // o nome muda a cada versão: o que já está no celular serve
+      const res = await fetch(u, { cache: 'no-cache' });
+      if (!res.ok) throw new Error(`${u} ${res.status}`);
+      await c.put(u, await limpa(res));
+    };
+    const ob = SHELL.filter(OBRIGATORIO), ex = SHELL.filter((u) => !OBRIGATORIO(u));
+    for (let i = 0; i < ob.length; i += 12) await Promise.all(ob.slice(i, i + 12).map((u) => pega(u).catch(() => pega(u)))); // duas tentativas
+    await Promise.all(ex.map((u) => pega(u).catch(() => {})));
+  }).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== MEDIA && k !== 'lembra-stories-v1' && k !== 'lembra-notif').map((k) => caches.delete(k)))).then(() => self.clients.claim()),
-  );
+  // só apaga o cache antigo do app (cal-…) e só com o novo inteiro; mídia, stories e avisos ficam
+  e.waitUntil((async () => {
+    const c = await caches.open(CACHE), tem = new Set((await c.keys()).map((r) => new URL(r.url).pathname.replace(new URL(self.registration.scope).pathname, '')));
+    if (SHELL.filter(OBRIGATORIO).every((u) => tem.has(u))) await Promise.all((await caches.keys()).filter((k) => k.startsWith('cal-') && k !== CACHE).map((k) => caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
+const PAGINA_VAZIA = '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lembra</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;text-align:center;padding:24px;background:#FFF6EE;color:#201008;font:700 18px/1.5 Nunito,system-ui,sans-serif}@media(prefers-color-scheme:dark){body{background:#0A0A0A;color:#fff}}</style><p>Abra o Lembra uma vez com internet.<br>Depois ele abre até sem.</p>';
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
@@ -43,31 +56,32 @@ self.addEventListener('fetch', (e) => {
     })));
     return;
   }
-  // demais arquivos: rede primeiro (para receber atualizações); cache se estiver offline
-  // "no-cache": sempre confere com o servidor se há versão nova (evita ficar preso numa versão antiga)
-  const nav = e.request.mode === 'navigate';
-  // ABRIR A PÁGINA: com internet, o próprio Safari cuida (o service worker não se mete).
-  // Assim nunca aparece "Response served by service worker has redirections".
-  // Sem internet: entrega a cópia guardada no celular (limpa de redirecionamento).
-  if (nav) {
-    if (self.navigator.onLine !== false) return;
-    e.respondWith(caches.match('index.html').then((x) => x || caches.match('./')).then((r) => (r ? unredirect(r) : Response.error())));
+  const cam = url.pathname.replace(new URL(self.registration.scope).pathname, '');
+  // teste de internet de verdade: nunca responde pelo cache
+  if (url.searchParams.has('ping')) return;
+  // ABRIR A PÁGINA: rede com pouco tempo; não respondeu (avião, Wi-Fi morto, servidor fora), abre a cópia do celular.
+  // Nunca decide por navigator.onLine: ele diz "conectado" mesmo sem internet.
+  if (e.request.mode === 'navigate') {
+    const app = cam === '' || cam === 'index.html';
+    e.respondWith((async () => {
+      const c = new AbortController(), t = setTimeout(() => c.abort(), 3200);
+      try { const r = await fetch(e.request, { signal: c.signal }); if (r.status < 500) return r; } catch { /* sem rede */ } finally { clearTimeout(t); }
+      const g = (await caches.match(app ? 'index.html' : e.request, { ignoreSearch: true })) || (app ? await caches.match('./') : null);
+      return g ? unredirect(g) : new Response(PAGINA_VAZIA, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    })());
     return;
   }
-  // demais arquivos: rede primeiro (para receber atualizações); cache se estiver offline
-  // "no-cache": sempre confere com o servidor se há versão nova (evita ficar preso numa versão antiga)
-  e.respondWith(
-    fetch(e.request, { cache: 'no-cache' })
-      .then((res) => {
-        if (res.redirected && new URL(res.url).origin !== location.origin) return res; // arquivo vindo do endereço novo: usa, mas não guarda
-        if (res.ok && res.status === 200 && !res.redirected) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(e.request, copy));
-        }
-        return res;
-      })
-      .catch(() => caches.match(e.request, { ignoreSearch: true }).then((r) => (r ? unredirect(r) : Response.error()))),
-  );
+  const guarda = (res) => { if (res.ok && res.status === 200 && !res.redirected) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {}); } return res; };
+  // nome versionado: o conteúdo nunca muda
+  if (cam.startsWith('dist/')) { e.respondWith(caches.match(e.request, { ignoreSearch: true }).then((r) => r || fetch(e.request).then(guarda))); return; }
+  // letras, ícones e estilos: na hora do celular, conferindo por trás
+  if (/^(media\/fonts|icons)\//.test(cam)) { e.respondWith(caches.match(e.request, { ignoreSearch: true }).then((hit) => { const net = fetch(e.request).then(guarda).catch(() => hit || Response.error()); if (hit) { e.waitUntil(net.catch(() => {})); return hit; } return net; })); return; }
+  // demais: rede primeiro (recebe atualização), com pouco tempo; sem rede, a cópia do celular
+  e.respondWith((async () => {
+    const c = new AbortController(), t = setTimeout(() => c.abort(), 6000);
+    try { const res = await fetch(e.request, { cache: 'no-cache', signal: c.signal }); if (res.redirected && new URL(res.url).origin !== location.origin) return res; if (res.status < 500) return guarda(res); } catch { /* sem rede */ } finally { clearTimeout(t); }
+    const r = await caches.match(e.request, { ignoreSearch: true }); return r ? unredirect(r) : Response.error();
+  })());
 });
 /* resposta guardada que veio de um redirecionamento: vira uma resposta "nova", que o Safari aceita */
 async function unredirect(r) {

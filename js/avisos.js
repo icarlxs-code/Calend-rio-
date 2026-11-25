@@ -57,7 +57,8 @@ export async function api(path, body) {
       res = await fetch(server() + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: payload });
     } catch (e) {
       if (safe && attempt < 2) { await new Promise((r) => setTimeout(r, 700 * (attempt + 1))); continue; }
-      throw e;
+      import('./rede.js').then((r) => r.confere()).catch(() => {});
+      throw Object.assign(new Error('Isso precisa de internet. Sua agenda continua aqui.'), { code: 'sem-rede', cause: e });
     }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {

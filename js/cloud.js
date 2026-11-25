@@ -7,6 +7,7 @@ import * as authMod from 'firebase/auth';
 import * as fnMod from 'firebase/functions';
 import { CONFIG } from '../config.js';
 import { mudancas, vencido } from './lixeira-core.js';
+import { criaFila } from './fila.js';
 
 let fs, auth, db, authApi, functions;
 
@@ -59,7 +60,7 @@ export async function connect(config) {
     confirmReset: (code, pass) => authApi.confirmPasswordReset(auth, code, pass),
     applyCode: (code) => authApi.applyActionCode(auth, code),
     // sair: a agenda guardada neste celular é apagada (celular emprestado não guarda nada de ninguém)
-    signOut: async () => { while (subs.length) subs.pop().stop(); await idb.clear().catch(() => {}); try { indexedDB.deleteDatabase('lembra-backup'); } catch { /* ok */ } return authApi.signOut(auth); },
+    signOut: async () => { if (fila && fila.pendentes().length) await Promise.race([fila.esvazia().catch(() => {}), new Promise((r) => setTimeout(r, 4000))]); try { Object.keys(localStorage).filter((k) => /^lembra\.(perfil|equipe)\./.test(k)).forEach((k) => localStorage.removeItem(k)); } catch { /* ok */ } while (subs.length) subs.pop().stop(); await idb.clear().catch(() => {}); try { indexedDB.deleteDatabase('lembra-backup'); } catch { /* ok */ } return authApi.signOut(auth); },
     signUp: async (email, pass, name) => {
       const cred = await authApi.createUserWithEmailAndPassword(auth, email, pass);
       if (name) await authApi.updateProfile(cred.user, { displayName: name }).catch(() => {});
@@ -114,15 +115,44 @@ const idb = (() => {
     t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
     setTimeout(() => rej(new Error('armazenamento lento')), 2500);
   }));
-  return { get: (k) => run('readonly', (st) => st.get(k)), put: (k, v) => run('readwrite', (st) => st.put(v, k)), clear: () => run('readwrite', (st) => st.clear()) };
+  return { get: (k) => run('readonly', (st) => st.get(k)), put: (k, v) => run('readwrite', (st) => st.put(v, k)), clear: () => run('readwrite', (st) => { const r = st.openCursor(); r.onsuccess = () => { const c = r.result; if (!c) return; if (!String(c.key).startsWith('fila|')) c.delete(); c.continue(); }; return r; }) }; // a fila do que ainda não subiu nunca é apagada
 })();
 const live = new Map(); // coleção → { docs, emit } (para as gravações deste celular aparecerem na hora)
 const liveKey = (path) => path.join('/');
+/* alterações que ainda não subiram (sobrevivem a fechar o app) */
+let fila = null, filaDe = '';
+function minhaFila() {
+  const uid = auth.currentUser?.uid || '-';
+  if (fila && filaDe === uid) return fila;
+  filaDe = uid; const K = `fila|${uid}`;
+  fila = criaFila({
+    le: () => idb.get(K), grava: (L) => idb.put(K, L.map(({ indo, ...e }) => e)),
+    envia: (e) => { const d = { ...e.por, _u: fs.serverTimestamp() }; for (const t of e.tira || []) d[t] = fs.deleteField(); const r = fs.doc(db, ...e.k.split('/')); if (!e.novo) return fs.updateDoc(r, d); d._del = fs.deleteField(); return fs.setDoc(r, d, { mergeFields: Object.keys(d) }); },
+    aoMudar: (n) => { try { window.dispatchEvent(new CustomEvent('lembra:fila', { detail: n })); } catch { /* ok */ } },
+    aoRecusar: (e, c) => { console.warn('alteração recusada', e.k, c); try { window.dispatchEvent(new CustomEvent('lembra:recusada')); } catch { /* ok */ } },
+  });
+  return fila;
+}
+/* grava agora e deixa na fila até o servidor confirmar */
+async function comFila(entradas, envio) {
+  const f = minhaFila(), itens = [];
+  for (const e of entradas) { const it = await f.poe(e).catch(() => null); if (it) { it.indo = 1; itens.push(it); } }
+  try { const r = await envio(); for (const it of itens) await f.tira(it); return r; }
+  catch (e) { for (const it of itens) { delete it.indo; if (/permission-denied|invalid-argument/.test(String(e.code || ''))) await f.tira(it); } throw e; }
+}
+const entrada = (path, item, base) => { const { por, tira } = mudancas(base, item); return { k: [...path, item.id].join('/'), por: clean(por), tira, novo: !base }; };
+export const esvaziaFila = () => (auth?.currentUser ? minhaFila().esvazia() : Promise.resolve());
 function syncCollection(path, onList, onErr) {
   const key = `${SYNC_V}|${auth.currentUser?.uid || '-'}|${liveKey(path)}`;
   const docs = new Map();
   let since = 0, fullAt = 0, unsub = null, stopped = false, saveT = null, firstDone = false;
-  const list = () => [...docs.values()];
+  const list = () => { // o que a pessoa mudou e ainda não subiu vale por cima do servidor
+    const f = filaDe === auth.currentUser?.uid ? fila : null, L = [...docs.values()]; if (!f || !f.pendentes().length) return L;
+    const pre = `${liveKey(path)}/`, ks = new Set(f.chaves(pre)); if (!ks.size) return L;
+    const out = L.map((d) => (ks.has(pre + d.id) ? (ks.delete(pre + d.id), { ...f.porCima(pre + d.id, d), id: d.id }) : d));
+    for (const k of ks) { const e = f.pendentes().find((x) => x.k === k && x.novo); if (e) out.push({ ...f.porCima(k, null), id: k.slice(pre.length) }); }
+    return out;
+  };
   const emit = () => onList(list());
   const save = () => { clearTimeout(saveT); saveT = setTimeout(() => idb.put(key, { docs: Object.fromEntries(docs), since, fullAt }).catch(() => {}), 1500); };
   const me = { docs, emit, save, hora: () => since };
@@ -155,7 +185,7 @@ function syncCollection(path, onList, onErr) {
         if (!firstDone) { firstDone = true; resolve(); }
       });
     };
-    idb.get(key).then((c) => {
+    minhaFila().carrega().then(() => idb.get(key)).then((c) => {
       if (c && c.docs && typeof c.docs === 'object') {
         for (const [id, d] of Object.entries(c.docs)) docs.set(id, d);
         since = c.since || 0; fullAt = c.fullAt || 0;
@@ -231,7 +261,8 @@ async function setPassword(p) {
 }
 
 const backend = {
-  phoneStart, phoneFinish, setPassword,
+  phoneStart, phoneFinish, setPassword, esvaziaFila,
+  pendentes: () => (fila ? fila.pendentes().length : 0),
   setWorkspace(uid) { base = uid ? ['ws', uid] : []; },
   /* separação da antiga dupla: lê a agenda que ficava na raiz e copia para o espaço da pessoa (a raiz fica intacta) */
   async readRoot(name) {
@@ -367,29 +398,29 @@ const backend = {
     return s.stop;
   },
   writePersonal(item) {
-    const path = ['pessoal', auth.currentUser.uid, 'itens'], g = campos(path, item);
+    const path = ['pessoal', auth.currentUser.uid, 'itens'], g = campos(path, item), en = entrada(path, item, live.get(liveKey(path))?.docs.get(item.id));
     localApply(path, item.id, item);
-    return fs.setDoc(fs.doc(db, ...path, item.id), ...g);
+    return comFila([en], () => fs.setDoc(fs.doc(db, ...path, item.id), ...g));
   },
   /* lixeira: marca (ou tira a marca) sem tocar no conteúdo */
   markPersonal(ids, marca) {
     const path = ['pessoal', auth.currentUser.uid, 'itens'];
     for (const id of ids) localApply(path, id, marca);
-    return emLotes(ids, 400, (bt, id) => bt.set(fs.doc(db, ...path, id), ...marcaEm(marca)));
+    return comFila(ids.map((id) => ({ k: [...path, id].join('/'), por: clean(marca), tira: [], novo: false })), () => emLotes(ids, 400, (bt, id) => bt.set(fs.doc(db, ...path, id), ...marcaEm(marca))));
   },
   write(name, item) {
-    const g = campos([...base, name], item);
-    localApply([...base, name], item.id, item);
-    return fs.setDoc(ref(name, item.id), ...g);
+    const path = [...base, name], g = campos(path, item), en = entrada(path, item, live.get(liveKey(path))?.docs.get(item.id)), r = ref(name, item.id);
+    localApply(path, item.id, item);
+    return comFila([en], () => fs.setDoc(r, ...g));
   },
   async writeMany(ops) {
     // até 400 por lote (cada item gravado uma vez só)
-    const L = ops.map(({ col: name, item }) => { const g = campos([...base, name], item); localApply([...base, name], item.id, item); return [ref(name, item.id), g]; });
-    await emLotes(L, 400, (bt, [r, g]) => bt.set(r, ...g));
+    const en = [], L = ops.map(({ col: name, item }) => { const g = campos([...base, name], item); en.push(entrada([...base, name], item, live.get(liveKey([...base, name]))?.docs.get(item.id))); localApply([...base, name], item.id, item); return [ref(name, item.id), g]; });
+    await comFila(en, () => emLotes(L, 400, (bt, [r, g]) => bt.set(r, ...g)));
   },
   async mark(name, ids, marca) {
     for (const id of ids) localApply([...base, name], id, marca);
-    await emLotes(ids, 400, (bt, id) => bt.set(ref(name, id), ...marcaEm(marca)));
+    const path = [...base, name]; await comFila(ids.map((id) => ({ k: [...path, id].join('/'), por: clean(marca), tira: [], novo: false })), () => emLotes(ids, 400, (bt, id) => bt.set(fs.doc(db, ...path, id), ...marcaEm(marca))));
   },
   /* passadas as 24 h: apaga de vez o que já venceu. Usa a hora do SERVIDOR (última gravação vista), não a do celular;
      a regra do banco confere de novo e recusa antes da hora. */

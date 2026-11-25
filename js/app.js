@@ -1313,6 +1313,8 @@ function startApp() {
   shell();
   render();
   store.on(rerenderAll);
+  import('./rede.js').then((r) => r.repintaRede()).catch(() => {});
+  window.addEventListener('lembra:recusada', () => toast('Uma alteração não foi aceita pela nuvem. Ela continua guardada neste aparelho.', { ms: 6000 }));
   startPersonal();
   import('./motion/auto.js').catch((e) => console.warn('animações', e));
   personal.onSaved = (b, a) => { import('./rank.js').then((r) => r.rankPersonal(b, a)); import('./game.js').then((gm) => gm.onPersonal(b, a)).catch(() => {}); };
@@ -1594,7 +1596,8 @@ async function boot() {
     return startApp();
   }
 
-  loading('Conectando à nuvem…');
+  import('./rede.js').then((r) => r.ligaRede()).catch(() => {});
+  loading('Abrindo sua agenda…');
   const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('tempo esgotado')), ms))]);
   try {
     const { connect } = await import('./cloud.js');

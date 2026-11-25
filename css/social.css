@@ -140,3 +140,5 @@ button, a, label, img, svg, canvas { -webkit-user-select: none; user-select: non
 /* ===== deslizar entre as abas ===== */
 html { overscroll-behavior-x: none; } .view { touch-action: pan-y pinch-zoom; } .dz__lado { position: fixed; inset: 0; z-index: 5; overflow: hidden; pointer-events: none; will-change: transform; } .dz__lado.is-cobre { background: var(--bg); transform: none !important; transition: none !important; } .dz__lado > .view { transition: none; min-height: 100%; } html.dz-on { overflow-x: clip; } html.dz-on body { overflow-x: clip; }
 .conv { touch-action: pan-y; }
+/* ===== sem internet ===== */
+.semnet { position: fixed; left: 0; right: 0; top: 0; z-index: 60; padding: calc(env(safe-area-inset-top, 0px) + 7px) 16px 8px; background: #201008; color: #FFF6EE; font: 800 14.5px/1.3 Nunito, system-ui, sans-serif; text-align: center; pointer-events: none; } html.is-semnet .view { padding-top: 36px; } :root[data-theme="dark"] .semnet { background: #1F1F1F; }

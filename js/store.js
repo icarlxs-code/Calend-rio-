@@ -381,6 +381,8 @@ export async function initLocal() {
 }
 
 /* ---------- backend nuvem ---------- */
+/* o último perfil fica no aparelho: nome, foto e ficha aparecem mesmo sem internet (sai junto com a conta) */
+function guardaPerfil() { const u = store.user; if (!u || !Object.keys(store.profile || {}).length) return; try { const { cpf, ...p } = store.profile; localStorage.setItem(`lembra.perfil.${u.uid}`, JSON.stringify(p)); } catch { /* cheio: tudo bem */ } }
 export async function initCloud(cloud, user) {
   store.mode = 'cloud';
   store.user = user;
@@ -390,8 +392,13 @@ export async function initCloud(cloud, user) {
   store.backendApi = cloud;
   // ficha da pessoa (profissão, rotina, dificuldades…): todas as contas têm
   let prof = null, profOk = false;
-  try { prof = await Promise.race([cloud.getProfile(user.uid), new Promise((r) => setTimeout(() => r(undefined), 6000))]); profOk = prof !== undefined; } catch { prof = null; }
-  store.profile = prof || {};
+  const KP = `lembra.perfil.${user.uid}`, guardado = (() => { try { return JSON.parse(localStorage.getItem(KP) || 'null'); } catch { return null; } })();
+  const busca = cloud.getProfile(user.uid);
+  // já tem perfil neste aparelho: abre na hora com ele e atualiza quando a nuvem responder
+  try { prof = await Promise.race([busca, new Promise((r) => setTimeout(() => r(undefined), guardado ? 1200 : 6000))]); profOk = prof !== undefined; } catch { prof = undefined; }
+  if (!profOk) { busca.then((p) => { if (p && store.user?.uid === user.uid) { store.profile = { ...store.profile, ...p }; guardaPerfil(); refreshMe(); store.emit(); } }).catch(() => {}); }
+  store.profile = (profOk ? prof : guardado) || {};
+  guardaPerfil();
   // fundadores já usavam o app antes da ficha existir: nunca são tratados como conta nova
   if (founder && profOk && !store.profile.onboardedAt) {
     const at = Date.parse(user.metadata?.creationTime || '') || Date.now();
@@ -415,7 +422,9 @@ export async function initCloud(cloud, user) {
     try { choice = localStorage.getItem(`lembra.ws.${user.uid}`); } catch { choice = null; }
     if (choice && choice !== user.uid && cloud.getTeam) {
       let t = null;
-      try { t = await Promise.race([cloud.getTeam(choice), new Promise((r) => setTimeout(() => r(null), 6000))]); } catch { t = null; }
+      try { t = await Promise.race([cloud.getTeam(choice), new Promise((r) => setTimeout(() => r(undefined), 6000))]); } catch { t = undefined; }
+      if (t === undefined) { try { t = JSON.parse(localStorage.getItem(`lembra.equipe.${choice}`) || 'null') || undefined; } catch { t = undefined; } } // sem rede: a equipe guardada
+      else if (t) try { localStorage.setItem(`lembra.equipe.${choice}`, JSON.stringify(t)); } catch { /* ok */ }
       if (t && t.active && (t.members || []).includes(user.uid)) {
         const { teamPeople } = await import('./equipe.js');
         store.workspace = choice;
@@ -427,8 +436,8 @@ export async function initCloud(cloud, user) {
         const nmNow = soloMember(user, store.profile).name;
         if (cloud.setMyTeamCard && (cur.name !== nmNow || (store.profile.photo && !cur.photo))) import('./equipe.js').then(async (q) => cloud.setMyTeamCard(choice, user.uid, { name: nmNow, color: mine.color, ...(cur.photo ? {} : await q.smallPhoto(store.profile.photo)) })).catch((e) => console.warn('cartão na equipe', e));
       } else {
-        try { localStorage.removeItem(`lembra.ws.${user.uid}`); } catch { /* ok */ }
-        store.sharedLost = t && !t.active ? (t.ownerName || 'Equipe') : choice ? 'removido' : null;
+        if (t !== undefined) try { localStorage.removeItem(`lembra.ws.${user.uid}`); } catch { /* ok */ } // sem rede não dá para saber: a escolha fica
+        store.sharedLost = t === undefined ? null : t && !t.active ? (t.ownerName || 'Equipe') : choice ? 'removido' : null;
       }
     }
   }
@@ -438,6 +447,7 @@ export async function initCloud(cloud, user) {
     try { await splitDupla(cloud, user, founder); } catch (e) { console.warn('separação da dupla: tenta de novo na próxima abertura', e); }
   }
   store.ready = false;
+  if (cloud.esvaziaFila) import('./rede.js').then((r) => { r.aoVoltarRede(() => cloud.esvaziaFila().catch(() => {})); setTimeout(() => cloud.esvaziaFila().catch(() => {}), 4000); }).catch(() => {});
   await cloud.subscribe(COLS, (col, items) => {
     const { ok, lixo } = separa(items);
     store.state[col] = ok.map((x) => sanitizeItem(col, x)).filter(Boolean);
