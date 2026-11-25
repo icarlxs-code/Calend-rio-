@@ -182,8 +182,8 @@ class Rig {
     go('l', pl, al); go('r', pr, ar);
   }
   /* boca falando (novidades): manda sobre os gestos enquanto houver voz */
-  fala(m) { if (m === null) { if (this.voz) { this.voz = null; this.mouth = this.antes || 'aberta'; this.pm = null; } return; } if (!this.voz) this.antes = this.mouth; this.voz = m; if (this.imgOk('boca-' + m)) { this.mouth = m; this.pm = null; } }
-  setMouth(m) { if (this.voz) return; if (m && m !== this.mouth && this.imgOk('boca-' + m)) { this.pm = this.mouth; this.pmT = this.t; this.mouth = m; this.s.mz.v = 0.9; } }
+  fala(m) { if (m === null) { if (this.voz) { this.voz = null; this.calou = this.t; this.mouth = this.antes || 'aberta'; this.pm = null; } return; } if (!this.voz) this.antes = this.mouth; this.voz = m; if (this.imgOk('boca-' + m)) { this.mouth = m; this.pm = null; } }
+  setMouth(m) { if (this.voz || (this.t - this.calou < 2.5 && /^(a|e|o)$/.test(m))) return; if (m && m !== this.mouth && this.imgOk('boca-' + m)) { this.pm = this.mouth; this.pmT = this.t; this.mouth = m; this.s.mz.v = 0.9; } }
   imgOk(n) { return IMG && IMG[n] && IMG[n].naturalWidth; }
   blink(dbl) {
     if (this.sleeping) this.wake();
