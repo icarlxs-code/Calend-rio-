@@ -63,8 +63,7 @@ function stepHtml(step, i, total) {
       <p>Avisos antes de cada ${esc(tlist(2))}, uma pergunta na hora exata e cobrança se algo ficar para trás.</p>
       <div data-notify-msg></div>
       ${dots}
-      <button class="btn btn--primary btn--block" data-enable>${icon('bell', 18)} Ativar notificações</button>
-      <button class="btn btn--ghost btn--block" data-skip>Agora não</button>`;
+      <button class="btn btn--primary btn--block" data-enable>${icon('bell', 18)} Ativar notificações</button>`;
     }
     return `<div class="ob__previews">
         ${preview('Daqui a 2h: Reels · Café Aroma', '18h — postar o Reels “Bastidores”', 'agora')}
@@ -75,8 +74,7 @@ function stepHtml(step, i, total) {
       <p>Lembretes 2h e 30 min antes de cada post, aviso na véspera das captações, cobrança se algo ficou para trás e aviso quando o parceiro marcar algo para você.</p>
       <div data-notify-msg></div>
       ${dots}
-      <button class="btn btn--primary btn--block" data-enable>${icon('bell', 18)} Ativar notificações</button>
-      <button class="btn btn--ghost btn--block" data-skip>Agora não</button>`;
+      <button class="btn btn--primary btn--block" data-enable>${icon('bell', 18)} Ativar notificações</button>`;
   }
   return `<div class="ob__art ob__art--ok">${icon('check', 40)}</div>
     <h1>Tudo pronto${me ? ', ' + esc(me.name) : ''}!</h1>

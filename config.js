@@ -13,6 +13,8 @@ export const CONFIG = {
   siteUrl: 'https://meulembra.com.br/',
   // LGPD: quem responde pelos dados (aparece nos Termos e na Política de Privacidade).
   // Se abrir empresa, coloque a razão social e o CNPJ, ex.: 'Lembra Tecnologia LTDA (CNPJ 00.000.000/0001-00)'.
+  // true: sem notificação ativada, o app pede e só abre depois de ligar
+  avisosObrigatorios: true,
   legalName: 'Lembra',
   // Lei do comércio eletrônico (Decreto 7.962/2013): quem vende online mostra CPF ou CNPJ e um endereço.
   // Preencha antes de anunciar, ex.: legalId: '', legalAddress: ''.

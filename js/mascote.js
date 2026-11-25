@@ -331,7 +331,7 @@ function feito(o = {}) {
 
 /* ---------- o companheiro na tela ---------- */
 let B = null, ultima = '', hideT = 0, spyT = 0, holdT = 0, busyUntil = 0, cenaT = 0, ultimoGesto = '';
-const blocked = () => !!document.querySelector('.sheet-wrap.is-open, .paywall, .ficha, .photogate, .gx, .okfx, .stk, .stv, .snhpeek, .spaceveil') ||
+const blocked = () => !!document.querySelector('.sheet-wrap.is-open, .paywall, .ficha, .photogate, .avgate, .gx, .okfx, .stk, .stv, .snhpeek, .spaceveil') ||
   (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName));
 const el = () => B && B.querySelector('[data-snh]');
 function state(s, side) { if (!B) return; B.dataset.st = s; if (side && !livre) B.dataset.side = side; }

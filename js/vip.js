@@ -22,7 +22,7 @@ export const notifOk = () => push.permission() === 'granted' && push.deviceRegis
 // nome completo da ficha no cartão; no texto, o apelido (como o app chama a pessoa)
 const myName = () => String(store.profile?.name || store.member(store.me)?.name || '').trim().slice(0, 40);
 const first = () => String(store.profile?.nickname || store.member(store.me)?.name || myName()).trim().split(/\s+/)[0] || '';
-const busy = () => !!document.querySelector('.sheet-wrap.is-open, .paywall.is-open, .photogate, .ficha, .ob, .guide, .termsgate, .gx, .vip');
+const busy = () => !!document.querySelector('.sheet-wrap.is-open, .paywall.is-open, .photogate, .avgate, .ficha, .ob, .guide, .termsgate, .gx, .vip');
 
 /* chamada ao abrir o app: mostra a revelação uma vez (espera as outras telas fecharem) */
 export function maybeShowVip({ force = false } = {}) {

@@ -38,7 +38,7 @@ export const preloadStreak = () => { alive(); import('./sound.js').catch(() => {
 export async function showStreak(days = 1, tries = 0) {
   if (!days || document.querySelector('.stk')) return;
   // espera outras telas cheias (conquista, planos…) saírem — no máx. 8 tentativas
-  if (document.querySelector('.gx, .paywall, .ficha, .photogate, .okfx, .spaceveil')) { if (tries < 8) setTimeout(() => showStreak(days, tries + 1), 1200); return; }
+  if (document.querySelector('.gx, .paywall, .ficha, .photogate, .avgate, .okfx, .spaceveil')) { if (tries < 8) setTimeout(() => showStreak(days, tries + 1), 1200); return; }
   const snd = import('./sound.js').catch(() => null);
   const marco = MARCOS[days], grande = days >= 7 && !!marco, T = tierOf(days), prox = TIERS.find((t) => t.from > days);
   const [title, sub] = marco || [pick(NORMAL), `${days} dias seguidos concluindo. Amanhã eu te espero aqui!`];

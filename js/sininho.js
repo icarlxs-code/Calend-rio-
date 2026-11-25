@@ -700,7 +700,7 @@ export function interactive(el, { base, bubble } = {}) {
 let peekOn = null;
 export async function peek(mood, text, { ms = 3600, gesture, tries = 0, desde = Date.now() } = {}) {
   if (document.hidden) return;
-  if (document.querySelector('.gx, .paywall, .ficha, .photogate, .okfx, .stk')) {
+  if (document.querySelector('.gx, .paywall, .ficha, .photogate, .avgate, .okfx, .stk')) {
     if (tries < 2 && Date.now() - desde < 4000) setTimeout(() => peek(mood, text, { ms, gesture, tries: tries + 1, desde }), 1500); // no máx. 3 tentativas em 4 s
     return;
   }

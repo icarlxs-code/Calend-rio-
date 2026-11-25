@@ -825,7 +825,7 @@ function requirePhoto(tries = 0) {
 let askedThisOpen = false;
 function askNotifications() {
   if (store.mode !== 'cloud' || typeof Notification === 'undefined' || Notification.permission === 'granted' || askedThisOpen || window.__vipAskedNotif) return;
-  if (document.querySelector('.sheet-wrap.is-open, .paywall.is-open, .photogate, .ficha, .vip, .gx')) { setTimeout(askNotifications, 8000); return; }
+  if (document.querySelector('.sheet-wrap.is-open, .paywall.is-open, .photogate, .ficha, .vip, .gx, .avgate')) { setTimeout(askNotifications, 8000); return; }
   let last = 0; try { last = Number(localStorage.getItem('lembra.askNotif') || 0); } catch { /* ok */ }
   const vip = store.billing?.plan === 'lifetime' && store.billing?.vip;
   const every = vip ? (Date.now() - (vip.at || 0) < 3 * 864e5 ? 0 : 20 * 3600e3) : 3 * 864e5;
@@ -1351,10 +1351,11 @@ function startApp() {
   // versão: confere se há nova ao voltar para o app (atualiza sozinho) e mostra as novidades uma vez
   import('./version.js').then((v) => {
     v.startVersionWatch();
-    const news = (n = 0) => (openSheets().length || document.querySelector('.ficha, .paywall, .ob, .guide, .photogate, .termsgate') ? n < 30 && setTimeout(() => news(n + 1), 4000) : v.maybeShowWhatsNew());
+    const news = (n = 0) => (openSheets().length || document.querySelector('.ficha, .paywall, .ob, .guide, .photogate, .termsgate, .avgate') ? n < 30 && setTimeout(() => news(n + 1), 4000) : v.maybeShowWhatsNew());
     setTimeout(news, 6000);
   }).catch(() => {});
   setTimeout(requirePhoto, 3500);
+  setTimeout(() => import('./avisos-obrigatorio.js').then((m) => m.vigia()).catch((e) => console.warn('avisos', e)), 2500);
   setTimeout(askNotifications, 12000);
   // voltou para o app depois de um tempo (o app não fecha de verdade no celular): conta como "abrir de novo"
   let hiddenAt = 0;

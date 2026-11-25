@@ -410,7 +410,7 @@ export function denunciaOuBloqueia({ uid, name, storyId = '' }, onClose, depoisB
    destravam com esse XP (calculado com as mesmas regras do jogo). Se já postou desse compromisso, não aparece. */
 let ultimoToque = 0, ultConvite = 0;
 if (typeof document !== 'undefined') document.addEventListener('pointerdown', () => { ultimoToque = Date.now(); }, { passive: true, capture: true });
-const ocupado = () => !!document.querySelector('.stk, .gx, .okfx, .photogate, .paywall, .ficha, .stv, .sheet--cvs');
+const ocupado = () => !!document.querySelector('.stk, .gx, .okfx, .photogate, .avgate, .paywall, .ficha, .stv, .sheet--cvs');
 function quandoLivre(fn, n = 0) { if (!ocupado()) return fn(); if (n < 50) setTimeout(() => quandoLivre(fn, n + 1), 600); }
 if (typeof window !== 'undefined') window.addEventListener('lembra:concluiu', (ev) => {
   const d = ev.detail || {};

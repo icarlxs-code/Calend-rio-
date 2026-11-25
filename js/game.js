@@ -419,7 +419,7 @@ const mini = [];
 let miniOn = false, welcomedAt = 0;
 function pumpMini() {
   if (miniOn || !mini.length) return;
-  if (document.querySelector('.gx, .okfx, .ficha, .paywall, .photogate')) { setTimeout(pumpMini, 1200); return; }
+  if (document.querySelector('.gx, .okfx, .ficha, .paywall, .photogate, .avgate')) { setTimeout(pumpMini, 1200); return; }
   miniOn = true;
   // várias conquistas de uma vez: um aviso só, com as medalhas empilhadas
   const group = mini.filter((x) => !x.level);
@@ -441,7 +441,7 @@ function pumpMini() {
   const t = setTimeout(close, 3600);
   el.onclick = () => { clearTimeout(t); close(); import('./views/profile.js').then((m) => (b.level ? m.openProfilePage({ tab: 'niveis' }) : b.many ? m.openProfilePage({ tab: 'emblemas' }) : m.badgeDetail(b.id))).catch(() => {}); };
 }
-const busy = () => !!document.querySelector('.sheet-wrap.is-open, .ficha, .paywall, .ob, .guide, .photogate, .termsgate, .okfx, .mustupd');
+const busy = () => !!document.querySelector('.sheet-wrap.is-open, .ficha, .paywall, .ob, .guide, .photogate, .avgate, .termsgate, .okfx, .mustupd');
 function pump() {
   if (showing || !queue.length) return;
   if (busy()) { setTimeout(pump, 1500); return; }

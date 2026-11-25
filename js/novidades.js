@@ -53,7 +53,7 @@ export function abreNovidades(quadros, aoFechar) {
   if (aberta || !quadros.length) return null;
   let i = 0, vez = 0; const antes = document.activeElement;
   const w = document.createElement('div'); w.className = 'nv'; w.tabIndex = -1; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', 'Novidades do Lembra');
-  w.innerHTML = `<div class="nv__fundo" data-fundo></div><div class="nv__bars">${quadros.map(() => '<i><b></b></i>').join('')}</div><div class="nv__topo"><button class="nv__som" data-som></button><button class="nv__pula" data-pula>Pular</button></div>
+  w.innerHTML = `<div class="nv__fundo" data-fundo></div><i class="nv__bola" data-bola hidden></i><div class="nv__bars">${quadros.map(() => '<i><b></b></i>').join('')}</div><div class="nv__topo"><button class="nv__som" data-som></button><button class="nv__pula" data-pula>Pular</button></div>
     <div class="nv__palco" data-palco></div>
     <div class="nv__baixo snhwrap"><h2 data-t></h2><div class="snhb nv__fala"><span class="snhb__txt" aria-live="polite"></span></div><span class="nv__snh">${sininho('feliz', { size: 220 })}</span></div>
     <button class="nv__zona nv__zona--l" data-volta tabindex="-1" aria-label="Voltar"></button><button class="nv__zona nv__zona--r" data-vai tabindex="-1" aria-label="Próxima novidade"></button>
@@ -70,32 +70,34 @@ export function abreNovidades(quadros, aoFechar) {
     q('[data-ok] span').textContent = espera ? 'Ouvir' : i < quadros.length - 1 ? 'Próxima' : 'Bora!';
   };
   const show = (s) => s.s.includes('|');
+  const FITA = ['M-20 60 C 140 20 40 190 200 200 S 300 360 430 320', 'M430 40 C 260 60 340 220 190 210 S 90 330 -30 380', 'M-20 330 C 120 380 120 120 220 150 S 300 60 430 90'];
   const enquadra = (k) => { w.classList.toggle('is-rosto', k === 'rosto'); w.classList.toggle('is-cena', k === 'cena'); };
   /* a demonstração entra em cena (mais rápida quando há voz) */
   const poeCena = (s) => {
-    const p = q('[data-palco]'); if (p.querySelector('.nvc:not(.is-sai)')) return;
-    p.insertAdjacentHTML('beforeend', (CENAS[s.c] || CENAS.abre)());
+    const p = q('[data-palco]'); if (p.querySelector(':scope > .nvc:not(.is-sai)')) return;
+    const c = (CENAS[s.c] || CENAS.abre)();
+    p.insertAdjacentHTML('beforeend', show(s) ? `<div class="nvc nvx"><svg class="nvx__fita" viewBox="0 0 400 400" aria-hidden="true"><path pathLength="1" d="${FITA[i % 3]}"/></svg><span class="nvx__aneis"><i></i><i></i><i></i></span><div class="nvx__cel"><div class="nvx__tela"><span class="nvx__barra"><b>${s.t}</b></span>${c}</div></div><span class="nvx__voa nvx__voa--a">${icon('bell', 30)}</span><span class="nvx__voa nvx__voa--b">${icon('check', 26)}</span></div>` : c);
     if (vozLigada() && show(s) && !calmo()) p.querySelectorAll('.nvc:not(.is-sai), .nvc:not(.is-sai) *').forEach((x) => x.getAnimations && x.getAnimations().forEach((m) => { m.playbackRate = 1.7; }));
   };
-  const tiraCena = () => { const velho = q('[data-palco] .nvc:not(.is-sai)'); if (velho) { velho.classList.add('is-sai'); setTimeout(() => velho.remove(), 220); } };
+  const tiraCena = () => { const velho = q('[data-palco] > .nvc:not(.is-sai)'); if (velho) { velho.classList.add('is-sai'); setTimeout(() => velho.remove(), 220); } };
   /* legenda viva: cada palavra entra na hora em que é dita */
   const legenda = (s, tudo) => {
     const t = q('.snhb__txt'), c = corte(s.c, s.s), d = duracao(s.c) / 1000; clearInterval(t._t); let k = 0;
     t.innerHTML = s.s.split('|').map((p, j) => { const ini = j ? c : 0, fim = j ? d : c, ps = p.trim().split(' '), tam = p.trim().length; let pos = 0; return `<span class="nv__p nv__p--${j}">${ps.map((x) => { const em = ini + (fim - ini - 0.1) * (pos / tam); pos += x.length + 1; return `<i data-em="${em.toFixed(2)}" style="--k:${(k++) % 2 ? 1 : -1}"${tudo ? ' class="is-dita"' : ''}>${x}</i>`; }).join(' ')}</span>`; }).join(' ');
     return { c, ps: [...t.querySelectorAll('i')] };
   };
-  const inteiro = (s) => { w.classList.add('is-inteiro'); legenda(s, true); enquadra('cena'); poeCena(s); };
+  const inteiro = (s) => { pintaFundo(1); w.classList.add('is-inteiro'); legenda(s, true); enquadra('cena'); poeCena(s); };
   /* sem toque antes, o celular segura o som: o primeiro toque vira "Ouvir" */
   const fala = async () => {
     const minha = vez, s = quadros[i]; espera = false;
     if (!vozLigada() || !temVoz(s.c)) { voz.para(); voz.musica(false); rotulo(); if (show(s)) inteiro(s); return; }
     let op = {};
     if (show(s) && !calmo()) {
-      w.classList.remove('is-inteiro'); const { c, ps } = legenda(s); let cena = false; enquadra('rosto');
+      w.classList.remove('is-inteiro'); pintaFundo(0); const { c, ps } = legenda(s); let cena = false; enquadra('rosto');
       op = {
         passo: (seg) => {
-          ps.forEach((x) => { if (seg >= Number(x.dataset.em) - 0.04) x.classList.add('is-dita'); });
-          if (!cena && seg >= c) { cena = true; enquadra('cena'); poeCena(s); voz.corta(false); if (!s.v) act(snh(), ['sim', 'sobrancelha', 'riso'][i % 3]); }
+          ps.forEach((x) => { if (seg >= Number(x.dataset.em) - 0.04 && !x.classList.contains('is-dita')) { x.classList.add('is-dita'); if (!cena && x.closest('.nv__p--0')) bola(x); } });
+          if (!cena && seg >= c) { cena = true; const b = q('[data-bola]'); pintaFundo(1, (Number(b.dataset.x) / w.clientWidth) * 100, (Number(b.dataset.y) / w.clientHeight) * 100); b.hidden = true; enquadra('cena'); poeCena(s); voz.corta(false); if (!s.v) act(snh(), ['sim', 'sobrancelha', 'riso'][i % 3]); }
         },
         fim: () => setTimeout(() => { if (minha === vez && aberta && i < quadros.length - 1) anda(1); else if (minha === vez) voz.musica(false); }, s.c === 'abre' ? 150 : 420),
       };
@@ -105,15 +107,24 @@ export function abreNovidades(quadros, aoFechar) {
     espera = ok === false; rotulo(); if (ok && !calmo()) voz.musica(true); else if (!ok && show(s)) inteiro(s);
     if (quadros[i + 1]) carrega(quadros[i + 1].c);
   };
-  const FUNDO = ['#FFF6EA', '#FFD166', '#FFE0C2', '#FFF0B8', '#FFC79A'];
-  const pintaFundo = () => {
-    const f = document.createElement('i'); f.style.setProperty('--cor', FUNDO[i % FUNDO.length]); f.style.setProperty('--x', ['50%', '8%', '92%'][i % 3]); q('[data-fundo]').append(f);
-    const n = q('[data-fundo]').children; if (n.length > 1) setTimeout(() => { while (n.length > 1 && n[0] !== f) n[0].remove(); }, 620);
+  /* dois fundos por novidade (rosto e cena): branco, laranja e amarelo, sem repetir vizinhos */
+  const FUNDO = [['w', 'o'], ['w', 'y'], ['o', 'w'], ['y', 'o']];
+  /* a bolinha cresce em anéis e vira o próximo fundo */
+  const pintaFundo = (plano, x = 50, y = 50) => {
+    const cor = FUNDO[i % 4][plano]; if (w.dataset.cor === cor && w.dataset.cor) return;
+    w.dataset.cor = cor; const cx = q('[data-fundo]'); cx.style.setProperty('--x', `${x}%`); cx.style.setProperty('--y', `${y}%`);
+    const novos = [2, 1, 0].map((k) => { const f = document.createElement('i'); f.className = `is-${cor} is-k${k}`; cx.append(f); return f; });
+    setTimeout(() => { while (cx.firstChild && cx.firstChild !== novos[2] && cx.contains(novos[2])) cx.firstChild.remove(); }, 720);
+  };
+  const bola = (palavra) => {
+    const b = q('[data-bola]'), r = palavra.getBoundingClientRect(), o = w.getBoundingClientRect();
+    const x = Math.min(r.right - o.left + 16, o.width - 14), y = r.top - o.top + r.height * 0.62, x0 = Number(b.dataset.x || -30), y0 = Number(b.dataset.y || y - 60); b.dataset.x = x; b.dataset.y = y; b.hidden = false;
+    b.animate([{ transform: `translate(${x0}px, ${y0}px)` }, { transform: `translate(${(x0 + x) / 2}px, ${Math.min(y0, y) - 70}px) scale(.82, 1.25)`, offset: 0.5 }, { transform: `translate(${x}px, ${y}px) scale(1.3, .7)`, offset: 0.9 }, { transform: `translate(${x}px, ${y}px)` }], { duration: 230, easing: 'cubic-bezier(.77, 0, .175, 1)', fill: 'forwards' });
   };
   const mostra = (dir = 1) => {
     const s = quadros[i], minha = ++vez; w.dataset.c = s.c; w.dataset.lado = i % 3; w.style.setProperty('--dir', dir); w.classList.toggle('is-show', show(s));
     w.querySelectorAll('.nv__bars i').forEach((b, k) => b.classList.toggle('is-on', k <= i));
-    tiraCena(); pintaFundo();
+    tiraCena(); pintaFundo(0, [50, 8, 92][i % 3], 78); const bl = q('[data-bola]'); bl.hidden = true; delete bl.dataset.x; delete bl.dataset.y;
     if (!show(s)) setTimeout(() => { if (minha === vez) poeCena(s); }, 160);
     const t = q('[data-t]'); t.textContent = s.t; t.classList.remove('is-in'); void t.offsetWidth; t.classList.add('is-in');
     voz.para(); voz.corta(true); espera = false; rotulo();

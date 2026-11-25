@@ -41,7 +41,7 @@ function comeca(e) {
     return;
   }
   const view = alvo.closest('#view');
-  if (!view || openSheets().length || document.querySelector('.paywall, .ficha, .ob, .guide, .nv, .stv, .spaceveil, .termsgate, .photogate') || alvo.closest(JA_TEM) || rolaDeLado(alvo, view)) return;
+  if (!view || openSheets().length || document.querySelector('.paywall, .ficha, .ob, .guide, .nv, .stv, .spaceveil, .termsgate, .photogate, .avgate') || alvo.closest(JA_TEM) || rolaDeLado(alvo, view)) return;
   const L = abas.lista(), i = L.indexOf(abas.atual()); if (i < 0) return;
   g = { ...base, tipo: 'aba', view, w: innerWidth, ant: L[i - 1], prox: L[i + 1], lados: {} };
 }
