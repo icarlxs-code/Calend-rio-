@@ -9,6 +9,8 @@ import { call, podeSocial, ICO, rosto, desde, falta, ouvir, atualiza, conversas,
 import { isTeen } from './teen.js';
 import { tranca } from './tranca.js';
 import { abreUnica } from './unica.js';
+import * as filaMsg from './msg-fila.js';
+import { semRede } from './rede.js';
 import { muda } from './mensagens.js';
 import { sininho, alive, veste, act, lookAt } from './sininho.js';
 import { roupa } from './roupas.js';
@@ -61,7 +63,7 @@ export async function openConversa(uid, prev = {}) {
       : m.tipo === 'story' ? `<button type="button" class="bol__story" data-story="${esc(m.st?.id || '')}" data-dono="${esc(m.st?.owner || '')}"><span class="bol__mini"></span><small>${m.meu ? `Você respondeu ao story de ${esc(n1())}` : 'Respondeu ao seu story'}</small></button><p class="${/^\p{Extended_Pictographic}/u.test(m.txt) && m.txt.length <= 4 ? 'is-emo' : ''}">${esc(m.txt)}</p>`
       : `<p class="${/^(\p{Extended_Pictographic}️?){1,3}$/u.test(m.txt) ? 'is-emo' : ''}">${esc(m.txt)}</p>`;
     const dia = !ant || new Date(ant.at).getDate() !== new Date(m.at).getDate() ? `<div class="conv__dia"><span>${new Date(m.at).getDate() === new Date().getDate() ? 'Hoje' : 'Ontem'}</span></div>` : '';
-    return `${dia}<div class="bol${m.meu ? ' bol--eu' : ''}${junto ? ' is-junto' : ''}${fim ? ' is-fim' : ''}${m.nova ? ' is-entra' : ''}${rc.length ? ' tem-reac' : ''}${achada ? ' is-acha' : ''}" data-m="${esc(m.id)}"><div class="bol__c">${m.resp ? citacao(m.resp) : ''}${dentro}<span class="bol__pe">${hora(m.at)}${m.meu && m.tipo !== 'apagada' ? (m.falhou ? ` <button type="button" class="bol__re" data-re="${esc(m.id)}">não foi · tentar</button>` : m.envio ? ` ${icon('clock', 12)}` : D.lidoAte >= m.at ? ' <b class="bol__visto">visto</b>' : ` ${icon('check', 12)}`) : ''}</span></div>${rc.length ? `<span class="bol__reac">${[...new Set(rc)].map(esc).join('')}${rc.length > 1 ? `<small>${rc.length}</small>` : ''}</span>` : ''}</div>`;
+    return `${dia}<div class="bol${m.meu ? ' bol--eu' : ''}${junto ? ' is-junto' : ''}${fim ? ' is-fim' : ''}${m.nova ? ' is-entra' : ''}${rc.length ? ' tem-reac' : ''}${achada ? ' is-acha' : ''}" data-m="${esc(m.id)}"><div class="bol__c">${m.resp ? citacao(m.resp) : ''}${dentro}<span class="bol__pe">${hora(m.at)}${m.meu && m.tipo !== 'apagada' ? (m.falhou ? ` <button type="button" class="bol__re" data-re="${esc(m.id)}">não foi · tentar</button>` : m.espera ? ' <span class="bol__esp">sem internet · sobe depois</span>' : m.envio ? ` ${icon('clock', 12)}` : D.lidoAte >= m.at ? ' <b class="bol__visto">visto</b>' : ` ${icon('check', 12)}`) : ''}</span></div>${rc.length ? `<span class="bol__reac">${[...new Set(rc)].map(esc).join('')}${rc.length > 1 ? `<small>${rc.length}</small>` : ''}</span>` : ''}</div>`;
   };
   let assin = '', viuAte = 0;
   /* o Lembra na conversa: digita, grava, e quando a última mensagem é vista ele chega e lê */
@@ -105,7 +107,14 @@ export async function openConversa(uid, prev = {}) {
   }
   async function despacha(m) {
     m.falhou = false; m.envio = true; pinta(true);
-    try { const r = await call('/friends/msg-send', m.pacote); m.ok = r.id; m.envio = false; if (m.local) MIDIA.set(r.id, Promise.resolve(m.local)); if (m.midiaLocal) MIDIA.set(r.id, Promise.resolve(m.midiaLocal)); await traz(); } catch (e) { m.envio = false; m.falhou = true; pinta(true); toast(e.message || 'Não foi. Toque em “tentar”.'); }
+    try { const r = await call('/friends/msg-send', m.pacote); m.ok = r.id; m.envio = false; if (m.local) MIDIA.set(r.id, Promise.resolve(m.local)); if (m.midiaLocal) MIDIA.set(r.id, Promise.resolve(m.midiaLocal)); await traz(); }
+    catch (e) {
+      m.envio = false;
+      const semNet = /sem-rede|rede|internet|Failed to fetch|NetworkError/i.test(String(e?.code || e?.message || e)) || semRede();
+      // sem internet e sendo texto: guarda no aparelho e sobe sozinha depois (nada se perde)
+      if (semNet && m.tipo === 'txt') { m.espera = true; m.falhou = false; await filaMsg.guardaParaDepois(m.pacote, { com: uid, txt: m.txt, tipo: 'txt' }); pinta(true); toast('Sem internet: a mensagem sobe sozinha quando voltar.', { ms: 5000 }); }
+      else { m.falhou = true; pinta(true); toast(e.message || 'Não foi. Toque em “tentar”.'); }
+    }
   }
   function mostraResp() { const r = $('[data-resp]'); if (!r) return; r.hidden = !resp; r.innerHTML = resp ? `${ICO.volta(18)}${citacao(resp)}<button type="button" class="iconbtn" data-semresp aria-label="Cancelar resposta">${icon('x', 18)}</button>` : ''; const x = r.querySelector('[data-semresp]'); if (x) x.onclick = () => { resp = null; mostraResp(); }; }
   /* toque longo (ou dois toques): reagir, responder, copiar, apagar, denunciar */

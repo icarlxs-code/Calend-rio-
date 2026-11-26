@@ -1364,6 +1364,8 @@ function startApp() {
   setTimeout(() => import('./avisos-obrigatorio.js').then((m) => m.vigia()).catch((e) => console.warn('avisos', e)), 2500);
   setTimeout(askNotifications, 12000);
   // time do coração: se aconteceu algo no jogo, o mascote reage na tela (e só então)
+  // mensagens escritas sem internet sobem sozinhas quando a rede voltar
+  import('./msg-fila.js').then(async (F) => { const S = await import('./social.js'); F.liga((pacote) => S.call('/friends/msg-send', pacote)); }).catch(() => {});
   const torcida = () => import('./torcida.js').then((t) => t.confere()).catch(() => {});
   setTimeout(torcida, 9000);
   setInterval(() => { if (!document.hidden) torcida(); }, 4 * 60e3);
