@@ -68,6 +68,8 @@ export async function checkVersion({ force = false } = {}) {
   try { tried = sessionStorage.getItem('cal.updTried') || ''; } catch { /* ok */ }
   if (tried === j.build || busy()) { showUpdPill(j); return j; }
   try { sessionStorage.setItem('cal.updTried', j.build); } catch { /* ok */ }
+  // limpa a cópia antiga antes de recarregar: garante que a versão nova entra de verdade, não a velha do cache
+  try { const ks = await caches.keys(); await Promise.all(ks.filter((k) => k.startsWith('cal-')).map((k) => caches.delete(k))); } catch { /* ok */ }
   location.replace(`${location.pathname}?u=${encodeURIComponent(j.build)}${location.hash}`);
   return j;
 }
