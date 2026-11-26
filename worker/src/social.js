@@ -73,6 +73,13 @@ export function makeSocial(sql, meter = {}) {
       q('UPDATE msg SET reac = ? WHERE par = ? AND at = ? AND id = ?', JSON.stringify(m), r.par, r.at, r.id); escreve();
       return m;
     },
+    /* a pessoa saiu do app (ou apertou print) com a mídia de uma vez só aberta: fica registrado e o autor vê */
+    sinalUnica(u, o, at, id, sinal, now = Date.now()) {
+      const r = api.acha(u, o, at, id); if (!r || r.de === u || r.tipo === 'apagada') return null;
+      const mt = J(r.meta) || {}; if (!mt.unica || mt.sinal) return null;
+      q('UPDATE msg SET meta = ? WHERE par = ? AND at = ? AND id = ?', JSON.stringify({ ...mt, sinal: String(sinal || 'suspeita').slice(0, 20), sinalAt: now }), r.par, r.at, r.id); escreve();
+      return true;
+    },
     midia(u, o, at, id, now = Date.now(), abrir = false) {
       const r = api.acha(u, o, at, id); if (!r || r.at <= now - DIA) return null;
       const mt = J(r.meta) || {};
@@ -249,6 +256,11 @@ export async function socialRoute(c) {
     const emo = EMO.includes(body.emo) ? body.emo : '', m = S.reage(meU, com, body.at, body.id, emo);
     if (!m) return erro('Essa mensagem já sumiu.', 404);
     avisa(com, { t: 'mudou', de: meU }); return [{ ok: true, reac: m }];
+  }
+  if (path === '/friends/msg-sinal') {
+    const ok = S.sinalUnica(meU, com, body.at, body.id, body.sinal);
+    if (ok) avisa(com, { t: 'mudou', de: meU });
+    return [{ ok: !!ok }];
   }
   if (path === '/friends/msg-send') {
     const tipo = ['txt', 'foto', 'audio', 'story'].includes(body.tipo) ? body.tipo : 'txt', meta = {};

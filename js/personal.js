@@ -11,6 +11,7 @@ import { todayKey, addDays, fromKey, pad, uid } from './utils.js';
 import { server, api } from './avisos.js';
 import { streak } from './reward.js';
 import { itemLook } from './itemicons.js';
+import * as cofre from './cofre.js';
 
 export const CATS = {
   lembrete: { label: 'Lembrete', emoji: '📝', ic: 'note', g: ['#8E9AAF', '#5B6478'], color: '#6B7489', words: [] },
@@ -44,6 +45,7 @@ export const listIcon = (l) => (l && LIST_ICONS[l.ic] ? l.ic : OLD_EMOJI[l?.emoj
 const DEFAULT_PREFS = { reminders: true, morning: true, night: true, nudges: true, water: true, meals: true, faith: true, freq: 'normal' };
 
 const LS = 'cal.pessoal.v1';
+export const CHAVE_LOCAL = LS;
 let items = [], lixo = [], started = false;
 const listeners = new Set();
 const isEvent = (x) => !x.kind || x.kind === 'event';
@@ -79,7 +81,7 @@ export function startPersonal() {
       emit();
     });
   } else {
-    try { const t = JSON.parse(localStorage.getItem(LS) || '[]'); items = t.filter((x) => !apagado(x)); lixo = t.filter((x) => apagado(x) && !vencido(x)); } catch { items = []; }
+    try { const t = JSON.parse(cofre.leSync(LS) || '[]'); items = t.filter((x) => !apagado(x)); lixo = t.filter((x) => apagado(x) && !vencido(x)); } catch { items = []; }
     personal.ready = true;
     emit();
   }
@@ -89,7 +91,7 @@ function writeFailed(e) {
   if (/permission/i.test(String(e?.code || e?.message))) { personal.error = 'rules'; emit(); }
   else if (store.onError) store.onError(e);
 }
-const saveLocal = () => { try { localStorage.setItem(LS, JSON.stringify([...items, ...lixo])); } catch { /* cheio */ } };
+const saveLocal = () => { cofre.guarda(LS, JSON.stringify([...items, ...lixo])).catch((e) => { console.error('cofre: Pessoal não salvou', e); if (store.onError) store.onError(e); }); };
 
 export function savePersonal(it) {
   // sem plano ativo: nada é gravado (só as preferências da ficha)

@@ -9,7 +9,9 @@ import { polishSoon } from './polish.js';
 import { renderPersonalSpace, personalTabbar, bindPersonal, personalActions, openPersonalEditor } from './views/personal.js';
 import { personal, startPersonal, occurrences } from './personal.js';
 import { CONFIG } from '../config.js';
-import { store, initLocal, initCloud, saveMyProfile } from './store.js';
+import { store, initLocal, initCloud, saveMyProfile, LS_DATA } from './store.js';
+import * as cofre from './cofre.js';
+import { CHAVE_LOCAL as LS_PESSOAL } from './personal.js';
 import { ui, saveUi } from './ui.js';
 import { esc, isStandalone, todayKey, addDays, addMonths, monthKey, uid, toMin, nowMin, resizeImage } from './utils.js';
 import { TYPES, TYPE_ORDER, WORK, ent, isMarketing, applyArch, crew } from './constants.js';
@@ -1574,9 +1576,26 @@ function captureOrigin() {
 document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 && !e.target.closest?.('.crop__area')) e.preventDefault(); }, { passive: false });
 let lastTouchEnd = 0;
 document.addEventListener('touchend', (e) => { const now = Date.now(); if (now - lastTouchEnd < 300 && !e.target.closest?.('input, textarea, select, .crop__area')) e.preventDefault(); lastTouchEnd = now; }, { passive: false });
+/* o cofre avisa quando algo deu errado ao salvar — a pessoa precisa saber na hora */
+function avisaCofre() {
+  const dito = new Set();
+  const mostra = (txt, ms = 9000) => { if (dito.has(txt)) return; dito.add(txt); import('./components.js').then((c) => c.toast(txt, { ms })).catch(() => {}); };
+  if (cofre.estado.recuperou.length) mostra('Recuperei dados que tinham sumido deste aparelho ✓');
+  cofre.aoAvisar((tipo) => {
+    if (tipo === 'cheio') mostra('A memória deste celular encheu. Seus dados estão guardados, mas libere espaço.', 14000);
+    else if (tipo === 'sem-localstorage') mostra('Este navegador bloqueou parte do armazenamento. Estou salvando pelo caminho reserva.', 14000);
+    else if (tipo === 'idb-falhou') mostra('Não consegui gravar a cópia de segurança agora. Vou tentar de novo.', 10000);
+    else if (tipo === 'encolheu') mostra('Muita coisa sumiu de uma vez. Guardei a versão anterior, dá para voltar.', 14000);
+    else if (tipo === 'recuperou') mostra('Recuperei dados que tinham sumido deste aparelho ✓');
+  });
+}
+
 async function boot() {
   // só nos testes automáticos no computador (emulador local): o robô enxerga o estado do app
   try { if (['localhost', '127.0.0.1'].includes(location.hostname) && localStorage.getItem('cal.emulator') === '1') window.__lembraStore = store; } catch { /* ok */ }
+  // o cofre primeiro: se a cópia principal sumiu ou encolheu, ele repõe ANTES de qualquer leitura
+  await cofre.prepara([LS_DATA, LS_PESSOAL]).catch((e) => console.error('cofre', e));
+  avisaCofre();
   startErrorLog();
   startTracking();
   // versão: confere já na abertura (também na tela de entrar); versão antiga → atualiza ou mostra o botão "Atualizar"

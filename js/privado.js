@@ -8,6 +8,7 @@ import { boneco3d } from './cena.js';
 import { call, podeSocial, ICO, rosto, desde, falta, ouvir, atualiza, conversas, aoVivo, conversaAberta, digitando, semSelecao } from './social.js';
 import { isTeen } from './teen.js';
 import { tranca } from './tranca.js';
+import { abreUnica } from './unica.js';
 import { muda } from './mensagens.js';
 import { sininho, alive, veste, act, lookAt } from './sininho.js';
 import { roupa } from './roupas.js';
@@ -52,7 +53,7 @@ export async function openConversa(uid, prev = {}) {
     const ant = L[i - 1], dep = L[i + 1], junto = ant && ant.meu === m.meu && m.at - ant.at < 12e4, fim = !dep || dep.meu !== m.meu || dep.at - m.at >= 12e4;
     const rc = Object.values(m.reac || {}), bl = isTeen() && !m.meu && m.tipo === 'foto' && !abertas.has(m.id);
     const dentro = m.tipo === 'apagada' ? `<i class="bol__apagada">${icon('trash', 14)} Mensagem apagada</i>`
-      : m.unica ? `<button type="button" class="bol__um${m.vista ? ' is-vista' : ''}" ${m.meu || m.vista ? 'disabled' : `data-um="${esc(m.id)}"`}><i>${m.vista ? icon('check', 17) : '1'}</i><span><b>${m.tipo === 'audio' ? 'Áudio' : 'Foto'}</b><small>${m.vista ? 'Aberta' : m.meu ? 'Visualização única' : 'Toque para ver uma vez'}</small></span></button>`
+      : m.unica ? `<button type="button" class="bol__um${m.vista ? ' is-vista' : ''}${m.sinal && m.meu ? ' is-sinal' : ''}" ${m.meu || m.vista ? 'disabled' : `data-um="${esc(m.id)}"`}><i>${m.vista ? icon('check', 17) : '1'}</i><span><b>${m.tipo === 'audio' ? 'Áudio' : 'Foto'}</b><small>${m.sinal && m.meu ? '⚠️ Saiu do app com ela aberta' : m.vista ? 'Aberta' : m.meu ? 'Visualização única' : 'Toque para ver uma vez'}</small></span></button>`
       : m.tipo === 'foto' ? `<button type="button" class="bol__foto${bl ? ' is-borrada' : ''}" style="aspect-ratio:${m.w || 3}/${m.h || 4}" data-abre="${esc(m.id)}"><span class="bol__carga"></span>${bl ? `<em>${icon('eyeoff', 20)} Toque para ver</em>` : ''}</button>${m.txt ? `<p>${esc(m.txt)}</p>` : ''}`
       : m.tipo === 'audio' ? `<span class="bol__audio" data-audio="${esc(m.id)}"><button type="button" class="bol__play" aria-label="Tocar áudio">${ICO.toca(22)}</button><span class="bol__onda" data-onda>${(m.onda || []).map((h) => `<i style="--h:${Math.max(10, +h || 0)}%"></i>`).join('')}</span><small data-dur>${Math.floor(m.dur / 60)}:${String(Math.round(m.dur % 60)).padStart(2, '0')}</small><button type="button" class="bol__vel" data-vel aria-label="Velocidade">1x</button></span>`
       : m.tipo === 'story' ? `<button type="button" class="bol__story" data-story="${esc(m.st?.id || '')}" data-dono="${esc(m.st?.owner || '')}"><span class="bol__mini"></span><small>${m.meu ? `Você respondeu ao story de ${esc(n1())}` : 'Respondeu ao seu story'}</small></button><p class="${/^\p{Extended_Pictographic}/u.test(m.txt) && m.txt.length <= 4 ? 'is-emo' : ''}">${esc(m.txt)}</p>`
@@ -185,7 +186,13 @@ export async function openConversa(uid, prev = {}) {
     if (abrindoUm) return; if (!(await confirmDialog({ title: m.tipo === 'audio' ? 'Ouvir uma vez?' : 'Ver uma vez?', text: 'Depois de fechar, não dá para abrir de novo.', ok: m.tipo === 'audio' ? 'Ouvir' : 'Ver' }))) return;
     abrindoUm = true; let v; try { v = (await call('/friends/msg-media', { com: uid, id: m.id, at: m.at, abrir: true })).v; } catch (e) { toast(e.message || 'Não consegui abrir agora.'); abrindoUm = false; traz(); return; }
     abrindoUm = false; m.vista = Date.now(); pinta(true);
-    if (m.tipo === 'foto') { abreFoto(v, m.txt); return; }
+    const meu = store.profile?.nickname || store.member?.(store.me)?.name || store.user?.email || 'Lembra';
+    const avisaPrint = (por) => { call('/friends/msg-sinal', { com: uid, id: m.id, at: m.at, sinal: por }).catch(() => {}); };
+    if (m.tipo === 'foto') {
+      const r = await abreUnica({ tipo: 'foto', src: v, legenda: m.txt ? esc(m.txt) : '', de: n1(), quem: meu, aoSinal: avisaPrint });
+      if (r.sinal && r.sinal !== 'fim') toast('Saiu do app com a foto aberta. Avisei quem mandou.', { ms: 6000 });
+      return;
+    }
     const V = await import('./voz.js'); paraTudo(); const au = new Audio(V.paraTocar(v)); tocando = au;
     const s = openSheet({ className: 'sheet--solid', onClose: () => { au.pause(); au.src = ''; }, html: `<div class="opc umaud"><span class="bol__snh" data-cena="grava">${sininho('feliz', { size: 110, label: '' })}</span><h3>Áudio de ${esc(n1())}</h3><div class="umaud__b"><i data-b></i></div><button class="btn btn--primary btn--block" data-t>Tocar</button><button class="btn btn--ghost btn--block" data-close>Fechar</button></div>`, onMount: (x) => { alive(); veste(x.el.querySelector('[data-snh]'), roupa('grava')); const t = x.el.querySelector('[data-t]'), b = x.el.querySelector('[data-b]'); t.onclick = () => (au.paused ? au.play() : au.pause()); au.onplay = () => { t.textContent = 'Pausar'; }; au.onpause = () => { t.textContent = 'Continuar'; }; au.ontimeupdate = () => { b.style.transform = `scaleX(${Math.min(1, au.currentTime / (m.dur || au.duration || 1))})`; }; au.onended = () => s.close(); au.play().catch(() => { /* toca no botão */ }); } });
   }

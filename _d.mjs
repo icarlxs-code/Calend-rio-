@@ -1,0 +1,13 @@
+import './test/_base.js';
+import { nova, ev } from './test/_base.js';
+import { todayKey } from './js/utils.js';
+const A = await import('./js/agent.js');
+const H = todayKey();
+const s = await nova();
+await s.upsert('companies', { id: 'c1', name: 'JG Garcia', color: '#16A34A' });
+for (let i = 0; i < 3; i++) await s.upsert('events', ev('f' + i, { date: H, companyId: 'c1', seriesId: null }));
+console.log('eventos', s.state.events.length);
+const pl = A.congela([{ acao: 'excluir', filtro: { empresa: 'JG Garcia' } }]);
+console.log('plano', JSON.stringify(pl.map((x) => ({ ok: x.ok, apaga: x.apaga?.length, text: x.text?.slice(0, 60) }))));
+const r = await A.executa(pl, { lote: 'L1' });
+console.log('resultado', JSON.stringify({ n: r.n, fails: r.fails, apagou: r.apagou }), 'sobraram', s.state.events.length);

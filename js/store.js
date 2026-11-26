@@ -5,7 +5,9 @@ import { buildClientPayload } from './share.js';
 import { sanitizeItem } from './sanitize.js';
 import { marca, desmarca, novoLote, separa, conteudo, vencido } from './lixeira-core.js';
 
-const LS_DATA = 'pauta.data.v1';
+import * as cofre from './cofre.js';
+
+export const LS_DATA = 'pauta.data.v1';
 const LS_ME = 'pauta.me';
 const COLS = ['companies', 'events', 'notes', 'settings'];
 
@@ -14,7 +16,7 @@ let backend = null;
 
 const readLocal = () => {
   try {
-    return JSON.parse(localStorage.getItem(LS_DATA) || 'null');
+    return JSON.parse(cofre.leSync(LS_DATA) || 'null');
   } catch {
     return null;
   }
@@ -345,13 +347,11 @@ function touch(col, item) {
 
 /* ---------- backend local ---------- */
 function saveLocal() {
-  try {
-    localStorage.setItem(LS_DATA, JSON.stringify({ ...store.state, trash: store.trash, demo: store.demo }));
-  } catch (err) {
-    // Ex.: memória do navegador cheia (muitas logos grandes)
+  // o cofre grava em dois lugares e guarda versões anteriores; só estoura se os DOIS falharem
+  cofre.guarda(LS_DATA, JSON.stringify({ ...store.state, trash: store.trash, demo: store.demo })).catch((err) => {
     store.onError && store.onError(err);
-    throw err;
-  }
+    console.error('cofre: nada foi salvo', err);
+  });
 }
 function saveLocalFlags() {
   if (store.mode === 'local') saveLocal();
