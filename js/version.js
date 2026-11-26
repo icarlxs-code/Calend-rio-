@@ -60,17 +60,9 @@ export async function checkVersion({ force = false } = {}) {
   let j;
   try { j = await fetchLatest(); } catch { return null; }
   if (j.build === APP_BUILD) return j;
-  // abaixo da versão mínima: atualização obrigatória (a versão antiga pode estar com problema)
-  const minNeeded = j.min && cmpVer(APP_VERSION, j.min) < 0;
-  if (minNeeded) { mustUpdate(j); return j; }
-  // versão nova: recarrega sozinho quando estiver livre (uma vez por versão, nunca em sequência)
-  let tried = '';
-  try { tried = sessionStorage.getItem('cal.updTried') || ''; } catch { /* ok */ }
-  if (tried === j.build || busy()) { showUpdPill(j); return j; }
-  try { sessionStorage.setItem('cal.updTried', j.build); } catch { /* ok */ }
-  // limpa a cópia antiga antes de recarregar: garante que a versão nova entra de verdade, não a velha do cache
-  try { const ks = await caches.keys(); await Promise.all(ks.filter((k) => k.startsWith('cal-')).map((k) => caches.delete(k))); } catch { /* ok */ }
-  location.replace(`${location.pathname}?u=${encodeURIComponent(j.build)}${location.hash}`);
+  // QUALQUER versão nova: assim que a pessoa entra, aparece a tela com o botão "Atualizar agora"
+  // (obrigatória — o app não fica usável na versão velha). O botão limpa o cache e recarrega na hora.
+  mustUpdate(j);
   return j;
 }
 
@@ -84,8 +76,8 @@ function mustUpdate(j) {
   if (document.querySelector('.mustupd')) return;
   const el = document.createElement('div');
   el.className = 'mustupd';
-  el.innerHTML = `<div class="mustupd__in">${icon('refresh', 34)}<h2>Atualização necessária</h2>
-    <p>O Lembra ${esc(j.version)} já está no ar e a sua versão (${esc(APP_VERSION)}) não funciona mais direito. Leva 2 segundos e você não perde nada.</p>
+  el.innerHTML = `<div class="mustupd__in">${icon('refresh', 34)}<h2>Tem versão nova! ✨</h2>
+    <p>O Lembra ${esc(j.version)} já está no ar com as últimas melhorias. Toque para atualizar — leva 2 segundos e você não perde nada.</p>
     <button class="btn btn--primary btn--block" data-upd>Atualizar agora</button></div>`;
   document.body.appendChild(el);
   el.querySelector('[data-upd]').onclick = (e) => { e.currentTarget.disabled = true; e.currentTarget.textContent = 'Atualizando…'; hardReload(); };
