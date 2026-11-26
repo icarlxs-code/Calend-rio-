@@ -21,7 +21,7 @@ const abre = () => new Promise((ok, no) => {
 const tx = (lojas, modo, fn) => new Promise((ok, no) => {
   if (!db) return no(new Error('cofre fechado'));
   const t = db.transaction(lojas, modo); let v;
-  t.oncomplete = () => ok(v); t.onerror = () => no(t.error); t.onabort = () => no(t.error || new Error('cancelado'));
+  t.oncomplete = () => ok(v); t.onerror = () => no(t.error || new Error('falhou')); t.onabort = () => no(t.error || new Error('cancelado'));
   try { v = fn(...lojas.map((l) => t.objectStore(l))); } catch (e) { no(e); }
 });
 const peca = (req) => new Promise((ok, no) => { req.onsuccess = () => ok(req.result); req.onerror = () => no(req.error); });
@@ -29,7 +29,7 @@ const peca = (req) => new Promise((ok, no) => { req.onsuccess = () => ok(req.res
 /* chamado uma vez, bem no começo do app */
 export function prepara(chaves = []) {
   return (pronto ||= (async () => {
-    try { db = await abre(); estado.idb = true; } catch (e) { estado.falhas.push('idb:' + (e.message || e)); avisa('sem-idb', e); }
+    try { db = await abre(); estado.idb = true; } catch (e) { estado.falhas.push('idb:' + ((e && (e.message || e.name)) || e)); avisa('sem-idb', e); }
     try { if (navigator.storage?.persist) estado.persistente = (await navigator.storage.persisted?.()) || (await navigator.storage.persist()); } catch { /* o navegador decide */ }
     try { const q = await navigator.storage?.estimate?.(); if (q) { estado.usado = q.usage || 0; estado.limite = q.quota || 0; } } catch { /* ok */ }
     for (const k of chaves) await confere(k);
@@ -39,7 +39,7 @@ export function prepara(chaves = []) {
 /* a principal sumiu, veio vazia ou menor que a cópia? então repõe do cofre */
 async function confere(k) {
   let local = null;
-  try { local = localStorage.getItem(k); } catch (e) { estado.ls = false; estado.falhas.push('ls:' + (e.name || e)); avisa('sem-localstorage', e); }
+  try { local = localStorage.getItem(k); } catch (e) { estado.ls = false; estado.falhas.push('ls:' + ((e && (e.name || e.message)) || e)); avisa('sem-localstorage', e); }
   const guardado = estado.idb ? await tx([LOJA], 'readonly', (s) => peca(s.get(k))).catch(() => null) : null;
   const g = await guardado;
   if (g && g.txt) memoria.set(k, g);
@@ -71,18 +71,18 @@ export async function guarda(k, txt) {
   memoria.set(k, { txt, n, at: Date.now() });
   let ls = false, idb = false, erro = null;
   try { localStorage.setItem(k, txt); ls = true; if (!estado.ls) { estado.ls = true; avisa('localstorage-voltou', { k }); } }
-  catch (e) { erro = e; estado.ls = false; estado.falhas.push('ls:' + (e.name || e)); avisa(/quota|exceed/i.test(e.name + e.message) ? 'cheio' : 'sem-localstorage', e); }
+  catch (e) { erro = e; estado.ls = false; estado.falhas.push('ls:' + ((e && (e.name || e.message)) || e)); avisa(/quota|exceed/i.test(e.name + e.message) ? 'cheio' : 'sem-localstorage', e); }
   if (estado.idb) {
     try {
       const suspeito = !!antes && antes.n >= 5 && n >= 0 && n < antes.n * 0.6;    // encolheu demais de uma vez
       await tx([LOJA, DIARIO], 'readwrite', (s, d) => {
         s.put({ txt, n, at: Date.now() }, k);
-        if (antes) d.add({ k, at: antes.at || Date.now(), txt: antes.txt, n: antes.n, protegida: suspeito });
+        if (antes) d.add({ k, at: antes.at || Date.now(), txt: antes.txt, itens: antes.n, protegida: suspeito });
       });
       idb = true;
       if (suspeito) { estado.encolheu.push({ k, de: antes.n, para: n }); avisa('encolheu', { k, de: antes.n, para: n }); }
       limpa(k).catch(() => {});
-    } catch (e) { erro = erro || e; estado.falhas.push('idb:' + (e.name || e)); avisa('idb-falhou', e); }
+    } catch (e) { erro = erro || e; estado.falhas.push('idb:' + ((e && (e.name || e.message)) || e)); avisa('idb-falhou', e); }
   }
   if (!ls && !idb) throw erro || new Error('não consegui salvar em lugar nenhum');
   return { ls, idb };
@@ -97,7 +97,7 @@ async function limpa(k) {
 export async function copias(k) {
   if (!estado.idb) return [];
   const todas = (await tx([DIARIO], 'readonly', (d) => peca(d.index('k').getAll(k)))) || [];
-  return todas.sort((a, b) => b.at - a.at).map((x) => ({ n: x.n, at: x.at, itens: x.n, protegida: !!x.protegida }));
+  return todas.sort((a, b) => b.at - a.at).map((x) => ({ n: x.n, at: x.at, itens: x.itens, protegida: !!x.protegida }));
 }
 /** volta uma versão guardada e devolve o texto */
 export async function restaura(k, n) {

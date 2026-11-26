@@ -39,10 +39,11 @@ export async function openConversa(uid, prev = {}) {
   const a = openSheet({ className: 'sheet--tall sheet--fx sheet--conv', html: casca(), onClose: () => { sai(); clearInterval(sonda); paraTudo(); if (gravando) gravando.cancela(); conversaAberta(''); vv && vv.removeEventListener('resize', encaixa); }, onMount: liga });
   const $ = (s) => a.el.querySelector(s);
   function casca() {
-    return `<div class="conv"><header class="conv__top"><button class="iconbtn" data-close aria-label="Voltar">${icon('left', 22)}</button><button class="conv__quem" data-perfil>${rosto(D.com, 42)}<span><b>${esc(D.com.name)}</b><small data-st></small></span></button><button class="iconbtn" data-menu aria-label="Opções">${icon('dots', 20)}</button></header>
+    return `<div class="conv"><header class="conv__top"><button class="iconbtn" data-close aria-label="Voltar">${icon('left', 22)}</button><button class="conv__quem" data-perfil>${rosto(D.com, 44)}<span><b>${esc(D.com.name)}</b><small data-st></small></span></button><span class="conv__acoes"><button class="iconbtn" data-busca aria-label="Buscar na conversa">${icon('search', 20)}</button><button class="iconbtn" data-menu aria-label="Opções">${icon('dots', 20)}</button></span></header>
+      <div class="conv__acha" data-acha hidden><input type="search" placeholder="Buscar nesta conversa" data-achatxt aria-label="Buscar nesta conversa"><span class="conv__achan" data-achan></span><button type="button" class="iconbtn" data-achasai aria-label="Fechar a busca">${icon('x', 20)}</button></div>
       <div class="conv__lista" data-lista aria-live="polite"></div>
       <div class="conv__resp" data-resp hidden></div>
-      <form class="conv__barra" data-barra autocomplete="off"><label class="conv__b" aria-label="Enviar foto">${icon('camera', 22)}<input type="file" accept="image/*" data-foto hidden></label><textarea rows="1" maxlength="1000" placeholder="Mensagem" data-txt enterkeyhint="send" aria-label="Mensagem"></textarea><button type="button" class="conv__b conv__b--mic" data-mic aria-label="Gravar áudio">${icon('mic', 22)}</button><button type="submit" class="conv__b conv__b--ir" data-ir aria-label="Enviar" hidden>${ICO.manda(21)}</button></form>
+      <form class="conv__barra" data-barra autocomplete="off"><button type="button" class="conv__b conv__b--mais" data-mais aria-label="Anexar">${icon('plus', 24)}</button><label class="conv__b" aria-label="Enviar foto">${icon('camera', 22)}<input type="file" accept="image/*" data-foto hidden></label><textarea rows="1" maxlength="1000" placeholder="Mensagem" data-txt enterkeyhint="send" aria-label="Mensagem"></textarea><button type="button" class="conv__b conv__b--mic" data-mic aria-label="Gravar áudio">${icon('mic', 22)}</button><button type="submit" class="conv__b conv__b--ir" data-ir aria-label="Enviar" hidden>${ICO.manda(21)}</button></form>
       <div class="conv__grava" data-grava hidden><button type="button" class="conv__b" data-cancela aria-label="Cancelar áudio">${icon('trash', 20)}</button><span class="conv__tempo" data-tempo>0:00</span><span class="conv__ondas" data-ondas></span><button type="button" class="conv__um" data-um1 aria-pressed="false" aria-label="Visualização única">1</button><button type="button" class="conv__b conv__b--ir" data-envia aria-label="Enviar áudio">${ICO.manda(21)}</button></div></div>`;
   }
   let quem = D.com.name + (D.com.photo || '');
@@ -51,6 +52,7 @@ export async function openConversa(uid, prev = {}) {
   const eu = () => store.user?.uid;
   const bolha = (m, i, L) => {
     const ant = L[i - 1], dep = L[i + 1], junto = ant && ant.meu === m.meu && m.at - ant.at < 12e4, fim = !dep || dep.meu !== m.meu || dep.at - m.at >= 12e4;
+    const achada = bate(m);
     const rc = Object.values(m.reac || {}), bl = isTeen() && !m.meu && m.tipo === 'foto' && !abertas.has(m.id);
     const dentro = m.tipo === 'apagada' ? `<i class="bol__apagada">${icon('trash', 14)} Mensagem apagada</i>`
       : m.unica ? `<button type="button" class="bol__um${m.vista ? ' is-vista' : ''}${m.sinal && m.meu ? ' is-sinal' : ''}" ${m.meu || m.vista ? 'disabled' : `data-um="${esc(m.id)}"`}><i>${m.vista ? icon('check', 17) : '1'}</i><span><b>${m.tipo === 'audio' ? 'Áudio' : 'Foto'}</b><small>${m.sinal && m.meu ? '⚠️ Saiu do app com ela aberta' : m.vista ? 'Aberta' : m.meu ? 'Visualização única' : 'Toque para ver uma vez'}</small></span></button>`
@@ -59,7 +61,7 @@ export async function openConversa(uid, prev = {}) {
       : m.tipo === 'story' ? `<button type="button" class="bol__story" data-story="${esc(m.st?.id || '')}" data-dono="${esc(m.st?.owner || '')}"><span class="bol__mini"></span><small>${m.meu ? `Você respondeu ao story de ${esc(n1())}` : 'Respondeu ao seu story'}</small></button><p class="${/^\p{Extended_Pictographic}/u.test(m.txt) && m.txt.length <= 4 ? 'is-emo' : ''}">${esc(m.txt)}</p>`
       : `<p class="${/^(\p{Extended_Pictographic}️?){1,3}$/u.test(m.txt) ? 'is-emo' : ''}">${esc(m.txt)}</p>`;
     const dia = !ant || new Date(ant.at).getDate() !== new Date(m.at).getDate() ? `<div class="conv__dia"><span>${new Date(m.at).getDate() === new Date().getDate() ? 'Hoje' : 'Ontem'}</span></div>` : '';
-    return `${dia}<div class="bol${m.meu ? ' bol--eu' : ''}${junto ? ' is-junto' : ''}${fim ? ' is-fim' : ''}${m.nova ? ' is-entra' : ''}${rc.length ? ' tem-reac' : ''}" data-m="${esc(m.id)}"><div class="bol__c">${m.resp ? citacao(m.resp) : ''}${dentro}<span class="bol__pe">${hora(m.at)}${m.meu && m.tipo !== 'apagada' ? (m.falhou ? ` <button type="button" class="bol__re" data-re="${esc(m.id)}">não foi · tentar</button>` : m.envio ? ` ${icon('clock', 12)}` : D.lidoAte >= m.at ? ' <b class="bol__visto">visto</b>' : ` ${icon('check', 12)}`) : ''}</span></div>${rc.length ? `<span class="bol__reac">${[...new Set(rc)].map(esc).join('')}${rc.length > 1 ? `<small>${rc.length}</small>` : ''}</span>` : ''}</div>`;
+    return `${dia}<div class="bol${m.meu ? ' bol--eu' : ''}${junto ? ' is-junto' : ''}${fim ? ' is-fim' : ''}${m.nova ? ' is-entra' : ''}${rc.length ? ' tem-reac' : ''}${achada ? ' is-acha' : ''}" data-m="${esc(m.id)}"><div class="bol__c">${m.resp ? citacao(m.resp) : ''}${dentro}<span class="bol__pe">${hora(m.at)}${m.meu && m.tipo !== 'apagada' ? (m.falhou ? ` <button type="button" class="bol__re" data-re="${esc(m.id)}">não foi · tentar</button>` : m.envio ? ` ${icon('clock', 12)}` : D.lidoAte >= m.at ? ' <b class="bol__visto">visto</b>' : ` ${icon('check', 12)}`) : ''}</span></div>${rc.length ? `<span class="bol__reac">${[...new Set(rc)].map(esc).join('')}${rc.length > 1 ? `<small>${rc.length}</small>` : ''}</span>` : ''}</div>`;
   };
   let assin = '', viuAte = 0;
   /* o Lembra na conversa: digita, grava, e quando a última mensagem é vista ele chega e lê */
@@ -169,14 +171,14 @@ export async function openConversa(uid, prev = {}) {
     termina = fim;
     $('[data-cancela]').onclick = () => fim(false); $('[data-envia]').onclick = () => fim(true);
   }
-  async function mandaFoto(f) {
+  async function mandaFoto(f, jaUnica = false) {
     const S = await import('./stories.js'); let foto; try { foto = await S.prepara(f); } catch (e) { return toast(e.message); }
     const im = new Image(); im.src = foto; await im.decode().catch(() => {});
     const w = document.createElement('div'); w.className = 'stv stv--edit is-in stv--foto'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Enviar foto');
     w.innerHTML = `<header class="stv__top"><button class="stv__x" data-x aria-label="Cancelar">${icon('x', 22)}</button><span><b>Para ${esc(n1())}</b><small>some em 24 h</small></span></header><div class="stv__img"><img src="${foto}" alt="" draggable="false"></div><div class="stve"><input class="stve__cap" type="text" maxlength="200" placeholder="Escreva algo (opcional)" data-cap>${podeUnica() ? `<button type="button" class="conv__um" data-um1 aria-pressed="false" aria-label="Visualização única">1</button>` : ''}<button class="stve__go" data-go>${ICO.manda(20)}<span>Enviar</span></button></div>`;
     (document.getElementById('sheets') || document.body).appendChild(w);
     w.querySelector('[data-x]').onclick = () => w.remove();
-    let um = false; const bu = w.querySelector('[data-um1]'); if (bu) bu.onclick = () => { um = !um; bu.setAttribute('aria-pressed', um); w.querySelector('.stv__top small').textContent = um ? 'visualização única' : 'some em 24 h'; };
+    let um = jaUnica; const bu = w.querySelector('[data-um1]'); if (bu && jaUnica) { bu.setAttribute('aria-pressed', 'true'); w.querySelector('.stv__top small').textContent = 'visualização única'; } if (bu) bu.onclick = () => { um = !um; bu.setAttribute('aria-pressed', um); w.querySelector('.stv__top small').textContent = um ? 'visualização única' : 'some em 24 h'; };
     w.querySelector('[data-go]').onclick = () => { const txt = w.querySelector('[data-cap]').value.trim(); w.remove(); envia({ tipo: 'foto', midia: foto, w: im.naturalWidth || 3, h: im.naturalHeight || 4, txt, ...(um ? { unica: true } : {}) }, um ? { unica: true } : { local: foto, w: im.naturalWidth || 3, h: im.naturalHeight || 4 }); };
   }
   function abreFoto(v, leg = '') { const w = document.createElement('div'); w.className = 'stv is-in stv--ver'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Foto'); w.innerHTML = `<button class="stv__x" data-x aria-label="Fechar">${icon('x', 24)}</button><div class="stv__img"><img src="${v}" alt="Foto" draggable="false"></div>${leg ? `<p class="stv__leg">${esc(leg)}</p>` : ''}`; w.onclick = () => w.remove(); (document.getElementById('sheets') || document.body).appendChild(w); w.querySelector('.stv__img').animate([{ transform: 'scale(.86)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 300, easing: 'cubic-bezier(.16,1,.3,1)' }); }
@@ -196,6 +198,36 @@ export async function openConversa(uid, prev = {}) {
     const V = await import('./voz.js'); paraTudo(); const au = new Audio(V.paraTocar(v)); tocando = au;
     const s = openSheet({ className: 'sheet--solid', onClose: () => { au.pause(); au.src = ''; }, html: `<div class="opc umaud"><span class="bol__snh" data-cena="grava">${sininho('feliz', { size: 110, label: '' })}</span><h3>Áudio de ${esc(n1())}</h3><div class="umaud__b"><i data-b></i></div><button class="btn btn--primary btn--block" data-t>Tocar</button><button class="btn btn--ghost btn--block" data-close>Fechar</button></div>`, onMount: (x) => { alive(); veste(x.el.querySelector('[data-snh]'), roupa('grava')); const t = x.el.querySelector('[data-t]'), b = x.el.querySelector('[data-b]'); t.onclick = () => (au.paused ? au.play() : au.pause()); au.onplay = () => { t.textContent = 'Pausar'; }; au.onpause = () => { t.textContent = 'Continuar'; }; au.ontimeupdate = () => { b.style.transform = `scaleX(${Math.min(1, au.currentTime / (m.dur || au.duration || 1))})`; }; au.onended = () => s.close(); au.play().catch(() => { /* toca no botão */ }); } });
   }
+  /* buscar na conversa (as mensagens já carregadas, que são as das últimas 24 h) */
+  let acha = '';
+  function ligaBusca(raiz) {
+    const Q = (sel) => raiz.querySelector(sel);
+    const cx = Q('[data-acha]'), inp = Q('[data-achatxt]'), n = Q('[data-achan]');
+    if (!cx || !inp) return;
+    const fecha = () => { acha = ''; cx.hidden = true; inp.value = ''; pinta(); };
+    Q('[data-busca]').onclick = () => { if (!cx.hidden) return fecha(); cx.hidden = false; inp.focus(); };
+    Q('[data-achasai]').onclick = fecha;
+    inp.oninput = () => { acha = inp.value.trim(); pinta(); const l = Q('[data-lista]'); const achados = l ? l.querySelectorAll('.bol.is-acha').length : 0; n.textContent = acha ? (achados ? `${achados} achada${achados > 1 ? 's' : ''}` : 'nada aqui') : ''; const p = l && l.querySelector('.bol.is-acha'); if (p) p.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
+    inp.onkeydown = (e) => { if (e.key === 'Escape') fecha(); };
+  }
+  const bate = (m) => { if (!acha) return false; const t = `${m.txt || ''}`.toLowerCase(); return t.includes(acha.toLowerCase()); };
+  function anexos() {
+    const s2 = openSheet({ className: 'sheet--actions', html: `<div class="phm"><div class="phm__head"><b>Enviar</b><small>para ${esc(n1())}</small></div>
+      <div class="phm__grp">
+        <button class="phm__row" data-o="galeria"><span class="phm__ic is-cam">${icon('image', 21)}</span><span class="phm__t"><b>Foto da galeria</b><small>JPG ou PNG</small></span></button>
+        <button class="phm__row" data-o="camera"><span class="phm__ic is-cam">${icon('camera', 21)}</span><span class="phm__t"><b>Tirar foto agora</b><small>abre a câmera</small></span></button>
+        ${podeUnica() ? `<button class="phm__row" data-o="unica"><span class="phm__ic is-cam">${icon('eye', 21)}</span><span class="phm__t"><b>Foto de uma vez só</b><small>some depois de ver</small></span></button>` : ''}
+        <button class="phm__row" data-o="audio"><span class="phm__ic is-cam">${icon('mic', 21)}</span><span class="phm__t"><b>Gravar áudio</b><small>até 1 minuto e meio</small></span></button>
+      </div></div>`,
+    onMount: (x) => x.el.querySelectorAll('[data-o]').forEach((b) => (b.onclick = () => {
+      const o = b.dataset.o; s2.close();
+      if (o === 'audio') return setTimeout(gravar, 120);
+      const inp = $('[data-foto]'); if (!inp) return;
+      inp.dataset.unica = o === 'unica' ? '1' : '';
+      if (o === 'camera') inp.setAttribute('capture', 'environment'); else inp.removeAttribute('capture');
+      setTimeout(() => inp.click(), 60);
+    })) });
+  }
   function menu() {
     const s = openSheet({ className: 'sheet--solid', html: `${sheetHead(esc(n1()), { left: '<button class="btn-text" data-close>Fechar</button>' })}<div class="page page--sheet"><div class="agroup"><button class="frow" data-o="perfil">${icon('user', 18)}<span class="frow__id"><b>Ver perfil</b></span></button><button class="frow" data-o="mudo">${icon(D.mudo ? 'bell' : 'eyeoff', 18)}<span class="frow__id"><b>${D.mudo ? 'Voltar a avisar' : 'Silenciar'}</b><small>${D.mudo ? 'Recebe os avisos de novo' : 'Continua recebendo, sem aviso no celular'}</small></span></button>${[['fix', 'left', 'Fixar no topo', 'Soltar do topo'], ['arq', 'download', 'Arquivar', 'Tirar das arquivadas'], ['tra', 'lock', 'Trancar com PIN', 'Destrancar']].map(([k, ic, x, y]) => `<button class="frow" data-o="${k}">${icon(k === 'fix' ? 'star' : ic, 18)}<span class="frow__id"><b>${conversas().cfg[k].includes(uid) ? y : x}</b></span></button>`).join('')}<button class="frow" data-o="limpa">${icon('trash', 18)}<span class="frow__id"><b>Limpar conversa</b><small>Só para você</small></span></button><button class="frow is-danger" data-o="den">${icon('flag', 18)}<span class="frow__id"><b>Denunciar ou bloquear</b></span></button></div></div>`, onMount: (x) => x.el.querySelectorAll('[data-o]').forEach((b) => (b.onclick = async () => {
       s.close(); const o = b.dataset.o;
@@ -212,6 +244,7 @@ export async function openConversa(uid, prev = {}) {
     tx.oninput = () => { cresce(); if (tx.value.trim()) digitando(uid); };
     tx.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); q('[data-barra]').requestSubmit(); } };
     tx.onfocus = () => setTimeout(() => { l.scrollTop = l.scrollHeight; }, 250);
+    ligaBusca(x.el);
     q('[data-barra]').onsubmit = (e) => { e.preventDefault(); const t = tx.value.trim(); if (!t) return; tx.value = ''; cresce(); envia({ tipo: 'txt', txt: t }); tx.focus(); };
     // toque: grava até tocar em enviar · segurar: grava enquanto segura; soltou, envia; arrastou para a esquerda, cancela
     let tS = 0, seg = false, mx = 0, pulaClique = 0;
@@ -225,7 +258,8 @@ export async function openConversa(uid, prev = {}) {
       addEventListener('pointermove', mexe); addEventListener('pointerup', sobe); addEventListener('touchend', sobe); addEventListener('pointercancel', cai); });
     mic.addEventListener('contextmenu', (e) => e.preventDefault());
     ir.addEventListener('pointerdown', (e) => e.preventDefault()); // o teclado não fecha ao enviar
-    q('[data-foto]').onchange = (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) mandaFoto(f); };
+    q('[data-foto]').onchange = (e) => { const f = e.target.files && e.target.files[0], un = e.target.dataset.unica === '1'; e.target.value = ''; e.target.dataset.unica = ''; if (f) mandaFoto(f, un); };
+    q('[data-mais]').onclick = anexos;
     q('[data-perfil]').onclick = async () => (await import('./friends.js')).openPublicProfile(uid, D.com);
     q('[data-menu]').onclick = menu;
     // toques na lista
@@ -255,7 +289,9 @@ export async function openConversa(uid, prev = {}) {
   const vv = window.visualViewport;
   // sem campo em foco não existe teclado: a folha volta ao tamanho inteiro (o iPhone às vezes não avisa que ele fechou)
   const escrevendo = () => { const n = document.activeElement; return !!n && a.el.contains(n) && /INPUT|TEXTAREA/.test(n.tagName); };
-  const encaixa = () => { if (!a || a.closed || !vv) return; const fora = escrevendo() ? Math.max(0, innerHeight - vv.height - vv.offsetTop) : 0; a.panel.style.setProperty('--teclado', fora + 'px'); const l = $('[data-lista]'); if (l && fora > 80) l.scrollTop = l.scrollHeight; };
+  const encaixa = () => { if (!a || a.closed || !vv) return; const fora = escrevendo() ? Math.max(0, innerHeight - vv.height - vv.offsetTop) : 0; a.panel.style.setProperty('--teclado', fora + 'px');
+    // iPhone: ao abrir o teclado o Safari rola a página inteira e o topo da conversa sai da tela
+    if (scrollY > 0) window.scrollTo(0, 0); const l = $('[data-lista]'); if (l && fora > 80) l.scrollTop = l.scrollHeight; };
   const depois = () => { encaixa(); [80, 250, 500, 900].forEach((t) => setTimeout(encaixa, t)); };
   if (vv) { vv.addEventListener('resize', encaixa); vv.addEventListener('scroll', encaixa); }
   a.el.addEventListener('focusin', depois); a.el.addEventListener('focusout', depois); addEventListener('orientationchange', depois); addEventListener('pageshow', depois); document.addEventListener('visibilitychange', depois);
