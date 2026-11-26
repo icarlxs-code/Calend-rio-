@@ -18,6 +18,8 @@ import { getDevices, removeDevices, addDevice, upgradeSubs } from './devices.js'
 import { runTick, planReminders, planPersonal, seedPerson, upgradeLegacy, usageMeter } from './tick.js';
 import { dueOf } from './kvsql.js';
 import { rodaFutebol, guardaTime, tiraTime, proximos, ligado as futebolLigado } from './futebol.js';
+import { rodaAoVivo, cenaDoTime } from './fut-motor.js';
+import { temChave as temFutChave, orcamento as futOrcamento } from './fut-api.js';
 import { porHora, usoIA } from './cota.js';
 import { brNow, fusoOk } from './coach.js';
 import { meuId, trocaId, limpaId, esqueceAchado, guardaCodigos } from './achar.js';
@@ -1046,7 +1048,8 @@ async function handle(req, env) {
   // time do coração: guarda só o id do clube, e só de quem ligou os avisos (para saber de quem avisar)
   if (url.pathname === '/futebol') {
     const r = body.ver ? { time: clean(body.time, 20) } : await guardaTime(env, me.id, { time: clean(body.time, 20), avisos: body.avisos });
-    return reply(env, req, { ok: true, ...r, ligado: futebolLigado(env), jogos: r.time ? await proximos(env, r.time) : [] });
+    const extra = r.time && temFutChave(env) ? { cena: await cenaDoTime(env, r.time, now), aoVivo: true } : { aoVivo: false };
+    return reply(env, req, { ok: true, ...r, ligado: futebolLigado(env) || temFutChave(env), jogos: r.time ? await proximos(env, r.time) : [], ...extra });
   }
   if (url.pathname === '/personal') {
     const items = (Array.isArray(body.items) ? body.items : []).slice(0, 300)
@@ -1205,6 +1208,7 @@ export async function cronTick(env, { now = Date.now(), meter = { pushes: 0 }, m
     await safe('lixeira', purgaLixeira(env, now));
     await safe('lote de frases', loteDiario(env, now));
     await safe('futebol', rodaFutebol(env, now, send));
+    await safe('futebol ao vivo', rodaAoVivo(env, now, send));
     await safe('ranking', monthlyAward(env, { stripe: stripeApi, getBill, putBill, notify: (id, msg) => send(env, id, msg) }));
   }
   const more = r.more || (await dueOf(env).dueBefore(now, 1)).length > 0;

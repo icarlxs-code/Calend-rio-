@@ -66,7 +66,12 @@ const ROS = {
 const MAO = {
   celular(c, t) { c.save(); c.rotate(-0.1); rr(c, C.tinta, -74, -190, 148, 250, 28); rr(c, C.creme, -60, -172, 120, 214, 16); const k = (t * 0.55) % 1; [0, 1, 2].forEach((i) => { const w = Math.max(0, Math.min(1, k * 3.4 - i)) * (i === 2 ? 52 : 88); if (w > 8) rr(c, i % 2 ? '#F3D9C2' : C.or, -44, -152 + i * 40, w, 22, 11); }); rr(c, '#E9D8C6', -44, -20, 88, 46, 10); const p = Math.floor(t * 7) % 6; rr(c, C.or, -38 + (p % 3) * 28, -14 + Math.floor(p / 3) * 20, 20, 14, 5); c.restore(); },
   microfone(c, t) { c.save(); c.rotate(-0.12); rr(c, '#4A4E58', -22, -60, 44, 150, 18); rr(c, '#2B2E36', -58, -170, 116, 128, 56); c.globalAlpha = 0.5; [-132, -104, -76].forEach((y) => rr(c, '#8A90A0', -44, y, 88, 9, 4)); c.globalAlpha = 1; el(c, '#E5383B', 0, 6, 11 + Math.sin(t * 6) * 3); [0, 1].forEach((i) => { const k = (t * 1.1 + i * 0.5) % 1; c.globalAlpha = 1 - k; l(c, C.or, 13, `M${84 + k * 54} ${-150 - k * 18}Q${112 + k * 64}-106 ${84 + k * 54} ${-62 + k * 18}`); l(c, C.or, 13, `M${-84 - k * 54} ${-150 - k * 18}Q${-112 - k * 64}-106 ${-84 - k * 54} ${-62 + k * 18}`); }); c.restore(); },
-  bandeira(c, t) { const s = Math.sin(t * 4) * 14; l(c, '#8C5A2E', 15, 'M0 60V-210'); f(c, '#2E6FE0', `M6-212C60-${232 + s} 120-${196 - s} 176-${214 + s}V-${104 + s}C120-${86 - s} 60-${122 + s} 6-104Z`); },
+  bandeira(c, t, cores) {
+    const s = Math.sin(t * 4) * 14, [a, b] = Array.isArray(cores) && cores.length ? cores : ['#2E6FE0', '#FFF6EE'];
+    l(c, '#8C5A2E', 15, 'M0 60V-210');
+    const pano = (y1, y2, cor) => f(c, cor, `M6-${y1}C60-${y1 + 20 + s} 120-${y1 - 16 - s} 176-${y1 + 2 + s}V-${y2 + s}C120-${y2 - 18 - s} 60-${y2 + 2 + s} 6-${y2}Z`);
+    pano(212, 158, a); pano(158, 104, b || a);
+  },
   mala(c) { l(c, C.tinta, 15, 'M-34 44V16Q-34-8 0-8T34 16V44'); rr(c, '#8C4A20', -104, 40, 208, 158, 26); rr(c, '#A85C2C', -104, 40, 208, 62, 26); rr(c, C.sol, -74, 40, 24, 158, 4); rr(c, C.sol, 50, 40, 24, 158, 4); el(c, C.creme, 0, 132, 27); coracao(c, C.or, 0, 133, 0.42); },
   copo(c, t) { c.save(); c.rotate(-0.08); f(c, 'rgba(255,255,255,.85)', 'M-56-118H56L42 46Q40 58 28 58H-28Q-40 58-42 46Z'); const y = -72 + Math.sin(t * 2.4) * 5; f(c, C.azul, `M-51-70Q-24 ${y - 12} 0-70T51-70L41 44Q39 52 28 52H-28Q-39 52-41 44Z`); l(c, C.or, 13, 'M14-40L40-186L80-196'); l(c, 'rgba(255,255,255,.8)', 9, 'M-34-52L-27 14'); c.restore(); },
   caneca(c, t) { l(c, '#A3340C', 19, 'M60-62Q108-62 108-28T60 6'); rr(c, '#C2410C', -62, -92, 124, 128, 22); coracao(c, C.creme, 0, -22, 0.75); el(c, '#6B3A1C', 0, -90, 54, 15); c.globalAlpha = 0.9; [-24, 4, 32].forEach((x, i) => { const s = Math.sin(t * 1.8 + i) * 9; l(c, '#C98A5A', 8, `M${x}-116Q${x + s}-138 ${x}-158T${x}-196`); }); c.globalAlpha = 1; },
@@ -116,8 +121,9 @@ export const ROUPAS = {
   forca: { mood: 'feliz', boca: 'riso', capa: true, l: ['aberto'], r: ['cima'] },
 };
 /** monta a roupa no formato que o boneco entende */
-export function roupa(nome) {
+export function roupa(nome, cores) {
   const r = ROUPAS[nome]; if (!r) return null;
+  if (cores && r.mao?.r === 'bandeira') { const f0 = MAO.bandeira; return { nome, mood: r.mood, semBracos: !!r.semBracos, boca: r.boca, l: r.l, r: r.r, atras: null, cab: null, ros: r.ros ? ROS[r.ros] : null, mao: { l: null, r: (c, t) => f0(c, t, cores) } }; }
   return { nome, mood: r.mood, semBracos: !!r.semBracos, boca: r.boca, l: r.l, r: r.r, atras: r.capa ? CAPA : null, cab: r.cab ? CAB[r.cab] : null, ros: r.ros ? ROS[r.ros] : null, mao: { l: r.mao?.l ? MAO[r.mao.l] : null, r: r.mao?.r ? MAO[r.mao.r] : null } };
 }
 /* cachecol liso, nas cores: nada de escudo, listra de uniforme ou símbolo de clube */

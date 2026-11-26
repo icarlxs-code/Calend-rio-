@@ -1363,6 +1363,10 @@ function startApp() {
   setTimeout(requirePhoto, 3500);
   setTimeout(() => import('./avisos-obrigatorio.js').then((m) => m.vigia()).catch((e) => console.warn('avisos', e)), 2500);
   setTimeout(askNotifications, 12000);
+  // time do coração: se aconteceu algo no jogo, o mascote reage na tela (e só então)
+  const torcida = () => import('./torcida.js').then((t) => t.confere()).catch(() => {});
+  setTimeout(torcida, 9000);
+  setInterval(() => { if (!document.hidden) torcida(); }, 4 * 60e3);
   // voltou para o app depois de um tempo (o app não fecha de verdade no celular): conta como "abrir de novo"
   let hiddenAt = 0;
   document.addEventListener('visibilitychange', () => {

@@ -86,3 +86,15 @@ aparece a prévia com a imagem `media/og.jpg`.
 2. Faça 1 compra real (cartão de verdade) e peça o reembolso pela Stripe, para ver o ciclo inteiro funcionando.
 3. Domínio próprio (lembra.com.br) passa muito mais confiança no anúncio do que `github.io` e libera e-mail profissional.
 4. Comece com orçamento pequeno (ex.: R$ 20–30/dia) por 3–5 dias por público/profissão e olhe no Painel quem paga.
+
+## Futebol ao vivo (API-Futebol)
+
+O acompanhamento dos jogos usa a API-Futebol (api-futebol.com.br). A chave fica **só no servidor**:
+
+1. No painel da Cloudflare: Workers → o worker do Lembra → Settings → Variables → **Encrypt** e crie `API_FUTEBOL_KEY` com a sua chave.
+2. Opcional: `API_FUTEBOL_LIMITE` com o número de requisições que o seu plano aguenta por dia (padrão: 100).
+3. Sem a chave, nada é chamado e o Lembra simplesmente não fala de futebol.
+
+Pelo terminal, o mesmo: `npx wrangler secret put API_FUTEBOL_KEY` dentro de `worker/`.
+
+A frequência de consulta se adapta ao que sobrou do limite do dia: 1 min (acima de 400 chamadas livres), 2 min, 4 min, 8 min ou 15 min. Não é "tempo real absoluto": depende da atualização da própria API.

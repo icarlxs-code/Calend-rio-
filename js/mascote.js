@@ -13,7 +13,7 @@ import { piada, humorOn } from './humor.js';
 import * as papo from './papo.js';
 import { store } from './store.js';
 import { CONFIG } from '../config.js';
-import { sininho, setMood, act, say, lookAt, rigOf, reactNivel, reactErro } from './sininho.js';
+import { sininho, setMood, act, say, lookAt, rigOf, reactNivel, reactErro, veste } from './sininho.js';
 import { todayKey, addDays, diffDays, fmtTime } from './utils.js';
 import { personal } from './personal.js';
 import { itensAtrasados } from './views/atrasados.js';
@@ -929,6 +929,15 @@ export function react(kind, o = {}) {
   if (kind === 'comentou') return fala({ t: `${o.nome || 'Alguém'} comentou no seu story! Corre ver 👀`, m: 'feliz', p: PRIO.xp }, 'soco');
   if (kind === 'repostou') return fala({ t: `${o.nome || 'Alguém'} repostou seu story! Tá famoso(a) 🔁`, m: 'feliz', p: PRIO.xp }, 'vibra');
   if (kind === 'visitas') { try { localStorage.setItem(visKey, String(Date.now())); } catch { /* ok */ } return o.n ? fala({ t: pick([`Hmm… que que será que ${(o.nome || 'essa pessoa').split(' ')[0]} tava querendo, hein? 🤭`, `${(o.nome || 'Alguém').split(' ')[0]} passou por aqui… será que tá com saudade? 👀`, 'Olha quanta gente curiosa com a sua vida 😏', `${(o.nome || 'Alguém').split(' ')[0]} veio, olhou e não falou nada… típico de quem tá interessado 😏`, 'Esse povo vê tudo e finge que não viu 🙈 Mas eu vi.', 'Quer que eu fique de olho em quem voltar? Eu fico 🕵️']), m: 'desconfiado', roteiro: ['olhaLados', 'maoBoca'] }, 'sobrancelha') : fala({ t: 'Ninguém passou ainda… posta um story que o povo aparece 😉', m: 'feliz' }, 'pisca'); }
+  /* torcida: o mascote veste as cores do clube, levanta a bandeira e fala do jogo (só agora, não todo dia) */
+  if (kind === 'torcida') {
+    const e = el(); if (!e) return;
+    if (o.veste) veste(e, o.veste);
+    if (o.humor) setMood(e, o.humor);
+    const volta = () => { veste(e, null); setMood(e, 'feliz'); };
+    setTimeout(volta, 30000);
+    return fala({ t: o.texto, m: o.humor || 'comemora', p: PRIO.nivel, k: 'torcida' }, o.gesto || 'pulo');
+  }
   if (kind === 'late') return fala({ t: 'Ih… esse passou da hora. Quer ver o que ficou pra trás?', m: 'triste', acoes: [{ label: 'Ver', go: A.atrasados }, { label: 'Depois' }] }, null);
 }
 export const active = () => !!B;
