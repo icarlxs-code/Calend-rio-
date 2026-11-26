@@ -57,6 +57,8 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          API_FUTEBOL_KEY: ${{ secrets.API_FUTEBOL_KEY }}
+          API_FUTEBOL_LIMITE: ${{ secrets.API_FUTEBOL_LIMITE }}
           WRANGLER_SEND_METRICS: 'false'
           TEAM: ${{ steps.prep.outputs.team }}
           PROJECT: ${{ steps.prep.outputs.project }}
@@ -64,6 +66,9 @@ jobs:
         run: |
           npx wrangler deploy --var "TEAM:$TEAM" --var "PROJECT_ID:$PROJECT" --var "ALLOWED_ORIGINS:$ORIGIN" | tee deploy.txt
           if [ -n "$ANTHROPIC_API_KEY" ]; then printf '%s' "$ANTHROPIC_API_KEY" | npx wrangler secret put ANTHROPIC_API_KEY; fi
+          # futebol: a chave fica só como segredo do Worker (nunca no código nem no app)
+          if [ -n "$API_FUTEBOL_KEY" ]; then printf '%s' "$API_FUTEBOL_KEY" | npx wrangler secret put API_FUTEBOL_KEY; fi
+          if [ -n "$API_FUTEBOL_LIMITE" ]; then printf '%s' "$API_FUTEBOL_LIMITE" | npx wrangler secret put API_FUTEBOL_LIMITE; fi
           URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.txt | head -1)
           echo "::notice title=Endereço do servidor::$URL"
           echo "SERVIDOR_URL=$URL"
