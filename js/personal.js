@@ -363,11 +363,28 @@ const QUOTES = [
 /* frase do dia de CADA pessoa: muda todo dia e é diferente para cada conta (sorteio pela conta + data),
    puxando um pouco para o que a pessoa marcou na ficha (fé → versículos; quem não quer fé, não recebe) */
 const hashS = (str) => { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+/* baralho embaralhado determinístico (Fisher-Yates com semente): a ordem é sempre a mesma para a mesma semente */
+function baralho(n, seed) {
+  const ordem = Array.from({ length: n }, (_, i) => i);
+  let x = (seed >>> 0) || 1;
+  const rnd = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return (x >>> 0) / 4294967296; };
+  for (let i = n - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const t = ordem[i]; ordem[i] = ordem[j]; ordem[j] = t; }
+  return ordem;
+}
+const diaNum = (k) => { const [y, m, d] = String(k).split('-').map(Number); return Math.floor(Date.UTC(y, (m || 1) - 1, d || 1) / 864e5); };
+/* frase/versículo do dia SEM repetir: cada pessoa recebe um baralho próprio e percorre TODAS as frases
+   antes de qualquer uma voltar; a cada volta o baralho é reembaralhado (ordem nova), e a última de um ciclo
+   nunca é a primeira do seguinte. */
 export const quoteOfDay = (k = todayKey()) => {
   const who = store.user?.uid || store.me || 'x';
   const faith = !!store.profile?.faith;
   const pool = QUOTES.filter((q) => faith || !/^(Filipenses|Salmos|Eclesiastes|\d? ?Coríntios)/.test(q[1]));
-  const q = pool[hashS(`${who}|${k}`) % pool.length];
+  const n = pool.length;
+  if (!n) return { t: QUOTES[0][0], a: QUOTES[0][1] };
+  // UM baralho por pessoa, percorrido em roda: cada frase aparece uma única vez antes de QUALQUER
+  // uma voltar — e isso vale sempre, inclusive na virada da volta (nunca repete dentro de n dias).
+  const ordem = baralho(n, hashS(who));
+  const q = pool[ordem[((diaNum(k) % n) + n) % n]];
   return { t: q[0], a: q[1] };
 };
 export const phraseOfDay = (k) => quoteOfDay(k).t;
