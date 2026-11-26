@@ -10,6 +10,7 @@ import { isTeen } from './teen.js';
 import { tranca } from './tranca.js';
 import { abreUnica } from './unica.js';
 import * as filaMsg from './msg-fila.js';
+import { abreSMS, temSMS } from './sms-ponte.js';
 import { semRede } from './rede.js';
 import { muda } from './mensagens.js';
 import { sininho, alive, veste, act, lookAt } from './sininho.js';
@@ -76,7 +77,7 @@ export async function openConversa(uid, prev = {}) {
       : m.tipo === 'story' ? `<button type="button" class="bol__story" data-story="${esc(m.st?.id || '')}" data-dono="${esc(m.st?.owner || '')}"><span class="bol__mini"></span><small>${m.meu ? `Você respondeu ao story de ${esc(n1())}` : 'Respondeu ao seu story'}</small></button><p class="${/^\p{Extended_Pictographic}/u.test(m.txt) && m.txt.length <= 4 ? 'is-emo' : ''}">${esc(m.txt)}</p>`
       : `<p class="${/^(\p{Extended_Pictographic}️?){1,3}$/u.test(m.txt) ? 'is-emo' : ''}">${esc(m.txt)}</p>`;
     const dia = !ant || new Date(ant.at).getDate() !== new Date(m.at).getDate() ? `<div class="conv__dia"><span>${new Date(m.at).getDate() === new Date().getDate() ? 'Hoje' : 'Ontem'}</span></div>` : '';
-    return `${dia}<div class="bol${m.meu ? ' bol--eu' : ''}${junto ? ' is-junto' : ''}${fim ? ' is-fim' : ''}${m.nova ? ' is-entra' : ''}${rc.length ? ' tem-reac' : ''}${achada ? ' is-acha' : ''}" data-m="${esc(m.id)}"><div class="bol__c">${m.resp ? citacao(m.resp) : ''}${dentro}<span class="bol__pe">${hora(m.at)}${m.meu && m.tipo !== 'apagada' ? (m.falhou ? ` <button type="button" class="bol__re" data-re="${esc(m.id)}">não foi · tentar</button>` : m.espera ? ' <span class="bol__esp">sem internet · sobe depois</span>' : m.envio ? ` ${icon('clock', 12)}` : D.lidoAte >= m.at ? ' <b class="bol__visto">visto</b>' : ` ${icon('check', 12)}`) : ''}</span></div>${rc.length ? `<span class="bol__reac">${[...new Set(rc)].map(esc).join('')}${rc.length > 1 ? `<small>${rc.length}</small>` : ''}</span>` : ''}</div>`;
+    return `${dia}<div class="bol${m.meu ? ' bol--eu' : ''}${junto ? ' is-junto' : ''}${fim ? ' is-fim' : ''}${m.nova ? ' is-entra' : ''}${rc.length ? ' tem-reac' : ''}${achada ? ' is-acha' : ''}" data-m="${esc(m.id)}"><div class="bol__c">${m.resp ? citacao(m.resp) : ''}${dentro}<span class="bol__pe">${hora(m.at)}${m.meu && m.tipo !== 'apagada' ? (m.falhou ? ` <button type="button" class="bol__re" data-re="${esc(m.id)}">não foi · tentar</button>` : m.espera ? ` <span class="bol__esp">sem internet</span>${temSMS() ? ` <button type="button" class="bol__sms" data-sms="${esc(m.id)}">enviar por SMS</button>` : ''}` : m.envio ? ` ${icon('clock', 12)}` : D.lidoAte >= m.at ? ' <b class="bol__visto">visto</b>' : ` ${icon('check', 12)}`) : ''}</span></div>${rc.length ? `<span class="bol__reac">${[...new Set(rc)].map(esc).join('')}${rc.length > 1 ? `<small>${rc.length}</small>` : ''}</span>` : ''}</div>`;
   };
   let assin = '', viuAte = 0;
   /* o Lembra na conversa: digita, grava, e quando a última mensagem é vista ele chega e lê */
@@ -125,7 +126,7 @@ export async function openConversa(uid, prev = {}) {
       m.envio = false;
       const semNet = /sem-rede|rede|internet|Failed to fetch|NetworkError/i.test(String(e?.code || e?.message || e)) || semRede();
       // sem internet e sendo texto: guarda no aparelho e sobe sozinha depois (nada se perde)
-      if (semNet && m.tipo === 'txt') { m.espera = true; m.falhou = false; await filaMsg.guardaParaDepois(m.pacote, { com: uid, txt: m.txt, tipo: 'txt' }); pinta(true); toast('Sem internet: a mensagem sobe sozinha quando voltar.', { ms: 5000 }); }
+      if (semNet && m.tipo === 'txt') { m.espera = true; m.falhou = false; await filaMsg.guardaParaDepois(m.pacote, { com: uid, txt: m.txt, tipo: 'txt' }); pinta(true); toast(temSMS() ? 'Sem internet: sobe sozinha quando voltar — ou toque em "enviar por SMS".' : 'Sem internet: a mensagem sobe sozinha quando voltar.', { ms: 6500 }); }
       else { m.falhou = true; pinta(true); toast(e.message || 'Não foi. Toque em “tentar”.'); }
     }
   }
@@ -300,6 +301,7 @@ export async function openConversa(uid, prev = {}) {
       const vel = e.target.closest('[data-vel]'), au = e.target.closest('[data-audio]');
       if (vel) { const v = { 1: 1.5, 1.5: 2, 2: 1 }[+(au.dataset.v || 1)]; au.dataset.v = v; vel.textContent = v + 'x'; if (au._au) au._au.playbackRate = v; return; }
       if (e.target.closest('.bol__play')) return tocaAudio(au, m);
+      if (e.target.closest('[data-sms]')) { const msm = todas().find((x) => x.id === e.target.closest('[data-sms]').dataset.sms); if (msm) { abreSMS(msm.txt); toast('Abri o SMS. A mensagem também sobe no Lembra quando a internet voltar.', { ms: 6000 }); } return; }
       if (e.target.closest('[data-um]')) return abreUm(m);
       const ft = e.target.closest('[data-abre]'); if (ft) { if (ft.classList.contains('is-borrada')) { abertas.add(m.id); return pinta(true); } const i = ft.querySelector('img'); if (i) abreFoto(i.src); return; }
       const st = e.target.closest('[data-story]'); if (st) { import('./stories.js').then((S) => S.openViewer(st.dataset.dono, null, st.dataset.story)); return; }

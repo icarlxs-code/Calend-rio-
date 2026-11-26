@@ -283,3 +283,4 @@ body.has-unica { overflow: hidden; }
 .cjump.is-nova .stface { outline: 2.5px solid var(--accent); outline-offset: 2px; } .cjump.is-nova span { opacity: 1; color: var(--accent); }
 .cjump__on { position: absolute; top: 34px; right: 8px; width: 11px; height: 11px; border-radius: 50%; background: #30D158; border: 2px solid var(--fx-bg, #fff); }
 .cjump:active { transform: scale(.93); }
+.bol__sms { margin-left: 4px; padding: 1px 7px; border: 0; border-radius: 99px; background: rgba(201,64,10,.14); color: #C9400A; font: 800 11px/1.5 Nunito, system-ui, sans-serif; cursor: pointer; } .bol--eu .bol__sms { background: rgba(255,255,255,.22); color: #fff; }
