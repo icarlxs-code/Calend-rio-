@@ -2,7 +2,7 @@
    Se algo aqui falhar, o app segue funcionando como antes (cada gancho tem o caminho antigo). */
 import * as LM from './lembra-motion.js';
 
-const fora = () => document.body.classList.contains('is-client') || !!document.querySelector('.paywall, .termsgate, .photogate');
+const fora = () => document.body.classList.contains('is-client') || !!document.querySelector('.paywall.is-open');
 const TOQUE = '.btn, .iconbtn, .tabbar__btn, .tabbar__fab, .chip, .pchip, .arow--btn, .prow__check, .ecard__check, .seg__btn, .seg3__btn, .whobtn, .fixbtn';
 let baixo = null;
 

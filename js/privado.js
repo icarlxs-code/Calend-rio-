@@ -42,11 +42,24 @@ export async function openConversa(uid, prev = {}) {
   const $ = (s) => a.el.querySelector(s);
   function casca() {
     return `<div class="conv"><header class="conv__top"><button class="iconbtn" data-close aria-label="Voltar">${icon('left', 22)}</button><button class="conv__quem" data-perfil>${rosto(D.com, 44)}<span><b>${esc(D.com.name)}</b><small data-st></small></span></button><span class="conv__acoes"><button class="iconbtn" data-busca aria-label="Buscar na conversa">${icon('search', 20)}</button><button class="iconbtn" data-menu aria-label="Opções">${icon('dots', 20)}</button></span></header>
+      <div class="conv__jump" data-jump hidden></div>
       <div class="conv__acha" data-acha hidden><input type="search" placeholder="Buscar nesta conversa" data-achatxt aria-label="Buscar nesta conversa"><span class="conv__achan" data-achan></span><button type="button" class="iconbtn" data-achasai aria-label="Fechar a busca">${icon('x', 20)}</button></div>
       <div class="conv__lista" data-lista aria-live="polite"></div>
       <div class="conv__resp" data-resp hidden></div>
       <form class="conv__barra" data-barra autocomplete="off"><button type="button" class="conv__b conv__b--mais" data-mais aria-label="Anexar">${icon('plus', 24)}</button><label class="conv__b" aria-label="Enviar foto">${icon('camera', 22)}<input type="file" accept="image/*" data-foto hidden></label><textarea rows="1" maxlength="1000" placeholder="Mensagem" data-txt enterkeyhint="send" aria-label="Mensagem"></textarea><button type="button" class="conv__b conv__b--mic" data-mic aria-label="Gravar áudio">${icon('mic', 22)}</button><button type="submit" class="conv__b conv__b--ir" data-ir aria-label="Enviar" hidden>${ICO.manda(21)}</button></form>
       <div class="conv__grava" data-grava hidden><button type="button" class="conv__b" data-cancela aria-label="Cancelar áudio">${icon('trash', 20)}</button><span class="conv__tempo" data-tempo>0:00</span><span class="conv__ondas" data-ondas></span><button type="button" class="conv__um" data-um1 aria-pressed="false" aria-label="Visualização única">1</button><button type="button" class="conv__b conv__b--ir" data-envia aria-label="Enviar áudio">${ICO.manda(21)}</button></div></div>`;
+  }
+  function pintaJump() {
+    const j = $('[data-jump]'); if (!j) return;
+    const cfgv = conversas().cfg, L = conversas().lista.filter((c) => c.uid !== uid && !cfgv.arq.includes(c.uid) && !cfgv.tra.includes(c.uid)).slice(0, 14);
+    if (L.length < 1) { j.hidden = true; return; }
+    j.hidden = false;
+    j.innerHTML = L.map((c) => `<button class="cjump${c.novas ? ' is-nova' : ''}" data-jump-uid="${esc(c.uid)}" aria-label="Abrir conversa com ${esc(c.name)}">${rosto(c, 46)}${online(c.online) ? '<i class="cjump__on"></i>' : ''}<span>${esc(c.name.split(' ')[0])}</span></button>`).join('');
+    j.querySelectorAll('[data-jump-uid]').forEach((btn) => (btn.onclick = () => {
+      const u2 = btn.dataset.jumpUid; if (u2 === uid) return;
+      const c = conversas().lista.find((x) => x.uid === u2);
+      a.close(); setTimeout(() => openConversa(u2, c || {}), 40);   // troca de conversa com um toque só
+    }));
   }
   let quem = D.com.name + (D.com.photo || '');
   const status = () => { const s = $('[data-st]'); if (!s) return; const ch = D.com.name + (D.com.photo || ''); if (ch !== quem) { quem = ch; const b = $('[data-perfil]'); const v = b.querySelector('.stface'); if (v) v.outerHTML = rosto(D.com, 42); b.querySelector('b').textContent = D.com.name; } s.className = Date.now() < digT ? 'is-dig' : online(D.online) ? 'is-on' : ''; s.textContent = Date.now() < digT ? (digV === 'audio' ? 'gravando áudio…' : 'digitando…') : online(D.online) ? 'online agora' : D.online ? `visto há ${desde(D.online)}` : 'some em 24 h'; };
@@ -314,7 +327,7 @@ export async function openConversa(uid, prev = {}) {
   // voltar (seta ou deslizando): se não há nada atrás, mostra a lista de conversas
   a.aoVoltar = () => setTimeout(() => { if (!openSheets().length) import('./mensagens.js').then((m) => m.openMensagens()); }, 30);
   a.el.addEventListener('click', (e) => { if (e.target.closest('.conv__top [data-close]')) a.aoVoltar(); }, true);
-  conversaAberta(uid); pinta(true); traz();
+  conversaAberta(uid); pintaJump(); pinta(true); traz();
   sonda = setInterval(() => { if (document.hidden) return; encaixa(); if (!aoVivo()) traz(); else status(); }, 6000);
   return a;
 }

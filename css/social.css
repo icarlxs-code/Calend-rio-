@@ -277,3 +277,9 @@ body.has-unica { overflow: hidden; }
 .pmsg small { display: block; margin-top: 3px; font-size: 11.5px; opacity: .7; }
 .perto__barraenv { display: flex; gap: 8px; padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--fx-line); }
 .perto__barraenv input { flex: 1; min-width: 0; height: 48px; padding: 0 16px; border: 1.5px solid var(--fx-line); border-radius: 24px; background: var(--fx-card); color: var(--text); font: 600 16.5px Nunito, system-ui, sans-serif; }
+.conv__jump { display: flex; gap: 10px; overflow-x: auto; padding: 8px 12px 10px; border-bottom: 1px solid var(--fx-line); scrollbar-width: none; -webkit-overflow-scrolling: touch; } .conv__jump::-webkit-scrollbar { display: none; } .conv__jump[hidden] { display: none; }
+.cjump { position: relative; flex: 0 0 auto; width: 58px; display: grid; justify-items: center; gap: 3px; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.cjump .stface { width: 46px; height: 46px; } .cjump span { max-width: 56px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; font-weight: 700; opacity: .85; }
+.cjump.is-nova .stface { outline: 2.5px solid var(--accent); outline-offset: 2px; } .cjump.is-nova span { opacity: 1; color: var(--accent); }
+.cjump__on { position: absolute; top: 34px; right: 8px; width: 11px; height: 11px; border-radius: 50%; background: #30D158; border: 2px solid var(--fx-bg, #fff); }
+.cjump:active { transform: scale(.93); }
