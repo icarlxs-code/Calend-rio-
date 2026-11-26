@@ -47,8 +47,8 @@ export function ensureTermsAccepted() {
   });
 }
 
-/* Baixar meus dados (portabilidade): tudo o que é da pessoa, num arquivo */
-export async function exportMyData() {
+/* Tudo o que é da pessoa, num objeto só (usado pelos três formatos) */
+export function meusDados() {
   const uid = store.user?.uid;
   const mine = (e) => (e.createdBy || store.me) === store.me;
   const own = store.workspace === uid;
@@ -64,18 +64,32 @@ export async function exportMyData() {
     pessoal: personal.items,
     retrospectiva: retro.exporta(), // livro-razão do ano, que só existe neste aparelho
   };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const name = `meus-dados-lembra-${todayKey()}.json`;
-  const file = typeof File === 'function' ? new File([blob], name, { type: 'application/json' }) : null;
-  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: 'Meus dados do Lembra' }); return; } catch { /* cancelou: baixa */ }
-  }
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  return data;
+}
+
+/* Baixar meus dados: a pessoa escolhe o formato (ler, planilha ou levar para outro app) */
+export async function exportMyData() {
+  const M = await import('./meus-dados.js'), d = meusDados();
+  const n = (d.trabalho?.compromissos || d.trabalho?.compromissosCadastradosPorVoce || []).length + (d.pessoal || []).length;
+  return new Promise((pronto) => {
+    const s = openSheet({
+      className: 'sheet--actions',
+      html: `<div class="phm"><div class="phm__head"><b>Baixar meus dados</b><small>${n} ite${n === 1 ? 'm' : 'ns'} · tudo é montado neste aparelho</small></div>
+        <div class="phm__grp">
+          <button class="phm__row" data-f="html"><span class="phm__ic is-n">${icon('note', 21)}</span><span class="phm__t"><b>Relatório para ler</b><small>organizado por assunto, abre no celular</small></span></button>
+          <button class="phm__row" data-f="csv"><span class="phm__ic is-n">${icon('list', 21)}</span><span class="phm__t"><b>Planilha da agenda</b><small>abre no Excel, Planilhas ou Numbers</small></span></button>
+          <button class="phm__row" data-f="json"><span class="phm__ic is-n">${icon('download', 21)}</span><span class="phm__t"><b>Arquivo técnico</b><small>para levar seus dados a outro aplicativo</small></span></button>
+        </div></div>`,
+      onMount: (a) => a.el.querySelectorAll('[data-f]').forEach((b) => (b.onclick = async () => {
+        const f = b.dataset.f; s.close();
+        if (f === 'html') await M.baixa(M.nomeArquivo('html'), M.relatorio(d), 'text/html');
+        else if (f === 'csv') await M.baixa(M.nomeArquivo('csv'), M.planilha(d), 'text/csv');
+        else await M.baixa(M.nomeArquivo('json'), JSON.stringify(d, null, 2), 'application/json');
+        pronto(f);
+      })),
+      onClose: () => pronto(null),
+    });
+  });
 }
 
 /* Excluir minha conta: confirma a senha, apaga tudo e encerra o login */
@@ -135,7 +149,7 @@ export function openPrivacy() {
     html: html(),
     onMount: (a) => {
       const el = a.el;
-      el.querySelector('[data-export]').onclick = () => exportMyData().then(() => toast('Seus dados foram exportados ✓')).catch(() => toast('Não consegui gerar o arquivo agora.'));
+      el.querySelector('[data-export]').onclick = () => exportMyData().then((f) => f && toast('Pronto! Procure o arquivo nos seus downloads.', { ms: 6000 })).catch(() => toast('Não consegui gerar o arquivo agora.'));
       const v = el.querySelector('[data-verify]');
       if (v) v.onclick = async () => { const { account } = await import('./cloud.js'); account.resendVerification().then(() => toast('Enviamos o e-mail de confirmação (veja também o spam).', { ms: 5000 })).catch(() => toast('Espere alguns minutos e tente de novo.')); };
       el.querySelector('[data-delete]').onclick = () => askDelete();
