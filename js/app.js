@@ -10,6 +10,7 @@ import { renderPersonalSpace, personalTabbar, bindPersonal, personalActions, ope
 import { personal, startPersonal, occurrences } from './personal.js';
 import { CONFIG } from '../config.js';
 import { store, initLocal, initCloud, saveMyProfile, LS_DATA } from './store.js';
+import { renderPreso, presoAte } from './ui-trava.js';
 import * as cofre from './cofre.js';
 import { CHAVE_LOCAL as LS_PESSOAL } from './personal.js';
 import { ui, saveUi } from './ui.js';
@@ -183,7 +184,10 @@ import('./deslizar.js').then((m) => m.ligaDeslizar({
   marca: (id) => document.querySelectorAll('.tabbar__btn').forEach((b) => b.classList.toggle('is-on', b.dataset.tab === id)),
   vai: (id) => { const go = () => { if (ui.space === 'personal') ui.ptab = id; else ui.tab = id; saveUi(); ui.stripReset = true; render(); window.scrollTo(0, 0); }; if (window.__motion?.direto) window.__motion.direto(id, go); else go(); },
 })).catch((e) => console.warn('deslizar', e));
+let presoT = 0;
 function render() {
+  // tela travada de propósito (a pessoa está mexendo num campo): redesenha quando soltar
+  if (renderPreso()) { clearTimeout(presoT); presoT = setTimeout(render, Math.max(30, presoAte() - Date.now() + 30)); return; }
   // proteção: se a abertura não terminou por algum motivo, termina aqui (o fundo branco dela nunca fica preso na tela)
   clearTimeout(window.__introGuard);
   window.__introGuard = setTimeout(() => { const de = document.documentElement, it = document.getElementById('intro'); if (!de.classList.contains('intro-done') && (!it || it.classList.contains('is-gone') || !it.isConnected || getComputedStyle(it).opacity === '0')) { de.classList.add('intro-done'); } else if (!de.classList.contains('intro-done') && window.PautaIntro) window.PautaIntro.finish(); }, 9000);

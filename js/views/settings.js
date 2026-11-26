@@ -5,6 +5,7 @@ import { iaStatus } from '../ia-consent.js';
 import { coachTest } from '../coach.js';
 import { fmtLeft } from '../billing.js';
 import { usagePlaceholder, fillUsage } from '../usage.js';
+import { seguraRender } from '../ui-trava.js';
 import { store } from '../store.js';
 import { CONFIG } from '../../config.js';
 import { TYPES, BEST_TIMES_TABLE, isMarketing, WORK, crew } from '../constants.js';
@@ -250,28 +251,31 @@ function planSection() {
 }
 
 /* "Seu dia de trabalho": perguntas simples, uma por cartão, com o resumo em uma frase no topo */
+const hh = (t) => String(t || '').replace(/^0/, '').replace(':00', 'h').replace(':', 'h');
+const WD_FULL = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+/* a frase do topo, montada à parte: assim dá para atualizar só ela quando a pessoa mexe em algo */
+export function resumoRotina(r) {
+  const offs = [...(r.daysOff || [])].sort((a, b) => a - b).map((i) => WD_FULL[i]);
+  return `Você trabalha das <b>${hh(r.workStart)}</b> às <b>${hh(r.workEnd)}</b>, almoça das <b>${hh(r.lunchStart)}</b> às <b>${hh(r.lunchEnd)}</b>${offs.length ? ` e folga ${offs.length === 1 ? 'no' : 'em'} <b>${offs.join(', ').replace(/, ([^,]*)$/, ' e $1')}</b>` : ' e não tem dia de folga'}.`;
+}
 function routineSection() {
   const r = routine();
-  const hh = (t) => String(t || '').replace(/^0/, '').replace(':00', 'h').replace(':', 'h');
-  const WD_FULL = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
-  const offs = r.daysOff.map((i) => WD_FULL[i]);
-  const resumo = `Você trabalha das <b>${hh(r.workStart)}</b> às <b>${hh(r.workEnd)}</b>, almoça das <b>${hh(r.lunchStart)}</b> às <b>${hh(r.lunchEnd)}</b>${offs.length ? ` e folga ${offs.length === 1 ? 'no' : 'em'} <b>${offs.join(', ').replace(/, ([^,]*)$/, ' e $1')}</b>` : ' e não tem dia de folga'}.`;
   const travel = [[0, 'Não preciso de tempo entre eles'], [15, '15 minutos'], [30, '30 minutos'], [45, '45 minutos'], [60, '1 hora'], [90, '1 hora e meia']];
   return `<section class="block">
     <h2 class="block__title">${icon('clock', 16)} Seu dia de trabalho</h2>
-    <p class="rt__lead">Conte como é o seu dia. Com isso o Lembra <b>não marca nada</b> no seu almoço, na sua folga ou fora do expediente, e avisa quando o dia estiver cheio demais.</p>
-    <div class="rt__resumo">${icon('sparkles', 16)}<span>${resumo}</span></div>
-    <form class="rt" data-routine-form onsubmit="return false">
-      <div class="rt__card"><div class="rt__q"><span class="rt__ic" style="--c:#0A84FF">${icon('briefcase', 18)}</span><div><b>Que horas você começa e termina de trabalhar?</b><small>Fora desse horário o Lembra não marca compromisso de trabalho.</small></div></div>
-        <div class="rt__times"><span>Das</span><input type="time" name="workStart" value="${r.workStart}" aria-label="Começo do expediente"><span>às</span><input type="time" name="workEnd" value="${r.workEnd}" aria-label="Fim do expediente"></div></div>
-      <div class="rt__card"><div class="rt__q"><span class="rt__ic" style="--c:#FF9500">${icon('utensils', 18)}</span><div><b>Que horas é o seu almoço?</b><small>Esse horário fica livre: nada é marcado em cima dele.</small></div></div>
-        <div class="rt__times"><span>Das</span><input type="time" name="lunchStart" value="${r.lunchStart}" aria-label="Começo do almoço"><span>às</span><input type="time" name="lunchEnd" value="${r.lunchEnd}" aria-label="Fim do almoço"></div></div>
-      <div class="rt__card"><div class="rt__q"><span class="rt__ic" style="--c:#34C759">${icon('sun', 18)}</span><div><b>Em quais dias você NÃO trabalha?</b><small>Toque nos dias de folga (eles ficam verdes). Nesses dias o Lembra deixa você descansar.</small></div></div>
-        <div class="rt__days">${WD_SHORT.map((w, i) => `<label class="rt__day"><input type="checkbox" name="off" value="${i}"${r.daysOff.includes(i) ? ' checked' : ''}><span><b>${w}</b><small>${r.daysOff.includes(i) ? 'folga' : 'trabalho'}</small></span></label>`).join('')}</div></div>
-      <div class="rt__card"><div class="rt__q"><span class="rt__ic" style="--c:#AF52DE">${icon('car', 18)}</span><div><b>Quanto tempo você leva de um compromisso para o outro?</b><small>O Lembra deixa esse intervalo livre entre eles (trânsito, deslocamento).</small></div></div>
-        <select class="rt__sel" name="travelMin">${travel.map(([m, l]) => `<option value="${m}"${r.travelMin === m ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
-      <div class="rt__card"><div class="rt__q"><span class="rt__ic" style="--c:#FF3B30">${icon('listcheck', 18)}</span><div><b>Quantos compromissos você aguenta num dia?</b><small>Passou disso, o Lembra avisa que o dia está pesado.</small></div></div>
-        <select class="rt__sel" name="maxTasks">${[4, 5, 6, 7, 8, 10, 12, 15, 20].map((n) => `<option value="${n}"${r.maxTasks === n ? ' selected' : ''}>Até ${n} por dia</option>`).join('')}</select></div>
+    <p class="rot__lead">Conte como é o seu dia. Com isso o Lembra <b>não marca nada</b> no seu almoço, na sua folga ou fora do expediente, e avisa quando o dia estiver cheio demais.</p>
+    <div class="rot__resumo">${icon('sparkles', 16)}<span data-rt-resumo>${resumoRotina(r)}</span></div>
+    <form class="rot" data-routine-form onsubmit="return false">
+      <div class="rot__card"><div class="rot__q"><span class="rot__ic" style="--c:#0A84FF">${icon('briefcase', 18)}</span><div><b>Que horas você começa e termina de trabalhar?</b><small>Fora desse horário o Lembra não marca compromisso de trabalho.</small></div></div>
+        <div class="rot__times"><span>Das</span><input type="time" name="workStart" value="${r.workStart}" aria-label="Começo do expediente"><span>às</span><input type="time" name="workEnd" value="${r.workEnd}" aria-label="Fim do expediente"></div></div>
+      <div class="rot__card"><div class="rot__q"><span class="rot__ic" style="--c:#FF9500">${icon('utensils', 18)}</span><div><b>Que horas é o seu almoço?</b><small>Esse horário fica livre: nada é marcado em cima dele.</small></div></div>
+        <div class="rot__times"><span>Das</span><input type="time" name="lunchStart" value="${r.lunchStart}" aria-label="Começo do almoço"><span>às</span><input type="time" name="lunchEnd" value="${r.lunchEnd}" aria-label="Fim do almoço"></div></div>
+      <div class="rot__card"><div class="rot__q"><span class="rot__ic" style="--c:#34C759">${icon('sun', 18)}</span><div><b>Em quais dias você NÃO trabalha?</b><small>Toque nos dias de folga (eles ficam verdes). Nesses dias o Lembra deixa você descansar.</small></div></div>
+        <div class="rot__days">${WD_SHORT.map((w, i) => `<label class="rot__day"><input type="checkbox" name="off" value="${i}"${r.daysOff.includes(i) ? ' checked' : ''}><span><b>${w}</b><small>${r.daysOff.includes(i) ? 'folga' : 'trabalho'}</small></span></label>`).join('')}</div></div>
+      <div class="rot__card"><div class="rot__q"><span class="rot__ic" style="--c:#AF52DE">${icon('car', 18)}</span><div><b>Quanto tempo você leva de um compromisso para o outro?</b><small>O Lembra deixa esse intervalo livre entre eles (trânsito, deslocamento).</small></div></div>
+        <select class="rot__sel" name="travelMin">${travel.map(([m, l]) => `<option value="${m}"${r.travelMin === m ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="rot__card"><div class="rot__q"><span class="rot__ic" style="--c:#FF3B30">${icon('listcheck', 18)}</span><div><b>Quantos compromissos você aguenta num dia?</b><small>Passou disso, o Lembra avisa que o dia está pesado.</small></div></div>
+        <select class="rot__sel" name="maxTasks">${[4, 5, 6, 7, 8, 10, 12, 15, 20].map((n) => `<option value="${n}"${r.maxTasks === n ? ' selected' : ''}>Até ${n} por dia</option>`).join('')}</select></div>
     </form>
     <p class="fhelp">Muda na hora, sem botão de salvar.</p>
   </section>`;
@@ -328,8 +332,13 @@ export const settingsActions = {
     };
     if (next.workEnd <= next.workStart) return toast('O fim do expediente precisa ser depois do início');
     if (next.lunchEnd <= next.lunchStart) return toast('O fim do almoço precisa ser depois do início');
+    // nada de redesenhar a tela aqui: o resumo muda de tamanho, os cartões descem e o próximo toque
+    // cai no cartão errado. Então: segura o redesenho e atualiza só o que mudou.
+    seguraRender(700);
     await store.upsert('settings', next);
-    toast('Rotina salva');
+    const topo = form.closest('.block')?.querySelector('[data-rt-resumo]');
+    if (topo) topo.innerHTML = resumoRotina(next);
+    form.querySelectorAll('.rot__day').forEach((l) => { const i = l.querySelector('input'), t = l.querySelector('small'); if (i && t) t.textContent = i.checked ? 'folga' : 'trabalho'; });
   },
   async ics(btn) {
     const who = btn.dataset.who === 'me' ? store.me : 'all';

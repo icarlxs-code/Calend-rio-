@@ -2692,24 +2692,24 @@ html:has(.login), html:has(.login) body { height: 100%; overflow: hidden; oversc
 .foryou__likes span { flex: 1; display: flex; flex-direction: column; } .foryou__likes small { opacity: .9; font-size: 12px; }
 
 /* ===================== Seu dia de trabalho (rotina) ===================== */
-.rt__lead { font-size: 14px; color: var(--muted, #8a8a8e); margin: 0 4px 10px; line-height: 1.45; }
-.rt__resumo { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, #E85A0C 10%, var(--card, #fff)); font-size: 14px; line-height: 1.45; margin-bottom: 12px; }
-.rt__resumo svg { color: #E85A0C; flex-shrink: 0; margin-top: 2px; }
-.rt { display: flex; flex-direction: column; gap: 10px; }
-.rt__card { background: var(--card, #fff); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
-.rt__q { display: flex; gap: 12px; align-items: flex-start; }
-.rt__q b { display: block; font-size: 15px; line-height: 1.3; }
-.rt__q small { display: block; color: var(--muted, #8a8a8e); font-size: 13px; margin-top: 2px; line-height: 1.35; }
-.rt__ic { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; color: #fff; background: var(--c); flex-shrink: 0; }
-.rt__times { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--muted, #8a8a8e); }
-.rt__times input { flex: 1; min-width: 0; padding: 12px; border-radius: 12px; border: 0; background: var(--fill, rgba(120,120,128,.12)); font: inherit; font-weight: 800; font-size: 18px; color: var(--text, #111); text-align: center; }
-.rt__days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-.rt__day input { position: absolute; opacity: 0; pointer-events: none; }
-.rt__day span { display: flex; flex-direction: column; align-items: center; padding: 9px 0; border-radius: 12px; background: var(--fill, rgba(120,120,128,.12)); transition: background .2s, color .2s, transform .15s; }
-.rt__day span b { font-size: 14px; } .rt__day span small { font-size: 10px; color: var(--muted, #8a8a8e); }
-.rt__day input:checked + span { background: #34C759; color: #fff; transform: translateY(-1px); box-shadow: 0 6px 14px -6px rgba(52,199,89,.7); }
-.rt__day input:checked + span small { color: rgba(255,255,255,.9); }
-.rt__sel { width: 100%; padding: 12px; border-radius: 12px; border: 0; background: var(--fill, rgba(120,120,128,.12)); font: inherit; font-weight: 700; font-size: 15px; color: var(--text, #111); }
+.rot__lead { font-size: 14px; color: var(--muted, #8a8a8e); margin: 0 4px 10px; line-height: 1.45; }
+.rot__resumo { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, #E85A0C 10%, var(--card, #fff)); font-size: 14px; line-height: 1.45; margin-bottom: 12px; }
+.rot__resumo svg { color: #E85A0C; flex-shrink: 0; margin-top: 2px; }
+.rot { display: flex; flex-direction: column; gap: 10px; }
+.rot__card { background: var(--card, #fff); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.rot__q { display: flex; gap: 12px; align-items: flex-start; }
+.rot__q b { display: block; font-size: 15px; line-height: 1.3; }
+.rot__q small { display: block; color: var(--muted, #8a8a8e); font-size: 13px; margin-top: 2px; line-height: 1.35; }
+.rot__ic { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; color: #fff; background: var(--c); flex-shrink: 0; }
+.rot__times { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--muted, #8a8a8e); }
+.rot__times input { flex: 1; min-width: 0; padding: 12px; border-radius: 12px; border: 0; background: var(--fill, rgba(120,120,128,.12)); font: inherit; font-weight: 800; font-size: 18px; color: var(--text, #111); text-align: center; }
+.rot__days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.rot__day input { position: absolute; opacity: 0; pointer-events: none; }
+.rot__day span { display: flex; flex-direction: column; align-items: center; padding: 9px 0; border-radius: 12px; background: var(--fill, rgba(120,120,128,.12)); transition: background .2s, color .2s, transform .15s; }
+.rot__day span b { font-size: 14px; } .rot__day span small { font-size: 10px; color: var(--muted, #8a8a8e); }
+.rot__day input:checked + span { background: #34C759; color: #fff; transform: translateY(-1px); box-shadow: 0 6px 14px -6px rgba(52,199,89,.7); }
+.rot__day input:checked + span small { color: rgba(255,255,255,.9); }
+.rot__sel { width: 100%; padding: 12px; border-radius: 12px; border: 0; background: var(--fill, rgba(120,120,128,.12)); font: inherit; font-weight: 700; font-size: 15px; color: var(--text, #111); }
 
 /* ===================== Conquistas com vida: fogo, 3D e jornada ===================== */
 /* fogo animado (camadas que tremulam devagar); a cor muda com a ofensiva */
