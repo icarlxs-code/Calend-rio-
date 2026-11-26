@@ -18,7 +18,7 @@ import { getDevices, removeDevices, addDevice, upgradeSubs } from './devices.js'
 import { runTick, planReminders, planPersonal, seedPerson, upgradeLegacy, usageMeter } from './tick.js';
 import { dueOf } from './kvsql.js';
 import { rodaFutebol, guardaTime, tiraTime, proximos, ligado as futebolLigado } from './futebol.js';
-import { rodaAoVivo, cenaDoTime } from './fut-motor.js';
+import { rodaAoVivo, rodaAntes, cenaDoTime } from './fut-motor.js';
 import { temChave as temFutChave, orcamento as futOrcamento } from './fut-api.js';
 import { porHora, usoIA } from './cota.js';
 import { brNow, fusoOk } from './coach.js';
@@ -1209,6 +1209,7 @@ export async function cronTick(env, { now = Date.now(), meter = { pushes: 0 }, m
     await safe('lote de frases', loteDiario(env, now));
     await safe('futebol', rodaFutebol(env, now, send));
     await safe('futebol ao vivo', rodaAoVivo(env, now, send));
+    await safe('futebol antes', rodaAntes(env, now, send));
     await safe('ranking', monthlyAward(env, { stripe: stripeApi, getBill, putBill, notify: (id, msg) => send(env, id, msg) }));
   }
   const more = r.more || (await dueOf(env).dueBefore(now, 1)).length > 0;

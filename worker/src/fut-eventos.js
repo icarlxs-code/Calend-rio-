@@ -139,3 +139,24 @@ export function situacao(tab, timeId) {
     total: tab.length,
   };
 }
+
+/* ---------- antes do jogo: véspera, dia e pouco antes ---------- */
+const A = {
+  vespera: ['EI! AMANHÃ TEM JOGO DO NOSSO TIME! 👀 {jogo}, às {hora}.', 'Amanhã tem {jogo}, às {hora}. Já deixa o horário livre!', 'Prepara o coração: amanhã é {jogo}, às {hora}.'],
+  dia: ['HOJE É DIA DE JOGO! 🔥 {jogo}, às {hora}.', 'Hoje tem {jogo}, às {hora}. Vamos vestir a camisa!', 'É hoje! {jogo} às {hora}. Não marca nada por cima 😄'],
+  perto: ['Falta pouco para a bola rolar! {jogo}, às {hora}.', 'Daqui a pouco: {jogo}, às {hora}. Bora!', 'Aquecendo! {jogo} começa às {hora}.'],
+};
+const ONDE = { casa: 'em casa', fora: 'fora de casa' };
+/** monta o aviso de antes do jogo. `p` = item de proximasLista. Só usa o que a API mandou. */
+export function recadoAntes(p, clube, momento, { quem = '', hora = '' } = {}) {
+  if (!A[momento] || !p || !clube) return null;
+  const casa = Number(p.casaId) === Number(p.meuId) || p.casa === clube.nome;
+  const rival = casa ? p.fora : p.casa;
+  if (!rival) return null;
+  const jogo = `${clube.nome} x ${rival}`;
+  let txt = um(A[momento], quem + p.id + momento).replace('{jogo}', jogo).replace('{hora}', hora || '');
+  if (p.camp) txt += ` ${p.camp}.`;
+  if (p.estadio) txt += ` ${casa ? 'Em casa, no' : 'Fora de casa, no'} ${p.estadio}.`;
+  else txt += ` Jogo ${ONDE[casa ? 'casa' : 'fora']}.`;
+  return { title: `⚽ ${{ vespera: 'Amanhã tem jogo', dia: 'Hoje tem jogo', perto: 'Já já começa' }[momento]}: ${clube.nome}`, body: txt.trim(), tag: `futa-${p.id}-${momento}`, url: './#/hoje' };
+}

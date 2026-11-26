@@ -105,3 +105,34 @@ test('API fora do ar não quebra nada e não inventa resultado', async () => {
   const r = await rodaAoVivo({ CAL, API_FUTEBOL_KEY: 'k' }, INICIO, async () => { throw new Error('não devia enviar'); });
   assert.ok(r.motivo === 'nenhum-jogo-agora' || r.detalhe, JSON.stringify(r));
 });
+
+test('antes do jogo: véspera, dia e pouco antes — um aviso por vez, e nunca de madrugada', async () => {
+  const { rodaAntes } = await import('../src/fut-motor.js');
+  const CAL = kv();
+  globalThis.fetch = async (u) => ({ ok: true, status: 200, json: async () => (String(u).includes('/tabela') ? TAB : PROX) });
+  const env = { CAL, API_FUTEBOL_KEY: 'k', API_FUTEBOL_LIMITE: '500' };
+  await CAL.put('fut:gente', JSON.stringify({ henrique: 'palmeiras' }));
+  await CAL.put('futv:prox:56', JSON.stringify({ at: INICIO, lista: [{ id: 777, at: INICIO, casa: 'Palmeiras', fora: 'Atlético-MG', casaId: 56, foraId: 30, camp: 'Brasileirão', estadio: 'Allianz Parque' }] }));
+  const avisos = [];
+  const send = async (e, quem, msg) => avisos.push(msg);
+
+  await rodaAntes(env, INICIO - 26 * 3600e3, send);        // véspera, de tarde
+  await rodaAntes(env, INICIO - 11 * 3600e3, send);        // no dia, de manhã
+  await rodaAntes(env, INICIO - 90 * 60e3, send);          // pouco antes
+  const tipos = avisos.map((a) => a.title);
+  assert.ok(tipos.some((t) => /Amanhã tem jogo/.test(t)), JSON.stringify(tipos));
+  assert.ok(tipos.some((t) => /Hoje tem jogo/.test(t)), JSON.stringify(tipos));
+  assert.ok(tipos.some((t) => /Já já começa/.test(t)), JSON.stringify(tipos));
+  assert.match(avisos[0].body, /Allianz Parque/, 'fala o estádio que a API informou');
+  assert.match(avisos[0].body, /Brasileirão/);
+
+  const antes = avisos.length;
+  await rodaAntes(env, INICIO - 90 * 60e3 + 60e3, send);
+  assert.equal(avisos.length, antes, 'não repete o mesmo aviso');
+
+  const madrugada = Date.parse('2026-11-26T03:00:00-0300');
+  await CAL.put('futv:antes:henrique', JSON.stringify({}));
+  const n0 = avisos.length;
+  await rodaAntes(env, madrugada, send);
+  assert.equal(avisos.length, n0, 'de madrugada o Lembra não acorda ninguém');
+});

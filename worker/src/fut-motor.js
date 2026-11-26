@@ -6,7 +6,8 @@
    - sem chave ou sem orçamento do dia, não chama nada e não inventa nada. */
 import { porTime } from '../../functions/times.js';
 import { temChave, orcamento, mapaTimes, idDoTime, proximasDoTime, proximasLista, partidaDetalhe, tabelaDe, intervalo } from './fut-api.js';
-import { retrato, novidades, fala, situacao } from './fut-eventos.js';
+import { retrato, novidades, fala, situacao, recadoAntes } from './fut-eventos.js';
+import { momentoDe, horaBR } from './futebol.js';
 
 const H = 3600e3;
 const ANTES = 10 * 60e3;     // começa a acompanhar 10 min antes
@@ -85,6 +86,40 @@ export async function rodaAoVivo(env, now, send, { maxPartidas = 3 } = {}) {
     detalhe.push({ partida: p.id, eventos: evs.map((e) => e.tipo) });
   }
   return { ...fora, enviadas, partidas: emJogo.length, detalhe };
+}
+
+/** antes do jogo: véspera, no dia e pouco antes (respeita a hora de dormir de cada pessoa) */
+export async function rodaAntes(env, now, send, { max = 20 } = {}) {
+  if (!temChave(env)) return { motivo: 'sem-chave' };
+  const gente = Object.entries((await env.CAL.get('fut:gente', 'json')) || {});
+  if (!gente.length) return { motivo: 'ninguem-segue' };
+  const mapa = await mapaTimes(env, { now });
+  let n = 0;
+  for (const [quem, timeApp] of gente) {
+    if (n >= max) break;
+    const clube = porTime(timeApp); if (!clube) continue;
+    const id = idDoTime(mapa, clube); if (!id) continue;
+    const g = await env.CAL.get(`futv:prox:${id}`, 'json');
+    const lista = (g?.lista || []).filter((p) => p.at > now && p.at < now + 36 * H);
+    if (!lista.length) continue;
+    const pp = (await env.CAL.get(`pprofile:${quem}`, 'json')) || {};
+    const prefs = { ...(pp.prefs || {}), tz: pp.tz };
+    const sent = (await env.CAL.get(`futv:antes:${quem}`, 'json')) || {};
+    for (const p of lista) {
+      const mo = momentoDe({ at: p.at, c: '', f: '' }, now, prefs);
+      const k = `${p.id}:${mo}`;
+      if (!mo || sent[k]) continue;
+      const msg = recadoAntes({ ...p, meuId: id }, clube, mo, { quem, hora: horaBR(p.at).replace(':', 'h').replace(/h00$/, 'h') });
+      if (!msg) continue;
+      sent[k] = now;
+      for (const a of Object.keys(sent)) if (sent[a] < now - 5 * 864e5) delete sent[a];
+      await env.CAL.put(`futv:antes:${quem}`, JSON.stringify(sent), { expirationTtl: 7 * 86400 });
+      await send(env, quem, msg, 'futebol');
+      n++;
+      break;        // um aviso por pessoa por rodada
+    }
+  }
+  return { avisos: n };
 }
 
 /** o que o app mostra na tela inicial (a reação do mascote). Só vale por algumas horas. */
