@@ -236,12 +236,14 @@ body.has-unica { overflow: hidden; }
 .unica.is-in { opacity: 1; } .unica.is-out { opacity: 0; }
 .unica__topo { display: flex; align-items: center; gap: 8px; padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 10px; } .unica__topo b { font-size: 17px; } .unica__topo small { opacity: .7; font-size: 14px; } .unica__x { margin-left: auto; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .12); color: inherit; cursor: pointer; }
 .unica__palco { position: relative; overflow: hidden; display: grid; place-items: center; touch-action: none; }
-.unica__img { max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; opacity: 0; transition: opacity .12s; }
-.unica.is-vendo .unica__img { opacity: 1; }
+.unica__cv { max-width: 100%; max-height: 100%; pointer-events: none; -webkit-user-drag: none; opacity: 0; transition: opacity .12s; }
+.unica.is-vendo .unica__cv { opacity: 1; }
+.unica__snh { display: block; margin: 0 auto 6px; filter: drop-shadow(0 10px 20px rgba(0, 0, 0, .5)); }
+.unica.is-vendo .unica__snh { display: none; }
+.unica__fala { display: block; max-width: 280px; margin: 10px auto 0; padding: 11px 15px; border-radius: 18px; background: #2A1008; color: #FFE6D8; font-size: 15.5px; font-weight: 700; line-height: 1.35; }
 .unica__som { display: grid; justify-items: center; gap: 14px; opacity: 0; transition: opacity .12s; } .unica.is-vendo .unica__som { opacity: 1; }
 .unica__onda { display: flex; align-items: center; gap: 4px; height: 70px; } .unica__onda i { width: 5px; height: 16px; border-radius: 9px; background: #FF8A3C; animation: unOnda 1s var(--d) ease-in-out infinite alternate; } @keyframes unOnda { to { height: 62px; } }
 .unica__tempo { font-size: 15px; opacity: .8; }
-.unica__marca { position: absolute; inset: -20%; display: grid; grid-template-columns: repeat(2, 1fr); align-content: space-around; gap: 40px 10px; transform: rotate(-24deg); pointer-events: none; opacity: 0; transition: opacity .12s; } .unica.is-vendo .unica__marca { opacity: .22; } .unica__marca span { font: 700 13px/1 Nunito, system-ui, sans-serif; text-align: center; color: #fff; }
 .unica__tampa { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; background: #000; transition: opacity .1s; } .unica.is-vendo .unica__tampa { opacity: 0; pointer-events: none; }
 .unica__tampa b { display: block; font-size: 19px; } .unica__tampa small { display: block; margin-top: 6px; font-size: 15px; opacity: .72; }
 .unica.is-risco .unica__tampa { background: #1A0000; } .unica.is-risco .unica__tampa b { color: #FF8A80; }
