@@ -144,7 +144,10 @@ export function startVersionWatch() {
   started = true;
   window.__verWatch = true;
   if (APP_MIN && cmpVer(APP_VERSION, APP_MIN) < 0) { /* build quebrado: nunca acontece, mas não trava */ }
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(() => checkVersion(), 1200); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkVersion({ force: true }); });
   setInterval(() => { if (!document.hidden) checkVersion(); }, 30 * 60e3);
-  setTimeout(() => checkVersion({ force: true }), 4000);
+  // confere JÁ na entrada: se tem versão nova, a tela obrigatória aparece na hora (e tenta de novo, caso a rede demore)
+  checkVersion({ force: true });
+  setTimeout(() => checkVersion({ force: true }), 1500);
+  setTimeout(() => checkVersion({ force: true }), 5000);
 }
