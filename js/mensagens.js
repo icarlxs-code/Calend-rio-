@@ -89,7 +89,6 @@ export async function openMensagens({ modo = '' } = {}) {
   function ligaCorpo(b) {
     b.querySelectorAll('[data-c]').forEach((n) => (n.onclick = () => { if (n.dataset.pula) { delete n.dataset.pula; return; } if (aberta) { fecha(); return; } abre(n.dataset.c, acha(n.dataset.c)); }));
     b.querySelectorAll('[data-modo]').forEach((n) => (n.onclick = () => openMensagens({ modo: n.dataset.modo }).then(() => {})));
-    const bp = x.el.querySelector('[data-perto]'); if (bp) bp.onclick = () => import('./perto.js').then((P) => P.abrePerto());
     b.querySelectorAll('[data-amigos]').forEach((n) => (n.onclick = async () => (await import('./friends.js')).openFriends()));
     b.querySelectorAll('[data-ac]').forEach((n) => (n.onclick = (e) => { e.stopPropagation(); const u = n.closest('[data-sw]').dataset.sw; fecha(); faz(u, n.dataset.ac); }));
     const d = b.querySelector('[data-ddd]'); if (d) d.onclick = () => abreAchar({ inicial: q, conversa: true });
@@ -126,6 +125,8 @@ export async function openMensagens({ modo = '' } = {}) {
     const i = x.el.querySelector('[data-q]'), lq = x.el.querySelector('[data-lq]');
     if (i) { i.oninput = () => { q = i.value; lq.hidden = !q; busca(); refaz(); }; i.onkeydown = (e) => { if (e.key === 'Enter') i.blur(); }; lq.onclick = () => { i.value = ''; i.oninput(); i.focus(); }; }
     x.el.querySelectorAll('.fx__head [data-amigos]').forEach((b) => (b.onclick = async () => (await import('./friends.js')).openFriends()));
+    // o botão de conversar sem internet fica no cabeçalho (fora do corpo que é redesenhado)
+    const bp = x.el.querySelector('[data-perto]'); if (bp) bp.onclick = () => import('./perto.js').then((P) => P.abrePerto());
     const l = x.el.querySelector('[data-lido]'); if (l) l.onchange = () => call('/friends/msg-config', { semLido: !l.checked }).then(() => atualiza(true)).catch(() => { l.checked = !l.checked; toast('Não consegui salvar agora.'); });
     ligaCorpo(x.el.querySelector('[data-corpo]'));
   } });

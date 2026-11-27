@@ -199,3 +199,29 @@ test('fixar, arquivar e trancar: só para mim, até 5 fixadas, só amigos; arqui
   amizade(BIA, 'fixo9Uid00000001'); assert.equal((await org(BIA, { com: 'fixo9Uid00000001', campo: 'fix', on: true })).status, 400);
   await call('/account/delete', DUDA); assert.ok(!kv.has(`convcfg:${DUDA}`));
 });
+
+test('chat de ponta a ponta com duas contas: envia, chega para o outro, responde, histórico em ordem; estranho não manda', async () => {
+  const [EVA, FAB] = ['eva', 'fab'].map((x) => `${x}Uid000000000001`);
+  await call('/friends/card', EVA, { name: 'Eva Melo' }); await call('/friends/card', FAB, { name: 'Fab Cruz' });
+  amizade(EVA, FAB);
+  eventos.length = 0;
+  const ida = await call('/friends/msg-send', EVA, { com: FAB, txt: 'Oi Cic, tudo bem?' });
+  assert.equal(ida.status, 200);
+  // chega na hora para quem recebe (aviso em tempo real) e aparece na lista de conversas com 1 nova
+  assert.ok(eventos.some(([u, o]) => u === FAB && o.t === 'msg' && o.de === EVA));
+  const conv = (await call('/friends/convs', FAB)).data.convs.find((c) => c.uid === EVA);
+  assert.equal(conv.novas, 1); assert.equal(conv.name, 'Eva Melo'); assert.equal(conv.txt, 'Oi Cic, tudo bem?');
+  // o outro abre a conversa (persistida no banco) e responde
+  const l1 = (await call('/friends/msg-list', FAB, { com: EVA })).data;
+  assert.deepEqual(l1.msgs.map((m) => [m.de, m.txt]), [[EVA, 'Oi Cic, tudo bem?']]);
+  assert.equal(l1.amigo, true);
+  await call('/friends/msg-send', FAB, { com: EVA, txt: 'Tudo ótimo!' });
+  const l2 = (await call('/friends/msg-list', EVA, { com: FAB })).data.msgs;
+  assert.deepEqual(l2.map((m) => [m.de, m.txt]), [[EVA, 'Oi Cic, tudo bem?'], [FAB, 'Tudo ótimo!']]);
+  assert.ok(l2[0].at <= l2[1].at, 'histórico em ordem');
+  // depois de abrir, a nova some
+  assert.equal((await call('/friends/convs', FAB)).data.convs.find((c) => c.uid === EVA).novas, 0);
+  // quem não é amigo não manda (e mensagem vazia é recusada)
+  assert.equal((await call('/friends/msg-send', FAB, { com: ANA, txt: 'oi' })).status, 403);
+  assert.equal((await call('/friends/msg-send', EVA, { com: FAB, txt: '   ' })).status, 400);
+});
