@@ -4,9 +4,10 @@
   "min": "2.33.0",
   "title": "Mais perto de você",
   "notes": [
+    "O Lembra agora te conhece melhor e fala com você do seu jeito.",
     "Contas do mês na agenda: diga \"todo dia 10 pago o aluguel de R$ 1.500\" e o Lembra entende a repetição e o valor.",
     "Excluir empresa direto na página dela, com 24 horas para desfazer.",
     "Futebol do seu time mais confiável, com uma segunda fonte de resultados.",
-    "Aparelhos em versão antiga agora recebem a atualização na hora."
+    "Atualização automática: o app se atualiza sozinho."
   ]
 }

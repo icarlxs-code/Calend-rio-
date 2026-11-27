@@ -10,6 +10,7 @@
    - aparece, fala e sai andando; volta sozinho em 15 s a 1 min;
    - por enquanto SÓ para o dono (CONFIG.adminEmail); para todo mundo: CONFIG.mascotPublic = true. */
 import { piada, humorOn } from './humor.js';
+import { frasesDaVida, perguntaDoPar } from './vida.js';
 import * as papo from './papo.js';
 import { store } from './store.js';
 import { CONFIG } from '../config.js';
@@ -309,6 +310,20 @@ function monta(c, out) {
     ['boba9', 'Tô de olho em você… brincadeira. Ou não 👀', 'desconfiado'],
     ['boba10', 'Você fica bem melhor quando sorri. Pronto, falei 🥹', 'amor'],
   ].forEach(([k, t, m, acoes]) => out.push({ k, t, m, acoes, leve: 1 }));
+  /* a vida da pessoa (o que ela contou): filhos, relacionamento, ânimo — frases só dela */
+  try {
+    let vida = store.profile?.vida; if (!vida) try { vida = JSON.parse(localStorage.getItem('lembra.vida') || 'null'); } catch { vida = null; }
+    if (vida) {
+      frasesDaVida(vida, { pronome: store.profile?.pronoun || '', semente: `${c.t}:${new Date().getHours()}` }).forEach((x) => out.push({ ...x, m: 'feliz', leve: 1 }));
+      // uma vez por semana: "vocês estão bem?" (sim → uma frase; não → ela conta e eu respondo curtinho)
+      const pg = perguntaDoPar(vida), sem = (() => { try { return Date.now() - (Number(localStorage.getItem('lembra.vida.papo')) || 0) > 7 * 864e5; } catch { return false; } })();
+      if (pg && sem) {
+        const marca = () => { try { localStorage.setItem('lembra.vida.papo', String(Date.now())); } catch { /* ok */ } };
+        const abre = (r) => () => { marca(); import('./views/vida.js').then((V) => V.conversaDoPar({ resposta: r })); };
+        out.push({ k: 'vida-papo', t: pg, m: 'feliz', leve: 1, acoes: [{ label: 'Sim', go: abre('sim') }, { label: 'Não', go: abre('nao') }] });
+      }
+    }
+  } catch (e) { console.warn('vida', e); }
 }
 
 /* pontos: o que mais importa agora, sem repetir o que acabou de ser dito */

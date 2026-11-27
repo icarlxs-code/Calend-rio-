@@ -1368,6 +1368,8 @@ function startApp() {
   import('./msg-fila.js').then(async (F) => { const S = await import('./social.js'); F.liga((pacote) => S.call('/friends/msg-send', pacote)); }).catch(() => {});
   const torcida = () => import('./torcida.js').then((t) => t.confere()).catch(() => {});
   setTimeout(torcida, 9000);
+  // "Conta um pouco de você": uma vez para cada pessoa (inclusive quem já tinha conta), quando o app estiver livre
+  setTimeout(() => import('./views/vida.js').then((m) => m.pede()).catch(() => {}), 7000);
   setInterval(() => { if (!document.hidden) torcida(); }, 4 * 60e3);
   // voltou para o app depois de um tempo (o app não fecha de verdade no celular): conta como "abrir de novo"
   let hiddenAt = 0;

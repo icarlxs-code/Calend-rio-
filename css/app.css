@@ -4051,3 +4051,11 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .snhbud.is-drag { will-change: transform; }
 .snhbud.is-drag .snhbud__fig { filter: none; will-change: transform; }
 .snhbud__fig canvas { touch-action: none; }
+/* conversa curtinha do mascote e números de ajuda */
+.vida { display: flex; flex-direction: column; gap: 14px; padding-bottom: 24px; }
+.vida__fala { font-size: 18px; line-height: 1.45; margin: 0; }
+.vida__bts { display: flex; gap: 10px; } .vida__bts .btn { flex: 1; }
+.vida__fecho { margin: 0; color: var(--muted, #888); }
+.vida__sos { display: flex; flex-direction: column; gap: 8px; }
+.vida__sos a { display: flex; flex-direction: column; align-items: flex-start; text-decoration: none; padding: 12px 14px; border: 2px solid #D92D20; }
+.vida__sos small { opacity: .75; font-weight: 400; }

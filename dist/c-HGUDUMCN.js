@@ -1,1 +1,0 @@
-import{a,b,c,d,e,f,g,h,i,j}from"./c-RGYHRJCW.js";import"./c-HJEBRIYR.js";export{g as acessorios,i as aplica,c as ceu,a as contraste,f as disposicao,d as estilo,h as fraseDaHora,b as horaAgora,j as liga,e as periodo};
