@@ -29,3 +29,16 @@ test('desfazer: apagar, mover, concluir, criar e pessoal voltam como estavam', a
   assert.ok(pl.every((x) => x.ok), JSON.stringify(pl.map((x) => x.text))); const r = await A.executa(pl, { lote: 'L2' }); assert.equal(r.apagou, 2); assert.notDeepEqual(foto(), antes); await A.desfaz(r.undo); assert.deepEqual(foto(), antes);
   assert.ok(itensDaLixeira().some((x) => x.item.title === 'Nova'), 'o criado foi para a lixeira');
 });
+test('conta pela IA: mensal no dia certo, com valor (número ou texto) e o texto da confirmação mostra tudo', async () => {
+  await nova(); P.startPersonal();
+  const d = addDays(H, 3), dia = +d.slice(8);
+  const p = A.planAction({ acao: 'pessoal', titulo: 'Pagar o aluguel', data: d, categoria: 'pagar', repetir: 'monthly', dia_mes: dia, valor: 1500 });
+  assert.equal(p.ok, true); assert.match(p.text, new RegExp(`todo dia ${dia} · R\\$ 1\\.500`));
+  await p.run();
+  const it = P.personal.events.find((x) => x.title === 'Pagar o aluguel');
+  assert.deepEqual([it.repeat, it.cat, it.valor, it.date], ['monthly', 'pagar', 1500, d]);
+  const q = A.planAction({ acao: 'pessoal', titulo: 'Pagar a luz', data: d, categoria: 'pagar', valor: 'R$ 230,50' }); await q.run();
+  assert.equal(P.personal.events.find((x) => x.title === 'Pagar a luz').valor, 230.5);
+  const r = A.planAction({ acao: 'pessoal', titulo: 'Sem valor', data: d, valor: 'abc' }); await r.run();
+  assert.equal(P.personal.events.find((x) => x.title === 'Sem valor').valor, undefined);
+});

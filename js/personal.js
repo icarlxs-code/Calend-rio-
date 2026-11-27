@@ -2,6 +2,7 @@
    (só o dono lê e escreve) e não se mistura com o calendário de trabalho.
    Tipos de documento: compromisso/lembrete (padrão), lista ("list") e preferências ("prefs"). */
 import { semAviso, podeCriar, textoLimite } from './limite.js';
+import { tiraValor, tiraRepeticao, contaMensal, limpaTitulo, reaisTxt } from './frase-conta.js';
 import { occursOn } from './inicio-pessoal.js';
 import { marca, desmarca, novoLote, apagado, conteudo, vencido } from './lixeira-core.js';
 import { ehRemedio, tituloSeguro, avisoRemedio } from '../functions/remedio.js';
@@ -20,7 +21,7 @@ export const CATS = {
   buscar: { label: 'Buscar / levar', emoji: '🚗', ic: 'car', g: ['#FFB547', '#FF7A1A'], color: '#FF8A1F', words: ['buscar', 'levar', 'pegar ', 'carona'] },
   beleza: { label: 'Cabelo / beleza', emoji: '💇', ic: 'hairdryer', g: ['#FF8FB8', '#D9367A'], color: '#E0457F', words: ['cabelo', 'escova', 'progressiva', 'hidratação', 'hidratacao', 'luzes', 'mechas', 'tintura', 'trança', 'penteado', 'barba', 'barbeiro', 'unha', 'manicure', 'pedicure', 'esmalte', 'sobrancelha', 'cílios', 'cilios', 'maquiagem', 'make', 'depilação', 'depilacao', 'limpeza de pele', 'estética', 'estetica', 'massagem', 'salão', 'salao'] },
   saude: { label: 'Saúde', emoji: '🩺', ic: 'stethoscope', g: ['#4BD88B', '#16A35A'], color: '#1FB566', words: ['médico', 'medico', 'médica', 'dentista', 'exame', 'consulta', 'remédio', 'remedio', 'academia', 'treino', 'vacina', 'terapia', 'psiqui', 'neuro', 'psicólogo', 'psicologo', 'fisioterapia', 'pilates', 'yoga', 'hospital', 'farmácia', 'farmacia', 'nutricionista'] },
-  pagar: { label: 'Pagar conta', emoji: '🧾', ic: 'receipt', g: ['#3FD0E0', '#0E8FB0'], color: '#14A3C2', words: ['pagar', 'conta de', 'boleto', 'fatura', 'aluguel', 'pix', 'condomínio', 'condominio', 'iptu', 'ipva', 'internet', 'mensalidade', 'parcela', 'imposto'] },
+  pagar: { label: 'Pagar conta', emoji: '🧾', ic: 'receipt', g: ['#3FD0E0', '#0E8FB0'], color: '#14A3C2', words: ['pagar', 'conta de', 'boleto', 'fatura', 'aluguel', 'pix', 'condomínio', 'condominio', 'iptu', 'ipva', 'internet', 'mensalidade', 'parcela', 'imposto', 'vence', 'vencimento', 'cartão de crédito', 'fatura do cartão', 'financiamento', 'prestação', 'prestacao'] },
   compras: { label: 'Compras', emoji: '🛒', ic: 'cart', g: ['#8B8CFF', '#5146E5'], color: '#5E5CF0', words: ['comprar', 'mercado', 'supermercado', 'feira', 'shopping', 'padaria'] },
 };
 export const REPEATS = { none: 'Não repete', daily: 'Todo dia', weekly: 'Toda semana', biweekly: 'A cada 2 semanas', monthly: 'Todo mês', yearly: 'Todo ano' };
@@ -209,9 +210,12 @@ const existe = (k) => { const d = fromKey(k); return d.getDate() === +k.slice(8)
 export function parseQuick(raw) {
   let text = ' ' + raw.trim().replace(/[,;!]+(\s|$)/g, ' ').replace(/\.(\s|$)/g, ' ') + ' ';
   const low = () => text.toLowerCase();
-  let date = null, time = null;
+  let date = null, time = null, diaSolto = 0;
   const take = (re, fn) => { const m = re.exec(low()); if (m) { fn(m); text = text.slice(0, m.index) + ' ' + text.slice(m.index + m[0].length); } };
   const t = todayKey();
+  // valor ("R$ 480", "1.200 reais") e repetição ("todo dia 10", "toda segunda", "todo mês") saem antes das datas
+  const v = tiraValor(text); text = v.texto;
+  const R = tiraRepeticao(text, t); text = R.texto; if (R.date) date = R.date;
   take(/\s(depois de amanhã|depois de amanha)\s/, () => (date = addDays(t, 2)));
   take(/\s(amanhã|amanha)\s/, () => (date = addDays(t, 1)));
   take(/\shoje\s/, () => (date = t));
@@ -231,6 +235,7 @@ export function parseQuick(raw) {
   if (!date) take(/\s(?:no |pro |para o )?dia (\d{1,2})(?:º|°)?(?: (?:deste mês|desse mês|(do mês que vem|do próximo mês)))?\s/, (m) => {
     let y = +t.slice(0, 4), mo = +t.slice(5, 7); if (m[2]) mo++;
     for (let i = 0; i < 14; i++, mo++) { if (mo > 12) { mo = 1; y++; } const k = `${y}-${pad(mo)}-${pad(+m[1])}`; if (existe(k) && k >= t) { date = k; break; } }
+    if (!m[2]) diaSolto = +m[1];
   });
   if (!date) take(/\sdaqui (?:a )?(\d{1,2}|uma?|duas) (dias?|semanas?)\s/, (m) => { const n = /^\d/.test(m[1]) ? +m[1] : m[1] === 'duas' ? 2 : 1; date = addDays(t, n * (m[2][0] === 's' ? 7 : 1)); });
   if (!date) take(/\s(?:na )?semana que vem\s/, () => (date = addDays(t, 7)));
@@ -246,9 +251,14 @@ export function parseQuick(raw) {
   });
   take(/\s(?:ao )?meio-dia\s/, () => (time = '12:00'));
   take(/\sda (tarde|noite|manhã|manha)\s/, (m) => { if (time && m[1][0] !== 'm' && +time.slice(0, 2) < 12) time = `${pad(+time.slice(0, 2) + 12)}${time.slice(2)}`; });
-  const title = text.replace(/\s+/g, ' ').trim().replace(/^(de|do|da|para|pra)\s/i, '');
+  const title = limpaTitulo(text.replace(/\s+/g, ' ').trim().replace(/^(de|do|da|para|pra)\s/i, ''));
   const cat = guessCat(raw);
-  return { title: title.charAt(0).toUpperCase() + title.slice(1), date: date || t, time, cat, repeat: cat === 'aniversario' ? 'yearly' : 'none' };
+  // "dia 10" sozinho numa conta de todo mês (aluguel, condomínio, fatura, internet…) = todo dia 10
+  let repeat = R.repeat, diaMes = R.diaMes;
+  if (repeat === 'none' && diaSolto && contaMensal(raw)) { repeat = 'monthly'; diaMes = diaSolto; }
+  if (repeat === 'none' && cat === 'aniversario') repeat = 'yearly';
+  if (repeat === 'monthly' && !diaMes) diaMes = +(date || t).slice(8);
+  return { title, date: date || t, time, cat: v.valor && cat === 'lembrete' ? 'pagar' : cat, repeat, ...(repeat === 'monthly' ? { diaMes } : {}), ...(v.valor ? { valor: v.valor } : {}) };
 }
 
 /* ---------- frase do dia ---------- */
@@ -452,8 +462,10 @@ function voice(it, stage, date) {
   const pr = store.profile?.pronoun || personal.prefs.pronoun;
   const G = { lindo: ['lindo', 'linda', 'incrível'], vcmesmo: ['você mesmo', 'você mesma', 'você'], tranquilo: ['tranquilo', 'tranquila', 'em paz'] };
   const gw = (k) => G[k][pr === 'm' ? 0 : pr === 'f' ? 1 : 2];
-  return s.replace(/\{tl\}/g, tl).replace(/\{t\}/g, t).replace(/\{h\}/g, it.time ? hm(it.time) : '').replace(/\{(lindo|vcmesmo|tranquilo)\}/g, (_, k) => gw(k));
+  return s.replace(/\{tl\}/g, tl).replace(/\{t\}/g, t).replace(/\{h\}/g, it.time ? hm(it.time) : '').replace(/\{(lindo|vcmesmo|tranquilo)\}/g, (_, k) => gw(k)) + comValor(it);
 }
+/* conta com valor: o aviso já diz quanto (" · R$ 1.500") */
+export const comValor = (it) => (Number(it.valor) > 0 ? ` · ${reaisTxt(it.valor)}` : '');
 const TITLES = { m60: 'Daqui a 1 hora', m30: 'Daqui a 30 min', m20: 'Daqui a 20 min', m0: 'É agora!', after: 'E aí? 👀' };
 
 /* ---------- avisos no celular (só para o dono) ---------- */
@@ -461,7 +473,7 @@ const at = (date, time) => new Date(`${date}T${time}:00`).getTime();
 const hm = (t) => t.replace(/^0/, '').replace(':00', 'h').replace(':', 'h');
 /* emoji do aviso: o do assunto (💇 cabelo, 💡 conta de luz…) e, se não reconhecer, o da categoria */
 export const emojiOf = (it) => itemLook(it.title || '', it.note || '')?.emoji || (CATS[it.cat] || CATS.lembrete).emoji;
-const short = (o) => `${ehRemedio(o.item) ? '💊' : emojiOf(o.item)} ${o.item.time ? hm(o.item.time) + ' ' : ''}${tituloSeguro(o.item)}`;
+const short = (o) => `${ehRemedio(o.item) ? '💊' : emojiOf(o.item)} ${o.item.time ? hm(o.item.time) + ' ' : ''}${tituloSeguro(o.item)}${ehRemedio(o.item) ? '' : comValor(o.item)}`;
 export function buildPersonalSchedule(now = Date.now()) {
   const t = todayKey();
   const prefs = personal.prefs;
@@ -475,6 +487,8 @@ export function buildPersonalSchedule(now = Date.now()) {
       const name = `${c.emoji} ${it.title}`;
       const url = `./#/p/${it.id}`, tag = `p-${it.id}`;
       const k = (s) => `p-${it.id}-${date}-${s}`;
+      // conta a pagar: aviso na véspera, às 19h, com o valor (dá tempo de separar o dinheiro)
+      if (it.cat === 'pagar' && !ehRemedio(it)) add(at(addDays(date, -1), '19:00'), `${c.emoji} Amanhã vence`, `${it.title}${comValor(it)}`, k('v1'), tag, url);
       if (it.cat === 'aniversario') {
         add(at(addDays(date, -1), '20:00'), 'Amanhã tem aniversário 🎂', `${it.title} — já pensou no presente?`, k('d1'), tag, url);
         add(at(date, '08:00'), 'Hoje é aniversário 🎂', `${it.title} — não esquece de dar os parabéns!`, k('d0'), tag, url);

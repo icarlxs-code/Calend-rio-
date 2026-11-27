@@ -19,6 +19,7 @@ FORMATO DAS AÇÕES: depois do texto, uma linha com <acoes> e um JSON (lista) e 
 <acoes>[{"acao":"concluir","id":"e_abc123"},{"acao":"excluir","ids":["e_x1","e_x2"]}]</acoes>
 <acoes>[{"acao":"editar","id":"e_abc123","titulo":"Novo título","responsaveis":["eu","ana"]}]</acoes>
 <acoes>[{"acao":"pessoal","titulo":"Cortar cabelo","data":"2026-11-21","inicio":"15:00","categoria":"beleza"}]</acoes>
+<acoes>[{"acao":"pessoal","titulo":"Pagar o aluguel","data":"2026-12-10","categoria":"pagar","repetir":"monthly","dia_mes":10,"valor":1500}]</acoes>  (para "todo dia 10 pago o aluguel de R$ 1.500")
 <acoes>[{"acao":"bilhete","data":"2026-11-20","texto":"Levar o tripé amanhã"}]</acoes>
 <acoes>[{"acao":"anotacao","texto":"Deixei o tênis em cima da mesa"}]</acoes>  (para "anota que deixei…", "guarda que eu fiz…": vai para as Notas com a hora de agora)
 Campos:
@@ -27,6 +28,12 @@ Campos:
 - responsaveis: "eu" (quem está falando), o nome de alguém da equipe ou "ambos". Se não disser, use "eu".
 - datas: use "data" para um dia só; para repetir use "datas":{"de","ate","dias_semana"} com 0=domingo, 1=segunda … 6=sábado. "Até o fim do mês" = último dia do mês atual.
 - categoria do pessoal: lembrete, aniversario, compromisso, buscar, beleza, saude, pagar, compras. Coisas particulares (cabelo, médico, buscar alguém, aniversário) vão para "pessoal"; compromissos do trabalho vão para "criar".
+- CONTAS E OBRIGAÇÕES (aluguel, condomínio, cartão de crédito, fatura, internet, luz, água, escola, mensalidade, parcela, boleto): use "pessoal" com "categoria":"pagar".
+  - título curto, no infinitivo, só o que é: "Pagar o aluguel", "Pagar a fatura do cartão". Nunca copie o jeito de pedir ("quero que você coloque na minha agenda que…", "eu tenho que…").
+  - aluguel, condomínio, fatura, cartão, internet, luz, água, escola e mensalidade se repetem: use "repetir":"monthly" e "dia_mes" com o dia do vencimento, mesmo que a pessoa diga só "dia 10". Só não repita se ela disser que é só uma vez ou der mês/ano (ex.: "IPVA 15/12").
+  - "data" é a PRÓXIMA vez que esse dia chega (use a regra do "dia N" logo abaixo dos próximos dias).
+  - "valor" é um número em reais, sem "R$" e com ponto decimal: "R$ 1.200,50" → 1200.5; "480 reais" → 480. Sem valor dito, não inclua "valor".
+  - "repetir" aceita só: none, daily, weekly, monthly, yearly.
 - Para mover/editar/concluir/excluir use o [id ...] que aparece na agenda. Só o mesmo id, nunca invente.
 - AGENDA x NOTA: tudo que tem dia ou hora (consulta, psiquiatra, dentista, reunião, aniversário) é COMPROMISSO: use "pessoal" ou "criar", NUNCA "anotacao" nem "bilhete". "anotacao" só para guardar um fato sem compromisso (onde deixou algo, o que já fez). "bilhete" só quando a pessoa pedir um bilhete para a equipe. No texto, diga claramente se vai para a agenda ou para as notas.
 - EXCLUIR VÁRIOS: quando pedirem todos de uma empresa, pessoa ou período, NÃO liste ids: use <acoes>[{"acao":"excluir","filtro":{"empresa":"Empresa X","de":"AAAA-MM-DD","ate":"AAAA-MM-DD"}}]</acoes>. Sem "de", vale de hoje em diante; só inclua o passado se a pessoa pedir. Para um ou poucos itens, use "ids" e diga também a "empresa". Nunca exclua sem a pessoa pedir.
@@ -39,7 +46,12 @@ export function calendarHelp(today) {
   const d0 = new Date(t + 'T12:00:00Z');
   const last = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + 1, 0)).toISOString().slice(0, 10);
   const days = Array.from({ length: 14 }, (_, i) => { const d = new Date(d0.getTime() + i * 864e5); return `${W[d.getUTCDay()]} ${d.toISOString().slice(0, 10)}${i === 0 ? ' (hoje)' : i === 1 ? ' (amanhã)' : ''}`; });
-  return `Hoje é ${t}. Último dia deste mês: ${last}. Próximos dias: ${days.join('; ')}.`;
+  // "dia N" sem mês: a próxima vez que esse dia chega (os 14 dias acima não bastam para "dia 10" dito no dia 27)
+  const dd = d0.getUTCDate(), lastDD = +last.slice(8), ym = t.slice(0, 7);
+  const nx = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + 1, 1)), ymN = nx.toISOString().slice(0, 7);
+  const lastN = new Date(Date.UTC(nx.getUTCFullYear(), nx.getUTCMonth() + 1, 0)).getUTCDate();
+  const diaN = `"dia N" sem mês = a próxima vez que o dia chega: dia ${dd}${dd < lastDD ? ` a ${lastDD}` : ''} → ${ym}-N${dd > 1 ? `; dia 1 a ${dd - 1} → ${ymN}-N` : ''}${lastN < 31 ? ` (em ${ymN} o último dia é ${lastN}: dias maiores caem nele)` : ''}${lastDD < 31 ? `; dia ${lastDD + 1}${lastDD < 30 ? ` a 31` : ''} → ${last} (último dia deste mês)` : ''}.`;
+  return `Hoje é ${t}. Último dia deste mês: ${last}. Próximos dias: ${days.join('; ')}. ${diaN}`;
 }
 export async function askFree(env, { question, history, context, me, today }) {
   if (!question.trim()) throw Object.assign(new Error('Escreva uma pergunta.'), { status: 400 });

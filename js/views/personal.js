@@ -1,6 +1,7 @@
 /* Modo Pessoal: um "outro app" dentro do Calendário. Visual, telas e menu próprios,
    mesmo login. Só o dono vê o que está aqui (nem o parceiro, nem o trabalho). */
 import { avisaApagado, listaHtml } from '../lixeira.js';
+import { numeroBR, reaisTxt } from '../frase-conta.js';
 import { disposicao, acessorios, fraseDaHora } from '../hora.js';
 import { botaoMensagens } from '../social.js';
 import { ajudante, ajudanteHtml } from '../ajudante.js';
@@ -42,7 +43,7 @@ const row = (it, date, done, { showDate = false, selo = '' } = {}) => {
   const when = showDate ? `${dayLabel(date)}${it.time ? ' · ' + fmtTime(it.time) : ''}` : it.time ? fmtTime(it.time) : 'Qualquer hora';
   return `<div class="prow${done ? ' is-done' : ''}" style="--pc:${c.color}" data-action="p-open" data-id="${it.id}" data-date="${date}">
     ${itemTile(it, 40)}
-    <div class="prow__body"><strong>${esc(it.title)}</strong><small>${esc(when)}${esc(age)}${it.repeat && it.repeat !== 'none' && !selo ? ` · ${icon('repeat', 11)}` : ''}${it.note ? ' · ' + esc(it.note.slice(0, 40)) : ''}</small>${selo ? seloHtml(selo) : ''}</div>
+    <div class="prow__body"><strong>${esc(it.title)}</strong><small>${esc(when)}${esc(age)}${Number(it.valor) > 0 ? ` · ${esc(reaisTxt(it.valor))}` : ''}${it.repeat && it.repeat !== 'none' && !selo ? ` · ${icon('repeat', 11)}` : ''}${it.note ? ' · ' + esc(it.note.slice(0, 40)) : ''}</small>${selo ? seloHtml(selo) : ''}</div>
     <button class="prow__check${done ? ' is-on' : ''}" data-action="p-done" data-id="${it.id}" data-date="${date}" aria-label="${done ? 'Desmarcar' : 'Feito'}">${icon('check', 15)}</button>
   </div>`;
 };
@@ -522,6 +523,7 @@ export function openPersonalEditor(id = null, preset = {}) {
       </div>
       <div class="fgroup row2">
         <div><label class="flabel" for="p-rep">Repetir</label><select id="p-rep" class="input" name="repeat">${Object.entries(REPEATS).map(([k, l]) => `<option value="${k}"${(d.repeat || 'none') === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div><label class="flabel" for="p-valor">Valor (opcional)</label><input id="p-valor" class="input" name="valor" inputmode="decimal" autocomplete="off" placeholder="R$ 0,00" value="${d.valor ? esc(String(d.valor).replace('.', ',')) : ''}"></div>
         <div data-by ${d.cat === 'aniversario' ? '' : 'hidden'}><label class="flabel" for="p-year">Ano que nasceu</label><input id="p-year" class="input" type="number" inputmode="numeric" name="birthYear" value="${d.birthYear || ''}" placeholder="opcional" min="1900" max="2100"></div>
       </div>
       <div class="fgroup"><label class="flabel" for="p-note">Observação</label><textarea id="p-note" class="input" name="note" rows="3" placeholder="Endereço, telefone, o que levar, ideia de presente…" maxlength="500">${esc(d.note || '')}</textarea></div>
@@ -552,7 +554,12 @@ export function openPersonalEditor(id = null, preset = {}) {
       el.querySelector('[data-save]').onclick = () => {
         const title = form.title.value.trim();
         if (!title) { form.title.focus(); return toast('Escreva o que é'); }
-        const ok = savePersonal({ ...d, title, date: form.date.value || todayKey(), time: form.time.value || null, repeat: form.repeat.value, note: form.note.value.trim(), birthYear: +form.birthYear.value || null, remind: form.remind.checked ? 'auto' : 'none' });
+        const date = form.date.value || todayKey(), repeat = form.repeat.value, valor = numeroBR(form.valor.value);
+        // mensal: guarda o dia pedido (29–31 caem no último dia dos meses menores); se mudou o dia na data, vale o novo
+        const pedido = Number(form.dataset.diaMes) || Number(d.diaMes) || 0, ult = new Date(+date.slice(0, 4), +date.slice(5, 7), 0).getDate();
+        const diaMes = repeat === 'monthly' ? (pedido && Math.min(pedido, ult) === +date.slice(8) ? pedido : +date.slice(8)) : 0;
+        const { diaMes: _dm, valor: _v, ...resto } = d;
+        const ok = savePersonal({ ...resto, title, date, time: form.time.value || null, repeat, ...(diaMes ? { diaMes } : {}), ...(valor > 0 ? { valor } : {}), note: form.note.value.trim(), birthYear: +form.birthYear.value || null, remind: form.remind.checked ? 'auto' : 'none' });
         a.close();
         if (ok) { if (!id) okFx({ title: 'Anotado!', sub: `${dayLabel(ok.date || todayKey())}${ok.time ? ' às ' + fmtTime(ok.time) : ''}`, item: ok }); else toast('Salvo ✓'); }
       };

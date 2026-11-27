@@ -13,7 +13,8 @@ import { avisaApagado, listaHtml } from '../lixeira.js';
 import { novoLote } from '../lixeira-core.js';
 import { entende } from '../destino.js';
 import { entendeConta, respostaConta } from '../contas.js';
-import { personal, savePersonal, removePersonal, addMemo, guessCat } from '../personal.js';
+import { personal, savePersonal, removePersonal, addMemo, guessCat, REPEATS } from '../personal.js';
+import { reaisTxt } from '../frase-conta.js';
 import { hasPro } from '../billing.js';
 import { okFx } from '../okfx.js';
 
@@ -70,7 +71,7 @@ function actionsCard(m, i) {
   </div>`;
 }
 /* Agenda ou nota? A pessoa escolhe antes de qualquer coisa ser guardada */
-const quandoTxt = (x) => `${dayLabel(x.data)}${x.hora ? ' às ' + fmtTime(x.hora) : ''}`;
+const quandoTxt = (x) => `${x.repetir === 'monthly' ? `Todo dia ${x.diaMes || +String(x.data).slice(8)} · 1º ${dayLabel(x.data).toLowerCase()}` : x.repetir && x.repetir !== 'none' ? `${REPEATS[x.repetir] || 'Repete'} · desde ${dayLabel(x.data).toLowerCase()}` : dayLabel(x.data)}${x.hora ? ' às ' + fmtTime(x.hora) : ''}${Number(x.valor) > 0 ? ` · ${reaisTxt(x.valor)}` : ''}`;
 function escolhaCard(m, i) {
   const x = m.escolha, st = m.escStatus || 'pergunta';
   if (st === 'feito') return `<div class="esco is-feito"><span class="esco__ok">${icon('check', 18)}</span><span class="esco__r"><b>${esc(m.escResult)}</b><small>${esc(x.titulo)}</small></span>${m.desfaz ? `<button class="btn-text btn-text--sm" data-esc-undo="${i}">Desfazer</button>` : ''}</div>`;
@@ -104,7 +105,8 @@ async function guarda(m, onde) {
     const novo = store.state.events.find((e) => !antes.has(e.id)); if (!novo) return false;
     m.desfaz = { trab: novo.id };
   } else {
-    const it = savePersonal({ title: x.titulo, date: x.data, time: x.hora, cat: x.cat || guessCat(x.texto), repeat: x.repetir || 'none', remind: 'auto' }); if (!it) return false;
+    const rep = x.repetir || 'none';
+    const it = savePersonal({ title: x.titulo, date: x.data, time: x.hora, cat: x.cat || guessCat(x.texto), repeat: rep, ...(rep === 'monthly' && x.diaMes ? { diaMes: x.diaMes } : {}), ...(Number(x.valor) > 0 ? { valor: Number(x.valor) } : {}), remind: 'auto' }); if (!it) return false;
     m.desfaz = { pessoal: it.id };
   }
   if (x.nota && personal.item(x.nota)) { const lt = removePersonal(x.nota, { via: 'assistente' }); m.notaLote = lt; } // a nota virou compromisso (fica na lixeira por 24 h)

@@ -2,6 +2,7 @@
    ("criar", "mover", "concluir", "excluir", "editar", "pessoal", "bilhete")
    em mudanças na agenda — sempre mostrando um resumo para a pessoa confirmar. */
 import { store } from './store.js';
+import { numeroBR, reaisTxt } from './frase-conta.js';
 import { TYPES, TYPE_ORDER, isMarketing, ent } from './constants.js';
 import { uid, todayKey, addDays, fromKey, toMin, fromMin, fmtTime, dayLabel, fmtDayShort } from './utils.js';
 import { tidyTitle } from './tidy.js';
@@ -155,8 +156,10 @@ export function planAction(a) {
     const rep = ['none', 'daily', 'weekly', 'monthly', 'yearly'].includes(a.repetir) ? a.repetir : cat === 'aniversario' ? 'yearly' : 'none';
     const title = String(a.titulo || '').slice(0, 120);
     if (!title) return { ok: false, text: 'Faltou dizer o que anotar no Pessoal.' };
-    return { ok: true, text: `Anotar no seu Pessoal: “${title}” · ${dayLabel(date)}${T(a.inicio || a.hora) ? ' às ' + fmtTime(T(a.inicio || a.hora)) : ''}${rep === 'monthly' ? ` · todo dia ${a.dia_mes || +date.slice(8)}` : rep !== 'none' ? ' · repete' : ''}${ate && rep !== 'none' ? ` até ${ate.split('-').reverse().join('/')}` : ''}`, novo: true, titulo: title, quando: `${rep === 'monthly' ? `Todo dia ${a.dia_mes || +date.slice(8)}` : dayLabel(date)}${ate && rep !== 'none' ? ` · até ${ate.split('-').reverse().join('/')}` : T(a.inicio || a.hora) ? ' · ' + fmtTime(T(a.inicio || a.hora)) : ''}`,
-      run: async () => { savePersonal({ title, date, time: T(a.inicio || a.hora), cat, repeat: rep, ...(ate && rep !== 'none' ? { until: ate } : {}), ...(dm && rep === 'monthly' ? { diaMes: dm } : {}), note: String(a.descricao || '').slice(0, 500), remind: 'auto' }); return 1; } };
+    const valor = typeof a.valor === 'number' ? a.valor : numeroBR(String(a.valor || ''));
+    const vt = valor > 0 && valor < 1e7 ? ` · ${reaisTxt(valor)}` : '';
+    return { ok: true, text: `Anotar no seu Pessoal: “${title}” · ${dayLabel(date)}${T(a.inicio || a.hora) ? ' às ' + fmtTime(T(a.inicio || a.hora)) : ''}${rep === 'monthly' ? ` · todo dia ${a.dia_mes || +date.slice(8)}` : rep !== 'none' ? ' · repete' : ''}${ate && rep !== 'none' ? ` até ${ate.split('-').reverse().join('/')}` : ''}${vt}`, novo: true, titulo: title, quando: `${rep === 'monthly' ? `Todo dia ${a.dia_mes || +date.slice(8)}` : dayLabel(date)}${ate && rep !== 'none' ? ` · até ${ate.split('-').reverse().join('/')}` : T(a.inicio || a.hora) ? ' · ' + fmtTime(T(a.inicio || a.hora)) : ''}`,
+      run: async () => { savePersonal({ title, date, time: T(a.inicio || a.hora), cat, repeat: rep, ...(ate && rep !== 'none' ? { until: ate } : {}), ...(dm && rep === 'monthly' ? { diaMes: dm } : {}), ...(vt ? { valor } : {}), note: String(a.descricao || '').slice(0, 500), remind: 'auto' }); return 1; } };
   }
   if (kind === 'anotacao' || kind === 'anotação') {
     const text = String(a.texto || a.titulo || '').slice(0, 500);
