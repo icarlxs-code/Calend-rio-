@@ -98,7 +98,7 @@ export function openEditProfile(after) {
   } });
 }
 /* só olha a tabela (não liga aviso nenhum antes de salvar) */
-const sincTimeVer = (time) => (store.mode === 'cloud' ? api('/futebol', { ws: '', ver: true, time }) : Promise.resolve({ ligado: false, jogos: [] }));
+const sincTimeVer = (time) => (store.mode === 'cloud' ? api('/futebol', { ws: '', ver: true, jogos: true, time }) : Promise.resolve({ ligado: false, jogos: [] }));
 export function proximoTxt(j, id) { const rival = j.c === id ? j.fora : j.casa, dt = new Date(j.at); return `próximo: ${rival}, ${dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' }).replace('.', '')} às ${dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}`; }
 
 export function escolheTime(d, ok) {

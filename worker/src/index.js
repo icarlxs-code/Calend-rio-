@@ -17,9 +17,10 @@ import { getBill, putBill, stripe as stripeApi } from './billing.js';
 import { getDevices, removeDevices, addDevice, upgradeSubs } from './devices.js';
 import { runTick, planReminders, planPersonal, seedPerson, upgradeLegacy, usageMeter } from './tick.js';
 import { dueOf } from './kvsql.js';
-import { rodaFutebol, guardaTime, tiraTime, proximos, ligado as futebolLigado } from './futebol.js';
+import { rodaFutebol, guardaTime, tiraTime, proximos } from './futebol.js';
 import { rodaAoVivo, rodaAntes, cenaDoTime } from './fut-motor.js';
-import { temChave as temFutChave, orcamento as futOrcamento } from './fut-api.js';
+import { proximosEspn } from './fut-espn.js';
+import { orcamento as futOrcamento } from './fut-api.js';
 import { porHora, usoIA } from './cota.js';
 import { brNow, fusoOk } from './coach.js';
 import { meuId, trocaId, limpaId, esqueceAchado, guardaCodigos } from './achar.js';
@@ -1062,8 +1063,12 @@ async function handle(req, env) {
   // time do coração: guarda só o id do clube, e só de quem ligou os avisos (para saber de quem avisar)
   if (url.pathname === '/futebol') {
     const r = body.ver ? { time: clean(body.time, 20) } : await guardaTime(env, me.id, { time: clean(body.time, 20), avisos: body.avisos });
-    const extra = r.time && temFutChave(env) ? { cena: await cenaDoTime(env, r.time, now), aoVivo: true } : { aoVivo: false };
-    return reply(env, req, { ok: true, ...r, ligado: futebolLigado(env) || temFutChave(env), jogos: r.time ? await proximos(env, r.time) : [], ...extra });
+    // a reação do mascote vem do motor (API-Futebol ou, sem ela, a fonte grátis): vale com ou sem chave
+    const extra = r.time ? { cena: await cenaDoTime(env, r.time, Date.now()), aoVivo: true } : { aoVivo: false };
+    let jogos = r.time ? await proximos(env, r.time) : [];
+    // sem a tabela paga, a ESPN diz o próximo jogo (só quando a tela pede: a reação do mascote, de 4 em 4 min, não precisa)
+    if (r.time && !jogos.length && (!body.ver || body.jogos === true)) jogos = await proximosEspn(env, r.time).catch(() => []);
+    return reply(env, req, { ok: true, ...r, ligado: true, jogos, ...extra });
   }
   if (url.pathname === '/personal') {
     const items = (Array.isArray(body.items) ? body.items : []).slice(0, 300)

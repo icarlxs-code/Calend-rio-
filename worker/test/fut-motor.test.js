@@ -81,10 +81,13 @@ test('não chama a API sem ninguém torcendo, nem sem chave', async () => {
   const a = monta(() => partida({}));
   assert.equal((await rodaAoVivo(a.env, INICIO, async () => {})).motivo, 'ninguem-segue');
   assert.equal(a.chamadas.length, 0);
+  // sem chave: a API-Futebol não é chamada; a agenda vem da fonte grátis (aqui sem jogo nenhum) e nada é inventado
   const b = monta(() => partida({}));
   await b.CAL.put('fut:gente', JSON.stringify({ x: 'palmeiras' }));
-  assert.equal((await rodaAoVivo({ CAL: b.CAL }, INICIO, async () => {})).motivo, 'sem-chave');
-  assert.equal(b.chamadas.length, 0);
+  const r = await rodaAoVivo({ CAL: b.CAL }, INICIO, async () => { throw new Error('não devia enviar'); });
+  assert.equal(r.motivo, 'nenhum-jogo-agora');
+  assert.equal(b.chamadas.filter((u) => !/espn\.com/.test(u)).length, 0, 'nenhuma chamada à API-Futebol sem chave');
+  assert.ok(b.chamadas.some((u) => /site\.api\.espn\.com/.test(u)), 'procurou na fonte grátis');
 });
 
 test('uma consulta serve para muita gente', async () => {

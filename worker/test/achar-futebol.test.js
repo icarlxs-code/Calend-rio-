@@ -78,6 +78,7 @@ test('14 dias simulados: só o time da pessoa, sem repetir, sem {campo}; desliga
 test('rota /futebol: olhar não liga aviso', async () => {
   await call('/futebol', ANA, { time: 'remo', ver: true });
   assert.ok(!(kv.get('fut:gente') || '').includes('remo'));
-  assert.equal((await call('/futebol', ANA, { time: 'remo', avisos: true })).ligado, false);
+  // sem chave paga os avisos funcionam pela fonte grátis (ESPN): ligado = true
+  assert.equal((await call('/futebol', ANA, { time: 'remo', avisos: true })).ligado, true);
   assert.ok(kv.get('fut:gente').includes('remo'));
 });
