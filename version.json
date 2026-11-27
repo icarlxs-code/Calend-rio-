@@ -1,16 +1,14 @@
 {
-  "version": "2.32.0",
-  "build": "ogiapgzr",
-  "date": "2026-11-26",
-  "min": "2.30.0",
+  "version": "2.33.0",
+  "build": "hgdwa7ad",
+  "date": "2026-11-27",
+  "min": "2.33.0",
   "title": "Mais perto de você",
   "notes": [
-    "Deslize para trocar de aba, abra sem internet, Pessoal sem repetição e assistente mais claro.",
-    "Ache amigos por telefone, e-mail ou ID, edite o perfil inteiro e conte qual é o seu time.",
-    "Frases do seu jeito, que não se repetem, com uma arte nova para cada uma.",
-    "Não curtiu? Toque em 👎 e ela não volta.",
-    "Minhas frases: reabra e poste quando quiser.",
-    "O nome do remédio não aparece mais na tela de bloqueio."
+    "Contas do mês na agenda: diga \"todo dia 10 pago o aluguel de R$ 1.500\" e o Lembra entende a repetição e o valor.",
+    "Excluir empresa direto na página dela, com 24 horas para desfazer.",
+    "Futebol do seu time mais confiável, com uma segunda fonte de resultados.",
+    "Aparelhos em versão antiga agora recebem a atualização na hora."
   ],
-  "builtAt": "2026-11-26T18:02:31.295Z"
+  "builtAt": "2026-11-27T20:36:57.958Z"
 }

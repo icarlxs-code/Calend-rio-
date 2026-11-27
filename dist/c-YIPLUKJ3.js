@@ -1,1 +1,0 @@
-import{a,b,c,d,e,f,g}from"./c-RGSLAURO.js";import"./c-IEC476XV.js";import"./c-RICAUSDB.js";import"./c-CKL3W2LR.js";export{a as aoMudar,f as esvazia,d as guardaParaDepois,g as liga,b as pendentes,c as quantas,e as tira};
