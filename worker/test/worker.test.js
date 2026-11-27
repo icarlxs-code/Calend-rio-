@@ -238,3 +238,24 @@ test('segurança: notificação nunca leva para site de fora; sair da conta tira
   const big = await handle(new Request('https://w.dev/schedule', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token(m)}`, 'Content-Length': '9000000' }, body: '{}' }), env);
   assert.equal(big.status, 413);
 });
+
+test('pedir para atualizar: só o dono; uma pessoa ou todos os desatualizados de uma vez', async () => {
+  const [h, m] = JSON.parse(env.TEAM).map((x) => x.email);
+  const antes = phones.matheus.inbox.length;
+  // quem não é o dono não manda
+  const negado = await call('/admin/nudge-update', { as: m, body: { uid: UID[m], version: '2.33.0' } });
+  assert.equal(negado.status, 403);
+  // uma pessoa
+  const um = await call('/admin/nudge-update', { as: h, body: { uid: UID[m], version: '2.33.0' } });
+  assert.ok(um.data.sent >= 1);
+  assert.equal(phones.matheus.inbox.at(-1).title, '✨ Lembra 2.33.0 chegou');
+  assert.equal(phones.matheus.inbox.at(-1).url, './');
+  // em lote: repetidos contam uma vez, quem não tem aparelho não quebra o envio
+  const lote = await call('/admin/nudge-update', { as: h, body: { version: '2.33.0', targets: [{ uid: UID[m] }, { uid: UID[m] }, { uid: 'semAparelho0001' }, { uid: '' }] } });
+  assert.equal(lote.data.asked, 2);
+  assert.equal(lote.data.people, 1);
+  assert.equal(phones.matheus.inbox.length, antes + 2);
+  // versão estranha não entra no título
+  await call('/admin/nudge-update', { as: h, body: { uid: UID[m], version: '<b>x</b>' } });
+  assert.equal(phones.matheus.inbox.at(-1).title, '✨ Lembra chegou');
+});

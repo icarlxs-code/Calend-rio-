@@ -4,6 +4,7 @@ import { openSheet, sheetHead, toast, confirmDialog } from '../components.js';
 import { icon } from '../icons.js';
 import { esc, todayKey, addDays } from '../utils.js';
 import { CONFIG } from '../../config.js';
+import { emDia } from '../versao-em-dia.js';
 import { DIFFICULTIES, GOALS, JOURNEYS, GENDERS, TONES, METHODS, VOLUMES } from '../persona.js';
 
 /* "no app agora": sinal de presença do último 2,5 min (o app manda 1 por minuto enquanto está aberto) */
@@ -45,12 +46,11 @@ const isAppOwner = (u) => !!u && !!u.email && String(u.email).toLowerCase() === 
 const planLabel = (p, u) => (isAppOwner(u) ? 'Proprietário' : !p ? 'Conta própria' : p.founderTeam && !p.vip ? 'Fundador' : p.plan === 'comp' ? `Liberado até ${new Date(p.compUntil).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}` : p.vip ? `Vitalício Nº ${String(p.vip.no).padStart(3, '0')}` : p.comp ? 'Cortesia' : { gratis: 'Grátis (lançamento)', trial: 'Teste grátis', monthly: 'Mensal', lifetime: 'Vitalício', expired: 'Teste acabou', blocked: 'Sem plano', none: 'Sem plano' }[p.plan] || 'Conta própria');
 /* versão do app da pessoa comparada com a última publicada */
 let latestVer = null;
-const cmpV = (a, b) => { const A = String(a || '0').split('.').map(Number), B = String(b || '0').split('.').map(Number); for (let i = 0; i < 3; i++) if ((A[i] || 0) !== (B[i] || 0)) return (A[i] || 0) > (B[i] || 0) ? 1 : -1; return 0; };
 const verState = (u) => {
   if (!u.app) return { cls: 'warn', label: 'versão antiga', long: 'Antes da 2.0.0 (ainda não abriu o app atualizado)', ok: false };
   if (!latestVer) return { cls: '', label: `v${u.app.v}`, long: `v${u.app.v}`, ok: true };
-  const same = u.app.b === latestVer.build || cmpV(u.app.v, latestVer.version) >= 0;
-  return same ? { cls: 'ok', label: `v${u.app.v} ✓`, long: `v${u.app.v} (${u.app.b}) — a mais recente`, ok: true }
+  // número igual com build diferente = publicação anterior (o número ficou 2.32.0 por várias publicações)
+  return emDia(u.app, latestVer) ? { cls: 'ok', label: `v${u.app.v} ✓`, long: `v${u.app.v} (${u.app.b}) — a mais recente`, ok: true }
     : { cls: 'warn', label: `v${u.app.v} · desatualizada`, long: `v${u.app.v} (${u.app.b}) — a última é a v${latestVer.version}`, ok: false };
 };
 const pad = (n) => String(n || 0).padStart(3, '0');
@@ -417,6 +417,7 @@ export async function openAdmin() {
       <h3 class="ah">Saúde do app</h3>
       <div class="agroup">
         ${row(`Na versão atual${latestVer ? ` (v${esc(latestVer.version)})` : ''}`, `${users.filter((u) => verState(u).ok && u.app).length} de ${users.length}`, (() => { const late = users.filter((u) => !verState(u).ok); return late.length ? `desatualizados: ${late.slice(0, 4).map((u) => esc((u.name || u.email || '').split(' ')[0])).join(', ')}${late.length > 4 ? ` e mais ${late.length - 4}` : ''} — atualiza sozinho ao abrir` : 'todo mundo atualizado ✓'; })())}
+        ${users.some((u) => !verState(u).ok) ? `<div class="aupd"><button class="btn btn--soft btn--sm" data-nudge-all>${icon('bell', 14)} Pedir para todos os desatualizados</button></div>` : ''}
         ${row('Instalaram na tela inicial', `${installed}${pct(installed)}`)}
         ${row('Recebem notificações', `${notif}${pct(notif)}`, notif < users.length ? 'sem isso, os lembretes não chegam' : '')}
         ${row('Compromissos criados', `${users.reduce((a, u) => a + (u.counts?.myEvents || 0), 0)}`)}
@@ -505,6 +506,20 @@ export async function openAdmin() {
           toast(r.sent ? 'Aviso enviado ✓ Quando a pessoa tocar, o app abre já atualizado.' : 'A pessoa não ativou as notificações: peça pelo WhatsApp para abrir o app.', { ms: 5000 });
         } catch (e) { b.disabled = false; toast(e.message || 'Não consegui agora.'); }
       }));
+      // um aviso no celular de cada pessoa desatualizada (quem não ligou as notificações fica de fora)
+      const na = a.el.querySelector('[data-nudge-all]');
+      if (na) na.onclick = async () => {
+        const late = users.filter((u) => !verState(u).ok && u.uid);
+        if (!late.length || !(await confirmDialog({ title: 'Pedir para atualizar', text: `Mandar um aviso para ${late.length} pessoa${late.length === 1 ? '' : 's'} desatualizada${late.length === 1 ? '' : 's'}? Ao tocar, o app abre já na versão nova.`, ok: 'Mandar aviso' }))) return;
+        na.disabled = true;
+        try {
+          const { api } = await import('../avisos.js');
+          let people = 0;
+          for (let i = 0; i < late.length; i += 200) people += (await api('/admin/nudge-update', { version: latestVer?.version || '', targets: late.slice(i, i + 200).map((u) => ({ uid: u.uid, email: u.email })) })).people || 0;
+          toast(people ? `Aviso enviado para ${people} de ${late.length} ✓ Quem não tem notificações ligadas atualiza ao abrir o app.` : 'Ninguém desatualizado está com as notificações ligadas: eles atualizam ao abrir o app.', { ms: 6000 });
+        } catch (e) { toast(e.message || 'Não consegui agora.'); }
+        na.disabled = false;
+      };
       const r = a.el.querySelector('[data-reload]');
       if (r) r.onclick = () => load();
       const ce = a.el.querySelector('[data-clear-errors]');

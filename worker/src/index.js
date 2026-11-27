@@ -409,10 +409,24 @@ async function handle(req, env) {
   // dono do app pede para uma pessoa atualizar (notificação que abre o app já na versão nova)
   if (url.pathname === '/admin/nudge-update') {
     if (!isAdmin(env, me)) return reply(env, req, { error: 'só o dono do app' }, 403);
-    const uid = clean(body.uid, 64), email = clean(body.email, 120).toLowerCase(), v = /^\d+\.\d+\.\d+$/.test(body.version || '') ? body.version : '';
-    const teamMember = JSON.parse(env.TEAM || '[]').find((m) => (m.email || '').toLowerCase() === email);
-    const member = teamMember ? teamMember.id : 'u' + uid.replace(/[^A-Za-z0-9]/g, '').slice(0, 24);
-    const sent = await sendToMember(env, member, { title: `✨ Lembra ${v ? v + ' ' : ''}chegou`, body: 'Toque aqui para abrir: o app se atualiza sozinho em 2 segundos.', tag: 'atualizar', url: './' }).catch(() => 0);
+    const v = /^\d+\.\d+\.\d+$/.test(body.version || '') ? body.version : '';
+    const team = JSON.parse(env.TEAM || '[]');
+    const memberOf = (t) => {
+      const uid = clean(t?.uid, 64), email = clean(t?.email, 120).toLowerCase();
+      const tm = email && team.find((m) => (m.email || '').toLowerCase() === email);
+      const id = uid.replace(/[^A-Za-z0-9]/g, '').slice(0, 24);
+      return tm ? tm.id : id ? 'u' + id : '';
+    };
+    const msg = { title: `✨ Lembra ${v ? v + ' ' : ''}chegou`, body: 'Toque aqui para abrir: o app se atualiza sozinho em 2 segundos.', tag: 'atualizar', url: './' };
+    // uma pessoa (botão na ficha) ou várias de uma vez ("Pedir para todos os desatualizados"), no máximo 200 por pedido
+    if (Array.isArray(body.targets)) {
+      const members = [...new Set(body.targets.slice(0, 200).map(memberOf).filter(Boolean))];
+      let sent = 0, people = 0;
+      for (const m of members) { const n = await sendToMember(env, m, msg).catch(() => 0); sent += n; if (n) people++; }
+      return reply(env, req, { ok: true, sent, people, asked: members.length });
+    }
+    const member = memberOf(body);
+    const sent = member ? await sendToMember(env, member, msg).catch(() => 0) : 0;
     return reply(env, req, { ok: true, sent });
   }
   // compra feita dentro do app da App Store / Google Play: o servidor confere o recibo com a loja antes de liberar.
