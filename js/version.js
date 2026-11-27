@@ -60,9 +60,14 @@ export async function checkVersion({ force = false } = {}) {
   let j;
   try { j = await fetchLatest(); } catch { return null; }
   if (j.build === APP_BUILD) return j;
-  // QUALQUER versão nova: assim que a pessoa entra, aparece a tela com o botão "Atualizar agora"
-  // (obrigatória — o app não fica usável na versão velha). O botão limpa o cache e recarrega na hora.
-  mustUpdate(j);
+  // QUALQUER versão nova: atualiza sozinho assim que a pessoa está livre (nada de tela bloqueando).
+  // Se não atualizar sozinho, fica o botão "Atualizar" fixo no topo: um toque e o app recarrega.
+  if (busy()) { showUpdPill(j); setTimeout(() => checkVersion({ force: true }), 20e3); return j; }
+  let tried = '';
+  try { tried = sessionStorage.getItem('lembra.autoUpd') || ''; } catch { /* ok */ }
+  if (tried === j.build) { showUpdPill(j); return j; }   // já tentou esta versão nesta sessão e não pegou: botão
+  try { sessionStorage.setItem('lembra.autoUpd', j.build); } catch { /* ok */ }
+  hardReload();
   return j;
 }
 
