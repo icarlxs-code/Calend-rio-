@@ -109,6 +109,7 @@ function companyHtml(id) {
       <h2 class="block__title">Últimas 2 semanas</h2>
       ${past.map((e) => eventCard(e, { showDate: true, compact: true })).join('')}
     </section>` : ''}
+    ${store.canEdit('companies', c) ? `<button type="button" class="btn btn--danger-soft btn--block" data-act="delete">${icon('trash', 18)} Excluir ${ent(false, true)}</button>` : ''}
   </div>`;
 }
 
@@ -119,8 +120,36 @@ function mountCompany(api, id) {
     const { openEventEditor } = await import('./event.js');
     openEventEditor({ companyId: id });
   };
-  el.querySelector('[data-act="share"]').onclick = () => openShare(id);
-  el.querySelector('[data-act="clientview"]').onclick = () => openClientPreview(id);
+  // "Página do cliente" só existe nas profissões de atendimento a cliente: sem ele, nada quebra
+  const on = (act, fn) => { const b = el.querySelector(`[data-act="${act}"]`); if (b) b.onclick = fn; };
+  on('share', () => openShare(id));
+  on('clientview', () => openClientPreview(id));
+  on('delete', () => excluirEmpresa(id, { onDone: () => api.close() }));
+}
+
+/* Excluir empresa: a MESMA rotina na página da empresa e no editor
+   (confirma mostrando o que vai junto, confere a permissão, lixeira por 24 h e "Desfazer") */
+export async function excluirEmpresa(id, { onDone } = {}) {
+  const c = store.company(id);
+  if (!c) return false;
+  const evs = store.state.events.filter((e) => e.companyId === id);
+  const ok = await confirmDialog({
+    title: `Excluir ${c.name}?`,
+    text: evs.length ? `${evs.length === 1 ? 'O compromisso daqui vai' : `Os ${evs.length} compromissos daqui vão`} junto para a lixeira por 24 horas. O link do cliente deixa de funcionar.` : 'Vai para a lixeira por 24 horas. O link do cliente deixa de funcionar.',
+    html: evs.length ? listaHtml([...evs].sort((a, b) => (a.date < b.date ? -1 : 1))) : '',
+    ok: 'Excluir',
+    danger: true,
+  });
+  if (!ok) return false;
+  const atual = store.company(id);
+  if (!atual) return false;
+  if (!store.canEdit('companies', atual)) { store._denied('companies', atual); return false; }
+  const lote = novoLote();
+  if (evs.length) await store.removeMany('events', evs.map((e) => e.id), { via: 'empresa', lote });
+  await store.remove('companies', id, { via: 'empresa', lote });
+  onDone && onDone();
+  avisaApagado(lote, `${c.name} excluída${evs.length ? ` com ${evs.length} ${evs.length === 1 ? 'compromisso' : 'compromissos'}` : ''}`);
+  return true;
 }
 
 /* ======================== CADASTRO ======================== */
@@ -227,23 +256,7 @@ export function openCompanyEditor(id = null, onSaved = null) {
       api.set(html());
     };
     const del = el.querySelector('[data-delete]');
-    if (del) del.onclick = async () => {
-      const evs = store.state.events.filter((e) => e.companyId === d.id);
-      const ok = await confirmDialog({
-        title: `Excluir ${d.name}?`,
-        text: evs.length ? `${evs.length === 1 ? 'O compromisso daqui vai' : `Os ${evs.length} compromissos daqui vão`} junto para a lixeira por 24 horas. O link do cliente deixa de funcionar.` : 'Vai para a lixeira por 24 horas. O link do cliente deixa de funcionar.',
-        html: evs.length ? listaHtml([...evs].sort((a, b) => (a.date < b.date ? -1 : 1))) : '',
-        ok: 'Excluir',
-        danger: true,
-      });
-      if (!ok) return;
-      if (!store.canEdit('companies', store.company(d.id) || {})) { store._denied('companies', store.company(d.id)); return; }
-      const lote = novoLote();
-      if (evs.length) await store.removeMany('events', evs.map((e) => e.id), { via: 'empresa', lote });
-      await store.remove('companies', d.id, { via: 'empresa', lote });
-      api.close();
-      avisaApagado(lote, `${d.name} excluída${evs.length ? ` com ${evs.length} ${evs.length === 1 ? 'compromisso' : 'compromissos'}` : ''}`);
-    };
+    if (del) del.onclick = () => excluirEmpresa(d.id, { onDone: () => api.close() });
     el.querySelector('[data-save]').onclick = async () => {
       read();
       if (!d.name) {
