@@ -21,6 +21,7 @@ import { rodaFutebol, guardaTime, tiraTime, proximos } from './futebol.js';
 import { rodaAoVivo, rodaAntes, cenaDoTime } from './fut-motor.js';
 import { proximosEspn } from './fut-espn.js';
 import { desabafo } from './desabafo.js';
+import { geraFala } from './fala.js';
 import { orcamento as futOrcamento } from './fut-api.js';
 import { porHora, usoIA } from './cota.js';
 import { brNow, fusoOk } from './coach.js';
@@ -261,7 +262,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/friends/achar': 20, '/friends/id': 15, '/futebol': 20, '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/frase-queixa': 20, '/coach': 20, '/ask': 15, '/desabafo': 8, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/story-like': 60, '/friends/story-comment': 15, '/friends/story-comments': 60, '/friends/story-comment-del': 30, '/friends/story-repost': 6, '/friends/msg-send': 40, '/friends/msg-list': 60, '/friends/msg-media': 90, '/friends/msg-react': 60, '/friends/msg-del': 30, '/friends/convs': 40, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/friends/suggest': 20, '/friends/email': 15, '/friends/perto': 10, '/friends/close': 30, '/friends/dismiss': 30, '/friends/ping': 40, '/staff/me': 30, '/staff/list': 20, '/staff/set': 20, '/staff/remove': 20, '/staff/metrics': 20, '/staff/reports': 20, '/staff/report-action': 30, '/lb/report': 20, '/lb/board': 40 };
+const LIMITS = { '/friends/achar': 20, '/friends/id': 15, '/futebol': 20, '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/frase-queixa': 20, '/coach': 20, '/ask': 15, '/desabafo': 8, '/fala': 20, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/story-like': 60, '/friends/story-comment': 15, '/friends/story-comments': 60, '/friends/story-comment-del': 30, '/friends/story-repost': 6, '/friends/msg-send': 40, '/friends/msg-list': 60, '/friends/msg-media': 90, '/friends/msg-react': 60, '/friends/msg-del': 30, '/friends/convs': 40, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/friends/suggest': 20, '/friends/email': 15, '/friends/perto': 10, '/friends/close': 30, '/friends/dismiss': 30, '/friends/ping': 40, '/staff/me': 30, '/staff/list': 20, '/staff/set': 20, '/staff/remove': 20, '/staff/metrics': 20, '/staff/reports': 20, '/staff/report-action': 30, '/lb/report': 20, '/lb/board': 40 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -1160,6 +1161,11 @@ async function handle(req, env) {
     return reply(env, req, { ok: true, counts });
   }
 
+  // fala do mascote escrita pela IA com o contexto da pessoa (tela inicial 3x por dia e quando ela toca nele)
+  if (url.pathname === '/fala') {
+    const r = await geraFala(env, me, { onde: body.onde === 'toque' ? 'toque' : 'tela', momento: ['manha', 'tarde', 'noite'].includes(body.momento) ? body.momento : '', ctx: body.ctx && typeof body.ctx === 'object' ? body.ctx : {} });
+    return reply(env, req, { ok: true, ...r });
+  }
   // conversa curtinha do mascote ("vocês estão bem?" → não → o que aconteceu): nada é guardado
   if (url.pathname === '/desabafo') {
     const r = await desabafo(env, { texto: body.texto, vida: body.vida, pronome: clean(body.pronome, 2) });

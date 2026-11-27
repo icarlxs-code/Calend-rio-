@@ -385,7 +385,10 @@ const diaNum = (k) => { const [y, m, d] = String(k).split('-').map(Number); retu
 /* frase/versículo do dia SEM repetir: cada pessoa recebe um baralho próprio e percorre TODAS as frases
    antes de qualquer uma voltar; a cada volta o baralho é reembaralhado (ordem nova), e a última de um ciclo
    nunca é a primeira do seguinte. */
-export const quoteOfDay = (k = todayKey()) => {
+const turnoIdx = (d = new Date()) => (d.getHours() < 12 ? 0 : d.getHours() < 18 ? 1 : 2);
+export const quoteOfDay = (k = todayKey(), t = turnoIdx()) => {
+  // frase escrita pela IA para esta pessoa neste turno (manhã, tarde ou noite), quando já chegou
+  try { const f = JSON.parse(localStorage.getItem(`lembra.fala.${k}.${['manha', 'tarde', 'noite'][t]}`) || 'null'); if (f && f.t) return { t: f.t, a: 'Lembra' }; } catch { /* ok */ }
   const who = store.user?.uid || store.me || 'x';
   const faith = !!store.profile?.faith;
   const pool = QUOTES.filter((q) => faith || !/^(Filipenses|Salmos|Eclesiastes|\d? ?Coríntios)/.test(q[1]));
@@ -394,7 +397,8 @@ export const quoteOfDay = (k = todayKey()) => {
   // UM baralho por pessoa, percorrido em roda: cada frase aparece uma única vez antes de QUALQUER
   // uma voltar — e isso vale sempre, inclusive na virada da volta (nunca repete dentro de n dias).
   const ordem = baralho(n, hashS(who));
-  const q = pool[ordem[((diaNum(k) % n) + n) % n]];
+  // três por dia (manhã, tarde e noite), e ainda assim todas passam antes de alguma voltar
+  const q = pool[ordem[(((diaNum(k) * 3 + t) % n) + n) % n]];
   return { t: q[0], a: q[1] };
 };
 export const phraseOfDay = (k) => quoteOfDay(k).t;

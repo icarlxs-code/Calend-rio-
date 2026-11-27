@@ -10,6 +10,7 @@
    - aparece, fala e sai andando; volta sozinho em 15 s a 1 min;
    - por enquanto SÓ para o dono (CONFIG.adminEmail); para todo mundo: CONFIG.mascotPublic = true. */
 import { piada, humorOn } from './humor.js';
+import { gostou, gostoDe, pegaFalaToque } from './fala-ia.js';
 import { frasesDaVida, perguntaDoPar } from './vida.js';
 import * as papo from './papo.js';
 import { store } from './store.js';
@@ -335,6 +336,7 @@ function pontua(l) {
   if (l.ctx) p += l.ctx * 14;                                       // fala do que a pessoa está vendo
   if (l.tod) p += 8 * Math.max(0, 1 - vezes / 2);
   if (l.leve) p -= 4;
+  p += Math.max(-12, Math.min(18, gostoDe(l.k) * 2));            // o que a pessoa mais gosta aparece mais
   p += Math.min(25, desde / 6);                                     // novidade: quanto mais tempo sem dizer, mais pontos
   if (!MEM.at[l.k]) p += 12;                                        // nunca disse
   if (desde < (l.u ? 6 : 15)) p -= 80;                              // acabou de dizer: quase proibido
@@ -397,6 +399,7 @@ function balao(line, ms) {
     b.onclick = (ev) => {
       ev.stopPropagation(); box.classList.remove('is-in'); btns.innerHTML = ''; busyUntil = 0; lendoAte = 0;
       import('./sfx.js').then((m) => m.ui('clique')).catch(() => {});
+      gostou(line.k, a.go ? 2 : -1);   // aprende: o assunto em que ela tocou sobe; o que dispensou desce
       if (a.go) { act(el(), 'sim'); Promise.resolve().then(a.go).catch(() => {}); } else { act(el(), 'tchau'); }
       setTimeout(settle, 1000);
     };
@@ -414,6 +417,7 @@ function balao(line, ms) {
    Uma reação nova substitui a anterior, a não ser que a anterior seja mais importante e ainda esteja valendo. */
 const PRIO = { erro: 6, nivel: 5, perfeito: 4, done: 3, xp: 2, created: 1 };
 let atual = { p: -1, ate: 0, id: 0 };
+let atualK = '', atualEm = 0;   // o assunto da última fala (para aprender do que a pessoa gosta)
 /* tempo de leitura: digitar + ler com calma (≈ 13 letras por segundo). Antes do mínimo, nada troca o texto. */
 const DIGITA = 30;
 const leitura = (t) => Math.max(4800, Math.min(15000, 2400 + t.length * (DIGITA + 56)));
@@ -428,6 +432,7 @@ function espera(line, gesto) {                       // guarda só a mais import
 }
 function fala(line, gesto, tentativa = 0, desde = Date.now(), id = 0) {
   if (!B || !line) return;
+  if (line.k) { atualK = line.k; atualEm = Date.now(); }
   if (line.k === 'visitas' && document.querySelector('#view .visita')) return; // o cartão já está mostrando
   const p = line.p ?? 0;
   if (!tentativa) {
@@ -519,7 +524,10 @@ function onTap() {
   if (now - falouEm < 900) return act(el(), pick(['pop', 'sim', 'riso', 'timido', 'pisca']));
   falouEm = now; busyUntil = 0; lendoAte = 0; atual = { p: -1, ate: 0, id: atual.id };
   if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '')) document.activeElement.blur();
+  if (atualK && now - atualEm < 15e3) gostou(atualK, 1);          // tocou logo depois de uma fala: gostou do assunto
   const c = ctx(), L = falas(c), urg = L.filter((x) => (x.u || 0) >= 2 && Date.now() - (MEM.at[x.k] || 0) > 12 * 60e3);
+  // às vezes, uma fala nova escrita pela IA só para esta pessoa (já buscada antes: não espera a rede)
+  if (!urg.length && Math.random() < 0.45) { const ia = pegaFalaToque(); if (ia) return fala({ k: 'ia', t: ia, m: 'feliz' }, pick(['tchau', 'sim', 'pop', 'riso'])); }
   // o urgente fala uma vez e dá lugar ao papo (não fica cobrando a cada toque)
   const l = (urg.length && Math.random() < 0.7 && melhor(urg)) || (Math.random() < 0.75 && puxaPapo(c)) || melhor(L) || puxaPapo(c);
   return fala(l, l && l.gesto ? l.gesto : pick(['tchau', 'sim', 'pop', 'riso']));

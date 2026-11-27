@@ -17,7 +17,7 @@ import { leCache, gravaCache } from './cache.js';
 import { personal } from './personal.js';
 import { previewStory } from './game.js';
 import { todayKey } from './utils.js';
-import { ICO, rosto, falta } from './social.js';
+import { ICO, rosto, falta, conversas } from './social.js';
 import { isTeen } from './teen.js';
 
 const call = (path, body = {}) => api(path, { ws: '', ...body });
@@ -118,10 +118,14 @@ export function storyStrip(rows = feed.rows, { comMeu = true, lembra = true, con
     ${!lembraVisto() ? lb : ''}
     ${novos.map((r) => `<button class="ststrip__it${pulsa(r)}" data-st-owner="${esc(r.uid)}" role="listitem" aria-label="${esc(rotulo(r, r.name.split(' ')[0]))}">${face(r, 60)}${anel(r)}${bolinha(r)}<small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
     ${vistos.map((r) => `<button class="ststrip__it" data-st-owner="${esc(r.uid)}" role="listitem" aria-label="${esc(rotulo(r, r.name.split(' ')[0]))}">${face(r, 60)}${anel(r)}<small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
+    ${recentes().map((c) => `<button class="ststrip__it ststrip__conv${c.novas ? ' is-nova' : ''}" data-st-conv="${esc(c.uid)}" role="listitem" aria-label="Conversar com ${esc((c.name || '').split(' ')[0])}">${face(c, 60)}<i class="ststrip__chat" aria-hidden="true">${ICO.chat(13)}</i>${c.novas ? `<i class="ststrip__n">${c.novas > 9 ? '9+' : c.novas}</i>` : ''}<small>${esc((c.name || '').split(' ')[0])}</small></button>`).join('')}
     ${convidar ? `<button class="ststrip__it ststrip__inv${dot ? ' is-dot' : ''}" data-action="friends" role="listitem" aria-label="Amigos e convites"><span class="ststrip__invc">${icon('plus', 24)}</span><i class="iconbtn__dot"></i><small>Convidar</small></button>` : ''}
   </div>`;
 }
+/* conversas recentes na mesma faixa: um toque na foto e a conversa abre (antes eram 2 ou 3 toques) */
+function recentes() { try { return (conversas().lista || []).filter((c) => c.uid && c.name).slice(0, 6); } catch { return []; } }
 export function bindStrip(el, onChange) {
+  el.querySelectorAll('[data-st-conv]').forEach((b) => (b.onclick = () => import('./privado.js').then((P) => P.openConversa(b.dataset.stConv, recentes().find((c) => c.uid === b.dataset.stConv) || {}))));
   el.querySelectorAll('[data-st-owner]').forEach((b) => (b.onclick = () => openViewer(b.dataset.stOwner, onChange)));
   const me = el.querySelector('[data-st-me]');
   if (me) me.onclick = (ev) => { if (ev.target.closest('[data-st-novo]')) return novoStory(onChange); const meus = meuStory(); if (meus) openViewer(meus.uid, onChange); else novoStory(onChange); };

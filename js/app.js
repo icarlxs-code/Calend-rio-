@@ -1370,6 +1370,9 @@ function startApp() {
   setTimeout(torcida, 9000);
   // "Conta um pouco de você": uma vez para cada pessoa (inclusive quem já tinha conta), quando o app estiver livre
   setTimeout(() => import('./views/vida.js').then((m) => m.pede()).catch(() => {}), 7000);
+  // falas escritas pela IA para esta pessoa (frase do momento 3x por dia e quando toca no mascote)
+  import('./fala-ia.js').then((m) => m.liga()).catch(() => {});
+  window.addEventListener('lembra:fala', () => { if (!document.querySelector('.sheet-wrap.is-open')) render(); });
   setInterval(() => { if (!document.hidden) torcida(); }, 4 * 60e3);
   // voltou para o app depois de um tempo (o app não fecha de verdade no celular): conta como "abrir de novo"
   let hiddenAt = 0;

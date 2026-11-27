@@ -4059,3 +4059,7 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .vida__sos { display: flex; flex-direction: column; gap: 8px; }
 .vida__sos a { display: flex; flex-direction: column; align-items: flex-start; text-decoration: none; padding: 12px 14px; border: 2px solid #D92D20; }
 .vida__sos small { opacity: .75; font-weight: 400; }
+/* conversas recentes na faixa do topo: um toque abre a conversa */
+.ststrip__conv { position: relative; }
+.ststrip__chat { position: absolute; right: 4px; top: 44px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #25A55F; color: #fff; border: 2px solid var(--bg, #fff); }
+.ststrip__n { position: absolute; right: 0; top: 0; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #E5484D; color: #fff; font-size: 11px; font-style: normal; display: grid; place-items: center; }
