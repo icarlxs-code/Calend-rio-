@@ -250,7 +250,7 @@ function render() {
   // visita nova no perfil: logo abaixo do que importa agora
   if (store.user && store.mode === 'cloud' && (personalMode ? (ui.ptab || 'p-hoje') === 'p-hoje' : ui.tab === 'hoje')) {
     import('./stories.js').then((m) => {
-      const poe = () => { const v = document.getElementById('view'); if (!v) return; v.querySelector('.visita')?.remove(); const alvo = v.querySelector('.page > .foco, .page > .pquick'); const h = alvo && m.visitaCard(); if (h) alvo.insertAdjacentHTML('afterend', h); };
+      const poe = () => m.pintaVisita();
       poe();
       if (Date.now() - m.visitasCache().at > 3 * 60e3) m.refreshVisitors().then(poe);
     }).catch(() => {});
@@ -430,6 +430,7 @@ const actions = {
   lixeira: () => openLixeira(),
   'minhas-frases': () => import('./frase.js').then((m) => m.minhasFrases()),
   mensagens: () => import('./privado.js').then((m) => m.openMensagens()),
+  'conversa-top': (b) => import('./social.js').then((S) => { const c = (S.conversas().lista || []).find((x) => x.uid === b.dataset.uid) || {}; return import('./privado.js').then((m) => m.openConversa(b.dataset.uid, c)); }),
   visitas: () => import('./stories.js').then((m) => m.openVisitors()).then(() => render()),
   'ui-toggle': (b) => { ui[b.dataset.k] = !ui[b.dataset.k]; render(); },
   acc: (b) => { const k = b.dataset.k; ui.acc[k] = !ui.acc[k]; const s = b.closest('.acc'); s.classList.toggle('is-open', ui.acc[k]); b.setAttribute('aria-expanded', !!ui.acc[k]); },

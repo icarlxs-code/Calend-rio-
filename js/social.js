@@ -49,7 +49,12 @@ const logo = () => { clearTimeout(relogio); relogio = setTimeout(() => atualiza(
 export function pinta() {
   document.querySelectorAll('[data-msgs]').forEach((b) => { const n = C.total; let i = b.querySelector('.msgn'); if (!n) { i && i.remove(); return; } if (!i) { i = document.createElement('i'); i.className = 'msgn'; b.appendChild(i); } i.textContent = n > 99 ? '99+' : n; b.setAttribute('aria-label', `Mensagens, ${n} ${n === 1 ? 'nova' : 'novas'}`); });
 }
-export const botaoMensagens = () => (podeSocial() ? `<button class="iconbtn iconbtn--msgs" data-action="mensagens" data-msgs aria-label="Mensagens">${ICO.chat(21)}${C.total ? `<i class="msgn">${C.total > 99 ? '99+' : C.total}</i>` : ''}</button>` : '');
+const contaConv = () => { try { return JSON.parse(localStorage.getItem('lembra.convN') || '{}') || {}; } catch { return {}; } };
+/** conta cada vez que a pessoa abre uma conversa: quem ela mais procura fica no atalho */
+export const somaConv = (uid) => { if (!uid) return; const o = contaConv(); o[uid] = (o[uid] || 0) + 1; try { localStorage.setItem('lembra.convN', JSON.stringify(o)); } catch { /* ok */ } };
+export const maisConversa = () => { const L = (C.lista || []).filter((c) => c.uid && c.name); if (!L.length) return null; const o = contaConv(); return L.map((c, i) => ({ c, s: (o[c.uid] || 0) * 3 + (L.length - i) / L.length + (c.novas ? 2 : 0) })).sort((a, b) => b.s - a.s)[0].c; };
+const atalhoConv = () => { const t = maisConversa(); return t ? `<button class="msgtop" data-action="conversa-top" data-uid="${esc(t.uid)}" aria-label="Conversar com ${esc(String(t.name).split(' ')[0])}">${rosto(t, 30)}${t.novas ? '<i class="msgtop__n"></i>' : ''}</button>` : ''; };
+export const botaoMensagens = () => (podeSocial() ? `<span class="msgsgrp"><button class="iconbtn iconbtn--msgs" data-action="mensagens" data-msgs aria-label="Mensagens">${ICO.chat(21)}${C.total ? `<i class="msgn">${C.total > 99 ? '99+' : C.total}</i>` : ''}</button>${atalhoConv()}</span>` : '');
 
 /* ---------- tempo real ---------- */
 let ws = null, tenta = 0, tRe = 0, tPing = 0, ligado = false, aberto = '';

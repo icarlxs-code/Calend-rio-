@@ -109,23 +109,26 @@ const lembraKey = () => `lembra.storyLembra.${APP_VERSION}`;
 const lembraVisto = () => { try { if (localStorage.getItem(lembraKey()) === '1') return true; const k = lembraKey() + '.desde', d = Number(localStorage.getItem(k)); if (!d) { localStorage.setItem(k, String(Date.now())); return false; } return Date.now() - d > 24 * 3600e3; } catch { return true; } };
 export const meuStory = () => feed.rows.find((r) => r.me && r.stories.length) || null;
 export function storyStrip(rows = feed.rows, { comMeu = true, lembra = true, convidar = false, dot = false } = {}) {
-  const meus = rows.find((r) => r.me && r.stories.length);
+  const meus = rows.find((r) => r.me && r.stories.length), on = onSet();
   const itens = rows.filter((r) => !r.me && r.stories.length);
   const novos = itens.filter((r) => r.stories.some((x) => !x.seen)), vistos = itens.filter((r) => !r.stories.some((x) => !x.seen)); // quem tem story novo vem primeiro
   const lb = lembra && mascotOn() ? `<button class="ststrip__it" data-st-lembra role="listitem"><span class="stface stface--snh" style="--s:60px">${sininho('feliz', { size: 58 })}</span>${anel({ stories: [{}] })}<small>Lembra</small></button>` : '';
   return `<div class="ststrip" role="list">
     ${comMeu ? `<button class="ststrip__it" data-st-me role="listitem" aria-label="${rotulo(meus, '', true)}">${face(store.member(store.me) || { name: 'Você' }, 60)}<i class="ststrip__plus" data-st-novo role="button" aria-label="Novo story">${icon('plus', 14)}</i><small>Seu story</small>${anel(meus, { meu: true })}</button>` : ''}
     ${!lembraVisto() ? lb : ''}
-    ${novos.map((r) => `<button class="ststrip__it${pulsa(r)}" data-st-owner="${esc(r.uid)}" role="listitem" aria-label="${esc(rotulo(r, r.name.split(' ')[0]))}">${face(r, 60)}${anel(r)}${bolinha(r)}<small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
-    ${vistos.map((r) => `<button class="ststrip__it" data-st-owner="${esc(r.uid)}" role="listitem" aria-label="${esc(rotulo(r, r.name.split(' ')[0]))}">${face(r, 60)}${anel(r)}<small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
-    ${recentes().map((c) => `<button class="ststrip__it ststrip__conv${c.novas ? ' is-nova' : ''}" data-st-conv="${esc(c.uid)}" role="listitem" aria-label="Conversar com ${esc((c.name || '').split(' ')[0])}">${face(c, 60)}<i class="ststrip__chat" aria-hidden="true">${ICO.chat(13)}</i>${c.novas ? `<i class="ststrip__n">${c.novas > 9 ? '9+' : c.novas}</i>` : ''}<small>${esc((c.name || '').split(' ')[0])}</small></button>`).join('')}
+    ${novos.map((r) => `<button class="ststrip__it${pulsa(r)}" data-st-owner="${esc(r.uid)}" role="listitem" aria-label="${esc(rotulo(r, r.name.split(' ')[0]))}">${face(r, 60)}${anel(r)}${bolinha(r)}${ponto(r.uid, on)}<small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
+    ${vistos.map((r) => `<button class="ststrip__it" data-st-owner="${esc(r.uid)}" role="listitem" aria-label="${esc(rotulo(r, r.name.split(' ')[0]))}">${face(r, 60)}${anel(r)}${ponto(r.uid, on)}<small>${esc(r.name.split(' ')[0])}</small></button>`).join('')}
+    ${recentes().map((c) => `<button class="ststrip__it ststrip__conv${c.novas ? ' is-nova' : ''}" data-st-conv="${esc(c.uid)}" role="listitem" aria-label="Conversar com ${esc((c.name || '').split(' ')[0])}">${face(c, 60)}<i class="ststrip__chat" aria-hidden="true">${ICO.chat(13)}</i>${c.novas ? `<i class="ststrip__n">${c.novas > 9 ? '9+' : c.novas}</i>` : ''}${ponto(c.uid, on)}<small>${esc((c.name || '').split(' ')[0])}</small></button>`).join('')}
+    ${(feed.online || []).filter((o) => o.uid && !itens.some((r) => r.uid === o.uid) && !recentes().some((c) => c.uid === o.uid)).slice(0, 8).map((o) => `<button class="ststrip__it ststrip__conv" data-st-conv="${esc(o.uid)}" role="listitem" aria-label="${esc((o.name || '').split(' ')[0])} está online. Conversar">${face(o, 60)}<i class="ststrip__on" aria-hidden="true"></i><small>${esc((o.name || '').split(' ')[0])}</small></button>`).join('')}
     ${convidar ? `<button class="ststrip__it ststrip__inv${dot ? ' is-dot' : ''}" data-action="friends" role="listitem" aria-label="Amigos e convites"><span class="ststrip__invc">${icon('plus', 24)}</span><i class="iconbtn__dot"></i><small>Convidar</small></button>` : ''}
   </div>`;
 }
 /* conversas recentes na mesma faixa: um toque na foto e a conversa abre (antes eram 2 ou 3 toques) */
+const onSet = () => new Set((feed.online || []).map((x) => x.uid));
+const ponto = (uid, on) => (on.has(uid) ? '<i class="ststrip__on" aria-label="online agora"></i>' : '');
 function recentes() { try { return (conversas().lista || []).filter((c) => c.uid && c.name).slice(0, 6); } catch { return []; } }
 export function bindStrip(el, onChange) {
-  el.querySelectorAll('[data-st-conv]').forEach((b) => (b.onclick = () => import('./privado.js').then((P) => P.openConversa(b.dataset.stConv, recentes().find((c) => c.uid === b.dataset.stConv) || {}))));
+  el.querySelectorAll('[data-st-conv]').forEach((b) => (b.onclick = () => import('./privado.js').then((P) => P.openConversa(b.dataset.stConv, recentes().find((c) => c.uid === b.dataset.stConv) || (feed.online || []).find((c) => c.uid === b.dataset.stConv) || {}))));
   el.querySelectorAll('[data-st-owner]').forEach((b) => (b.onclick = () => openViewer(b.dataset.stOwner, onChange)));
   const me = el.querySelector('[data-st-me]');
   if (me) me.onclick = (ev) => { if (ev.target.closest('[data-st-novo]')) return novoStory(onChange); const meus = meuStory(); if (meus) openViewer(meus.uid, onChange); else novoStory(onChange); };
@@ -354,11 +357,16 @@ export async function openStoriesFeed() {
 /* ---------- quem visitou o seu perfil ---------- */
 export const visitasNovas = () => { let v = 0; try { v = +localStorage.getItem('lembra.visitasVistas') || 0; } catch { /* ok */ } return visitasCache().list.filter((x) => x.at > v); };
 /* cartão que chama atenção só quando há visita NOVA de verdade (some depois de vista) */
+export const olhandoAgora = (agora = Date.now()) => visitasCache().list.filter((x) => agora - x.at < 3 * 60e3);
 export function visitaCard() {
+  const ag = olhandoAgora();
+  if (ag.length) return `<button class="visita visita--agora" data-action="visitas"><span class="visita__rostos">${ag.slice(0, 3).map((c) => `<i class="visita__anel">${face(c, 44)}</i>`).join('')}</span><span class="visita__t"><b>👀 ${ag.length === 1 ? '1 pessoa está' : `${ag.length} pessoas estão`} olhando o seu perfil agora</b><small>Toque para ver quem é</small></span><em class="visita__ao">ao vivo</em></button>`;
   const n = visitasNovas(); if (!n.length) return '';
   const p = (n[0].name || 'Alguém').split(' ')[0];
   return `<button class="visita" data-action="visitas"><span class="visita__rostos">${n.slice(0, 3).map((c) => `<i class="visita__anel">${face(c, 44)}</i>`).join('')}</span><span class="visita__t"><b>${n.length === 1 ? `${esc(p)} viu seu perfil` : `${esc(p)} e mais ${n.length - 1} viram seu perfil`}</b><small>${desde(n[0].at)} · toque para ver</small></span><em>${n.length}</em></button>`;
 }
+/** põe (ou atualiza) o cartão de visita no Hoje sem redesenhar a tela */
+export function pintaVisita() { const v = document.getElementById('view'); if (!v) return; v.querySelector('.visita')?.remove(); const alvo = v.querySelector('.page > .foco, .page > .pquick'); const h = alvo && visitaCard(); if (h) alvo.insertAdjacentHTML('afterend', h); }
 export async function openVisitors() {
   let lista = null;
   const novos = new Set(visitasNovas().map((x) => x.uid));

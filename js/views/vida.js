@@ -16,7 +16,7 @@ async function guarda(v) {
   store.profile = { ...(store.profile || {}), vida: v };
   await saveProfileQuiet({ vida: v });
 }
-const ocupado = () => document.querySelector('.sheet-wrap.is-open, .ficha, .paywall, .ob, .guide, .termsgate, .photogate, .avgate, .mustupd, .nv, .gx');
+const ocupado = () => document.querySelector('.sheet-wrap.is-open, .ficha, .vficha, .paywall, .ob, .guide, .termsgate, .photogate, .avgate, .mustupd, .nv, .gx');
 const opc = (L, v) => `<option value="" disabled${v ? '' : ' selected'}>Escolha…</option>${L.map(([k, t]) => `<option value="${k}"${v === k ? ' selected' : ''}>${esc(t)}</option>`).join('')}`;
 
 /** abre a tela se a pessoa ainda não respondeu (chamado ao entrar no app) */
@@ -27,33 +27,74 @@ export function pede({ forca = false } = {}) {
   abreFicha();
   return true;
 }
-export function abreFicha() {
+/* tela cheia no estilo oficial: fundo ilustrado, o Sininho vivo fazendo uma pergunta por vez,
+   respostas em botões grandes e ele reagindo a cada escolha (amor = olhos de coração, filhos = emocionado…) */
+const REACAO = {
+  solteiro: ['descolado', 'Solteiro(a) e livre! 😎'], namorando: ['apaixonado', 'Que amor! 💛'], noivo: ['apaixonado', 'Casório vindo aí! 💍'],
+  casado: ['apaixonado', 'Que lindo! ❤️'], uniao: ['apaixonado', 'Que lindo! ❤️'], complicado: ['zonzo', 'Relacionamento é assim mesmo, às vezes dá um nó 😵‍💫'],
+  separado: ['feliz', 'Recomeços também são bonitos 🌱'], viuvo: ['emocionado', 'Sinto muito. Tô aqui com você 🤍'],
+  sim: ['emocionado', 'Que coisa boa! 🥹'], nao: ['feliz', 'Beleza!'], gravida: ['estrelado', 'Que notícia incrível! ⭐'],
+  bem: ['estrelado', 'Adoro essa energia! ⭐'], normal: ['feliz', 'Dia normal também é dia bom 🙂'], desanimado: ['emocionado', 'Vou caprichar pra te animar 🤗'],
+  dificil: ['emocionado', 'Obrigado por confiar em mim. Tô do seu lado 🤍'],
+};
+export function abreFicha({ aoFechar } = {}) {
+  document.querySelector('.vficha')?.remove();
   const d = { ...(vidaAtual() || {}) };
-  const html = () => `${sheetHead('Conta um pouco de você', { right: '<button class="btn btn--primary btn--sm" data-ok>Salvar</button>' })}
-    <form class="form" onsubmit="return false">
-      <p class="fhelp">Assim eu falo com você do seu jeito. Só você vê estas respostas. Em todas dá para escolher “Prefiro não dizer”.</p>
-      <div class="fgroup"><label class="flabel" for="v-rel">Relacionamento</label><select id="v-rel" class="input" name="rel">${opc(RELACOES, d.rel)}</select></div>
-      <div class="fgroup" data-par ${COM_PAR.includes(d.rel) ? '' : 'hidden'}><label class="flabel" for="v-par">Nome dele(a) (opcional)</label><input id="v-par" class="input" name="par" maxlength="30" autocomplete="off" value="${esc(d.par || '')}"></div>
-      <div class="fgroup"><label class="flabel" for="v-fil">Tem filhos?</label><select id="v-fil" class="input" name="filhos">${opc(FILHOS, d.filhos)}</select></div>
-      <div class="fgroup" data-nomes ${d.filhos === 'sim' ? '' : 'hidden'}><label class="flabel" for="v-nomes">Nome dos filhos (opcional)</label><input id="v-nomes" class="input" name="nomes" maxlength="200" autocomplete="off" placeholder="Ex.: Lucas, Bia" value="${esc((d.nomes || []).join(', '))}"></div>
-      <div class="fgroup"><label class="flabel" for="v-ani">Como você anda se sentindo?</label><select id="v-ani" class="input" name="animo">${opc(ANIMO, d.animo)}</select></div>
-      <p class="fhelp" data-err hidden role="status">Escolha uma opção em cada pergunta (pode ser “Prefiro não dizer”).</p>
-    </form>`;
-  const a = openSheet({
-    className: 'sheet--tall vidasheet', html: html(),
-    onMount: (x) => {
-      const f = x.el.querySelector('form');
-      f.rel.onchange = () => { x.el.querySelector('[data-par]').hidden = !COM_PAR.includes(f.rel.value); };
-      f.filhos.onchange = () => { x.el.querySelector('[data-nomes]').hidden = f.filhos.value !== 'sim'; };
-      x.el.querySelector('[data-ok]').onclick = async () => {
-        const v = limpaVida({ rel: f.rel.value, par: f.par.value, filhos: f.filhos.value, nomes: f.nomes.value, animo: f.animo.value });
-        if (!v) { x.el.querySelector('[data-err]').hidden = false; return; }
-        try { await guarda(v); } catch { toast('Não consegui salvar agora. Tento de novo quando a internet voltar.'); }
-        a.close(); toast('Prontinho! Agora eu te conheço melhor 💛');
-      };
-    },
-  });
-  return a;
+  if (typeof d.nomes === 'string') d.nomes = d.nomes.split(',');
+  const passos = () => [
+    { k: 'rel', arte: '19-socializar', h: 'Seu coração', p: 'Me conta: como está o seu coração?', L: RELACOES },
+    ...(COM_PAR.includes(d.rel) ? [{ k: 'par', arte: '19-socializar', h: 'Seu amor', p: 'E qual é o nome dele(a)? Se quiser, pode pular.', txt: 'Nome (opcional)', max: 30 }] : []),
+    { k: 'filhos', arte: '06-aniversario', h: 'Sua família', p: 'Você tem filhos?', L: FILHOS },
+    ...(d.filhos === 'sim' ? [{ k: 'nomes', arte: '06-aniversario', h: 'Seus pequenos', p: 'Como eles se chamam? Assim eu lembro deles com você.', txt: 'Ex.: Lucas, Bia', max: 200 }] : []),
+    { k: 'animo', arte: '28-calma', h: 'Como você está', p: 'E você, como anda se sentindo?', L: ANIMO },
+  ];
+  let i = 0;
+  const w = document.createElement('div');
+  w.className = 'vficha'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', 'Conta um pouco de você');
+  document.body.appendChild(w);
+  const fecha = () => { w.classList.add('is-sai'); setTimeout(() => w.remove(), 280); aoFechar && aoFechar(); };
+  let snh = null, S = null;
+  const fala = (t, humor, gesto) => { if (!S || !snh) return; if (humor) S.setMood(snh, humor); if (gesto) S.act(snh, gesto); S.say(snh, t, { bubble: w.querySelector('.snhb__txt') }); };
+  const pinta = () => {
+    const P = passos(), s = P[i];
+    const val = s.k === 'nomes' ? (d.nomes || []).join(', ') : d[s.k] || '';
+    w.innerHTML = `<img class="vficha__bg" src="assets/stories/${s.arte}.webp" alt="" decoding="async">
+      <div class="vficha__topo"><button class="vficha__x" data-x aria-label="Fechar">✕</button><span class="vficha__pts" aria-label="Pergunta ${i + 1} de ${P.length}">${P.map((_, j) => `<i class="${j < i ? 'is-ok' : j === i ? 'is-on' : ''}"></i>`).join('')}</span><span></span></div>
+      <div class="vficha__palco snhwrap"><span class="vficha__snh">${S ? S.sininho('feliz', { size: Math.min(190, Math.round(innerWidth * 0.46)) }) : ''}</span><div class="snhb vficha__bal"><span class="snhb__txt" aria-live="polite"></span></div></div>
+      <div class="vficha__card"><div class="vficha__h">${esc(s.h)}</div>
+        ${s.L ? `<div class="vficha__ops" role="radiogroup">${s.L.map(([k, t], j) => `<button class="vficha__op${val === k ? ' is-on' : ''}${k === NAO_DIZER ? ' vficha__op--nd' : ''}" role="radio" aria-checked="${val === k}" data-v="${esc(k)}" style="--d:${0.05 + j * 0.04}s">${esc(t)}</button>`).join('')}</div>`
+        : `<input class="input vficha__in" maxlength="${s.max}" autocomplete="off" placeholder="${esc(s.txt)}" value="${esc(val)}"><div class="vficha__bts"><button class="btn btn--soft" data-pula>Pular</button><button class="btn btn--primary" data-seg>Continuar</button></div>`}
+        ${i > 0 ? '<button class="vficha__volta" data-volta>‹ Voltar</button>' : ''}</div>`;
+    if (S) { S.alive(); snh = w.querySelector('[data-snh]'); }
+    setTimeout(() => fala(s.p, 'feliz', i ? 'sim' : 'tchau'), 260);
+    w.querySelector('[data-x]').onclick = fecha;
+    const volta = w.querySelector('[data-volta]'); if (volta) volta.onclick = () => { i--; pinta(); };
+    w.querySelectorAll('[data-v]').forEach((b) => (b.onclick = () => {
+      d[s.k] = b.dataset.v;
+      w.querySelectorAll('[data-v]').forEach((x) => { x.classList.toggle('is-on', x === b); x.setAttribute('aria-checked', x === b); });
+      const [h, t] = REACAO[b.dataset.v] || ['feliz', b.dataset.v === NAO_DIZER ? 'Tudo bem, sem problema 😉' : 'Anotado!'];
+      fala(t, h, 'pulo');
+      setTimeout(avanca, 1500);
+    }));
+    const inp = w.querySelector('.vficha__in');
+    if (inp) {
+      const seg = () => { d[s.k] = s.k === 'nomes' ? inp.value.split(',').map((x) => x.trim()).filter(Boolean) : inp.value.trim(); if (inp.value.trim()) fala(s.k === 'nomes' ? 'Que nomes lindos! 🥰' : `${inp.value.trim().split(' ')[0]}, que nome bonito! 💛`, 'apaixonado', 'pulo'); setTimeout(avanca, inp.value.trim() ? 1300 : 0); };
+      w.querySelector('[data-seg]').onclick = seg; inp.onkeydown = (e) => { if (e.key === 'Enter') seg(); };
+      w.querySelector('[data-pula]').onclick = () => { d[s.k] = s.k === 'nomes' ? [] : ''; avanca(); };
+    }
+  };
+  async function avanca() {
+    if (i < passos().length - 1) { i++; return pinta(); }
+    const v = limpaVida({ ...d, nomes: (d.nomes || []).join(', ') });
+    if (!v) { i = 0; return pinta(); }
+    try { await guarda(v); } catch { toast('Não consegui salvar agora. Tento de novo quando a internet voltar.'); }
+    w.querySelector('.vficha__card').innerHTML = '<div class="vficha__h">Prontinho!</div><p class="vficha__fim">Agora eu te conheço melhor. Só você vê estas respostas.</p><button class="btn btn--primary btn--block" data-fim>Valeu, Lembra!</button>';
+    w.querySelector('.vficha__pts').querySelectorAll('i').forEach((x) => (x.className = 'is-ok'));
+    fala('Obrigado por me contar! Agora eu falo com você do seu jeitinho 💛', 'apaixonado', 'pulo');
+    w.querySelector('[data-fim]').onclick = fecha;
+  }
+  import('../sininho.js').then((m) => { S = m; pinta(); }).catch(() => pinta());
+  return { el: w, close: fecha };
 }
 
 /* ---------- conversa curta do mascote ---------- */

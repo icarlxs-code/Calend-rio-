@@ -5,7 +5,7 @@ import { openSheet, openSheets, sheetHead, toast, confirmDialog } from './compon
 import { icon } from './icons.js';
 import { esc } from './utils.js';
 import { boneco3d } from './cena.js';
-import { call, podeSocial, ICO, rosto, desde, falta, ouvir, atualiza, conversas, aoVivo, conversaAberta, digitando, semSelecao } from './social.js';
+import { call, podeSocial, ICO, rosto, desde, falta, ouvir, atualiza, conversas, aoVivo, conversaAberta, digitando, semSelecao, somaConv } from './social.js';
 import { isTeen } from './teen.js';
 import { tranca } from './tranca.js';
 import { abreUnica } from './unica.js';
@@ -33,6 +33,7 @@ const paraTudo = () => { if (tocando) { tocando.pause(); tocando = null; } };
 
 export async function openConversa(uid, prev = {}) {
   if (!podeSocial()) return toast('Entre na sua conta para conversar.');
+  somaConv(uid);
   if (!conversas().at) await atualiza(true);
   if (conversas().cfg.tra.includes(uid) && !(await tranca('Conversa trancada'))) return null;
   let D = { com: { uid, name: prev?.name || 'Amigo', photo: prev?.photo, color: prev?.color }, msgs: [], lidoAte: 0, amigo: true, online: prev?.online || 0, mudo: false, carregou: false };
