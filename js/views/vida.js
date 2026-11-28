@@ -48,53 +48,64 @@ export function abreFicha({ aoFechar } = {}) {
     ...(d.filhos === 'sim' ? [{ k: 'nomes', arte: '06-aniversario', h: 'Seus pequenos', p: 'Como eles se chamam? Assim eu lembro deles com você.', txt: 'Ex.: Lucas, Bia', max: 200 }] : []),
     { k: 'animo', arte: '28-calma', h: 'Como você está', p: 'E você, como anda se sentindo?', L: ANIMO },
   ];
-  let i = 0;
+  let i = 0, S = null, snh = null;
   const w = document.createElement('div');
   w.className = 'vficha'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', 'Conta um pouco de você');
   document.body.appendChild(w);
-  const fecha = () => { w.classList.add('is-sai'); setTimeout(() => w.remove(), 280); aoFechar && aoFechar(); };
-  let snh = null, S = null;
+  const fecha = () => { w.classList.add('is-sai'); setTimeout(() => w.remove(), 240); aoFechar && aoFechar(); };
   const fala = (t, humor, gesto) => { if (!S || !snh) return; if (humor) S.setMood(snh, humor); if (gesto) S.act(snh, gesto); S.say(snh, t, { bubble: w.querySelector('.snhb__txt') }); };
+  /* a moldura (fundo, mascote, balão) é montada uma vez: as perguntas só trocam o cartão de baixo */
+  const monta = (P) => {
+    w.innerHTML = `<img class="vficha__bg" src="assets/stories/${P[0].arte}.webp" alt="" decoding="async">
+      <div class="vficha__topo"><button class="vficha__x" data-x aria-label="Fechar">✕</button><span class="vficha__pts"></span><span></span></div>
+      <div class="vficha__palco"><div class="snhb vficha__bal"><span class="snhb__txt" aria-live="polite"></span></div><span class="vficha__snh">${S ? S.sininho('feliz', { size: Math.min(176, Math.round(innerWidth * 0.44)) }) : ''}</span></div>
+      <div class="vficha__card"></div>`;
+    w.querySelector('[data-x]').onclick = fecha;
+    snh = w.querySelector('[data-snh]'); if (S && snh) S.alive();
+  };
   const pinta = () => {
     const P = passos(), s = P[i];
+    if (!w.querySelector('.vficha__palco') || (S && !w.querySelector('[data-snh]'))) monta(P);
+    w.querySelector('.vficha__pts').innerHTML = P.map((_, j) => `<i class="${j < i ? 'is-ok' : j === i ? 'is-on' : ''}"></i>`).join('');
     const val = s.k === 'nomes' ? (d.nomes || []).join(', ') : d[s.k] || '';
-    w.innerHTML = `<img class="vficha__bg" src="assets/stories/${s.arte}.webp" alt="" decoding="async">
-      <div class="vficha__topo"><button class="vficha__x" data-x aria-label="Fechar">✕</button><span class="vficha__pts" aria-label="Pergunta ${i + 1} de ${P.length}">${P.map((_, j) => `<i class="${j < i ? 'is-ok' : j === i ? 'is-on' : ''}"></i>`).join('')}</span><span></span></div>
-      <div class="vficha__palco snhwrap"><span class="vficha__snh">${S ? S.sininho('feliz', { size: Math.min(190, Math.round(innerWidth * 0.46)) }) : ''}</span><div class="snhb vficha__bal"><span class="snhb__txt" aria-live="polite"></span></div></div>
-      <div class="vficha__card"><div class="vficha__h">${esc(s.h)}</div>
-        ${s.L ? `<div class="vficha__ops" role="radiogroup">${s.L.map(([k, t], j) => `<button class="vficha__op${val === k ? ' is-on' : ''}${k === NAO_DIZER ? ' vficha__op--nd' : ''}" role="radio" aria-checked="${val === k}" data-v="${esc(k)}" style="--d:${0.05 + j * 0.04}s">${esc(t)}</button>`).join('')}</div>`
-        : `<input class="input vficha__in" maxlength="${s.max}" autocomplete="off" placeholder="${esc(s.txt)}" value="${esc(val)}"><div class="vficha__bts"><button class="btn btn--soft" data-pula>Pular</button><button class="btn btn--primary" data-seg>Continuar</button></div>`}
-        ${i > 0 ? '<button class="vficha__volta" data-volta>‹ Voltar</button>' : ''}</div>`;
-    if (S) { S.alive(); snh = w.querySelector('[data-snh]'); }
-    setTimeout(() => fala(s.p, 'feliz', i ? 'sim' : 'tchau'), 260);
-    w.querySelector('[data-x]').onclick = fecha;
-    const volta = w.querySelector('[data-volta]'); if (volta) volta.onclick = () => { i--; pinta(); };
-    w.querySelectorAll('[data-v]').forEach((b) => (b.onclick = () => {
+    const card = w.querySelector('.vficha__card');
+    card.innerHTML = `<div class="vficha__h">${esc(s.h)}</div>
+      ${s.L ? `<div class="vficha__ops" role="radiogroup">${s.L.map(([k, t], j) => `<button class="vficha__op${val === k ? ' is-on' : ''}${k === NAO_DIZER ? ' vficha__op--nd' : ''}${t.length > 14 ? ' is-largo' : ''}" role="radio" aria-checked="${val === k}" data-v="${esc(k)}" style="--d:${0.04 + j * 0.035}s">${esc(t)}</button>`).join('')}</div>`
+      : `<input class="input vficha__in" maxlength="${s.max}" autocomplete="off" placeholder="${esc(s.txt)}" value="${esc(val)}"><div class="vficha__bts"><button class="btn btn--soft" data-pula>Pular</button><button class="btn btn--primary" data-seg>Continuar</button></div>`}
+      ${i > 0 ? '<button class="vficha__volta" data-volta>‹ Voltar</button>' : ''}`;
+    card.classList.remove('is-in'); void card.offsetWidth; card.classList.add('is-in');
+    const volta = card.querySelector('[data-volta]'); if (volta) volta.onclick = () => { i--; pinta(); };
+    card.querySelectorAll('[data-v]').forEach((b) => (b.onclick = () => {
       d[s.k] = b.dataset.v;
+      card.querySelectorAll('[data-v]').forEach((x) => { x.classList.toggle('is-on', x === b); x.setAttribute('aria-checked', x === b); });
       import('../sound.js').then((m) => m.pop()).catch(() => {});
-      w.querySelectorAll('[data-v]').forEach((x) => { x.classList.toggle('is-on', x === b); x.setAttribute('aria-checked', x === b); });
       const [h, t] = REACAO[b.dataset.v] || ['feliz', b.dataset.v === NAO_DIZER ? 'Tudo bem, sem problema 😉' : 'Anotado!'];
       fala(t, h, 'pulo');
       setTimeout(avanca, 1500);
     }));
-    const inp = w.querySelector('.vficha__in');
+    const inp = card.querySelector('.vficha__in');
     if (inp) {
       const seg = () => { d[s.k] = s.k === 'nomes' ? inp.value.split(',').map((x) => x.trim()).filter(Boolean) : inp.value.trim(); if (inp.value.trim()) fala(s.k === 'nomes' ? 'Que nomes lindos! 🥰' : `${inp.value.trim().split(' ')[0]}, que nome bonito! 💛`, 'apaixonado', 'pulo'); setTimeout(avanca, inp.value.trim() ? 1300 : 0); };
-      w.querySelector('[data-seg]').onclick = seg; inp.onkeydown = (e) => { if (e.key === 'Enter') seg(); };
-      w.querySelector('[data-pula]').onclick = () => { d[s.k] = s.k === 'nomes' ? [] : ''; avanca(); };
+      card.querySelector('[data-seg]').onclick = seg; inp.onkeydown = (e) => { if (e.key === 'Enter') seg(); };
+      card.querySelector('[data-pula]').onclick = () => { d[s.k] = s.k === 'nomes' ? [] : ''; avanca(); };
     }
+    setTimeout(() => fala(s.p, 'feliz', i ? 'sim' : 'tchau'), 200);
   };
   async function avanca() {
-    if (i < passos().length - 1) { i++; return pinta(); }
+    const P = passos();
+    if (i < P.length - 1) { i++; return pinta(); }
     const v = limpaVida({ ...d, nomes: (d.nomes || []).join(', ') });
     if (!v) { i = 0; return pinta(); }
     try { await guarda(v); } catch { toast('Não consegui salvar agora. Tento de novo quando a internet voltar.'); }
-    w.querySelector('.vficha__card').innerHTML = '<div class="vficha__h">Prontinho!</div><p class="vficha__fim">Agora eu te conheço melhor. Só você vê estas respostas.</p><button class="btn btn--primary btn--block" data-fim>Valeu, Lembra!</button>';
-    w.querySelector('.vficha__pts').querySelectorAll('i').forEach((x) => (x.className = 'is-ok'));
+    w.querySelector('.vficha__pts').innerHTML = P.map(() => '<i class="is-ok"></i>').join('');
+    const card = w.querySelector('.vficha__card');
+    card.innerHTML = '<div class="vficha__h">Prontinho!</div><p class="vficha__fim">Agora eu te conheço melhor. Só você vê estas respostas.</p><button class="btn btn--primary btn--block" data-fim>Valeu, Lembra!</button>';
+    card.classList.remove('is-in'); void card.offsetWidth; card.classList.add('is-in');
     fala('Obrigado por me contar! Agora eu falo com você do seu jeitinho 💛', 'apaixonado', 'pulo');
-    w.querySelector('[data-fim]').onclick = fecha;
+    card.querySelector('[data-fim]').onclick = fecha;
   }
-  import('../sininho.js').then((m) => { S = m; pinta(); }).catch(() => pinta());
+  pinta();
+  import('../sininho.js').then((m) => { S = m; pinta(); }).catch(() => {});
   return { el: w, close: fecha };
 }
 

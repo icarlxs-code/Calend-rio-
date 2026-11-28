@@ -4131,10 +4131,11 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 @keyframes stPisca { to { opacity: .25; } }
 
 /* ---------- "Conta um pouco de você" com o mascote ---------- */
-.vficha { position: fixed; inset: 0; z-index: 9000; overflow: hidden; background: #FFF4E6; color: #2A1A12; display: flex; flex-direction: column; animation: vfIn .32s ease both; }
+.vficha { position: fixed; inset: 0; z-index: 9000; overflow: hidden; background: #FFF4E6; color: #2A1A12; display: flex; flex-direction: column; animation: vfIn .25s ease both; }
 .vficha.is-sai { animation: vfOut .26s ease both; }
-@keyframes vfIn { from { opacity: 0; transform: scale(1.03); } }
-@keyframes vfOut { to { opacity: 0; transform: scale(.98); } }
+@keyframes vfIn { from { opacity: 0; } }
+@keyframes vfOut { to { opacity: 0; } }
+@keyframes vfSobe { from { opacity: 0; transform: translateY(22px); } }
 .vficha__bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: nvartein .6s ease both; }
 .vficha__topo { position: relative; display: flex; align-items: center; justify-content: space-between; padding: calc(env(safe-area-inset-top, 0px) + 14px) 16px 0; }
 .vficha__x { width: 38px; height: 38px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .85); color: #3B2A20; font-size: 16px; font-weight: 800; box-shadow: 0 4px 12px rgba(150, 70, 10, .15); }
@@ -4142,14 +4143,18 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .vficha__pts i { width: 22px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .7); transition: background .3s, width .3s; }
 .vficha__pts i.is-on { width: 34px; background: #E85A0C; }
 .vficha__pts i.is-ok { background: #F6A46A; }
-.vficha__palco { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 10px; padding: 8px 16px 6px; min-height: 0; }
-.vficha__snh { flex: none; order: 2; animation: nvsnh .7s .15s cubic-bezier(.3, 1.4, .5, 1) both; }
-.vficha__bal { order: 1; max-width: 86%; text-align: center; color: #2A1A12; background: #fff; }
+.vficha__palco { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 8px 16px; min-height: 0; }
+.vficha__snh { flex: none; display: flex; justify-content: center; width: 100%; animation: vfSnh .5s .1s cubic-bezier(.3, 1.3, .5, 1) both; }
+@keyframes vfSnh { from { opacity: 0; transform: scale(.85); } }
+.vficha__bal { max-width: 86%; text-align: center; color: #2A1A12; background: #fff; font-size: 17px; }
 .vficha__bal::after { left: 50%; bottom: -6px; margin-left: -7px; border-radius: 0 0 4px 0; }
-.vficha__card { position: relative; margin: 0 12px calc(env(safe-area-inset-bottom, 0px) + 12px); padding: 18px 16px 14px; border-radius: 26px; background: rgba(255, 255, 255, .94); box-shadow: 0 14px 40px rgba(150, 70, 10, .22); backdrop-filter: blur(8px); animation: nvpop .45s cubic-bezier(.3, 1.3, .5, 1) both; }
+.vficha__card { position: relative; margin: 0 12px calc(env(safe-area-inset-bottom, 0px) + 12px); padding: 18px 18px 16px; border-radius: 26px; background: rgba(255, 255, 255, .94); box-shadow: 0 14px 40px rgba(150, 70, 10, .22); flex: none; }
+.vficha__card.is-in { animation: vfSobe .42s cubic-bezier(.2, .9, .3, 1.05) both; }
 .vficha__h { font: 900 22px/1.15 Nunito, system-ui, sans-serif; color: #C9400A; margin-bottom: 12px; }
-.vficha__ops { display: flex; flex-wrap: wrap; gap: 8px; }
-.vficha__op { padding: 12px 16px; border-radius: 99px; border: 2px solid #F3D9C4; background: #fff; font: 800 15px/1.1 Nunito, system-ui, sans-serif; color: #5B3B28; cursor: pointer; transition: transform .15s, background .2s, color .2s; animation: nvpop .4s var(--d, .1s) cubic-bezier(.3, 1.4, .5, 1) both; }
+.vficha__ops { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.vficha__op { text-align: center; }
+.vficha__op.is-largo { grid-column: 1 / -1; }
+.vficha__op { padding: 12px 16px; border-radius: 99px; border: 2px solid #F3D9C4; background: #fff; font: 800 15px/1.1 Nunito, system-ui, sans-serif; color: #5B3B28; cursor: pointer; transition: transform .15s, background .2s, color .2s; animation: vfSobe .35s var(--d, .1s) ease both; }
 .vficha__op:active { transform: scale(.95); }
 .vficha__op.is-on { background: #E85A0C; border-color: #E85A0C; color: #fff; }
 .vficha__op--nd { border-style: dashed; color: #8A6A56; }
