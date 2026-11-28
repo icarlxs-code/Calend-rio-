@@ -58,6 +58,23 @@ function guarda(fluxo, chave, dev = null) {
   guardada = { fluxo, chave, dev, timer: setTimeout(() => { fluxo.getTracks().forEach((t) => t.stop()); guardada = null; }, GUARDA_MS) };
 }
 let lentesMemo = null; // as lentes do aparelho, descobertas uma vez (a câmera abre direto na certa nas próximas)
+/* a tela cheia é posta direto em cada elemento (com prioridade) na hora de criar a câmera, antes de qualquer pintura:
+   assim ela nunca aparece com a borda do formato antigo, nem na primeira vez depois de reabrir o app. */
+const CSS_TELA = {
+  '.scam': 'position:fixed;inset:0;width:100vw;height:100dvh;z-index:9600;background:#000;display:block;padding:0;margin:0',
+  '.scam__quadro': 'position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;border-radius:0;background:#000;overflow:hidden',
+  '.scam__v': 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover',
+  '.scam__x': 'position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;z-index:3',
+  '.scam__barra': 'position:absolute;left:0;right:0;bottom:0;width:auto;max-width:none;height:auto;padding:18px 0 calc(env(safe-area-inset-bottom,0px) + 26px);z-index:3;background:linear-gradient(to top,rgba(0,0,0,.45),transparent)',
+  '.scam__zooms': 'position:absolute;left:50%;transform:translateX(-50%);margin:0;bottom:calc(env(safe-area-inset-bottom,0px) + 140px);z-index:3',
+  '.scam__msg': 'z-index:3',
+};
+function aplicaTelaCheia(raiz) {
+  for (const [sel, css] of Object.entries(CSS_TELA)) {
+    const els = sel === '.scam' ? [raiz] : raiz.querySelectorAll(sel);
+    els.forEach((el) => css.split(';').forEach((d) => { const i = d.indexOf(':'); if (i > 0) el.style.setProperty(d.slice(0, i).trim(), d.slice(i + 1).trim(), 'important'); }));
+  }
+}
 /* Tela cheia garantida: as regras entram pelo próprio JavaScript (com !important), então o aparelho nunca mostra o
    quadro antigo com borda preta, mesmo que o arquivo de estilo guardado no celular ainda seja de uma versão anterior. */
 const ESTILO_CAMERA = `
@@ -101,7 +118,7 @@ export function abreCamera({ soCamera = false, lado = 'environment', arrasto = n
         <button type="button" class="scam__clique" data-foto aria-label="Tirar foto"><i></i></button>
         <button type="button" class="scam__vira" data-vira aria-label="Virar a câmera"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/></svg></button>
       </div>`;
-    garanteEstiloCamera(); document.body.appendChild(w); document.body.classList.add('has-scam');
+    garanteEstiloCamera(); aplicaTelaCheia(w); document.body.appendChild(w); document.body.classList.add('has-scam');
     const v = w.querySelector('video'), msg = w.querySelector('.scam__msg');
     v.addEventListener('playing', () => v.classList.add('is-vivo'));
     const para = () => { if (fluxo) fluxo.getTracks().forEach((t) => t.stop()); fluxo = null; };
