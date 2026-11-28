@@ -14,7 +14,8 @@ import { novoLote } from '../lixeira-core.js';
 import { entende } from '../destino.js';
 import { entendeConta, respostaConta } from '../contas.js';
 import { personal, savePersonal, removePersonal, addMemo, guessCat, REPEATS } from '../personal.js';
-import { reaisTxt } from '../frase-conta.js';
+import { reaisTxt, proximoDiaDoMes } from '../frase-conta.js';
+import { ehConta, novaConta, proximo as proximoPasso, responde as respondeConta } from '../conta-conversa.js';
 import { hasPro } from '../billing.js';
 import { okFx } from '../okfx.js';
 
@@ -285,6 +286,32 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
         // conta de empréstimo ou parcela: quem faz é o app, nunca a IA
         const conta = entendeConta(q, todayKey());
         if (conta) { const r = respostaConta(conta); chat.push({ role: 'user', text: q }, { role: 'assistant', text: r.texto, chips: r.chips, actions: r.acoes, actStatus: 'pending' }); saveChat(); redrawChat(a); return; }
+        // conta que se repete (aluguel, boleto…): conversa de verdade, uma pergunta por vez
+        const ativa = [...chat].reverse().find((m) => m.role === 'assistant' && m.coleta && !m.coleta.fim);
+        if (ativa) {
+          chat.push({ role: 'user', text: q });
+          const r = respondeConta(ativa.coleta, q);
+          ativa.coleta = null;
+          const msg = { role: 'assistant', text: r.fala };
+          chat.push(msg);
+          if (r.salvar) {
+            const c = r.c, diaMes = c.diaMes || 0;
+            const x = { texto: c.titulo, titulo: c.titulo, data: diaMes ? proximoDiaDoMes(diaMes, todayKey()) : todayKey(), hora: null, cat: guessCat(c.titulo), espaco: c.espaco || 'personal', repetir: diaMes ? 'monthly' : 'none', ...(diaMes ? { diaMes } : {}), ...(c.valor > 0 ? { valor: c.valor } : {}) };
+            msg.escolha = x;
+            const ok = c.destino === 'nota' ? await guarda(msg, 'nota') : await guarda(msg, 'agenda');
+            msg.text = ok ? `${r.fala}\n\n${msg.escResult || 'Guardado.'}${diaMes ? ` Vai repetir todo dia ${diaMes}.` : ''}` : 'Não consegui guardar agora. Tenta de novo?';
+          } else if (!r.fim) {
+            msg.coleta = r.c;
+          }
+          saveChat(); redrawChat(a);
+          return;
+        }
+        if (x0 && ehConta(x0, q)) {
+          const c = novaConta(x0, q), p = proximoPasso(c);
+          chat.push({ role: 'user', text: q }, { role: 'assistant', text: p.fala, coleta: c });
+          saveChat(); redrawChat(a);
+          return;
+        }
         // coisa para guardar: pergunta o lugar (ou vai direto quando a pessoa já disse)
         const x = x0;
         if (x) {
