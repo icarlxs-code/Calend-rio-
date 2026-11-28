@@ -11,6 +11,7 @@ test('categorias: conversas entram no controle; compromisso, mensagem e atualiza
 test('limites: fora do horário, muito cedo, mesma categoria e limite do dia', async () => {
   const env = { CAL: kv() };
   assert.equal((await cabe(env, 'u', 'story', BR(6))).motivo, 'fora-da-janela');
+  assert.equal((await cabe(env, 'u', 'rotina', Date.parse('2026-11-28T23:40:00-03:00'), 8)).motivo, 'fora-da-janela');
   assert.equal((await cabe(env, 'u', 'story', BR(10))).ok, true);
   assert.equal((await cabe(env, 'u', 'visita', BR(10, 30))).motivo, 'muito-cedo', 'entre duas mensagens, espera 60 min');
   assert.equal((await cabe(env, 'u', 'story', BR(12))).motivo, 'categoria-repetida', 'mesma categoria só depois de 3 h');

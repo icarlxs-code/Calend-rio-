@@ -28,8 +28,9 @@ export function categoriaDe(tag, kind) {
 /** pode mandar agora? Se pode, já registra o envio. */
 export async function cabe(env, member, cat, now = Date.now(), max = DIA_MAX) {
   const br = brNow(now);
-  // até 23h: a rotina da noite (boa noite, descanso) vem perto da hora de dormir
-  if (br.h < 7 || br.h >= 23) return { ok: false, motivo: 'fora-da-janela' };
+  // até 23h30 (como os avisos de atualização): a rotina da noite vem perto da hora de dormir
+  const min = br.h * 60 + br.m;
+  if (min < 7 * 60 || min >= 23 * 60 + 30) return { ok: false, motivo: 'fora-da-janela' };
   const chave = `eq:${member}`;
   let e = (await env.CAL.get(chave, 'json')) || {};
   if (e.d !== br.date) e = { d: br.date, n: 0, t: 0, c: {} };
