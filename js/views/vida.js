@@ -71,6 +71,7 @@ export function abreFicha({ aoFechar } = {}) {
     const volta = w.querySelector('[data-volta]'); if (volta) volta.onclick = () => { i--; pinta(); };
     w.querySelectorAll('[data-v]').forEach((b) => (b.onclick = () => {
       d[s.k] = b.dataset.v;
+      import('../sound.js').then((m) => m.pop()).catch(() => {});
       w.querySelectorAll('[data-v]').forEach((x) => { x.classList.toggle('is-on', x === b); x.setAttribute('aria-checked', x === b); });
       const [h, t] = REACAO[b.dataset.v] || ['feliz', b.dataset.v === NAO_DIZER ? 'Tudo bem, sem problema 😉' : 'Anotado!'];
       fala(t, h, 'pulo');

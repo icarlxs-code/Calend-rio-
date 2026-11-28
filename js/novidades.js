@@ -223,6 +223,7 @@ export function abreNovidades(quadros, aoFechar) {
   /* efeito sutil: um brilhinho no toque e o personagem reage de leve (sem áudio) */
   const brilho = (x, y) => {
     if (calmo() || !w.isConnected) return;
+    import('./sound.js').then((m) => m.pop()).catch(() => {});
     const b = document.createElement('span'); b.className = 'nv__brilho'; const r = w.getBoundingClientRect();
     b.style.left = `${x - r.left}px`; b.style.top = `${y - r.top}px`;
     b.innerHTML = [0, 1, 2, 3, 4].map((k) => `<i style="--a:${k * 72}deg"></i>`).join('');
