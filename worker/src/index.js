@@ -28,6 +28,7 @@ import { lembraAtualizar, guardaVersao } from './atualiza-aviso.js';
 import { lembraStory } from './story-lembra.js';
 import { categoriaDe, cabe } from './equilibrio.js';
 import { confereUnico, liberaUnico } from './unico.js';
+import { rodaPapo } from './fut-papo.js';
 import { quer, limiteDia, somaEnvio, limpaNp, CATS } from './notif-prefs.js';
 const comN = (url = './', cat) => { const [base, hash = ''] = String(url).split('#'); return `${base}${base.includes('?') ? '&' : '?'}n=${cat}${hash ? '#' + hash : ''}`; };
 import { orcamento as futOrcamento } from './fut-api.js';
@@ -1307,6 +1308,7 @@ export async function cronTick(env, { now = Date.now(), meter = { pushes: 0 }, m
     await safe('futebol', rodaFutebol(env, now, send));
     await safe('futebol ao vivo', rodaAoVivo(env, now, send));
     await safe('futebol antes', rodaAntes(env, now, send));
+    await safe('futebol papo', rodaPapo(env, now, send));
     await safe('ranking', monthlyAward(env, { stripe: stripeApi, getBill, putBill, notify: (id, msg) => send(env, id, msg) }));
   }
   const more = r.more || (await dueOf(env).dueBefore(now, 1)).length > 0;
