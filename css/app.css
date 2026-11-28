@@ -4067,3 +4067,5 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .aerr__oque { margin: 6px 0; font-size: 15px; line-height: 1.4; }
 .aerr--externo { opacity: .75; }
 .aerr__tec summary { cursor: pointer; font-size: 12px; opacity: .7; margin-top: 6px; }
+.nv__acao { position: relative; z-index: 4; align-self: center; margin: 2px 22px 0; padding: 12px 24px; font-weight: 800; box-shadow: 0 6px 18px rgba(0,0,0,.18); }
+.nv__acao[hidden] { display: none; }

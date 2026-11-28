@@ -6,8 +6,21 @@ import { roupa, cachecol } from './roupas.js';
 import { icon } from './icons.js';
 import { locutor, temVoz, vozLigada, ligaVoz, duracao, carrega, corte } from './voz-novidades.js';
 import { anel, bolinha } from './anel.js';
+import { store } from './store.js';
+import { porTime } from '../functions/times.js';
+/* as cores do time da pessoa (bandeira e cachecol do mascote); sem time, as do Lembra */
+const coresDaPessoa = () => { try { return porTime(store.profile?.teamId)?.cores || null; } catch { return null; } };
 
 export const NOVIDADES = {
+  '2.33.0': [
+    { t: 'Chegou coisa nova!', s: 'Segura essa bandeira!|Tem muita novidade pra você!', m: 'feliz', c: 'abre', v: 'torcida' },
+    { t: 'Seu time do coração', s: 'Agora você escolhe|o seu time! Eu aviso dos jogos e comemoro cada gol junto!', m: 'feliz', c: 'time', v: 'torcida', acao: { label: 'Escolher meu time', go: () => import('./views/vida.js').then((m) => m.pedeTime({ forca: true })) } },
+    { t: 'Eu te conheço melhor', s: 'Me conta de você?|Filhos, amor, como anda o coração… eu falo do seu jeito!', m: 'feliz', c: 'perfil', v: 'torcida', acao: { label: 'Contar agora', go: () => import('./views/vida.js').then((m) => m.abreFicha()) } },
+    { t: 'Frase nova toda hora', s: 'De manhã, de tarde e de noite:|uma frase nova, escrita só pra você!', m: 'feliz', c: 'frase', v: 'torcida' },
+    { t: 'Contas do mês', s: '"Todo dia 10 pago o aluguel"?|Eu entendo, lembro todo mês e ainda digo o valor!', m: 'feliz', c: 'assist', v: 'torcida' },
+    { t: 'Conversa num toque', s: 'Quer falar com alguém?|As conversas recentes ficam lá no topo. Um toque e pronto!', m: 'feliz', c: 'conversa', v: 'torcida' },
+    { t: 'Eu me atualizo sozinho', s: 'Saiu versão nova?|Eu me atualizo sozinho. Você nem percebe!', m: 'feliz', c: 'abre', v: 'torcida' },
+  ],
   '2.32.0': [
     { t: 'Eu mudei!', s: 'Respeitável público!|Chegou novidade, e das boas!', m: 'feliz', g: 'tchau', c: 'abre' },
     { t: 'Deslize o dedo', s: 'Deslizou?|Trocou de aba! Rápido assim!', m: 'feliz', g: 'olhaLados', c: 'desliza' },
@@ -57,6 +70,7 @@ export function abreNovidades(quadros, aoFechar) {
     <div class="nv__palco" data-palco></div>
     <div class="nv__baixo snhwrap"><h2 data-t></h2><div class="snhb nv__fala"><span class="snhb__txt" aria-live="polite"></span></div><span class="nv__snh">${sininho('feliz', { size: 220 })}</span></div>
     <button class="nv__zona nv__zona--l" data-volta tabindex="-1" aria-label="Voltar"></button><button class="nv__zona nv__zona--r" data-vai tabindex="-1" aria-label="Próxima novidade"></button>
+    <button class="btn btn--soft nv__acao" data-acao hidden></button>
     <button class="nv__ok" data-ok><span></span></button>`;
   document.body.appendChild(w); document.body.classList.add('has-nv'); aberta = w; alive();
   const q = (s) => w.querySelector(s), snh = () => q('.nv__snh [data-snh]');
@@ -131,7 +145,10 @@ export function abreNovidades(quadros, aoFechar) {
     const e = snh();
     if (e) {
       const r = s.v ? roupa(s.v) : { mood: s.m || 'feliz', l: ['baixo'], r: ['baixo'] };
-      veste(e, s.v === 'torcida' ? { ...r, ros: cachecol(['#2E6FE0', '#FFF6EE']) } : r);
+      const cs = coresDaPessoa();
+      const cores = cs || ['#FF6A1A', '#FFF6EE']; // sem time: bandeira nas cores do Lembra
+      veste(e, s.v === 'torcida' ? { ...roupa('torcida', cores), ros: cachecol(cores) } : r);
+      const ac = q('[data-acao]'); ac.hidden = !s.acao; if (s.acao) { ac.textContent = s.acao.label; ac.onclick = () => { fecha(); setTimeout(() => s.acao.go(), 300); }; }
       setMood(e, s.m || 'feliz');
       if (!s.v) { veste(e, null); setTimeout(() => minha === vez && act(e, s.g || 'sim'), 160); }
     }

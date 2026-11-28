@@ -103,10 +103,10 @@ export { NAO_DIZER };
 /* ---------- time do coração: quem ainda não escolheu (nem disse que não torce) escolhe ao entrar ---------- */
 const semTime = () => { const p = store.profile || {}; if (p.teamId || p.teamOther || p.semTime) return false; try { return localStorage.getItem('lembra.semTime') !== '1'; } catch { return true; } };
 /** abre a escolha do time (com "Não torço"); fechou sem escolher, pergunta de novo na próxima vez que entrar */
-export async function pedeTime() {
-  if (!semTime() || (!store.user && store.mode === 'cloud')) return false;
+export async function pedeTime({ forca = false } = {}) {
+  if ((!forca && !semTime()) || (!store.user && store.mode === 'cloud')) return false;
   if (ocupado()) { setTimeout(() => pedeTime(), 4000); return false; }
-  const E = await import('./editar-perfil.js'), d = { teamId: '', teamOther: '', teamAvisos: false };
+  const E = await import('./editar-perfil.js'), d = { teamId: store.profile?.teamId || '', teamOther: store.profile?.teamOther || '', teamAvisos: !!store.profile?.teamAvisos };
 
   E.escolheTime(d, async () => {
 
