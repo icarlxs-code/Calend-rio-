@@ -707,6 +707,8 @@ async function handle(req, env) {
       list.push({ id, at: now, title: livre ? '' : clean(body.title, 60), caption: clean(body.caption, 120), ref: clean(body.ref, 80), livre, views: {}, podeCom: body.podeCom === true, podeRp: body.podeRp === true && !(await cardOf(meU)).teen });
       await env.CAL.put(`stories:${meU}`, JSON.stringify(list), { expirationTtl: 26 * 3600 });
       await env.CAL.put(`storyimg:${id}`, photo, { expirationTtl: 24 * 3600 }); // a foto some sozinha em 24h (não fica guardada)
+      // pontos do ranking por story (cada story conta uma vez; o limite diário fica no recordAct)
+      await recordAct(env, me, await billingStatus(env, me), { type: 'story', ref: id }).catch(() => 0);
       const mine = await cardOf(meU), fr = await getL(`friends:${meU}`);
       const TIT = ['👀 Story novo no ar', '📸 Alguém postou agora', '🔥 Saiu story novo'];
       await Promise.all(fr.slice(0, 200).map(async (u) => (await dormindo(u)) ? 0 : sendToMember(env, memberOf(u), { title: TIT[now % TIT.length], body: `${mine.name.split(' ')[0]} acabou de postar um story${body.title ? ` de “${clean(body.title, 40)}”` : ''}. Toque pra ver antes que suma!`, tag: `story-${meU}`, url: './#/stories' }).catch(() => 0)));

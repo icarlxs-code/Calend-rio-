@@ -95,7 +95,8 @@ export async function postStory({ title = '', ref = '', kind = 'w', cam } = {}) 
   try {
     const r = await call('/friends/story-post', { photo, camera: true, title, ref, podeCom: pref('com', true), podeRp: !isTeen() && pref('rp', false) });
     const G = await import('./game.js');
-    const got = G.storyXp(r.id, kind, ref);
+    const livre = !ref, k = livre ? 'livre' : kind, rf = ref || `livre-${todayKey()}`; // story livre: 25 XP, uma vez por dia
+    const got = G.storyXp(r.id, k, rf);
     toast(got ? `📸 Story no ar! +${got} XP (em dobro)` : '📸 Story no ar! Seus amigos vão ver por 24 h');
     refreshFeed();
     import('./mascote.js').then((M) => M.react('story')).catch(() => {});
@@ -497,6 +498,7 @@ export function fotoPendente() {
 /* ---------- o story do Lembra: novidades da versão + dicas, em cartões com ele ---------- */
 export function openLembraStory(onChange) {
   const dicas = [
+    { t: 'Poste um story e ganhe mais 📸', s: 'Story vale 25 XP e 5 pontos no ranking, mais que qualquer outra coisa aqui. Toque em + e poste!', m: 'comemora' },
     { t: 'Concluiu? Mostra! 📸', s: 'A foto do que você fez vale XP em dobro. E eu te conto na hora se ela destrava nível ou emblema.', m: 'comemora' },
     { t: 'Me leva pra onde quiser', s: 'Arrasta eu pra qualquer altura da tela. Só não me sacode muito, tá? 😵', m: 'surpreso' },
     { t: 'Quem passou no seu perfil? 👀', s: 'Em Amigos aparece quem visitou você nos últimos 7 dias.', m: 'desconfiado' },

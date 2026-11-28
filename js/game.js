@@ -566,7 +566,8 @@ export const iconFor = (b) => icon(b.icon || 'star', 16);
 
 /* ---------- story do compromisso: foto tirada na hora = XP em dobro; apagou a foto = perde só o bônus ---------- */
 /* o bônus do story vale UMA vez por compromisso (ref "e:id" / "p:id"): postar de novo do mesmo não dá XP */
-const storyBonus = (kind) => (kind === 'p' ? XP.personal : XP.onTime);
+/* story: o do compromisso vale o bônus de sempre; o story livre vale 25 XP (uma vez por dia) — mais que qualquer outra ação */
+const storyBonus = (kind) => (kind === 'p' ? XP.personal : kind === 'livre' ? 25 : XP.onTime);
 /* XP de amizade/convite: o servidor decide e paga uma vez (cada prêmio tem id); fora do limite diário */
 export function socialXp(premios = []) {
   load();

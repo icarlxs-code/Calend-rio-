@@ -117,6 +117,8 @@ const agendaAqui = () => A.agendar(TELA.date || todayKey());
 function falas(c) {
   const out = [];
   try { monta(c, out); } catch (e) { console.warn('falas', e); }
+  /* o Lembra lembra de postar story (vale mais pontos que qualquer outra ação) */
+  if (Math.random() < 0.35) { const [i, t] = variante('storyxp', ['Poste um story e ganhe 25 XP + 5 pontos no ranking! 📸', 'Quer subir no ranking? Story vale 5 pontos e 25 XP 🔥', 'Hoje tem story? Ele vale 25 XP e 5 pontos. Bora? 📸', 'Story é o jeito mais rápido de ganhar pontos: 25 XP e 5 no ranking 🏆']); out.push({ k: 'storyxp', i, t, m: 'comemora', u: 1, acoes: [{ label: 'Postar agora', go: () => import('./stories.js').then((m) => m.novoStory()) }, { label: 'Depois' }] }); }
   if (!out.some((x) => x.leve)) out.push({ k: 'oi', t: `Oi${c.primeiro}! Quer agendar alguma coisa?`, m: 'acena', leve: 1, acoes: [{ label: 'Sim', go: agendaAqui }, { label: 'Não' }] });
   return out;
 }

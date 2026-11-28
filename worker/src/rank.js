@@ -13,7 +13,9 @@
    Prêmios no dia 1º (somando o mês): 1º lugar 1 mês grátis (100%), 2º 50%, 3º 25% na próxima fatura;
      quem ficou ativo 20+ dias no mês ganha 10%. Cada pessoa ganha no máximo 1 prêmio a cada 90 dias. */
 
-export const POINTS = { done: 3, late: 1, create: 1, personal: 1, note: 1, open: 0 };
+// story vale mais que qualquer outra ação (até 2 por dia contam)
+export const POINTS = { done: 3, late: 1, create: 1, personal: 1, note: 1, open: 0, story: 5 };
+const MAX_STORY_DAY = 2;
 export const LEAGUES = ['bronze', 'prata', 'ouro'];
 export const LEAGUE_NAME = { bronze: 'Bronze', prata: 'Prata', ouro: 'Ouro' };
 const MIN_GAP = 6e3, MAX_HOUR = 18, MAX_DAY = 60, MAX_CREATE_DAY = 10, GROUP = 30, MOVE = 5;
@@ -102,18 +104,20 @@ export async function recordAct(env, me, plan, act, now = Date.now()) {
   u.i = initial(me.name); u.id = me.id;
   u.acts = [...(u.acts || []), now].slice(-200);
   const firstToday = u.day !== day;
-  if (firstToday) { u.day = day; u.dayPts = 0; u.dayCreate = 0; }
+  if (firstToday) { u.day = day; u.dayPts = 0; u.dayCreate = 0; u.dayStory = 0; }
   const hr = Math.floor(now / 3600e3);
   if (u.hour !== hr) { u.hour = hr; u.hourPts = 0; }
   let add = POINTS[type];
   const key = `${type === 'late' ? 'done' : type}:${ref}`;
   if (type !== 'open' && (u.refs || []).includes(key)) add = 0;
   if (type === 'create' && u.dayCreate >= MAX_CREATE_DAY) add = 0;
+  if (type === 'story' && (u.dayStory || 0) >= MAX_STORY_DAY) add = 0;
   if (u.acts.length > 1 && now - u.acts[u.acts.length - 2] < MIN_GAP) add = 0;
   if (firstToday) add += 2; // 1º uso do dia: vale a sequência
   add = Math.max(0, Math.min(add, MAX_HOUR - u.hourPts, MAX_DAY - u.dayPts));
   if (type !== 'open') u.refs = [...(u.refs || []), key].slice(-600);
   if (type === 'create' && add > 0) u.dayCreate++;
+  if (type === 'story' && add > 0) u.dayStory = (u.dayStory || 0) + 1;
   const why = suspicious(u.acts, now);
   if (why && !u.flag) u.flag = { why, at: now };
   u.pts += add; u.dayPts += add; u.hourPts += add;
