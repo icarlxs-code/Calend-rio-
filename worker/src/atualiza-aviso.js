@@ -30,11 +30,8 @@ export async function guardaVersao(env, member, app, now = Date.now()) {
   await env.CAL.put(`vers:${member}`, JSON.stringify(nova), { expirationTtl: 30 * 86400 });
 }
 export const AVISO = { title: '✨ Chegou versão nova do Lembra', body: 'Toque aqui para atualizar. Leva 2 segundos e você não perde nada.', tag: 'atualizar', url: './?atualizar=1' };
-/* já está na versão nova, mas ainda não viu as novidades até o final */
-export const AVISO_NOVIDADES = { title: '🎁 Tem novidade te esperando no Lembra', body: 'Abra e confira tudo o que chegou, até o final. Preparei com carinho!', tag: 'atualizar', url: './' };
 
-/** uma rodada: de 5 em 5 min, para quem ainda NÃO está na versão no ar (até a pessoa atualizar).
-    Quem já está na versão no ar não recebe "atualize". Quem está, mas ainda não viu as novidades até o final, recebe só o lembrete das novidades. */
+/** uma rodada: de 5 em 5 min, só para quem está com versão antiga (até a pessoa atualizar). Novidade não é aviso: quem já está na versão no ar não recebe nada. */
 export async function lembraAtualizar(env, now, send, { max = 200 } = {}) {
   const bloco = String(Math.floor(now / BLOCO));
   if ((await env.CAL.get('upd:bloco')) === bloco) return { pulou: 'cedo' };
@@ -49,10 +46,8 @@ export async function lembraAtualizar(env, now, send, { max = 200 } = {}) {
   for (const [k] of await env.CAL.scan('dev:')) {
     if (avisos >= max) break;
     const m2 = k.slice(4), L = (await env.CAL.get(`vers:${m2}`, 'json')) || [];
-    const atual = L.find((x) => x.b === no.build);
-    if (atual && atual.nv) { emDia++; continue; }       // já está na última e viu as novidades até o final: para de avisar
-    if (atual) { await send(env, m2, AVISO_NOVIDADES); avisos++; continue; } // atualizado: só falta o final das novidades
-    await send(env, m2, AVISO);                          // ainda não está na versão no ar
+    if (L.some((x) => x.b === no.build)) { emDia++; continue; } // já está na versão no ar: nada de "atualize"
+    await send(env, m2, AVISO);                                 // só quando a versão no ar é de verdade mais nova
     avisos++;
   }
   return { avisos, emDia, build: no.build };
