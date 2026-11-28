@@ -25,6 +25,7 @@ import { proximosEspn } from './fut-espn.js';
 import { desabafo } from './desabafo.js';
 import { geraFala } from './fala.js';
 import { lembraAtualizar, guardaVersao } from './atualiza-aviso.js';
+import { lembraStory } from './story-lembra.js';
 import { orcamento as futOrcamento } from './fut-api.js';
 import { porHora, usoIA } from './cota.js';
 import { brNow, fusoOk } from './coach.js';
@@ -1257,6 +1258,7 @@ export async function cronTick(env, { now = Date.now(), meter = { pushes: 0 }, m
     const safe = (name, p) => p.catch((e) => console.log(name, e.message));
     // "tem versão nova": de 5 em 5 min até a pessoa atualizar (fora da madrugada)
     await safe('atualizar', lembraAtualizar(env, now, (e, m, msg) => sendToMember(e, m, msg)));
+    await safe('story do dia', lembraStory(env, now, (e, m, msg) => sendToMember(e, m, msg)));
     await safe('aviso único', oneShot(env));
     await safe('vitalício (quem ganhou antes da surpresa)', vipMigrate(env, (uid) => vipNotify(env, uid)));
     await safe('vitalício (numeração sem buracos)', vipCompacta(env));
