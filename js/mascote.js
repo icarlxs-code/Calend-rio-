@@ -940,7 +940,7 @@ export function stop() {
 /* o app avisa o que aconteceu; ele reage */
 export function react(kind, o = {}) {
   if (kind === 'created') salvouAgora = Date.now();
-  if (!B || (blocked() && !['done', 'nivel', 'visitas', 'story', 'pedido', 'gostou', 'comentou', 'repostou'].includes(kind))) return;
+  if (!B || (blocked() && !['done', 'nivel', 'visitas', 'story', 'pedido', 'gostou', 'comentou', 'repostou', 'torcida'].includes(kind))) return;
   if (kind === 'erro') { reactErro(el()); return fala({ t: 'Ops, não salvou. Tento de novo quando a internet voltar.', m: 'triste', p: PRIO.erro }, 'pop'); }
   if (kind === 'nivel') { reactNivel(el()); return fala({ t: o.nivel ? `Nível ${o.nivel}! Subiu de nível 🎉` : 'Subiu de nível! 🎉', m: 'comemora', p: PRIO.nivel }, null); }
   if (kind === 'done') return fala(o.perfect ? { k: 'perfeito', t: pick(['Dia 100%! Você zerou tudo! 🏆', 'Zerou o dia! Pode comemorar 🎉']), m: 'danca', p: PRIO.perfeito } : o.late ? { t: outra(DONE_LATE), m: 'feliz', p: PRIO.done, gesto: 'alivio' } : { t: feito(o), m: 'feliz', p: PRIO.done }, comemora());

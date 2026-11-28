@@ -99,3 +99,37 @@ async function responde(texto, perigo) {
   return { fala: respostaReserva(texto, String(Date.now())), perigo: null };
 }
 export { NAO_DIZER };
+
+/* ---------- time do coração: quem ainda não escolheu (nem disse que não torce) escolhe ao entrar ---------- */
+const semTime = () => { const p = store.profile || {}; if (p.teamId || p.teamOther || p.semTime) return false; try { return localStorage.getItem('lembra.semTime') !== '1'; } catch { return true; } };
+/** abre a escolha do time (com "Não torço"); fechou sem escolher, pergunta de novo na próxima vez que entrar */
+export async function pedeTime() {
+  if (!semTime() || (!store.user && store.mode === 'cloud')) return false;
+  if (ocupado()) { setTimeout(() => pedeTime(), 4000); return false; }
+  const E = await import('./editar-perfil.js'), d = { teamId: '', teamOther: '', teamAvisos: false };
+
+  E.escolheTime(d, async () => {
+
+    const nenhum = !d.teamId && !d.teamOther;
+    try { localStorage.setItem('lembra.semTime', nenhum ? '1' : '0'); } catch { /* ok */ }
+    const dados = { teamId: d.teamId, teamOther: d.teamOther, teamAvisos: !!d.teamId, ...(nenhum ? { semTime: true } : {}) };
+    store.profile = { ...(store.profile || {}), ...dados };
+    try { await saveProfileQuiet(dados); } catch { /* sem internet: fica no aparelho e sobe depois */ }
+    if (d.teamId) falaDoTime(d.teamId, E);
+  });
+  return true;
+}
+/** acabou de escolher: o mascote já fala do time (o que está rolando agora ou o próximo jogo) */
+async function falaDoTime(id, E) {
+  const { porTime } = await import('../../functions/times.js'), t = porTime(id); if (!t) return;
+  const M = await import('../mascote.js');
+  let texto = `${t.nome} no coração! ❤️ Agora eu te aviso dos jogos: véspera, no dia e perto da hora.`;
+  try {
+    const r = await E.sincTime(store.profile);
+    const c = r && r.cena;
+    if (c && c.tipo && (c.tipo === 'gol' || c.tipo === 'gol-sofrido' || c.tipo === 'comecou' || c.tipo === 'intervalo')) texto = `Tá rolando agora! ${t.nome} ${c.meu} x ${c.dele}${c.rival ? ` ${c.rival}` : ''}. Bora torcer junto! ⚽`;
+    else if (c && c.tipo === 'fim') texto = `${t.nome} ${c.meu} x ${c.dele}${c.rival ? ` ${c.rival}` : ''} no último jogo. ${c.meu > c.dele ? 'Que vitória! 🎉' : c.meu === c.dele ? 'Fica pro próximo! 💪' : 'Bola pra frente! 💪'}`;
+    else if (r && r.jogos && r.jogos[0]) texto = `${t.nome} no coração! ❤️ ${E.proximoTxt(r.jogos[0], id).replace(/^próximo/, 'Próximo jogo')}. Eu te aviso!`;
+  } catch { /* sem internet: fala o básico */ }
+  setTimeout(() => M.react('torcida', { texto, humor: 'comemora', gesto: 'pulo' }), 600);
+}
