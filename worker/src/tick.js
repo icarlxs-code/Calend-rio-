@@ -41,10 +41,21 @@ export async function planPersonal(env, member, items, now = Date.now()) {
   if (at === null) await D.del(`per:${member}`); else await D.set(`per:${member}`, at);
 }
 /* pessoa com plano ativo: garante que o amigo e as dicas estão na fila */
-export async function seedPerson(env, id, now = Date.now()) {
+export async function seedPerson(env, id, now = Date.now(), { soAmigo = false } = {}) {
   const D = dueOf(env);
   if ((await D.get(`amg:${id}`)) === null) await D.set(`amg:${id}`, now);
-  if ((await D.get(`cch:${id}`)) === null) await D.set(`cch:${id}`, now);
+  if (!soAmigo && (await D.get(`cch:${id}`)) === null) await D.set(`cch:${id}`, now);
+}
+/* uma vez: põe na fila do bom dia / boa noite quem ficou de fora (sem plano ativo) */
+export async function seedTodos(env, now = Date.now()) {
+  const marca = 'seed-amg:v1';
+  if (await env.CAL.get(marca)) return 0;
+  await env.CAL.put(marca, String(now));
+  let n = 0;
+  const D = dueOf(env);
+  for (const id of Object.keys(await regAll(env))) { await D.set(`amg:${id}`, now); n++; } // já olha agora: quem ficou sem o bom dia de hoje recebe na hora (quem já recebeu não repete)
+  console.log(`bom dia para todos: ${n} pessoas na fila`);
+  return n;
 }
 
 /* manda o que venceu de uma lista; devolve quantos e grava o próximo horário */
@@ -163,9 +174,10 @@ export async function runTick(env, { now = Date.now(), send, maxPushes = 8, maxK
         if (!(await regOf(id))) { await D.del(k); continue; }
         sent += await dueList(env, { itemsKey: `pitems:${id}`, sentKey: `psent:${id}`, dueKey: k, member: id, send, now });
       } else if (kind === 'amg' || kind === 'cch') {
-        const u = await regOf(id);
-        if (!u) { await D.del(k); continue; }
-        const m = { id, name: u.name, ws: u.ws, ctxKey: `coach-ctx:${u.ws}` };
+        // o bom dia e o boa noite são de TODO mundo; com plano ativo vem também o resto do dia (água, ânimo, agenda…)
+        const u = await regOf(id), u0 = u || (kind === 'amg' ? await regGet(env, id) : null);
+        if (!u0) { await D.del(k); continue; }
+        const m = { id, name: u0.name, ws: u0.ws, ctxKey: `coach-ctx:${u0.ws}`, ...(u ? {} : { soMomentos: true }) };
         const r = kind === 'amg' ? await amigoOne(env, send, m, now, rankInfo, usage) : await coachOne(env, send, m, now, cache, usage);
         sent += r.sent;
         if (r.nextAt === null) await D.del(k); else await D.set(k, Math.max(r.nextAt, now + 60e3));

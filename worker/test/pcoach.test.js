@@ -103,9 +103,18 @@ test('um dia inteiro sem IA: quase nenhuma mensagem repetida', () => {
   const uniq = new Set(bodies).size;
   assert.ok(uniq / bodies.length > 0.8, `${uniq}/${bodies.length} diferentes`);
 });
-test('mensagens começam às 7h20', () => {
+test('bom dia a partir das 7h30 (antes disso, nada) e ainda sai até as 11h para quem ficou para trás', () => {
   assert.equal(nextNudge(prof, {}, at('07:19')), null);
-  assert.match(nextNudge(prof, {}, at('07:20'), () => 0.3).msg.kind, /morning/);
+  assert.equal(nextNudge(prof, {}, at('07:29')), null);
+  assert.match(nextNudge(prof, {}, at('07:30'), () => 0.3).msg.kind, /morning/);
+  assert.match(nextNudge(prof, {}, at('10:30'), () => 0.3).msg.kind, /morning/);
+});
+
+test('sem plano ativo: só o bom dia e o boa noite (nada de água, ânimo ou agenda no meio do dia)', () => {
+  const livre = { ...prof, soMomentos: true };
+  let st = {}; const kinds = [];
+  for (let t = at('07:00'); t <= at('23:00'); t += 60e3) { const r = nextNudge(livre, st, t, () => 0.4); if (r) { st = r.state; kinds.push(r.msg.kind); } }
+  assert.deepEqual(kinds, ['morning', 'night']);
 });
 
 test('intervalos aleatórios: nunca menos de 25 min e sem ritmo fixo; títulos por tipo', () => {
@@ -122,16 +131,17 @@ test('intervalos aleatórios: nunca menos de 25 min e sem ritmo fixo; títulos p
   assert.ok(titles.has('water') && titles.has('morning'));
 });
 
-test('janela do dia vem da ficha: quem acorda 5h recebe o bom dia 5h30; quem dorme 21h não recebe depois de 20h45', async () => {
+test('janela do dia vem da ficha: quem acorda 5h recebe o bom dia às 7h30 (nunca antes); quem dorme 21h não recebe depois de 20h45', async () => {
   const { dayWindow, inWindow, anchorsFor } = await import('../src/pcoach.js');
   const cedo = { name: 'Ana', prefs: { wake: '05:00', sleep: '21:00', lunch: '11:00' }, today: [] };
   assert.equal(nextNudge(cedo, {}, at('05:20')), null);
-  assert.match(nextNudge(cedo, {}, at('05:30'), () => 0.3).msg.kind, /morning/);
+  assert.equal(nextNudge(cedo, {}, at('07:00'), () => 0.3)?.msg.kind === 'morning', false); // o bom dia espera as 7h30
+  assert.match(nextNudge(cedo, {}, at('07:30'), () => 0.3).msg.kind, /morning/);
   assert.equal(nextNudge(cedo, { day: '', next: 0 }, at('20:50'), () => 0.3), null);
   // almoço da ficha (11h): o lembrete de comer vem entre 10h40 e 11h40
   const lunch = anchorsFor(dayWindow(cedo.prefs)).find((a) => a.key === 'lunch');
   assert.ok(lunch);
-  const r = nextNudge(cedo, { done: { morning: true }, day: '2026-03-10', lastAny: 0, next: Date.now() + 9e9, nextWater: Date.now() + 9e9 }, at('10:50'), () => 0.5);
+  const r = nextNudge(cedo, { done: { morning: true }, day: '2026-11-20', lastAny: 0, next: Date.now() + 9e9, nextWater: Date.now() + 9e9 }, at('10:50'), () => 0.5);
   assert.match(r.msg.title, /Almoço/);
   // quem trabalha à noite: acorda 17h, dorme 9h → a janela passa da meia-noite
   const w = dayWindow({ wake: '17:00', sleep: '09:00' });

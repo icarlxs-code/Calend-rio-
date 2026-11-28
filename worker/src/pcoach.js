@@ -242,12 +242,15 @@ export function dayWindow(prefs = {}) {
 const relOf = (mins, w) => (mins - w.start + 1440) % 1440;
 const spanOf = (w) => ((w.end - w.start + 1440) % 1440) || 1440;
 export const inWindow = (mins, w) => relOf(mins, w) <= spanOf(w);
+/* o bom dia nunca sai antes das 7h30: se a janela da pessoa começa antes, ele espera até 7h30 */
+const MANHA = 7 * 60 + 30;
+const MANHA_DE = (w) => { const L = spanOf(w), r = relOf(MANHA, w); return r > 0 && r < L && r < 240 ? r : 0; };
 /* Momentos fixos do dia, relativos à janela da pessoa */
 export function anchorsFor(w) {
   const L = spanOf(w);
   const r = (m) => relOf(m, w);
   return [
-    { key: 'morning', from: 0, to: Math.min(100, L) },
+    { key: 'morning', from: MANHA_DE(w), to: Math.min(L, Math.max(MANHA_DE(w) + 100, r(11 * 60))) },
     { key: 'lunch', from: r(w.lunch) - 20, to: r(w.lunch) + 40, pref: 'meals' },
     { key: 'dinner', from: r(19 * 60 + 15), to: r(19 * 60 + 15) + 60, pref: 'meals' },
     { key: 'night', from: Math.max(0, L - 35), to: L },
@@ -285,9 +288,9 @@ export function nextNudge(p, st, now, rand = Math.random) {
   let msg = null;
 
   // 1) momentos fixos do dia
-  const anchor = prefs.nudges && now - (st.lastAny || 0) >= 20 * 60e3 ? ANCHORS.find((a) => mins >= a.from && mins <= a.to && !st.done[a.key] && (!a.pref || prefs[a.pref])) : null;
+  const anchor = prefs.nudges && now - (st.lastAny || 0) >= 20 * 60e3 ? ANCHORS.find((a) => mins >= a.from && mins <= a.to && !st.done[a.key] && (!a.pref || prefs[a.pref]) && (!p.soMomentos || a.key === 'morning' || a.key === 'night')) : null;
   // água: de hora em hora, das 8h às 21h30 (independente das outras mensagens)
-  const waterDue = prefs.water && waterEvery > 0 && (st.water || 0) < waterMax && mins >= 70 + phase && mins <= L - 45 && now >= (st.nextWater || 0) && now - (st.lastAny || 0) >= (st.minGap || 25) * 60e3;
+  const waterDue = !p.soMomentos && prefs.water && waterEvery > 0 && (st.water || 0) < waterMax && mins >= 70 + phase && mins <= L - 45 && now >= (st.nextWater || 0) && now - (st.lastAny || 0) >= (st.minGap || 25) * 60e3;
   let isWater = false;
   if (!anchor && waterDue) {
     isWater = true;
@@ -314,6 +317,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
       msg = { title: KIND_TITLE[anchor.key], body: fill(pick(T[anchor.key], seed), V), kind: anchor.key };
     }
   } else {
+    if (p.soMomentos) return null; // sem plano ativo: só o bom dia e o boa noite
     // avisos de RETORNO (sequência em risco / caiu no ranking) furam a fila: não esperam o próximo horário sorteado
     const sn0 = p.seen || {}, today0 = br.date;
     const usual0 = Array.isArray(sn0.hours) && sn0.hours.some((x) => x > 0) ? sn0.hours.indexOf(Math.max(...sn0.hours)) : 19;
@@ -428,6 +432,10 @@ const KIND_TASK = {
   selfcare: 'Sugira um cuidado rápido com o corpo/mente (respirar, alongar, postura, tomar um ar, descansar os olhos).',
 };
 import { repetida } from './fala.js';
+/* a IA nunca segura a fila: se não responder a tempo, sai a frase do banco (já personalizada) e a fila anda.
+   Antes, cada pessoa esperava a IA terminar e o bom dia de muita gente passava da hora. */
+export const IA_PRAZO = 2500;
+export const comPrazo = (pr, ms) => Promise.race([pr, new Promise((res) => setTimeout(() => res(null), ms))]);
 export const IA_DIA = 10;   // notificações escritas pela IA por pessoa por dia (o resto vem do banco de frases)
 /* a vida que a pessoa contou e o time dela, em uma linha para a IA (nada se ela não quis dizer) */
 export function vidaTxt(p) {
@@ -517,7 +525,7 @@ export async function amigoOne(env, sendToMember, m, now = Date.now(), rankInfo 
   // posição no ranking (para avisar quando cair) — só para quem participa
   let rank = null;
   if (m.ws && m.ws !== 'main' && rankInfo) { const b = await rankInfo(m.ws); if (b) rank = b; }
-  let p = { ...prof, uid: m.id, name: prof.prefs?.nickname || prof.name || m.name, seenAt: sn.last || 0, seen: sn, rank, banco: env.FRASES ? env.FRASES.atual() : null, likes: prof.likes || [], goals: prof.goals || [], mind: prof.prefs?.mind || null, age: prof.prefs?.age || null };
+  let p = { ...prof, uid: m.id, name: prof.prefs?.nickname || prof.name || m.name, seenAt: sn.last || 0, seen: sn, rank, banco: env.FRASES ? env.FRASES.atual() : null, likes: prof.likes || [], goals: prof.goals || [], mind: prof.prefs?.mind || null, age: prof.prefs?.age || null, ...(m.soMomentos ? { soMomentos: true } : {}) };
   if (prof.date && prof.date !== br.date) {
     const yesterday = new Date(Date.parse(br.date) - 864e5).toISOString().slice(0, 10);
     p = { ...p, today: prof.date === yesterday ? prof.tomorrow || [] : [], tomorrow: [] };
@@ -529,14 +537,14 @@ export async function amigoOne(env, sendToMember, m, now = Date.now(), rankInfo 
   // os recados da agenda que não vêm do banco de frases podem ser reescritos pela IA (com consentimento)
   let out = r.msg, ai = false;
   if (r.msg.kind === 'agenda' && !r.msg.fid && !r.msg.priv && Math.random() < 0.7) {
-    const h = await humanize(env, r.msg, p, st.recent, br).catch((e) => { console.log('humanize falhou', e.message); if (usage && usage.erro) usage.erro('amigo'); return null; });
+    const h = await comPrazo(humanize(env, r.msg, p, st.recent, br), IA_PRAZO).catch((e) => { console.log('humanize falhou', e.message); if (usage && usage.erro) usage.erro('amigo'); return null; });
     if (h) { out = { ...r.msg, body: h.body }; ai = true; r.state.recent = [...(r.state.recent || []), h.body].slice(-40); }
   } else if (!r.msg.priv && p.ia === true && env.AI) {
     // as outras notificações (bom dia, água, refeição, ânimo, versículo…) também saem escritas para a pessoa, até o teto do dia
     const kc = `pcia:${m.id}:${br.date}`, n = Number(await env.CAL.get(kc)) || 0;
     if (n < IA_DIA) {
       await env.CAL.put(kc, String(n + 1), { expirationTtl: 2 * 86400 });
-      const h = await humanize(env, r.msg, p, st.recent, br).catch(() => null);
+      const h = await comPrazo(humanize(env, r.msg, p, st.recent, br), IA_PRAZO).catch(() => null);
       if (h) { out = { ...r.msg, title: h.title || r.msg.title, body: h.body }; ai = true; r.state.recent = [...(r.state.recent || []), h.body].slice(-40); }
     }
   }

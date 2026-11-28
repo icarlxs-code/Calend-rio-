@@ -17,7 +17,7 @@ import { verifyIdToken } from './auth.js';
 import { recordAct, getBoard, adminBoard, monthlyAward, eligible as rankEligible, standing as rankStanding, weekKey as rankWeek } from './rank.js';
 import { getBill, putBill, stripe as stripeApi } from './billing.js';
 import { getDevices, saveDevices, removeDevices, addDevice, upgradeSubs } from './devices.js';
-import { runTick, planReminders, planPersonal, seedPerson, upgradeLegacy, usageMeter } from './tick.js';
+import { runTick, planReminders, planPersonal, seedPerson, seedTodos, upgradeLegacy, usageMeter } from './tick.js';
 import { dueOf } from './kvsql.js';
 import { rodaFutebol, guardaTime, tiraTime, proximos } from './futebol.js';
 import { rodaAoVivo, rodaAntes, cenaDoTime } from './fut-motor.js';
@@ -143,7 +143,8 @@ async function registerUser(env, me, st = null) {
   const until = st ? untilOf(st) : cur?.until;
   if (cur && cur.name === me.name && cur.ws === me.ws && cur.until === until) return; // já conhecido: não gasta gravação
   await regPut(env, me.id, { name: me.name, ws: me.ws, at: cur?.at || Date.now(), ...(until !== undefined ? { until } : {}) });
-  if ((until || 0) > Date.now()) await seedPerson(env, me.id);
+  // com plano: amigo e dicas; sem plano: o bom dia e o boa noite (que são de todo mundo)
+  await seedPerson(env, me.id, Date.now(), { soAmigo: !((until || 0) > Date.now()) });
 }
 /* Conta nova abriu o app pela primeira vez: avisa o dono do app no celular (nome e e-mail).
    Quem já existia (já tem cobrança ou já está no registro) é só marcado, sem aviso. */
@@ -1296,6 +1297,7 @@ export async function cronTick(env, { now = Date.now(), meter = { pushes: 0 }, m
     const ahead = s.pos > 1 ? s.group[s.pos - 2][1].pts - s.pts + 1 : 0;
     return { pos: s.pos, week: wk, leagueName: { bronze: 'Bronze', prata: 'Prata', ouro: 'Ouro' }[s.league], ahead };
   };
+  if (!kinds) await seedTodos(env, now).catch((e) => console.log('bom dia para todos', e.message)); // uma vez só (marca no banco)
   const r = await runTick(env, { now, send, maxPushes, maxKeys, meter, rankInfo, kinds });
   // tarefas raras (cada uma confere uma marca e sai na hora quando não há nada a fazer)
   if (!r.more && !kinds) {
