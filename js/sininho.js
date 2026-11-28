@@ -67,7 +67,44 @@ const EMO = {
   bravo: { lid: 0.22, happy: 0, brow: [-20, 20, 14], mouth: 'cerrado', arms: ['baixo', 22, 'baixo', -22], amp: 0, breath: 1.4, loop: 'tremer' },
   tonto: { lid: 0.3, happy: 0, brow: [8, 12, 4, -8], mouth: 'canto', arms: ['baixo', 6, 'baixo', -2], amp: 0, breath: 3, sag: 0.02 },
   surpreso: { lid: 0, happy: 0, brow: [0, 0, -26], mouth: 'oo', arms: ['aberto', 8, 'aberto', -8], amp: 0.4, breath: 2.6, pupil: 0.82 },
+  // olhos especiais (como nas folhas de expressão): coração, cifrão, estrela, espiral, óculos e choro
+  apaixonado: { lid: 0, happy: 0, brow: [0, 0, -8], mouth: 'riso', arms: ['baixo', 6, 'baixo', -6], amp: 1.4, breath: 2.6, blush: 1, fx: 'coracao' },
+  rico: { lid: 0, happy: 0, brow: [0, 0, -12], mouth: 'riso', arms: ['aberto', 14, 'aberto', -14], amp: 0.8, breath: 2.4, fx: 'cifrao' },
+  estrelado: { lid: 0, happy: 0, brow: [0, 0, -16], mouth: 'riso', arms: ['aberto', 22, 'aberto', -22], amp: 0.6, breath: 2.2, fx: 'estrela' },
+  descolado: { lid: 0, happy: 0, brow: [0, 0, -4], mouth: 'canto', arms: ['baixo', 10, 'baixo', -10], amp: 0.8, breath: 3, fx: 'oculos', lean: 2 },
+  zonzo: { lid: 0.1, happy: 0, brow: [8, 12, 4, -8], mouth: 'canto', arms: ['baixo', 6, 'baixo', -2], amp: 0, breath: 3, sag: 0.02, fx: 'espiral' },
+  chorando: { lid: 0.12, happy: 0, brow: [17, -17, 6], mouth: 'choro', arms: ['baixo', -2, 'baixo', 2], amp: 0.5, breath: 3.4, look: [0, -6], sag: 0.03, fx: 'lagrima' },
+  emocionado: { lid: 0, happy: 1, brow: [10, -10, 2], mouth: 'riso', arms: ['baixo', 8, 'baixo', -8], amp: 1, breath: 2.8, blush: 1, fx: 'lagrima' },
 };
+/* desenha o símbolo no lugar da pupila (o olho continua piscando e acompanhando o olhar) */
+function simbolo(c, fx, x, y, k, t) {
+  c.save(); c.translate(x, y); c.scale(k, k);
+  if (fx === 'coracao') { const p = 1 + Math.sin(t * 7) * 0.08; c.scale(p, p); c.fillStyle = '#E8142B'; c.beginPath(); c.moveTo(0, 34); c.bezierCurveTo(-66, -4, -40, -62, 0, -26); c.bezierCurveTo(40, -62, 66, -4, 0, 34); c.fill(); c.fillStyle = 'rgba(255,255,255,.55)'; c.beginPath(); c.ellipse(-22, -22, 9, 6, -0.6, 0, Math.PI * 2); c.fill(); }
+  else if (fx === 'cifrao') { c.fillStyle = '#1F9D55'; c.beginPath(); c.arc(0, 0, 50, 0, Math.PI * 2); c.fill(); c.fillStyle = '#fff'; c.font = '900 72px Nunito, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('$', 0, 4); }
+  else if (fx === 'estrela') { c.rotate(Math.sin(t * 3) * 0.15); c.fillStyle = '#2B1A12'; c.beginPath(); c.arc(0, 0, 52, 0, Math.PI * 2); c.fill(); c.fillStyle = '#FFC21A'; c.beginPath(); for (let i = 0; i < 8; i++) { const a = (i * Math.PI) / 4, rr = i % 2 ? 12 : 42; c.lineTo(Math.sin(a) * rr, -Math.cos(a) * rr); } c.closePath(); c.fill(); }
+  else if (fx === 'espiral') { c.rotate(t * 5); c.strokeStyle = '#2B1A12'; c.lineWidth = 9; c.lineCap = 'round'; c.beginPath(); for (let a = 0; a < Math.PI * 5; a += 0.2) { const rr = 4 + a * 3.1; c.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } c.stroke(); }
+  c.restore();
+}
+/* lágrimas que escorrem (choro ou emoção) */
+function lagrimas(c, x, y, w, h, t, lado) {
+  c.save(); const lx = x + (lado === 'l' ? w * 0.22 : w * 0.78);
+  // lágrima parada na borda do olho (sempre visível) + gotas escorrendo
+  c.fillStyle = '#5BC0FF'; c.beginPath(); c.ellipse(lx, y + h * 0.86, 30, 20, 0, 0, Math.PI * 2); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.7)'; c.beginPath(); c.ellipse(lx - 9, y + h * 0.82, 8, 5, -0.4, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#3FA9F5';
+  for (let i = 0; i < 2; i++) { const k = ((t * 0.8 + i * 0.5 + (lado === 'l' ? 0 : 0.25)) % 1); const ly = y + h * 0.95 + k * 170; c.globalAlpha = Math.min(1, (1 - k) * 1.4); c.beginPath(); c.moveTo(lx, ly - 34); c.quadraticCurveTo(lx + 26, ly + 6, lx, ly + 20); c.quadraticCurveTo(lx - 26, ly + 6, lx, ly - 34); c.fill(); }
+  c.restore();
+}
+/* óculos escuros por cima dos dois olhos */
+function oculos(c, L) {
+  const [lx, ly, lw, lh] = L['olho-l'], [rx, ry, rw, rh] = L['olho-r'];
+  c.save(); c.fillStyle = '#1C1C1E'; c.strokeStyle = '#1C1C1E'; c.lineWidth = 16; c.lineJoin = 'round';
+  const lente = (x, y, w, h) => { c.beginPath(); c.moveTo(x - 6, y + h * 0.22); c.lineTo(x + w + 6, y + h * 0.22); c.quadraticCurveTo(x + w + 4, y + h * 0.95, x + w / 2, y + h * 0.92); c.quadraticCurveTo(x - 4, y + h * 0.95, x - 6, y + h * 0.22); c.fill(); };
+  lente(lx, ly, lw, lh); lente(rx, ry, rw, rh);
+  c.beginPath(); c.moveTo(lx + lw, ly + lh * 0.3); c.quadraticCurveTo((lx + lw + rx) / 2, ly + lh * 0.18, rx, ry + rh * 0.3); c.stroke();
+  c.fillStyle = 'rgba(255,255,255,.28)'; [[lx, ly, lw, lh], [rx, ry, rw, rh]].forEach(([x, y, w, h]) => { c.beginPath(); c.moveTo(x + w * 0.2, y + h * 0.32); c.lineTo(x + w * 0.38, y + h * 0.32); c.lineTo(x + w * 0.22, y + h * 0.7); c.lineTo(x + w * 0.08, y + h * 0.7); c.closePath(); c.fill(); });
+  c.restore();
+}
 export const MOODS = Object.keys(EMO);
 export const LIVE = []; // (compatibilidade)
 /* todos os bonecos vivos: quando a pessoa toca na tela, eles olham para onde ela tocou */
@@ -159,7 +196,7 @@ class Rig {
     if (this.calm) now = true; // reduzir movimento: troca a expressão na hora
     if (this.sleeping) this.wake();
     s.lid.t = e.lid; s.happy.t = e.happy; s.bL.t = e.brow[0]; s.bR.t = e.brow[1]; s.bY.t = e.brow[2]; s.bYr.t = e.brow[3] ?? e.brow[2];
-    s.blush.t = e.blush || 0; s.sag.t = e.sag || 0; s.pz.t = e.pupil || 1;
+    s.blush.t = e.blush || 0; s.sag.t = e.sag || 0; s.pz.t = e.pupil || 1; this.fx = e.fx || '';
     s.px.t = e.look ? e.look[0] : 0; s.py.t = e.look ? e.look[1] : 0;
     s.lean.t = e.lean || 0; s.bx.t = 0; s.by.t = 0; s.fL.t = 0; s.fR.t = 0;
     if (!this.dr) this.arms(e.arms);                // no ar, os braços continuam abertos
@@ -538,7 +575,8 @@ class Rig {
         c.save(); c.beginPath(); c.ellipse(cx, cy, w / 2 - 3, h / 2 - 3, 0, 0, Math.PI * 2); c.clip();
         const [qx, qy, qw, qh] = L['pupila-' + side], z = s.pz.v * X.pupil;
         const pcx = qx + qw / 2 + s.px.v + dz[side][0] + (side === 'l' ? 1 : -1) * X.pupilDx, pcy = qy + qh / 2 + s.py.v + dz[side][1] + X.pupilDy;
-        img('pupila-' + side, pcx - (qw * z) / 2, pcy - (qh * z) / 2, qw * z, qh * z);
+        if (['coracao', 'cifrao', 'estrela', 'espiral'].includes(this.fx)) simbolo(c, this.fx, pcx, pcy, z * (this.fx === 'coracao' ? 1.7 : this.fx === 'estrela' ? 1.3 : 1.15), this.t + (side === 'l' ? 0 : 0.3));
+        else img('pupila-' + side, pcx - (qw * z) / 2, pcy - (qh * z) / 2, qw * z, qh * z);
         // pálpebra (piscar, sono, desconfiança)
         c.restore();
         // pálpebra (piscar, sono, desconfiança): cobre o olho inteiro, inclusive a borda
@@ -553,12 +591,14 @@ class Rig {
         c.restore();
         if (lid > 0.9) { c.strokeStyle = INK; c.lineWidth = 13; c.lineCap = 'round'; c.beginPath(); c.moveTo(cx - w * 0.32, cy + 4); c.quadraticCurveTo(cx, cy + 26, cx + w * 0.32, cy + 4); c.stroke(); }
       }
+      if (this.fx === 'lagrima') lagrimas(c, x, y, w, h, this.t, side);
       if (hp > 0.02) { // olhos fechados de alegria (arco, como no vídeo)
         c.save(); c.globalAlpha = hp; c.strokeStyle = INK; c.lineWidth = 15; c.lineCap = 'round';
         c.beginPath(); c.moveTo(cx - w * 0.3, cy + 14); c.quadraticCurveTo(cx, cy - 40, cx + w * 0.3, cy + 14); c.stroke(); c.restore();
       }
       c.restore();
     });
+    if (this.fx === 'oculos') oculos(c, L);
     // sobrancelhas (giram no centro, sobem/descem)
     [['l', s.bL.v, s.bY.v], ['r', s.bR.v, s.bYr.v]].forEach(([side, rot, dy]) => {
       const fB = side === 'l' ? 'browL' : 'browR';

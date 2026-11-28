@@ -4098,3 +4098,8 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 
 .nvarte__h { font: 900 clamp(30px, 9.4vw, 44px)/1.04 Nunito, system-ui, sans-serif; letter-spacing: -.01em; color: #2A1A12; }
 .nvarte__txt { z-index: 2; }
+/* animações quadro a quadro do mascote (andar, girar, amor) por cima do boneco */
+.spr { position: absolute; inset: 0; pointer-events: none; z-index: 2; display: grid; place-items: center; }
+.spr i { display: block; width: 100%; aspect-ratio: 1; background-size: 1500% 100%; background-repeat: no-repeat; animation: spr var(--ms, 600ms) steps(14) var(--it, 1) both; }
+@keyframes spr { from { background-position: 0 0; } to { background-position: 100% 0; } }
+.is-spr > [data-snh] { visibility: hidden; }

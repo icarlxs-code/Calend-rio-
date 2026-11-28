@@ -10,6 +10,8 @@
    - aparece, fala e sai andando; volta sozinho em 15 s a 1 min;
    - por enquanto SÓ para o dono (CONFIG.adminEmail); para todo mundo: CONFIG.mascotPublic = true. */
 import { piada, humorOn } from './humor.js';
+import { toca, aquece as aqueceSprites } from './sprite.js';
+import { humorDaFala } from './humor-fala.js';
 import { gostou, gostoDe, pegaFalaToque } from './fala-ia.js';
 import { frasesDaVida, perguntaDoPar } from './vida.js';
 import * as papo from './papo.js';
@@ -385,7 +387,15 @@ let B = null, ultima = '', hideT = 0, spyT = 0, holdT = 0, busyUntil = 0, cenaT 
 const blocked = () => !!document.querySelector('.sheet-wrap.is-open, .paywall, .ficha, .photogate, .avgate, .gx, .okfx, .stk, .stv, .snhpeek, .spaceveil') ||
   (document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName));
 const el = () => B && B.querySelector('[data-snh]');
-function state(s, side) { if (!B) return; B.dataset.st = s; if (side && !livre) B.dataset.side = side; }
+function state(s, side) {
+  if (!B) return;
+  const era = B.dataset.st, lado = (side && !livre ? side : B.dataset.side) || 'r';
+  B.dataset.st = s; if (side && !livre) B.dataset.side = side;
+  // anda de verdade: saindo, vai para o lado dele; voltando, vem andando de lá (e às vezes dá um giro ao chegar)
+  const host = B.querySelector('.snhbud__fig') || B;
+  if (s === 'away' && era !== 'away') toca(host, lado === 'l' ? 'esquerda' : 'direita', { ms: 520, loop: true, ciclo: 520 });
+  else if (era === 'away' && s !== 'away') toca(host, lado === 'l' ? 'direita' : 'esquerda', { ms: 560, loop: true, ciclo: 520 }).then((ok) => { if (ok && Math.random() < 0.3) toca(host, 'gira', { ms: 700 }); });
+}
 const falando = () => Date.now() < busyUntil;
 
 /* o balão: texto digitado e, quando for o caso, botões de escolha */
@@ -445,7 +455,10 @@ function fala(line, gesto, tentativa = 0, desde = Date.now(), id = 0) {
   ultima = line.t;
   if (line.k) lembrou(line.k, line.i);
   state('up');
-  setMood(el(), line.m || 'feliz');
+  // a cara combina com o que ele fala (amor = coração nos olhos, dinheiro = cifrão, gol = estrelas, tristeza = lágrimas)
+  const hf = !line.m || line.m === 'feliz' || line.m === 'acena' ? humorDaFala(line.t) : '';
+  setMood(el(), hf || line.m || 'feliz');
+  if (hf === 'apaixonado' && B) toca(B.querySelector('.snhbud__fig') || B, 'amor', { ms: 1100 }); // corações e beijinho antes dos olhos de coração
   const g = gesto || line.gesto;
   if (g) setTimeout(() => act(el(), g), 220);
   // roteiro: uma sequência de gestos enquanto fala (olha pros lados, desconfia, tapa a boca rindo…)
@@ -905,6 +918,7 @@ function avisaVisita() {
 /* ---------- API ---------- */
 export const companheiroOn = () => { try { return mascotOn() && localStorage.getItem('lembra.companheiroOff') !== '1'; } catch { return mascotOn(); } };
 export function start() {
+  setTimeout(aqueceSprites, 4000);
   if (B || !companheiroOn()) { if (B && !companheiroOn()) stop(); return; }
   document.documentElement.classList.add('snh-theme');
   B = document.createElement('div');

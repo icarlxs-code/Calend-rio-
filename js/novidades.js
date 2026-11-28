@@ -17,6 +17,7 @@ const EXTRA = {
   camps: () => ['Brasileirão', 'Libertadores', 'Copa do Brasil', 'Todos'].map((x, k) => `<span class="nvchip${k < 2 ? ' is-on' : ''}" style="--d:${0.2 + k * 0.12}s">${k < 2 ? '✓ ' : ''}${x}</span>`).join(''),
   vida: () => `<div class="nvcard"><span><b>Pedro tem sorte de ter você por perto 💛</b><small>o Lembra fala da sua vida, do seu jeito</small></span></div>`,
   frase: () => ['☀️ manhã', '🌤️ tarde', '🌙 noite'].map((x, k) => `<span class="nvchip is-on" style="--d:${0.2 + k * 0.15}s">${x}</span>`).join(''),
+  caras: () => [['😍', 'amor'], ['🤑', 'dinheiro'], ['🤩', 'gol'], ['😎', 'de boa'], ['🥲', 'emoção']].map(([e, t], k) => `<span class="nvchip" style="--d:${0.2 + k * 0.1}s">${e} ${t}</span>`).join(''),
   conta: () => `<div class="nvcard"><i>🧾</i><span><b>Pagar o aluguel</b><small>todo dia 10 · R$ 1.500</small></span></div>`,
   conversa: () => ['A', 'L', 'C', 'B'].map((x, k) => `<span class="nvface" style="--c:${['#0A8AD8', '#E85A0C', '#05855F', '#6D3AE0'][k]};--d:${0.2 + k * 0.1}s">${x}<i>💬</i></span>`).join(''),
 };
@@ -31,6 +32,7 @@ export const NOVIDADES = {
     { t: 'Uma frase nova toda hora', s: 'De manhã, de tarde e de noite,|escrita só pra você.', m: 'feliz', c: 'frase', arte: '29-manha-b', v: 'manha', extra: 'frase' },
     { t: 'Contas do mês, sem esquecer', s: 'Fala do seu jeito|que eu entendo, repito todo mês e digo o valor.', m: 'feliz', c: 'assist', arte: '21-contas', v: 'dinheiro', extra: 'conta' },
     { t: 'Conversa num toque', s: 'As conversas recentes|ficam lá no topo. Um toque e pronto!', m: 'feliz', c: 'conversa', arte: '19-socializar', v: 'digita', extra: 'conversa' },
+    { t: 'Eu tenho mil caras', s: 'Falou de amor, eu fico apaixonado.|Falou de dinheiro, meus olhos viram cifrão!', m: 'feliz', c: 'abre', arte: '12-lembrete', v: 'amor', cara: 'apaixonado', extra: 'caras' },
     { t: 'Eu me atualizo sozinho', s: 'Saiu versão nova?|Eu já chego atualizado, sem você fazer nada.', m: 'feliz', c: 'abre', arte: '30-ofensiva', v: 'forca' },
   ],
   '2.32.0': [
@@ -111,7 +113,7 @@ export function abreNovidades(quadros, aoFechar) {
     const e = a.querySelector('[data-snh]'); if (!e) return;
     const cores = coresDaPessoa() || ['#FF6A1A', '#FFF6EE'];
     const r = s.v === 'torcida' ? { ...roupa('torcida', cores), ros: cachecol(cores) } : roupa(s.v);
-    veste(e, r); setMood(e, (r && r.mood) || s.m || 'feliz');
+    veste(e, r); setMood(e, s.cara || (r && r.mood) || s.m || 'feliz');
   };
   const FITA = ['M-20 60 C 140 20 40 190 200 200 S 300 360 430 320', 'M430 40 C 260 60 340 220 190 210 S 90 330 -30 380', 'M-20 330 C 120 380 120 120 220 150 S 300 60 430 90'];
   const enquadra = (k) => { w.classList.toggle('is-rosto', k === 'rosto'); w.classList.toggle('is-cena', k === 'cena'); };
