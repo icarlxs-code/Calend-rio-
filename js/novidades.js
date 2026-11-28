@@ -35,12 +35,12 @@ const LIGA = {
     const pinta = () => {
       l.innerHTML = achaTimes(inp.value).slice(0, 8).map((t) => `<button type="button" class="nvchip" data-tid="${t.id}">${esc(t.nome)}</button>`).join('');
       l.querySelectorAll('[data-tid]').forEach((b) => (b.onclick = async () => {
-        await salva({ teamId: b.dataset.tid, teamOther: '', teamAvisos: true, semTime: false }); try { localStorage.setItem('lembra.semTime', '0'); } catch { /* ok */ }
+        await salva({ teamId: b.dataset.tid, teamOther: '', teamAvisos: true, semTime: false }); try { localStorage.setItem(`lembra.semTime.${store.user?.uid || 'local'}`, '0'); } catch { /* ok */ }
         revestir(); const x = a.querySelector('.nvarte__extra'); if (x) x.innerHTML = `<div class="nvcard"><i>✅</i><span><b>${esc(porTime(b.dataset.tid)?.nome || '')} no coração!</b><small>Eu te aviso de todos os jogos</small></span></div>`; avanca();
       }));
     };
     inp.oninput = pinta; pinta();
-    a.querySelector('[data-tnao]').onclick = async () => { await salva({ teamId: '', teamAvisos: false, semTime: true }); try { localStorage.setItem('lembra.semTime', '1'); } catch { /* ok */ } avanca(); };
+    a.querySelector('[data-tnao]').onclick = async () => { await salva({ teamId: '', teamAvisos: false, semTime: true }); try { localStorage.setItem(`lembra.semTime.${store.user?.uid || 'local'}`, '1'); } catch { /* ok */ } avanca(); };
   },
   campsAqui(a) {
     a.querySelectorAll('[data-cp]').forEach((b) => (b.onclick = async () => {

@@ -6,9 +6,9 @@ import { esc } from '../utils.js';
 
 const UFS = 'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ');
 const INTERVALO = 6 * 3600e3;
-const LS = 'lembra.completa';
-const le = () => { try { return JSON.parse(localStorage.getItem(LS) || '{}'); } catch { return {}; } };
-const grava = (o) => { try { localStorage.setItem(LS, JSON.stringify(o)); } catch { /* ok */ } };
+const LS_ = () => `lembra.completa.${store.user?.uid || 'local'}`;
+const le = () => { try { return JSON.parse(localStorage.getItem(LS_()) || '{}'); } catch { return {}; } };
+const grava = (o) => { try { localStorage.setItem(LS_(), JSON.stringify(o)); } catch { /* ok */ } };
 
 /* o que pode faltar, na ordem em que vale perguntar; cada um sabe se já está preenchido */
 export const PERGUNTAS = [

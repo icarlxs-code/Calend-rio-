@@ -5,15 +5,15 @@ import { openSheet, sheetHead, toast } from '../components.js';
 import { esc } from '../utils.js';
 import { RELACOES, FILHOS, ANIMO, COM_PAR, NAO_DIZER, limpaVida, respondeu, risco, respostaDeRisco, respostaReserva, RESPOSTA_SIM, EMERGENCIA, FECHO, perguntaDoPar } from '../vida.js';
 
-const LS = 'lembra.vida';
+const LS_ = () => `lembra.vida.${store.user?.uid || 'local'}`; // por conta: nunca passa de uma conta para outra no mesmo celular
 /* modo sem nuvem (teste local): guarda no aparelho */
 export function vidaAtual() {
   if (store.profile?.vida) return store.profile.vida;
   if (store.mode === 'cloud') return null; // na nuvem vale só o que está na conta (nunca o de outra conta no aparelho)
-  try { return JSON.parse(localStorage.getItem(LS) || 'null'); } catch { return null; }
+  try { return JSON.parse(localStorage.getItem(LS_()) || 'null'); } catch { return null; }
 }
 async function guarda(v) {
-  try { localStorage.setItem(LS, JSON.stringify(v)); } catch { /* ok */ }
+  try { localStorage.setItem(LS_(), JSON.stringify(v)); } catch { /* ok */ }
   store.profile = { ...(store.profile || {}), vida: v };
   await saveProfileQuiet({ vida: v });
 }
@@ -155,7 +155,7 @@ async function responde(texto, perigo) {
 export { NAO_DIZER };
 
 /* ---------- time do coração: quem ainda não escolheu (nem disse que não torce) escolhe ao entrar ---------- */
-const semTime = () => { const p = store.profile || {}; if (p.teamId || p.teamOther || p.semTime) return false; try { return localStorage.getItem('lembra.semTime') !== '1'; } catch { return true; } };
+const semTime = () => { const p = store.profile || {}; if (p.teamId || p.teamOther || p.semTime) return false; try { return localStorage.getItem(`lembra.semTime.${store.user?.uid || 'local'}`) !== '1'; } catch { return true; } };
 /** abre a escolha do time (com "Não torço"); fechou sem escolher, pergunta de novo na próxima vez que entrar */
 export async function pedeTime({ forca = false } = {}) {
   if ((!forca && !semTime()) || (!store.user && store.mode === 'cloud')) return false;
@@ -165,7 +165,7 @@ export async function pedeTime({ forca = false } = {}) {
   E.escolheTime(d, async () => {
 
     const nenhum = !d.teamId && !d.teamOther;
-    try { localStorage.setItem('lembra.semTime', nenhum ? '1' : '0'); } catch { /* ok */ }
+    try { localStorage.setItem(`lembra.semTime.${store.user?.uid || 'local'}`, nenhum ? '1' : '0'); } catch { /* ok */ }
     const dados = { teamId: d.teamId, teamOther: d.teamOther, teamAvisos: !!d.teamId, ...(nenhum ? { semTime: true } : {}) };
     store.profile = { ...(store.profile || {}), ...dados };
     try { await saveProfileQuiet(dados); } catch { /* sem internet: fica no aparelho e sobe depois */ }

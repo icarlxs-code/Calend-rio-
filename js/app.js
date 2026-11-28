@@ -795,11 +795,12 @@ function requirePhoto(tries = 0) {
   if (!store.solo || store.mode !== 'cloud' || !store.user || store.shared) return;
   const me = store.member(store.me) || {};
   const created = store.user.metadata?.creationTime ? Date.parse(store.user.metadata.creationTime) : 0;
-  if (window.__comeco?.semNada() && tries < 200) { setTimeout(() => requirePhoto(tries + 1), 15000); return; } // primeiro o 1º lembrete
+  // conta nova: pede a foto logo depois do cadastro (dá para pular e colocar depois; volta a perguntar na próxima vez)
+  try { if (sessionStorage.getItem(`lembra.fotoDepois.${store.user.uid}`)) return; } catch { /* ok */ }
   if (me.photo || created < PHOTO_FROM || document.querySelector('.photogate')) return;
   // espera a ficha, os termos e a tela de planos saírem da frente
   // (e também perguntas abertas, como "entrar na agenda de quem te convidou?", e comemorações de conquistas)
-  if (document.querySelector('.ficha, .termsgate, .paywall.is-open, .sheet--dialog, .gx, .pkr') || pendingInvite()) { if (tries < 200) setTimeout(() => requirePhoto(tries + 1), 3000); return; }
+  if (document.querySelector('.ficha, .vficha, .sheet-wrap.is-open, .nv, .termsgate, .paywall.is-open, .sheet--dialog, .gx, .pkr') || pendingInvite()) { if (tries < 200) setTimeout(() => requirePhoto(tries + 1), 3000); return; }
   const w = document.createElement('div');
   w.className = 'photogate';
   w.innerHTML = `<div class="photogate__in">
@@ -807,10 +808,12 @@ function requirePhoto(tries = 0) {
     <h2>Coloque sua foto de perfil</h2>
     <p>Assim sua dupla, sua equipe e seus clientes sabem quem é quem. Leva 5 segundos.</p>
     <label class="btn btn--primary btn--block btn--big">${icon('camera', 18)} Escolher foto<input type="file" accept="image/*" data-photo hidden></label>
+    <button type="button" class="btn-text btn--block" data-depois>Colocar depois</button>
     <p class="photogate__err" data-err hidden></p>
   </div>`;
   document.body.appendChild(w);
   requestAnimationFrame(() => w.classList.add('is-open'));
+  w.querySelector('[data-depois]').onclick = () => { try { sessionStorage.setItem(`lembra.fotoDepois.${store.user.uid}`, '1'); } catch { /* ok */ } w.classList.remove('is-open'); setTimeout(() => w.remove(), 300); };
   w.querySelector('[data-photo]').onchange = async (e) => {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
@@ -834,12 +837,12 @@ let askedThisOpen = false;
 function askNotifications() {
   if (store.mode !== 'cloud' || typeof Notification === 'undefined' || Notification.permission === 'granted' || askedThisOpen || window.__vipAskedNotif) return;
   if (document.querySelector('.sheet-wrap.is-open, .paywall.is-open, .photogate, .ficha, .vip, .gx, .avgate')) { setTimeout(askNotifications, 8000); return; }
-  let last = 0; try { last = Number(localStorage.getItem('lembra.askNotif') || 0); } catch { /* ok */ }
+  let last = 0; try { last = Number(localStorage.getItem(`lembra.askNotif.${store.user?.uid || 'x'}`) || 0); } catch { /* ok */ }
   const vip = store.billing?.plan === 'lifetime' && store.billing?.vip;
   const every = vip ? (Date.now() - (vip.at || 0) < 3 * 864e5 ? 0 : 20 * 3600e3) : 3 * 864e5;
   if (Date.now() - last < every) return;
   askedThisOpen = true;
-  try { localStorage.setItem('lembra.askNotif', String(Date.now())); } catch { /* ok */ }
+  try { localStorage.setItem(`lembra.askNotif.${store.user?.uid || 'x'}`, String(Date.now())); } catch { /* ok */ }
   const denied = Notification.permission === 'denied';
   const s = openSheet({
     className: 'sheet--dialog',
@@ -1507,7 +1510,8 @@ function startApp() {
   };
   setTimeout(tryInstall, 3500);
   // atualiza o cadastro deste celular para notificações (se já tiver permissão)
-  if (store.mode === 'cloud' && push.permission() === 'granted') push.register().catch(() => {});
+  // avisos já liberados neste celular: o aparelho passa a avisar a conta que entrou (também conta nova)
+  if (store.mode === 'cloud' && push.permission() === 'granted') { push.register().catch(() => {}); setTimeout(() => push.register().catch(() => {}), 20000); setTimeout(() => push.register().catch(() => {}), 90000); }
   setTimeout(() => openDeepLink(), 300);
 }
 
