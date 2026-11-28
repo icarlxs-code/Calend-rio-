@@ -1,6 +1,6 @@
 /* "Tem versão nova": de 5 em 5 minutos, para quem está com o app desatualizado, até a pessoa abrir e atualizar.
    - a versão publicada vem do próprio site (version.json), conferida a cada 5 min;
-   - a versão de cada pessoa é a que o app informa ao abrir (ver:{pessoa});
+   - as versões que cada pessoa informa ao abrir ficam em vers:{pessoa} (até 4 aparelhos/versões);
    - o aviso usa sempre a mesma etiqueta: o novo SUBSTITUI o anterior no celular (não empilha 12 avisos);
    - nunca de madrugada (23h30 às 8h, horário de Brasília). */
 import { brNow } from './coach.js';
@@ -18,20 +18,23 @@ export async function versaoPublicada(env, now = Date.now()) {
   } catch { /* sem site agora: usa o último */ }
   return g && g.build ? g : null;
 }
-/** guarda a versão que o aparelho da pessoa informou (só grava quando muda) */
+/** guarda as versões que os aparelhos da pessoa informaram (um registro por versão, os 4 mais recentes).
+    Assim, se UM aparelho já está na versão nova, a pessoa não recebe mais "atualize" — mesmo que outro aparelho antigo ainda pingue. */
 export async function guardaVersao(env, member, app, now = Date.now()) {
   const b = String(app?.b || '').slice(0, 20), v = String(app?.v || '').slice(0, 20), nv = app?.nv === true;
   if (!member || !b || b === 'dev') return;
-  const era = await env.CAL.get(`ver:${member}`, 'json');
-  if (!era || era.b !== b || !!era.nv !== nv) await env.CAL.put(`ver:${member}`, JSON.stringify({ v, b, nv, at: now }), { expirationTtl: 120 * 86400 });
-  // quem já viu as novidades desta versão fica registrado à parte: um celular antigo que ainda pinga não reabre o aviso
-  if (nv) await env.CAL.put(`verok:${member}`, JSON.stringify({ b, at: now }), { expirationTtl: 30 * 86400 });
+  const L = (await env.CAL.get(`vers:${member}`, 'json')) || [];
+  const era = L.find((x) => x.b === b);
+  if (era && era.nv === nv && now - era.at < 3600e3 && L[0] && L[0].b === b) return; // nada mudou: não grava a cada ping
+  const nova = [{ v, b, nv, at: now }, ...L.filter((x) => x.b !== b)].slice(0, 4);
+  await env.CAL.put(`vers:${member}`, JSON.stringify(nova), { expirationTtl: 30 * 86400 });
 }
 export const AVISO = { title: '✨ Chegou versão nova do Lembra', body: 'Toque aqui para atualizar. Leva 2 segundos e você não perde nada.', tag: 'atualizar', url: './?atualizar=1' };
 /* já está na versão nova, mas ainda não viu as novidades até o final */
 export const AVISO_NOVIDADES = { title: '🎁 Tem novidade te esperando no Lembra', body: 'Abra e confira tudo o que chegou, até o final. Preparei com carinho!', tag: 'atualizar', url: './' };
 
-/** uma rodada: de 5 em 5 min, avisa quem tem aparelho cadastrado e não está na versão no ar (até 23h30 e a partir das 8h; para só depois de ver as novidades até o final) */
+/** uma rodada: de 5 em 5 min, para quem ainda NÃO está na versão no ar (até a pessoa atualizar).
+    Quem já está na versão no ar não recebe "atualize". Quem está, mas ainda não viu as novidades até o final, recebe só o lembrete das novidades. */
 export async function lembraAtualizar(env, now, send, { max = 200 } = {}) {
   const bloco = String(Math.floor(now / BLOCO));
   if ((await env.CAL.get('upd:bloco')) === bloco) return { pulou: 'cedo' };
@@ -44,10 +47,12 @@ export async function lembraAtualizar(env, now, send, { max = 200 } = {}) {
   if (typeof env.CAL.scan !== 'function') return { motivo: 'sem-lista' };
   let avisos = 0, emDia = 0;
   for (const [k] of await env.CAL.scan('dev:')) {
-    const m = k.slice(4), v = await env.CAL.get(`ver:${m}`, 'json'), ok = await env.CAL.get(`verok:${m}`, 'json');
-    if ((v && v.b === no.build && v.nv) || (ok && ok.b === no.build)) { emDia++; continue; } // já está na última e viu as novidades até o final: para de avisar
     if (avisos >= max) break;
-    await send(env, m, v && v.b === no.build ? AVISO_NOVIDADES : AVISO);
+    const m2 = k.slice(4), L = (await env.CAL.get(`vers:${m2}`, 'json')) || [];
+    const atual = L.find((x) => x.b === no.build);
+    if (atual && atual.nv) { emDia++; continue; }       // já está na última e viu as novidades até o final: para de avisar
+    if (atual) { await send(env, m2, AVISO_NOVIDADES); avisos++; continue; } // atualizado: só falta o final das novidades
+    await send(env, m2, AVISO);                          // ainda não está na versão no ar
     avisos++;
   }
   return { avisos, emDia, build: no.build };

@@ -36,3 +36,13 @@ test('celular antigo que ainda pinga não reabre o aviso de quem já viu as novi
   const r = await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send);
   assert.equal(sent.length, 0, 'não reabre o aviso'); assert.equal(r.emDia, 1);
 });
+test('quem tem um aparelho na versão nova nunca recebe "atualize", mesmo com outro aparelho antigo', async () => {
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ version: '2.34.0', build: 'nov9999' }) });
+  const CAL = kv(), env = { CAL }; await CAL.put('dev:uDual', '{}');
+  await guardaVersao(env, 'uDual', { v: '2.34.0', b: 'nov9999', nv: false });
+  await guardaVersao(env, 'uDual', { v: '2.33.0', b: 'velho1', nv: false });
+  await guardaVersao(env, 'uDual', { v: '2.33.0', b: 'velho1', nv: false });
+  const titles = []; const send = async (e, m, msg) => titles.push(msg.title);
+  await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send);
+  assert.ok(titles.every((t) => !/Chegou versão nova/.test(t)), 'nada de "atualize"');
+});
