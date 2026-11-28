@@ -9,18 +9,29 @@ import { anel, bolinha } from './anel.js';
 import { store } from './store.js';
 import { porTime } from '../functions/times.js';
 /* as cores do time da pessoa (bandeira e cachecol do mascote); sem time, as do Lembra */
+const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nomeTime = () => { try { return porTime(store.profile?.teamId)?.nome || ''; } catch { return ''; } };
+/* o cartão de cada novidade, mostrando como fica na prática (com o time e o nome da pessoa quando dá) */
+const EXTRA = {
+  gol: () => `<div class="nvcard nvcard--push"><i>⚽</i><span><b>GOL DO ${esc((nomeTime() || 'seu time').toUpperCase())}!</b><small>Que golaço! Comemora comigo 🎉</small></span></div>`,
+  camps: () => ['Brasileirão', 'Libertadores', 'Copa do Brasil', 'Todos'].map((x, k) => `<span class="nvchip${k < 2 ? ' is-on' : ''}" style="--d:${0.2 + k * 0.12}s">${k < 2 ? '✓ ' : ''}${x}</span>`).join(''),
+  vida: () => `<div class="nvcard"><span><b>Pedro tem sorte de ter você por perto 💛</b><small>o Lembra fala da sua vida, do seu jeito</small></span></div>`,
+  frase: () => ['☀️ manhã', '🌤️ tarde', '🌙 noite'].map((x, k) => `<span class="nvchip is-on" style="--d:${0.2 + k * 0.15}s">${x}</span>`).join(''),
+  conta: () => `<div class="nvcard"><i>🧾</i><span><b>Pagar o aluguel</b><small>todo dia 10 · R$ 1.500</small></span></div>`,
+  conversa: () => ['A', 'L', 'C', 'B'].map((x, k) => `<span class="nvface" style="--c:${['#0A8AD8', '#E85A0C', '#05855F', '#6D3AE0'][k]};--d:${0.2 + k * 0.1}s">${x}<i>💬</i></span>`).join(''),
+};
 const coresDaPessoa = () => { try { return porTime(store.profile?.teamId)?.cores || null; } catch { return null; } };
 
 export const NOVIDADES = {
   '2.33.0': [
-    { t: 'Chegou coisa nova!', s: 'Segura essa bandeira!|Tem muita novidade pra você!', m: 'feliz', c: 'abre', v: 'torcida' },
-    { t: 'Seu time do coração', s: 'Agora você escolhe|o seu time! Eu aviso dos jogos e comemoro cada gol junto!', m: 'feliz', c: 'time', v: 'torcida', acao: { label: 'Escolher meu time', go: () => import('./views/vida.js').then((m) => m.pedeTime({ forca: true })) } },
-    { t: 'Só o campeonato que você quer', s: 'Só Brasileirão? Só Libertadores?|Você escolhe! Ou recebe de todos os campeonatos.', m: 'feliz', c: 'time', v: 'torcida', acao: { label: 'Escolher campeonatos', go: () => import('./views/editar-perfil.js').then(async (E) => { const { store, saveProfileQuiet } = await import('./store.js'); E.escolheCamps(store.profile?.teamCamps || [], async (L) => { store.profile = { ...(store.profile || {}), teamCamps: L }; try { await saveProfileQuiet({ teamCamps: L }); await E.sincTime(store.profile); } catch { /* sobe depois */ } }); }) } },
-    { t: 'Eu te conheço melhor', s: 'Me conta de você?|Filhos, amor, como anda o coração… eu falo do seu jeito!', m: 'feliz', c: 'perfil', v: 'torcida', acao: { label: 'Contar agora', go: () => import('./views/vida.js').then((m) => m.abreFicha()) } },
-    { t: 'Frase nova toda hora', s: 'De manhã, de tarde e de noite:|uma frase nova, escrita só pra você!', m: 'feliz', c: 'frase', v: 'torcida' },
-    { t: 'Contas do mês', s: '"Todo dia 10 pago o aluguel"?|Eu entendo, lembro todo mês e ainda digo o valor!', m: 'feliz', c: 'assist', v: 'torcida' },
-    { t: 'Conversa num toque', s: 'Quer falar com alguém?|As conversas recentes ficam lá no topo. Um toque e pronto!', m: 'feliz', c: 'conversa', v: 'torcida' },
-    { t: 'Eu me atualizo sozinho', s: 'Saiu versão nova?|Eu me atualizo sozinho. Você nem percebe!', m: 'feliz', c: 'abre', v: 'torcida' },
+    { t: 'Chegou coisa nova!', s: 'Preparei tudo com carinho|pra deixar seu dia ainda mais leve.', m: 'feliz', c: 'abre', arte: '11-conquista-semana', v: 'conquista' },
+    { t: 'Seu time do coração', s: 'Eu aviso dos jogos|e comemoro cada gol junto com você!', m: 'feliz', c: 'time', arte: '32-estadio', v: 'torcida', extra: 'gol', acao: { label: 'Escolher meu time', go: () => import('./views/vida.js').then((m) => m.pedeTime({ forca: true })) } },
+    { t: 'Só o campeonato que você quer', s: 'Só Brasileirão? Só Libertadores?|Você escolhe. Ou recebe de todos!', m: 'feliz', c: 'time', arte: '32-estadio', v: 'torcida', extra: 'camps', acao: { label: 'Escolher campeonatos', go: () => import('./views/editar-perfil.js').then(async (E) => { const { store, saveProfileQuiet } = await import('./store.js'); E.escolheCamps(store.profile?.teamCamps || [], async (L) => { store.profile = { ...(store.profile || {}), teamCamps: L }; try { await saveProfileQuiet({ teamCamps: L }); await E.sincTime(store.profile); } catch { /* sobe depois */ } }); }) } },
+    { t: 'Eu te conheço melhor', s: 'Me conta de você:|filhos, amor, como anda o coração.', m: 'amor', c: 'perfil', arte: '28-calma', v: 'amor', extra: 'vida', acao: { label: 'Contar agora', go: () => import('./views/vida.js').then((m) => m.abreFicha()) } },
+    { t: 'Uma frase nova toda hora', s: 'De manhã, de tarde e de noite,|escrita só pra você.', m: 'feliz', c: 'frase', arte: '29-manha-b', v: 'manha', extra: 'frase' },
+    { t: 'Contas do mês, sem esquecer', s: 'Fala do seu jeito|que eu entendo, repito todo mês e digo o valor.', m: 'feliz', c: 'assist', arte: '21-contas', v: 'dinheiro', extra: 'conta' },
+    { t: 'Conversa num toque', s: 'As conversas recentes|ficam lá no topo. Um toque e pronto!', m: 'feliz', c: 'conversa', arte: '19-socializar', v: 'digita', extra: 'conversa' },
+    { t: 'Eu me atualizo sozinho', s: 'Saiu versão nova?|Eu já chego atualizado, sem você fazer nada.', m: 'feliz', c: 'abre', arte: '30-ofensiva', v: 'forca' },
   ],
   '2.32.0': [
     { t: 'Eu mudei!', s: 'Respeitável público!|Chegou novidade, e das boas!', m: 'feliz', g: 'tchau', c: 'abre' },
@@ -68,6 +79,7 @@ export function abreNovidades(quadros, aoFechar) {
   let i = 0, vez = 0; const antes = document.activeElement;
   const w = document.createElement('div'); w.className = 'nv'; w.tabIndex = -1; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', 'Novidades do Lembra');
   w.innerHTML = `<div class="nv__fundo" data-fundo></div><i class="nv__bola" data-bola hidden></i><div class="nv__bars">${quadros.map(() => '<i><b></b></i>').join('')}</div><div class="nv__topo"><button class="nv__som" data-som></button><button class="nv__pula" data-pula>Pular</button></div>
+    <div class="nvarte" data-arte hidden></div>
     <div class="nv__palco" data-palco></div>
     <div class="nv__baixo snhwrap"><h2 data-t></h2><div class="snhb nv__fala"><span class="snhb__txt" aria-live="polite"></span></div><span class="nv__snh">${sininho('feliz', { size: 220 })}</span></div>
     <button class="nv__zona nv__zona--l" data-volta tabindex="-1" aria-label="Voltar"></button><button class="nv__zona nv__zona--r" data-vai tabindex="-1" aria-label="Próxima novidade"></button>
@@ -85,6 +97,22 @@ export function abreNovidades(quadros, aoFechar) {
     q('[data-ok] span').textContent = espera ? 'Ouvir' : i < quadros.length - 1 ? 'Próxima' : 'Bora!';
   };
   const show = (s) => s.s.includes('|');
+  /* quadro ilustrado no estilo oficial: fundo da marca + mascote vivo com a roupa do tema + cartão da novidade */
+  const pintaArte = (s) => {
+    const a = q('[data-arte]'); w.classList.toggle('is-arte', !!s.arte); a.hidden = !s.arte;
+    if (!s.arte) { a.innerHTML = ''; return; }
+    const [l1, l2] = s.s.split('|');
+    a.innerHTML = `<img class="nvarte__bg" src="assets/stories/${s.arte}.webp" alt="" decoding="async">
+      <div class="nvarte__topo"><b>LEMBRA</b><span>@meulembra</span></div>
+      <div class="nvarte__txt"><div class="nvarte__h">${esc(s.t)}</div><p><b>${esc(l1)}</b> ${esc(l2 || '')}</p>
+      ${EXTRA[s.extra] ? `<div class="nvarte__extra nvarte__extra--${s.extra}">${EXTRA[s.extra]()}</div>` : ''}</div>
+      <span class="nvarte__snh">${sininho(s.m || 'feliz', { size: Math.min(270, Math.round(innerWidth * 0.6)) })}</span>`;
+    alive();
+    const e = a.querySelector('[data-snh]'); if (!e) return;
+    const cores = coresDaPessoa() || ['#FF6A1A', '#FFF6EE'];
+    const r = s.v === 'torcida' ? { ...roupa('torcida', cores), ros: cachecol(cores) } : roupa(s.v);
+    veste(e, r); setMood(e, (r && r.mood) || s.m || 'feliz');
+  };
   const FITA = ['M-20 60 C 140 20 40 190 200 200 S 300 360 430 320', 'M430 40 C 260 60 340 220 190 210 S 90 330 -30 380', 'M-20 330 C 120 380 120 120 220 150 S 300 60 430 90'];
   const enquadra = (k) => { w.classList.toggle('is-rosto', k === 'rosto'); w.classList.toggle('is-cena', k === 'cena'); };
   /* a demonstração entra em cena (mais rápida quando há voz) */
@@ -137,7 +165,7 @@ export function abreNovidades(quadros, aoFechar) {
     b.animate([{ transform: `translate(${x0}px, ${y0}px)` }, { transform: `translate(${(x0 + x) / 2}px, ${Math.min(y0, y) - 70}px) scale(.82, 1.25)`, offset: 0.5 }, { transform: `translate(${x}px, ${y}px) scale(1.3, .7)`, offset: 0.9 }, { transform: `translate(${x}px, ${y}px)` }], { duration: 230, easing: 'cubic-bezier(.77, 0, .175, 1)', fill: 'forwards' });
   };
   const mostra = (dir = 1) => {
-    const s = quadros[i], minha = ++vez; w.dataset.c = s.c; w.dataset.lado = i % 3; w.style.setProperty('--dir', dir); w.classList.toggle('is-show', show(s));
+    const s = quadros[i], minha = ++vez; pintaArte(s); w.dataset.c = s.c; w.dataset.lado = i % 3; w.style.setProperty('--dir', dir); w.classList.toggle('is-show', show(s));
     w.querySelectorAll('.nv__bars i').forEach((b, k) => b.classList.toggle('is-on', k <= i));
     tiraCena(); pintaFundo(0, [50, 8, 92][i % 3], 78); const bl = q('[data-bola]'); bl.hidden = true; delete bl.dataset.x; delete bl.dataset.y;
     if (!show(s)) setTimeout(() => { if (minha === vez) poeCena(s); }, 160);
