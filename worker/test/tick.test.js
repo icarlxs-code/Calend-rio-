@@ -30,7 +30,8 @@ test('lembrete sai uma vez só, mesmo se o app regravar a lista', async () => {
   assert.equal(await dueOf(env).get('rem:A'), null, 'sem mais nada: sai da fila');
 });
 
-test('sem plano ativo não manda (e sai da fila)', async () => {
+test('depois do lançamento, sem plano ativo não manda (e sai da fila)', async () => {
+  globalThis.__LEMBRA_FREE_UNTIL = 0; // simula o fim do período de lançamento
   const now = Date.now();
   const { env, kv } = mkEnv({ ...reg(['B'], now, now - 1), 'upgraded:v2': '1' });
   const items = [{ id: 'x', at: now - 1000, member: 'uB', title: 't' }];
@@ -133,6 +134,7 @@ test('próximo horário ignora o que já saiu e o que passou da janela', () => {
 });
 
 test('bom dia, boa noite e frases com arte para TODO mundo: quem não tem plano entra na fila e recebe', async () => {
+  globalThis.__LEMBRA_FREE_UNTIL = 0; // depois do lançamento
   const { seedTodos } = await import('../src/tick.js');
   const d = (hhmm) => Date.parse(`2026-11-20T${hhmm}:00-03:00`);
   const { env, kv } = mkEnv({ ...reg(['L'], d('07:00'), 0), ...reg(['P'], d('07:00'), d('07:00') + 30 * 864e5), 'upgraded:v2': '1' });
@@ -144,4 +146,16 @@ test('bom dia, boa noite e frases com arte para TODO mundo: quem não tem plano 
   const livre = out.filter(([m]) => m === 'uL').map(([, t]) => t);
   assert.ok(livre.length >= 4 && livre.length <= 5, `sem plano recebeu: ${livre.join(' | ')}`);
   assert.ok(out.filter(([m]) => m === 'uP').length > 2, 'com plano continua recebendo o dia todo');
+});
+
+test('durante o lançamento, todo mundo tem o plano mais alto: a conta sem data gravada recebe o dia completo', async () => {
+  const { seedTodos } = await import('../src/tick.js');
+  globalThis.__LEMBRA_FREE_UNTIL = Date.UTC(2027, 0, 1, 3, 0, 0);
+  const d = (hhmm) => Date.parse(`2026-11-20T${hhmm}:00-03:00`);
+  const { env, kv } = mkEnv({ 'reg:uX': JSON.stringify({ name: 'Ana', ws: 'X' }), 'upgraded:v2': '1' });
+  kv.set('pprofile:uX', JSON.stringify({ name: 'Ana', prefs: {}, today: [] }));
+  await seedTodos(env, d('07:00'));
+  const out = [];
+  for (let t = d('07:00'); t <= d('23:00'); t += 60e3) await runTick(env, { now: t, send: async (e, m, msg) => { out.push(msg.title); return 1; }, meter: { pushes: 0 } });
+  assert.ok(out.length > 6, `só ${out.length} avisos durante o lançamento`);
 });

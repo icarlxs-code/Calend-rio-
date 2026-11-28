@@ -10,6 +10,7 @@ import { ehRemedio, barra } from '../../functions/remedio.js';
 import { dueOf } from './kvsql.js';
 import { amigoOne, splitLegacyAmigo } from './pcoach.js';
 import { coachOne } from './coach.js';
+import { freeUntil } from './billing.js';
 import { upgradeSubs } from './devices.js';
 import { regAll, regGet, idOfWs } from './registry.js';
 
@@ -53,6 +54,7 @@ export async function seedTodos(env, now = Date.now()) {
   await env.CAL.put(marca, String(now));
   let n = 0;
   const D = dueOf(env);
+  // em qualquer caso a fila olha para todos; quem não tem plano (depois do lançamento) fica só com os momentos e as frases
   for (const id of Object.keys(await regAll(env))) { await D.set(`amg:${id}`, now); n++; } // já olha agora: quem ficou sem o bom dia de hoje recebe na hora (quem já recebeu não repete)
   console.log(`bom dia para todos: ${n} pessoas na fila`);
   return n;
@@ -158,7 +160,8 @@ export async function runTick(env, { now = Date.now(), send, maxPushes = 8, maxK
   if (kinds) list = list.filter(([k]) => kinds.includes(k.slice(0, k.indexOf(':'))));
   if (!list.length) return { more: false, processed: 0, sent: 0 };
   // quem tem plano ativo (o registro de cada pessoa guarda até quando ela tem direito)
-  const regOf = async (id) => { const u = await regGet(env, id); return u && (u.until || 0) > now ? u : null; };
+  // com plano ativo (ou no período de lançamento, em que todo mundo tem o plano mais alto)
+  const regOf = async (id) => { const u = await regGet(env, id); return u && ((u.until || 0) > now || now < freeUntil()) ? u : null; };
   const usage = usageMeter(env);
   const cache = {};
   let processed = 0, sent = 0;
@@ -175,9 +178,12 @@ export async function runTick(env, { now = Date.now(), send, maxPushes = 8, maxK
         sent += await dueList(env, { itemsKey: `pitems:${id}`, sentKey: `psent:${id}`, dueKey: k, member: id, send, now });
       } else if (kind === 'amg' || kind === 'cch') {
         // o bom dia e o boa noite são de TODO mundo; com plano ativo vem também o resto do dia (água, ânimo, agenda…)
-        const u = await regOf(id), u0 = u || (kind === 'amg' ? await regGet(env, id) : null);
+        // durante o período de lançamento (plano mais alto para todos) a conta conta como ativa, mesmo sem a data gravada
+        const u0 = (await regGet(env, id)) || null, promo = now < freeUntil();
+        const ativo = u0 && ((u0.until || 0) > now || promo);
         if (!u0) { await D.del(k); continue; }
-        const m = { id, name: u0.name, ws: u0.ws, ctxKey: `coach-ctx:${u0.ws}`, ...(u ? {} : { soMomentos: true }) };
+        if (!ativo && kind === 'cch') { await D.del(k); continue; }
+        const m = { id, name: u0.name, ws: u0.ws, ctxKey: `coach-ctx:${u0.ws}`, ...(ativo ? {} : { soMomentos: true }) };
         const r = kind === 'amg' ? await amigoOne(env, send, m, now, rankInfo, usage) : await coachOne(env, send, m, now, cache, usage);
         sent += r.sent;
         if (r.nextAt === null) await D.del(k); else await D.set(k, Math.max(r.nextAt, now + 60e3));
