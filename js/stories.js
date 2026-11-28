@@ -198,7 +198,7 @@ export async function openViewer(ownerUid, onChange, storyId = '') {
         ${st.podeCom ? `<button class="stv__b" data-coms aria-label="Comentários">${ICO.coment(26)}${st.ncom ? `<em>${st.ncom}</em>` : ''}</button>` : ''}
         ${(st.podeRp || st.rp) && !(st.rp && st.rp.meu) ? `<button class="stv__b" data-rep aria-label="Repostar no seu story">${icon('repeat', 25)}</button>` : ''}</footer>`;
     w.innerHTML = `<div class="stv__bars">${r.stories.map((x, i) => `<i><b style="width:${i < si ? 100 : 0}%"></b></i>`).join('')}</div>
-      <header class="stv__top">${face(r, 36)}<span><b>${r.me ? 'Seu story' : esc(r.name)}</b><small>${desde(st.at)}${st.rp ? ` · repostou de ${esc(st.rp.name.split(' ')[0])}` : st.title ? ` · ✓ ${esc(st.title)}` : ''}</small></span><button class="stv__x" data-x aria-label="Fechar">${icon('x', 22)}</button></header>
+      <header class="stv__top"><button class="stv__who" data-perfil-dono aria-label="Ver perfil de ${esc(r.name)}">${face(r, 36)}<span><b>${r.me ? 'Seu story' : esc(r.name)}</b><small>${desde(st.at)}${st.rp ? ` · repostou de ${esc(st.rp.name.split(' ')[0])}` : st.title ? ` · ✓ ${esc(st.title)}` : ''}</small></span></button><button class="stv__x" data-x aria-label="Fechar">${icon('x', 22)}</button></header>
       <div class="stv__img"><div class="stv__load"><i></i><i></i><i></i></div></div>
       ${st.caption ? `<p class="stv__cap">${esc(st.caption)}</p>` : ''}
       <div class="stv__falas" data-falas aria-live="polite"></div>
@@ -206,6 +206,9 @@ export async function openViewer(ownerUid, onChange, storyId = '') {
       ${rodape}
       <button class="stv__nav stv__nav--l" data-prev aria-label="Anterior"></button><button class="stv__nav stv__nav--r" data-next aria-label="Próximo"></button>`;
     w.querySelector('[data-x]').onclick = fecha;
+    /* tocar na foto ou no nome leva ao perfil da pessoa (o seu próprio abre o seu perfil) */
+    const quem = w.querySelector('[data-perfil-dono]');
+    if (quem) quem.onclick = (ev) => { ev.stopPropagation(); if (r.me) return; const uid = r.uid, nome = r.name; fecha(); setTimeout(() => import('./friends.js').then((F) => F.openPublicProfile(uid, { uid, name: nome, photo: r.photo, color: r.color })).catch(() => {}), 260); };
     w.querySelector('[data-prev]').onclick = (ev) => { if (!arrastou) toque(ev, anterior); };
     w.querySelector('[data-next]').onclick = (ev) => { if (!arrastou) toque(ev, proximo); };
     const v = w.querySelector('[data-viewers]'); if (v) v.onclick = abreQuemViu;
