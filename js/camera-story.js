@@ -58,6 +58,21 @@ function guarda(fluxo, chave, dev = null) {
   guardada = { fluxo, chave, dev, timer: setTimeout(() => { fluxo.getTracks().forEach((t) => t.stop()); guardada = null; }, GUARDA_MS) };
 }
 let lentesMemo = null; // as lentes do aparelho, descobertas uma vez (a câmera abre direto na certa nas próximas)
+/* Tela cheia garantida: as regras entram pelo próprio JavaScript (com !important), então o aparelho nunca mostra o
+   quadro antigo com borda preta, mesmo que o arquivo de estilo guardado no celular ainda seja de uma versão anterior. */
+const ESTILO_CAMERA = `
+.scam{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;z-index:9600!important;background:#000!important;display:block!important;padding:0!important;margin:0!important;}
+.scam__quadro{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;aspect-ratio:auto!important;border-radius:0!important;background:#000!important;overflow:hidden!important;}
+.scam__v{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;}
+.scam__x{position:absolute!important;top:calc(env(safe-area-inset-top,0px) + 10px)!important;left:12px!important;z-index:3!important;}
+.scam__barra{position:absolute!important;left:0!important;right:0!important;bottom:0!important;width:auto!important;max-width:none!important;height:auto!important;padding:18px 0 calc(env(safe-area-inset-bottom,0px) + 26px)!important;z-index:3!important;background:linear-gradient(to top,rgba(0,0,0,.45),transparent)!important;}
+.scam__zooms{position:absolute!important;left:50%!important;transform:translateX(-50%)!important;margin:0!important;bottom:calc(env(safe-area-inset-bottom,0px) + 140px)!important;z-index:3!important;}
+.scam__msg{z-index:3!important;}
+`;
+function garanteEstiloCamera() {
+  if (document.getElementById('scam-tela-cheia')) return;
+  const st = document.createElement('style'); st.id = 'scam-tela-cheia'; st.textContent = ESTILO_CAMERA; document.head.appendChild(st);
+}
 export function abreCamera({ soCamera = false, lado = 'environment', arrasto = null } = {}) {
   return new Promise((fim) => {
     let fluxo = null, frente = lado === 'user', acabou = false;
@@ -87,7 +102,7 @@ export function abreCamera({ soCamera = false, lado = 'environment', arrasto = n
         <button type="button" class="scam__clique" data-foto aria-label="Tirar foto"><i></i></button>
         <button type="button" class="scam__vira" data-vira aria-label="Virar a câmera"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/></svg></button>
       </div>`;
-    document.body.appendChild(w); document.body.classList.add('has-scam');
+    garanteEstiloCamera(); document.body.appendChild(w); document.body.classList.add('has-scam');
     const v = w.querySelector('video'), msg = w.querySelector('.scam__msg');
     v.addEventListener('playing', () => v.classList.add('is-vivo'));
     const para = () => { if (fluxo) fluxo.getTracks().forEach((t) => t.stop()); fluxo = null; };
