@@ -120,7 +120,7 @@ const precisa = (r) => !r.dead && !r.manual && !r.sleeping && r.visible;
 function loop(now) {
   rafId = 0;
   if (typeof document !== 'undefined' && document.hidden) return;
-  if (now - lastLoop >= 1000 / 60 - 1.5) {
+  if (now - lastLoop >= 1000 / 120 - 1) { // acompanha a tela: 60 fps, ou 120 nos celulares com tela de 120 Hz
     lastLoop = now;
     // durante uma troca de tela quem se mexe é o Lembra da transição: os outros esperam (o quadro fica livre para o movimento)
     const viaja = document.documentElement.classList.contains('lm-viajando');

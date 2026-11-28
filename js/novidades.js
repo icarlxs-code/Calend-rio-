@@ -7,7 +7,7 @@ import { icon } from './icons.js';
 import { locutor, temVoz, vozLigada, ligaVoz, duracao, carrega, corte } from './voz-novidades.js';
 import { anel, bolinha } from './anel.js';
 import { store } from './store.js';
-import { porTime } from '../functions/times.js';
+import { porTime, achaTimes } from '../functions/times.js';
 /* as cores do time da pessoa (bandeira e cachecol do mascote); sem time, as do Lembra */
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const nomeTime = () => { try { return porTime(store.profile?.teamId)?.nome || ''; } catch { return ''; } };
@@ -21,13 +21,40 @@ const EXTRA = {
   conta: () => `<div class="nvcard"><i>🧾</i><span><b>Pagar o aluguel</b><small>todo dia 10 · R$ 1.500</small></span></div>`,
   conversa: () => ['A', 'L', 'C', 'B'].map((x, k) => `<span class="nvface" style="--c:${['#0A8AD8', '#E85A0C', '#05855F', '#6D3AE0'][k]};--d:${0.2 + k * 0.1}s">${x}<i>💬</i></span>`).join(''),
 };
+const salva = async (dados) => { const { saveProfileQuiet } = await import('./store.js'); store.profile = { ...(store.profile || {}), ...dados }; try { await saveProfileQuiet(dados); const E = await import('./views/editar-perfil.js'); await E.sincTime(store.profile); } catch { /* sobe quando a internet voltar */ } };
+const CAMPS_N = [['brasileirao', 'Brasileirão'], ['serieb', 'Série B'], ['copadobrasil', 'Copa do Brasil'], ['libertadores', 'Libertadores'], ['sulamericana', 'Sul-Americana'], ['estadual', 'Estaduais']];
+EXTRA.escolheTime = () => '<label class="nvbusca"><input type="text" placeholder="Busque seu time" aria-label="Buscar time" autocomplete="off" data-tq></label><div class="nvtimes" data-tl></div><button type="button" class="nvchip" data-tnao>Não torço</button>';
+EXTRA.campsAqui = () => `${CAMPS_N.map(([k, n]) => `<button type="button" class="nvchip${(store.profile?.teamCamps || []).includes(k) ? ' is-on' : ''}" data-cp="${k}">${n}</button>`).join('')}<button type="button" class="nvchip${(store.profile?.teamCamps || []).length ? '' : ' is-on'}" data-cp="">Todos</button>`;
+/* preencher dentro da apresentação: escolhe, salva na hora e segue para o próximo quadro */
+const LIGA = {
+  escolheTime(a, { avanca, revestir }) {
+    const inp = a.querySelector('[data-tq]'), l = a.querySelector('[data-tl]');
+    const pinta = () => {
+      l.innerHTML = achaTimes(inp.value).slice(0, 8).map((t) => `<button type="button" class="nvchip" data-tid="${t.id}">${esc(t.nome)}</button>`).join('');
+      l.querySelectorAll('[data-tid]').forEach((b) => (b.onclick = async () => {
+        await salva({ teamId: b.dataset.tid, teamOther: '', teamAvisos: true, semTime: false }); try { localStorage.setItem('lembra.semTime', '0'); } catch { /* ok */ }
+        revestir(); const x = a.querySelector('.nvarte__extra'); if (x) x.innerHTML = `<div class="nvcard"><i>✅</i><span><b>${esc(porTime(b.dataset.tid)?.nome || '')} no coração!</b><small>Eu te aviso de todos os jogos</small></span></div>`; avanca();
+      }));
+    };
+    inp.oninput = pinta; pinta();
+    a.querySelector('[data-tnao]').onclick = async () => { await salva({ teamId: '', teamAvisos: false, semTime: true }); try { localStorage.setItem('lembra.semTime', '1'); } catch { /* ok */ } avanca(); };
+  },
+  campsAqui(a) {
+    a.querySelectorAll('[data-cp]').forEach((b) => (b.onclick = async () => {
+      let L = new Set(store.profile?.teamCamps || []); const k = b.dataset.cp;
+      if (!k) L = new Set(); else if (L.has(k)) L.delete(k); else L.add(k);
+      await salva({ teamCamps: [...L] });
+      a.querySelectorAll('[data-cp]').forEach((x) => x.classList.toggle('is-on', x.dataset.cp ? L.has(x.dataset.cp) : !L.size));
+    }));
+  },
+};
 const coresDaPessoa = () => { try { return porTime(store.profile?.teamId)?.cores || null; } catch { return null; } };
 
 export const NOVIDADES = {
   '2.33.0': [
     { t: 'Chegou coisa nova!', s: 'Preparei tudo com carinho|pra deixar seu dia ainda mais leve.', m: 'feliz', c: 'abre', arte: '11-conquista-semana', v: 'conquista' },
-    { t: 'Seu time do coração', s: 'Eu aviso dos jogos|e comemoro cada gol junto com você!', m: 'feliz', c: 'time', arte: '32-estadio', v: 'torcida', extra: 'gol', acao: { label: 'Escolher meu time', go: () => import('./views/vida.js').then((m) => m.pedeTime({ forca: true })) } },
-    { t: 'Só o campeonato que você quer', s: 'Só Brasileirão? Só Libertadores?|Você escolhe. Ou recebe de todos!', m: 'feliz', c: 'time', arte: '32-estadio', v: 'torcida', extra: 'camps', acao: { label: 'Escolher campeonatos', go: () => import('./views/editar-perfil.js').then(async (E) => { const { store, saveProfileQuiet } = await import('./store.js'); E.escolheCamps(store.profile?.teamCamps || [], async (L) => { store.profile = { ...(store.profile || {}), teamCamps: L }; try { await saveProfileQuiet({ teamCamps: L }); await E.sincTime(store.profile); } catch { /* sobe depois */ } }); }) } },
+    { t: 'Seu time do coração', s: 'Eu aviso dos jogos|e comemoro cada gol junto com você!', m: 'feliz', c: 'time', arte: '32-estadio', v: 'torcida', extra: () => (store.profile?.teamId ? 'gol' : 'escolheTime'), acao: { label: 'Escolher meu time', go: () => import('./views/vida.js').then((m) => m.pedeTime({ forca: true })) } },
+    { t: 'Só o campeonato que você quer', s: 'Só Brasileirão? Só Libertadores?|Você escolhe. Ou recebe de todos!', m: 'feliz', c: 'time', arte: '32-estadio', v: 'torcida', extra: () => (store.profile?.teamId ? 'campsAqui' : 'camps'), acao: { label: 'Escolher campeonatos', go: () => import('./views/editar-perfil.js').then(async (E) => { const { store, saveProfileQuiet } = await import('./store.js'); E.escolheCamps(store.profile?.teamCamps || [], async (L) => { store.profile = { ...(store.profile || {}), teamCamps: L }; try { await saveProfileQuiet({ teamCamps: L }); await E.sincTime(store.profile); } catch { /* sobe depois */ } }); }) } },
     { t: 'Eu te conheço melhor', s: 'Me conta de você:|filhos, amor, como anda o coração.', m: 'amor', c: 'perfil', arte: '28-calma', v: 'amor', extra: 'vida', acao: { label: 'Contar agora', go: () => import('./views/vida.js').then((m) => m.abreFicha()) } },
     { t: 'Uma frase nova toda hora', s: 'De manhã, de tarde e de noite,|escrita só pra você.', m: 'feliz', c: 'frase', arte: '29-manha-b', v: 'manha', extra: 'frase' },
     { t: 'Contas do mês, sem esquecer', s: 'Fala do seu jeito|que eu entendo, repito todo mês e digo o valor.', m: 'feliz', c: 'assist', arte: '21-contas', v: 'dinheiro', extra: 'conta' },
@@ -50,6 +77,8 @@ export const NOVIDADES = {
     { t: 'Meu time, seu time', s: 'E agora me conta:|qual é o seu time? Eu lembro. Você vive!', m: 'feliz', c: 'time', v: 'torcida' },
   ],
 };
+/** impressão digital dos quadros (muda quando entra quadro novo) */
+export const assinatura = (q) => { let h = 2166136261; for (const c of q.map((x) => x.t).join('|')) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
 const num = (v) => String(v).split('.').map((x) => parseInt(x, 10) || 0);
 const maior = (a, b) => { const A = num(a), B = num(b); for (let i = 0; i < 3; i++) if ((A[i] || 0) !== (B[i] || 0)) return (A[i] || 0) > (B[i] || 0); return false; };
 /** quadros de tudo que é novo entre a versão que a pessoa tinha e a de agora */
@@ -102,18 +131,20 @@ export function abreNovidades(quadros, aoFechar) {
   /* quadro ilustrado no estilo oficial: fundo da marca + mascote vivo com a roupa do tema + cartão da novidade */
   const pintaArte = (s) => {
     const a = q('[data-arte]'); w.classList.toggle('is-arte', !!s.arte); a.hidden = !s.arte;
-    if (!s.arte) { a.innerHTML = ''; return; }
-    const [l1, l2] = s.s.split('|');
+    if (!s.arte) { a.innerHTML = ''; w.classList.remove('is-preenche'); return; }
+    const [l1, l2] = s.s.split('|'), ex = typeof s.extra === 'function' ? s.extra() : s.extra, aqui = !!LIGA[ex];
+    w.classList.toggle('is-preenche', aqui); // tem algo para preencher: os toques de avançar/voltar não roubam o toque
     a.innerHTML = `<img class="nvarte__bg" src="assets/stories/${s.arte}.webp" alt="" decoding="async">
       <div class="nvarte__topo"><b>LEMBRA</b><span>@meulembra</span></div>
       <div class="nvarte__txt"><div class="nvarte__h">${esc(s.t)}</div><p><b>${esc(l1)}</b> ${esc(l2 || '')}</p>
-      ${EXTRA[s.extra] ? `<div class="nvarte__extra nvarte__extra--${s.extra}">${EXTRA[s.extra]()}</div>` : ''}</div>
+      ${EXTRA[ex] ? `<div class="nvarte__extra nvarte__extra--${ex}">${EXTRA[ex]()}</div>` : ''}</div>
       <span class="nvarte__snh">${sininho(s.m || 'feliz', { size: Math.min(270, Math.round(innerWidth * 0.6)) })}</span>`;
     alive();
     const e = a.querySelector('[data-snh]'); if (!e) return;
     const cores = coresDaPessoa() || ['#FF6A1A', '#FFF6EE'];
     const r = s.v === 'torcida' ? { ...roupa('torcida', cores), ros: cachecol(cores) } : roupa(s.v);
     veste(e, r); setMood(e, s.cara || (r && r.mood) || s.m || 'feliz');
+    if (aqui) LIGA[ex](a, { avanca: () => setTimeout(() => anda(1), 1300), revestir: () => pintaArte(s) });
   };
   const FITA = ['M-20 60 C 140 20 40 190 200 200 S 300 360 430 320', 'M430 40 C 260 60 340 220 190 210 S 90 330 -30 380', 'M-20 330 C 120 380 120 120 220 150 S 300 60 430 90'];
   const enquadra = (k) => { w.classList.toggle('is-rosto', k === 'rosto'); w.classList.toggle('is-cena', k === 'cena'); };
@@ -179,7 +210,7 @@ export function abreNovidades(quadros, aoFechar) {
       const cs = coresDaPessoa();
       const cores = cs || ['#FF6A1A', '#FFF6EE']; // sem time: bandeira nas cores do Lembra
       veste(e, s.v === 'torcida' ? { ...roupa('torcida', cores), ros: cachecol(cores) } : r);
-      const ac = q('[data-acao]'); ac.hidden = !s.acao; if (s.acao) { ac.textContent = s.acao.label; ac.onclick = () => { fecha(); setTimeout(() => s.acao.go(), 300); }; }
+      const ac = q('[data-acao]'); const exq = typeof s.extra === 'function' ? s.extra() : s.extra; ac.hidden = !s.acao || !!LIGA[exq]; if (s.acao) { ac.textContent = s.acao.label; ac.onclick = () => { fecha(); setTimeout(() => s.acao.go(), 300); }; }
       setMood(e, s.m || 'feliz');
       if (!s.v) { veste(e, null); setTimeout(() => minha === vez && act(e, s.g || 'sim'), 160); }
     }

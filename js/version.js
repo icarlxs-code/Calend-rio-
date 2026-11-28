@@ -90,15 +90,19 @@ function mustUpdate(j) {
 
 /* ---------- novidades (uma vez depois de atualizar) ---------- */
 export async function maybeShowWhatsNew() {
-  if (!prevVersion || cmpVer(APP_VERSION, prevVersion) <= 0 || !APP_NOTES.length) return false;
+  if (!prevVersion) return false; // primeira instalação: quem chega agora vê a apresentação de boas-vindas, não as novidades
   const { store, saveProfileQuiet } = await import('./store.js');
-  if (store.profile?.newsVista && cmpVer(store.profile.newsVista, APP_VERSION) >= 0) return false; // já viu em outro aparelho
-  const key = `lembra.news.${APP_VERSION}`;
+  const { NOVIDADES, abreNovidades, quadrosDesde, assinatura } = await import('./novidades.js');
+  // número maior: tudo o que é novo desde a versão dela; mesmo número (nova publicação): os quadros desta versão
+  const q = cmpVer(APP_VERSION, prevVersion) > 0 ? quadrosDesde(prevVersion, APP_VERSION) : (NOVIDADES[APP_VERSION] || []);
+  if (!q.length) { if (cmpVer(APP_VERSION, prevVersion) > 0 && APP_NOTES.length) openNews(); return false; }
+  // marcada pelo CONTEÚDO dos quadros: quadro novo aparece mesmo sem mudar o número da versão
+  const sig = `${APP_VERSION}:${assinatura(q)}`;
+  if (store.profile?.newsVista === sig) return false; // já viu em outro aparelho
+  const key = `lembra.news.${sig}`;
   try { if (localStorage.getItem(key)) return false; localStorage.setItem(key, '1'); } catch { return false; }
-  const { abreNovidades, quadrosDesde } = await import('./novidades.js');
-  const q = quadrosDesde(prevVersion, APP_VERSION);
-  saveProfileQuiet({ newsVista: APP_VERSION }).catch(() => {});
-  if (q.length) abreNovidades(q); else openNews(); // só as atualizações grandes ganham apresentação
+  saveProfileQuiet({ newsVista: sig }).catch(() => {});
+  abreNovidades(q);
   return true;
 }
 /* "Novidades" no jeito da App Store: versão, há quantos dias e um texto curto e geral

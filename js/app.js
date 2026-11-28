@@ -94,7 +94,7 @@ function applySpaceMeta(personalMode) {
 function switchSpace(space, from) {
   if (ui.space === space || document.querySelector('.spaceveil')) return;
   document.querySelectorAll('.sheet-wrap.is-open [data-close]').forEach((b) => b.click());
-  const M = window.__motion;
+  const M = null; // sem a transição em 3D (lenta): sempre o splash rápido, ~0,9 s
   if (M && M.pronto()) {
     M.mundo(space, from, () => { ui.space = space; saveUi(); shell(); render(); window.scrollTo(0, 0); document.getElementById('view')?.querySelectorAll('.page').forEach((n) => { n.style.animation = 'none'; }); }, setBarColor, SPACE_BAR[space]);
     return;
@@ -126,9 +126,9 @@ function switchSpace(space, from) {
     const view = document.getElementById('view');
     if (view) { view.classList.add('is-entering'); setTimeout(() => view.classList.remove('is-entering'), 600); }
     setBarColor(veilBar); // continua na cor da transição enquanto ela está na tela
-  }, 430);
-  setTimeout(() => { veil.classList.add('is-out'); const [l, d] = space === 'personal' ? SPACE_BAR.personal : SPACE_BAR.work; setBarColor(l, d); }, 700);
-  setTimeout(() => veil.remove(), 1050);
+  }, 330);
+  setTimeout(() => { veil.classList.add('is-out'); const [l, d] = space === 'personal' ? SPACE_BAR.personal : SPACE_BAR.work; setBarColor(l, d); }, 560);
+  setTimeout(() => veil.remove(), 900);
 }
 window.__calRender = () => render();
 const tabBtn = (id, ic, label) => `<button class="tabbar__btn" data-action="tab" data-tab="${id}">${icon(ic, 24)}<span>${label}</span></button>`;

@@ -24,6 +24,7 @@ import { rodaAoVivo, rodaAntes, cenaDoTime } from './fut-motor.js';
 import { proximosEspn } from './fut-espn.js';
 import { desabafo } from './desabafo.js';
 import { geraFala } from './fala.js';
+import { lembraAtualizar, guardaVersao } from './atualiza-aviso.js';
 import { orcamento as futOrcamento } from './fut-api.js';
 import { porHora, usoIA } from './cota.js';
 import { brNow, fusoOk } from './coach.js';
@@ -1151,6 +1152,7 @@ async function handle(req, env) {
     if (t && prev.t && t < prev.t) return reply(env, req, { ok: true, ignored: true });
     const on = body.state !== 'off';
     const app = body.app && typeof body.app === 'object' ? { v: clean(body.app.v, 20), b: clean(body.app.b, 20) } : prev.app;
+    if (body.app && typeof body.app === 'object') await guardaVersao(env, me.id, app); // o aviso "tem versão nova" para quando ela atualiza
     P.set(me.ws, { t: t || prev.t || 0, online: on, lastPing: Date.now(), ...(on ? { lastOpen: body.state === 'open' ? Date.now() : prev.lastOpen || Date.now() } : { closedAt: Date.now(), lastOpen: prev.lastOpen }), ...(app ? { app } : {}) });
     if (P.size > 20000) { const old = [...P.entries()].sort((x, y) => x[1].lastPing - y[1].lastPing).slice(0, 5000); for (const [k] of old) P.delete(k); }
     return reply(env, req, { ok: true });
@@ -1238,6 +1240,8 @@ export async function cronTick(env, { now = Date.now(), meter = { pushes: 0 }, m
   // tarefas raras (cada uma confere uma marca e sai na hora quando não há nada a fazer)
   if (!r.more && !kinds) {
     const safe = (name, p) => p.catch((e) => console.log(name, e.message));
+    // "tem versão nova": de 5 em 5 min até a pessoa atualizar (fora da madrugada)
+    await safe('atualizar', lembraAtualizar(env, now, (e, m, msg) => sendToMember(e, m, msg)));
     await safe('aviso único', oneShot(env));
     await safe('vitalício (quem ganhou antes da surpresa)', vipMigrate(env, (uid) => vipNotify(env, uid)));
     await safe('vitalício (numeração sem buracos)', vipCompacta(env));

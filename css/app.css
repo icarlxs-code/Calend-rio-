@@ -4103,3 +4103,16 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .spr i { display: block; width: 100%; aspect-ratio: 1; background-size: 1500% 100%; background-repeat: no-repeat; animation: spr var(--ms, 600ms) steps(14) var(--it, 1) both; }
 @keyframes spr { from { background-position: 0 0; } to { background-position: 100% 0; } }
 .is-spr > [data-snh] { visibility: hidden; }
+.nvbusca { display: block; width: 100%; } .nvbusca input { width: 100%; padding: 13px 16px; border-radius: 16px; border: 0; background: #fff; font: 700 16px Nunito, system-ui, sans-serif; box-shadow: 0 8px 20px rgba(150, 70, 10, .16); }
+.nvtimes { display: flex; flex-wrap: wrap; gap: 8px; }
+.nvarte__extra button.nvchip { border: 0; cursor: pointer; pointer-events: auto; }
+.nvarte__extra { pointer-events: auto; }
+
+/* troca Pessoal ⇄ Trabalho: splash rápido (~0,9 s), só opacidade e escala (GPU, 60 fps) */
+.spaceveil { transition: opacity .22s ease-out !important; will-change: opacity; }
+.spaceveil > div { transition: transform .32s cubic-bezier(.2, .9, .3, 1.2) !important; will-change: transform; }
+.spaceveil.is-in > div { transform: scale(1) !important; }
+.spaceveil.is-out { transition-duration: .3s !important; }
+.spaceveil, .spaceveil.is-in { clip-path: none !important; }
+.spaceveil:not(.is-in) { opacity: 0; }
+.nv.is-preenche .nv__zona { pointer-events: none; } .nv.is-arte .nvarte { z-index: 2; }
