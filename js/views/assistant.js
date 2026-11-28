@@ -12,6 +12,7 @@ import { planAction, congela, mudou, executa, desfaz, quantosApaga, pedeSegunda 
 import { avisaApagado, listaHtml } from '../lixeira.js';
 import { novoLote } from '../lixeira-core.js';
 import { entende } from '../destino.js';
+import { ehConsulta, jaTem, limpaResposta } from '../intencao.js';
 import { entendeConta, respostaConta } from '../contas.js';
 import { personal, savePersonal, removePersonal, addMemo, guessCat, REPEATS } from '../personal.js';
 import { reaisTxt, proximoDiaDoMes } from '../frase-conta.js';
@@ -346,14 +347,21 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
           redrawChat(a);
           return;
         }
-        const history = chat.filter((m) => !m.error).map((m) => ({ role: m.role, text: m.text + (m.escolha ? ` (${m.escolha.titulo}: ${m.escStatus === 'feito' ? m.escResult : 'ainda não guardado'})` : '') + (m.actions?.length ? (m.actStatus === 'done' ? ' (ações confirmadas e feitas na agenda)' : m.actStatus === 'cancelled' ? ' (a pessoa cancelou essas ações)' : ' (ações aguardando confirmação)') : '') }));
+        const history = chat.filter((m) => !m.error).map((m) => ({ role: m.role, text: m.text + (m.escolha ? ` (${m.escolha.titulo}: ${m.escStatus === 'feito' ? m.escResult : 'ainda não guardado'})` : '') + (m.actions?.length ? (m.actStatus === 'done' ? ' [ações confirmadas e feitas na agenda]' : m.actStatus === 'cancelled' ? ' [a pessoa cancelou essas ações]' : ' [ações aguardando confirmação]') : '') }));
         chat.push({ role: 'user', text: q });
         thinking = true;
         redrawChat(a);
         try {
           const r = await store.askAssistant(q, history);
-          const text = typeof r === 'string' ? r : r.text;
-          const actions = typeof r === 'string' ? [] : r.actions || [];
+          const text = limpaResposta(typeof r === 'string' ? r : r.text);
+          let actions = typeof r === 'string' ? [] : r.actions || [];
+          // pergunta é pergunta: só responde, nada de cartão para agendar
+          if (ehConsulta(q)) actions = [];
+          // nunca propõe criar o que já está na agenda
+          const existentes = [...personal.events.map((e) => ({ title: e.title || e.text, date: e.date })), ...(store.state.events || []).map((e) => ({ title: e.title, date: e.date }))];
+          actions = actions.filter((x) => !(/^(criar|pessoal|anota[cç][aã]o|bilhete)$/i.test(x.acao || '') && jaTem(x, existentes)));
+          // e não mostra cartão só com erro ("Faltou a data"): a resposta em texto já pergunta o que falta
+          actions = actions.filter((x) => { try { return planAction(x).ok !== false; } catch { return false; } });
           // conta que se repete sem valor: a IA não age sozinha; o app pergunta o valor, o dia e o lugar, uma coisa por vez
           const conta = actions.find((a) => (a.repetir === 'monthly' || /pagar/i.test(a.categoria || '')) && !(Number(a.valor) > 0));
           if (conta && ehConta({ texto: q, titulo: conta.titulo, repetir: 'monthly' }, q)) {
@@ -363,7 +371,7 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
             return;
           }
           const so = actions.length === 1 ? actions[0] : null;
-          if (so && /^(pessoal|anota[cç][aã]o|bilhete)$/i.test(so.acao || '') && (!so.repetir || so.repetir === 'none') && !so.datas) { // a IA não decide sozinha entre agenda e nota
+          if (so && /^(pessoal|anota[cç][aã]o|bilhete)$/i.test(so.acao || '') && (!so.repetir || so.repetir === 'none') && !so.datas && !so.data) { // sem dia: pergunta se é agenda ou nota; com dia, é agenda
             const e2 = entende(q.slice(0, 160).replace(/\?+$/, ''), 'personal') || {};
             chat.push({ role: 'assistant', text: text || 'Onde eu guardo isso?', escolha: { texto: so.texto || so.titulo || q, titulo: so.titulo || e2.titulo || so.texto || q, data: so.data || e2.data || null, hora: so.inicio || so.hora || e2.hora || null, cat: so.categoria, espaco: 'personal' } });
             thinking = false; saveChat(); redrawChat(a);

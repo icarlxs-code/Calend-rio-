@@ -483,6 +483,16 @@ function abrePergunta() {
   const f = w.querySelector('form'), t = f.q, av = w.querySelector('[data-snh]');
   requestAnimationFrame(() => w.classList.add('is-in'));
   setTimeout(() => t.focus({ preventScroll: true }), 380);
+  /* teclado aberto: a caixa sobe e cabe inteira na parte visível (o Lembra nunca fica escondido atrás do teclado) */
+  const vv = window.visualViewport;
+  const encaixa = () => {
+    if (!vv || !w.isConnected) return;
+    const tecl = window.innerHeight - vv.height > 120;
+    w.style.top = `${Math.round(vv.offsetTop)}px`; w.style.height = `${Math.round(vv.height)}px`; w.style.bottom = 'auto';
+    w.classList.toggle('is-teclado', tecl);
+    if (tecl && document.scrollingElement && vv.offsetTop > 0 && !/iPhone|iPad/.test(navigator.userAgent)) window.scrollTo(0, 0);
+  };
+  if (vv) { vv.addEventListener('resize', encaixa); vv.addEventListener('scroll', encaixa); encaixa(); }
   /* os olhos acompanham a última letra digitada (posição medida com a fonte do campo) */
   const med = document.createElement('canvas').getContext('2d');
   const olha = () => {
@@ -500,7 +510,7 @@ function abrePergunta() {
   };
   ['input', 'click', 'keyup', 'focus'].forEach((e) => t.addEventListener(e, olha));
   t.addEventListener('input', () => { if (av && t.value.length === 1) act(av, 'sim'); });
-  const sai = () => { w.classList.remove('is-in'); w.classList.add('is-sai'); pulsoSegura(false); try { rec && rec.stop(); } catch { /* ok */ } setTimeout(() => w.remove(), 320); };
+  const sai = () => { if (vv) { vv.removeEventListener('resize', encaixa); vv.removeEventListener('scroll', encaixa); } w.classList.remove('is-in'); w.classList.add('is-sai'); pulsoSegura(false); try { rec && rec.stop(); } catch { /* ok */ } setTimeout(() => w.remove(), 320); };
   w.querySelectorAll('[data-sai]').forEach((x) => (x.onclick = sai));
   w.addEventListener('click', (ev) => { if (ev.target === w) sai(); });
   w.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') sai(); if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); f.requestSubmit(); } });
