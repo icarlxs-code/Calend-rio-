@@ -31,6 +31,7 @@ import { brNow, fusoOk } from './coach.js';
 import { meuId, trocaId, limpaId, esqueceAchado, guardaCodigos } from './achar.js';
 import { regGet, regPut, regDel, regAll, idOfWs } from './registry.js';
 import { boardOf } from './leaderboard.js';
+import { fraseVisita } from './visita-frase.js';
 import { marcaCpf, startTrial, billingStatus, createCheckout, createPortal, verifyStripe, handleStripeEvent, billingAll, syncTeam, teamActive, closeBilling, untilOf, statusOf, grantComp, markVipSent, vipMigrate, vipCompacta } from './billing.js';
 
 const SUBJECT = 'mailto:avisos@calendario.app';
@@ -760,12 +761,15 @@ async function handle(req, env) {
       if (other === meU || !(await isFriend(meU, other))) return reply(env, req, { ok: true });
       const l = (await getL(`visits:${other}`)).filter((x) => now - x.at < 7 * DAY);
       const prev = l.find((x) => x.from === meU);
-      const novo = [{ from: meU, at: now, n: (prev?.n || 0) + 1 }, ...l.filter((x) => x.from !== meU)].slice(0, 60);
+      const dia = new Date(now - 3 * 3600e3).toISOString().slice(0, 10), hj = prev && prev.hd === dia ? (prev.hj || 1) + 1 : 1;
+      const novo = [{ from: meU, at: now, n: (prev?.n || 0) + 1, hd: dia, hj }, ...l.filter((x) => x.from !== meU)].slice(0, 60);
       await env.CAL.put(`visits:${other}`, JSON.stringify(novo), { expirationTtl: 8 * 24 * 3600 });
-      // gatilho de curiosidade: não diz quem foi (pra pessoa abrir o app); no máximo 1 aviso a cada 6h por visitante
-      if ((!prev || now - prev.at > 6 * 3600e3) && !(await dormindo(other))) {
-        const B = ['Alguém acabou de olhar o seu perfil 👀 Toque pra ver quem foi', 'Tem gente bisbilhotando o seu perfil 🤭 Quer saber quem?', 'Seu perfil recebeu uma visita agora. Curioso(a)? 👀'];
-        await sendToMember(env, memberOf(other), { title: '👀 Visita no seu perfil', body: B[now % B.length], tag: 'visitas', url: './#/visitas' }).catch(() => 0);
+      // toda visita vira aviso (frase diferente a cada vez, mais forte quando a mesma pessoa volta no dia); só não repete se reabriu em menos de 1 min
+      if ((!prev || now - prev.at > 60e3) && !(await dormindo(other))) {
+        const kU = `vfr:${other}`, ultima = +(await env.CAL.get(kU)) || -1;
+        const f = fraseVisita({ nome: (await cardOf(meU)).name, hoje: hj, ultima, semente: `${meU}:${now}` });
+        await env.CAL.put(kU, String(f.idx), { expirationTtl: 3 * 864e2 });
+        await sendToMember(env, memberOf(other), { title: f.title, body: f.body, tag: `visitas-${now}`, url: './#/visitas' }).catch(() => 0);
       }
       return reply(env, req, { ok: true });
     }
