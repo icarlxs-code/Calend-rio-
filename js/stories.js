@@ -661,3 +661,39 @@ function repostar(r, st, foto, fim, onChange) {
   const c = w.querySelector('.stv__cartao'); c.animate([{ transform: 'scale(1.4) rotate(0)', opacity: 0.2 }, { transform: 'scale(.94) rotate(-3deg)', opacity: 1, offset: 0.6 }, { transform: 'scale(1) rotate(-2deg)' }], { duration: 480, easing: 'cubic-bezier(.2,1.1,.3,1)', fill: 'forwards' });
   requestAnimationFrame(() => w.classList.add('is-in'));
 }
+
+/* ---------- puxar da esquerda para a direita abre a câmera do story (como no Instagram) ----------
+   o painel segue o dedo; soltando depois de ~1/3 da tela (ou num puxão rápido) abre a câmera 9:16 */
+export async function cameraDireto(onChange) {
+  if (store.mode !== 'cloud' || !store.user) return toast('Entre na sua conta para postar stories.');
+  const C = await import('./camera-story.js');
+  if (!C.temCamera()) return novoStory(onChange);
+  const foto = await C.abreCamera(); if (foto) editorStory(foto, onChange);
+}
+let puxaLigado = false;
+export function ligaPuxar() {
+  if (puxaLigado) return; puxaLigado = true;
+  let ini = null, painel = null;
+  const livre = () => store.user && store.mode === 'cloud' && !document.querySelector('.sheet-wrap.is-open, .stv, .scam, .snhq, .login, .vficha, .nv, dialog[open]') && !document.body.classList.contains('has-stv');
+  document.addEventListener('touchstart', (e) => {
+    const t = e.touches[0]; if (e.touches.length !== 1 || t.clientX > 28 || !livre()) return;
+    ini = { x: t.clientX, y: t.clientY, t: performance.now(), dx: 0, ok: null };
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (!ini) return; const t = e.touches[0], dx = t.clientX - ini.x, dy = t.clientY - ini.y;
+    if (ini.ok === null && Math.hypot(dx, dy) > 10) ini.ok = dx > Math.abs(dy) * 1.3;  // é horizontal? senão deixa a tela rolar
+    if (!ini.ok) { if (ini.ok === false) ini = null; return; }
+    ini.dx = Math.max(0, dx);
+    if (!painel) { painel = document.createElement('div'); painel.className = 'puxa'; painel.innerHTML = `<span class="puxa__ic">${icon('camera', 30)}</span><b>Seu story</b>`; document.body.appendChild(painel); }
+    const k = Math.min(1, ini.dx / innerWidth);
+    painel.style.transform = `translate3d(${(-1 + k) * 100}%, 0, 0)`; painel.style.setProperty('--k', k.toFixed(3));
+  }, { passive: true });
+  const fim = () => {
+    if (!ini) return; const v = ini.dx / Math.max(1, performance.now() - ini.t), abre = ini.ok && (ini.dx > innerWidth * 0.33 || (v > 0.6 && ini.dx > 60));
+    ini = null; if (!painel) return; const p = painel; painel = null;
+    p.style.transition = 'transform .26s cubic-bezier(.2,.9,.3,1)'; p.style.transform = abre ? 'translate3d(0,0,0)' : 'translate3d(-100%,0,0)';
+    try { if (abre && navigator.vibrate) navigator.vibrate(10); } catch { /* ok */ }
+    setTimeout(() => { if (abre) cameraDireto(); setTimeout(() => p.remove(), abre ? 350 : 0); }, 240);
+  };
+  document.addEventListener('touchend', fim, { passive: true }); document.addEventListener('touchcancel', fim, { passive: true });
+}

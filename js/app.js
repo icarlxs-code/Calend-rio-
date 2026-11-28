@@ -1354,6 +1354,7 @@ function startApp() {
   import('./rede.js').then((r) => r.repintaRede()).catch(() => {});
   window.addEventListener('lembra:recusada', () => toast('Uma alteração não foi aceita pela nuvem. Ela continua guardada neste aparelho.', { ms: 6000 }));
   startPersonal();
+  import('./stories.js').then((m) => m.ligaPuxar()).catch(() => {}); // puxar da esquerda abre a câmera do story
   import('./motion/auto.js').catch((e) => console.warn('animações', e));
   personal.onSaved = (b, a) => { import('./rank.js').then((r) => r.rankPersonal(b, a)); import('./game.js').then((gm) => gm.onPersonal(b, a)).catch(() => {}); };
   // conquistas: XP, níveis e emblemas (concluir, marcar, bilhetes); começa depois que a agenda carregou

@@ -4349,3 +4349,7 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .scam__clique { width: 78px; height: 78px; border-radius: 50%; border: 5px solid #fff; background: none; padding: 5px; cursor: pointer; }
 .scam__clique i { display: block; width: 100%; height: 100%; border-radius: 50%; background: #fff; transition: transform .12s; }
 .scam__clique:active i { transform: scale(.88); }
+/* puxar da esquerda: painel da câmera do story seguindo o dedo */
+.puxa { position: fixed; inset: 0; z-index: 9500; background: #000; color: #fff; display: flex; flex-direction: column; align-items: flex-end; padding-right: 22px; justify-content: center; gap: 12px; transform: translate3d(-100%, 0, 0); will-change: transform; box-shadow: 8px 0 30px rgba(0,0,0,.35); font: 800 18px Nunito, system-ui, sans-serif; pointer-events: none; }
+.puxa__ic { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, #FF8A3D, #FF3D7F); transform: scale(calc(.6 + var(--k, 0) * .5)); }
+.puxa b { opacity: calc(var(--k, 0) * 2); }

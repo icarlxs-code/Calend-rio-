@@ -395,8 +395,8 @@ function state(s, side) {
   B.dataset.st = s; if (side && !livre) B.dataset.side = side;
   // anda de verdade: saindo, vai para o lado dele; voltando, vem andando de lá (e às vezes dá um giro ao chegar)
   const host = B.querySelector('.snhbud__fig') || B;
-  if (s === 'away' && era !== 'away') toca(host, lado === 'l' ? 'esquerda' : 'direita', { ms: 520, loop: true, ciclo: 520 });
-  else if (era === 'away' && s !== 'away') toca(host, lado === 'l' ? 'direita' : 'esquerda', { ms: 560, loop: true, ciclo: 520 }).then((ok) => { if (ok && Math.random() < 0.3) toca(host, 'gira', { ms: 700 }); });
+  if (s === 'away' && era !== 'away') (rig()?.corre && rig().corre(lado === 'l' ? -1 : 1, 0.52));
+  else if (era === 'away' && s !== 'away') { const rg0 = rig(); if (rg0 && rg0.corre) rg0.corre(lado === 'l' ? 1 : -1, 0.56); }
 }
 const falando = () => Date.now() < busyUntil;
 
@@ -798,9 +798,9 @@ function voltaCanto() {
   const host = B.querySelector('.snhbud__fig') || B;
   const indo = para.left > de.left ? 'direita' : 'esquerda';   // para onde ele está andando
   const dur = Math.min(1900, Math.max(800, dist * 5.5));        // ~180 px/s de passo tranquilo
-  toca(host, indo, { ms: dur, loop: true, ciclo: 520 });
+  { const rg0 = rig(); if (rg0 && rg0.corre) rg0.corre(indo === 'direita' ? 1 : -1, dur / 1000); }
   const passos = Math.max(3, Math.round(dist / 90));
-  const an = caminhada(B, { x: dx, y: dy }, { x: 0, y: 0 }, dur, passos, 7);
+  const an = caminhada(B, { x: dx, y: dy }, { x: 0, y: 0 }, dur, passos, 0);
   if (!an) { B.style.transition = ''; return; }
   an.onfinish = () => { if (andando === an) andando = null; an.cancel(); if (B) B.style.transition = ''; };
 }
@@ -1018,8 +1018,8 @@ function reage(a) {
   const x1 = bordaX(side), dist = Math.abs(x1 - a.x);
   const y0 = Number.isFinite(a.yAgora) ? a.yAgora : a.y; // onde ele está de verdade (antes de ajustar à área permitida)
   a.y = y; a.enc = { t0: performance.now(), x0: a.x, x1, y0, y1: y, side, dur: Math.min(1700, Math.max(800, Math.hypot(dist, y - y0) * 5.5)), passos: Math.max(2, Math.round(Math.hypot(dist, y - y0) / 70)) };   // vai andando pra borda mais perto
-  if (dist > 24) toca(B.querySelector('.snhbud__fig') || B, x1 > a.x ? 'direita' : 'esquerda', { ms: a.enc.dur, loop: true, ciclo: 520 }); // os passos do desenho
-  if (!calmo()) { B.style.transition = 'none'; B.style.removeProperty('transform'); a.enc.anim = caminhada(B, { x: a.x, y: y0 }, { x: x1, y }, a.enc.dur, a.enc.passos); if (!a.enc.anim) mover(a.x, y0); }
+  if (dist > 24) { const rg0 = rig(); if (rg0 && rg0.corre) rg0.corre(x1 > a.x ? 1 : -1, a.enc.dur / 1000); } // a corridinha é desenhada quadro a quadro pelo próprio boneco
+  if (!calmo()) { B.style.transition = 'none'; B.style.removeProperty('transform'); a.enc.anim = caminhada(B, { x: a.x, y: y0 }, { x: x1, y }, a.enc.dur, a.enc.passos, 0); if (!a.enc.anim) mover(a.x, y0); }
   livre = { side, y, em: Date.now() }; gravaPos();
   const agora = Date.now(); mudancas++; solturas = solturas.filter((t) => agora - t < 30000); solturas.push(agora);
   // o que ele acha da mudança

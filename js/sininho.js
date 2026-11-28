@@ -46,7 +46,7 @@ class Spring {
   // mexer no alvo ou na velocidade (de dentro ou de fora, ex.: abertura e arrasto) acorda o boneco que estava "dormindo"
   get t() { return this._t; } set t(x) { this._t = x; if (this.o && this.o.sleeping) this.o.wake(); }
   get vel() { return this._vel; } set vel(x) { this._vel = x; if (this.o && this.o.sleeping) this.o.wake(); }
-  set(f, z) { const w = 2 * Math.PI * f; this.k = w * w; this.c = 2 * z * w; return this; }
+  set(f, z) { this.f = f; this.z = z; const w = 2 * Math.PI * f; this.k = w * w; this.c = 2 * z * w; return this; }
   step(dt) { const a = this.k * (this._t - this.v) - this.c * this._vel; this._vel += a * dt; this.v += this._vel * dt; }
   calma() { return Math.abs(this._t - this.v) < 0.01 && Math.abs(this._vel) < 0.01; }
 }
@@ -445,9 +445,45 @@ class Rig {
     this.next.idle = this.t + n * 0.19 + 0.5;
   }
 
+  /* CORRIDINHA: ciclo de corrida contínuo, recalculado a cada quadro (60 fps), sem sprite e sem saltos.
+     Pernas alternando (sobem e vão pra frente/trás), corpo quicando duas vezes por ciclo com amassa-e-estica
+     no contato do pé (a "distorção" que dá peso), inclinado para a frente, gingando de lado, braços
+     balançando ao contrário das pernas e olhar para onde vai. Começa e termina suave. */
+  corre(dir = 1, dur = 1) {
+    const s = this.s;
+    if (!this.corrida) this.molasAntes = ['fL', 'fR', 'fxL', 'fxR', 'by', 'bx', 'sq', 'lean', 'aL', 'aR'].map((k) => [k, s[k].f, s[k].z]);
+    [['fL', 11, 0.55], ['fR', 11, 0.55], ['fxL', 11, 0.6], ['fxR', 11, 0.6], ['by', 12, 0.6], ['bx', 7, 0.7], ['sq', 12, 0.5], ['lean', 6, 0.75], ['aL', 10, 0.55], ['aR', 10, 0.55]].forEach(([k, a, b]) => s[k].set(a, b));
+    this.corrida = { dir: dir < 0 ? -1 : 1, t0: this.t, ate: this.t + Math.max(0.35, dur) };
+    this.wake && this.sleeping && this.wake();
+  }
+  cicloCorrida() {
+    const s = this.s, c = this.corrida, e = EMO[this.mood] || {};
+    if (this.t >= c.ate) {                                         // chegou: pés no chão, assenta o peso
+      this.corrida = null;
+      (this.molasAntes || []).forEach(([k, a, b]) => s[k].set(a, b));
+      s.fL.t = 0; s.fR.t = 0; s.fxL.t = 0; s.fxR.t = 0; s.by.t = 0; s.bx.t = 0; s.sq.t = 0; s.sq.vel += 1.1;
+      s.lean.t = e.lean || 0; s.px.t = 0; if (e.arms) { s.aL.t = e.arms[1]; s.aR.t = e.arms[3]; }
+      this.next.idle = this.t + 0.6;
+      return;
+    }
+    const d = c.dir, el = this.t - c.t0, falta = c.ate - this.t;
+    const A = Math.max(0, Math.min(1, el / 0.22, falta / 0.28));      // entra e sai suave
+    const ph = el * Math.PI * 2 * 2.1;                               // 2,1 ciclos por segundo (4,2 passos)
+    const sn = Math.sin(ph), salto = Math.abs(sn);
+    s.fL.t = Math.max(0, sn) * 56 * A; s.fR.t = Math.max(0, -sn) * 56 * A;          // cada pé sobe na sua vez
+    s.fxL.t = Math.cos(ph) * 28 * d * A; s.fxR.t = -Math.cos(ph) * 28 * d * A;       // e vai pra frente/trás
+    s.by.t = -salto * 30 * A;                                                          // corpo quica a cada passo
+    s.sq.t = (0.075 - salto * 0.15) * A;                                               // amassa no contato, estica no ar
+    s.lean.t = (d * 6 + Math.sin(ph * 2) * 1.3) * A + (e.lean || 0) * (1 - A);         // inclinado pra frente
+    s.bx.t = sn * 5 * A;                                                               // ginga de lado
+    s.aL.t = 22 - Math.sin(ph) * 34 * A; s.aR.t = -22 - Math.sin(ph) * 34 * A;          // braços ao contrário das pernas
+    s.px.t = d * 16 * A; s.py.t = 2;                                                   // olha para onde vai
+  }
+
   /* vida própria */
   idle() {
     const s = this.s, e = EMO[this.mood];
+    if (this.corrida) return this.cicloCorrida();
     if (this.dr) { this.pendurado(); if (this.t >= this.next.blink) { this.blink(false); this.next.blink = this.t + 3 + Math.random() * 3; } return; }
     if (this.tonto) {                                              // tonto: corpo bambo, cambaleando
       const A = Math.min(1, Math.max(0, (this.tonto.ate - this.t) / 1.2));
