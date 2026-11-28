@@ -707,21 +707,30 @@ function encosta(side, y, desde) {
 function voltaCanto() {
   livre = null; gravaPos();
   if (!B) return;
-  /* deslize de verdade: sai de onde ele está e vai até o canto (sem pular) */
+  /* volta andando até a borda: sai de onde está, anda com o balanço dos passos (sprite de andar), começa devagar,
+     pega ritmo e vai parando aos poucos na borda. Sem pular. */
   const de = B.getBoundingClientRect();
   B.classList.remove('is-free', 'is-drag', 'bub-baixo'); B.style.transition = 'none'; B.style.left = B.style.top = ''; B.style.removeProperty('transform');
   B.dataset.side = 'r';
   const para = B.getBoundingClientRect();
-  const dx = de.left - para.left, dy = de.top - para.top;
-  if (calmo() || (Math.abs(dx) < 4 && Math.abs(dy) < 4)) { B.style.transition = ''; return; }
-  B.style.setProperty('transform', `translate3d(${dx.toFixed(1)}px, ${dy.toFixed(1)}px, 0)`, 'important');
-  void B.offsetWidth;
-  const dist = Math.hypot(dx, dy), dur = Math.min(900, Math.max(420, dist * 0.9));
-  B.style.transition = `transform ${dur}ms cubic-bezier(.22,.9,.3,1)`;
-  requestAnimationFrame(() => requestAnimationFrame(() => { if (!B) return; B.style.setProperty('transform', 'translate3d(0px, 0px, 0)', 'important'); }));
-  const fim = () => { if (!B) return; B.style.transition = ''; B.style.removeProperty('transform'); B.removeEventListener('transitionend', fim); };
-  B.addEventListener('transitionend', fim);
-  setTimeout(fim, dur + 120);
+  const dx = de.left - para.left, dy = de.top - para.top, dist = Math.hypot(dx, dy);
+  if (calmo() || dist < 4) { B.style.transition = ''; return; }
+  const host = B.querySelector('.snhbud__fig') || B;
+  const indo = para.left > de.left ? 'direita' : 'esquerda';   // para onde ele está andando
+  const dur = Math.min(1700, Math.max(700, dist * 4.2));        // ~240 px/s de passo tranquilo
+  toca(host, indo, { ms: dur, loop: true, ciclo: 520 });
+  const t0 = performance.now(), passos = Math.max(3, Math.round(dist / 90));
+  const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2); // começa devagar, acelera, freia no fim
+  const frame = (now) => {
+    if (!B) return;
+    const t = Math.min(1, (now - t0) / dur), k = ease(t);
+    const bob = Math.abs(Math.sin(t * Math.PI * passos)) * 7 * (1 - t);           // balanço de cada passo
+    const x = dx * (1 - k), y = dy * (1 - k) - bob;
+    B.style.setProperty('transform', `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`, 'important');
+    if (t < 1) requestAnimationFrame(frame);
+    else { B.style.removeProperty('transform'); B.style.transition = ''; }
+  };
+  requestAnimationFrame(frame);
 }
 const zona = (side, y) => { const cy = y + FIGH / 2, H = innerHeight; return cy < H * 0.3 ? 'topo' : cy > H * 0.72 ? 'baixo' : side === 'l' ? 'esq' : 'dir'; };
 
