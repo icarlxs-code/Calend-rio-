@@ -181,14 +181,16 @@ export async function openViewer(ownerUid, onChange, storyId = '') {
   w.className = 'stv'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Stories');
   (document.getElementById('sheets') || document.body).appendChild(w); document.body.classList.add('has-stv'); // na mesma pilha das janelas: o que abrir depois (Visto por, Apagar) fica na frente
   const DUR = 6000;
-  const fecha = () => { clearInterval(timer); w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-stv'); }, 220); onChange && onChange(); };
+  let mudo = (() => { try { return localStorage.getItem('lembra.storyMudo') === '1'; } catch { return false; } })(), som = null;
+  const paraSom = () => { if (som) { try { som.pause(); } catch { /* ok */ } som = null; } };
+  const fecha = () => { clearInterval(timer); paraSom(); w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-stv'); }, 220); onChange && onChange(); };
   const proximo = () => { const r = ordem[oi]; if (si < r.stories.length - 1) si++; else if (oi < ordem.length - 1) { oi++; si = 0; } else return fecha(); mostra(); };
   const anterior = () => { if (si > 0) si--; else if (oi > 0) { oi--; si = ordem[oi].stories.length - 1; } mostra(); };
   const abreQuemViu = () => { const r = ordem[oi], st = r.stories[si]; if (!r.me) return; pausado = true; openViewers(st.id, () => { pausado = false; }, w.querySelector('.stv__img img')?.src, st); };
   // adianta os próximos 2 (do mesmo amigo e o primeiro do próximo): abrem na hora
   const adianta = () => { const L = []; const r = ordem[oi]; if (r.stories[si + 1]) L.push([r, r.stories[si + 1]]); const r2 = ordem[oi + 1]; if (r2) { const k = Math.max(0, r2.stories.findIndex((x) => !x.seen)); L.push([r2, r2.stories[k]]); } L.forEach(([rr, ss]) => fotoDe(rr, ss, { adianta: true }).catch(() => {})); };
   async function mostra() {
-    clearInterval(timer);
+    clearInterval(timer); paraSom();
     const minha = ++vez, r = ordem[oi], st = r.stories[si];
     const n1 = esc(r.name.split(' ')[0]);
     const rodape = r.me ? `<footer class="stv__me"><button class="stv__ativ" data-viewers><span class="stv__faces" data-faces></span><b>Atividade</b><small>${st.views || 0} ${st.views === 1 ? 'viu' : 'viram'}${st.likes ? ` · ${st.likes} ♥` : ''}</small></button>${st.podeCom ? `<button class="stv__ic" data-coms aria-label="Comentários">${ICO.coment(22)}<small>${st.ncom || 'Comentar'}</small></button>` : ''}<button class="stv__ic" data-postar aria-label="Postar outro">${icon('camera', 22)}<small>Postar</small></button><button class="stv__ic" data-del aria-label="Apagar">${icon('trash', 22)}<small>Apagar</small></button></footer>`
@@ -232,9 +234,25 @@ export async function openViewer(ownerUid, onChange, storyId = '') {
     } catch (e) { if (minha === vez) w.querySelector('.stv__img').innerHTML = `<p class="stv__gone">${esc(e.message || 'Esse story já sumiu.')}</p>`; }
     if (minha !== vez) return;
     adianta();
+    // música do story: figurinha no lugar escolhido, trecho tocando e botão de som
+    const DURA = st.musica ? 15000 : DUR;
+    if (st.musica) {
+      const M = await import('./musica.js'); if (minha !== vez || !w.isConnected) return;
+      const box = w.querySelector('.stv__img'), f = document.createElement('div');
+      f.className = 'mfig-pos is-ver'; f.innerHTML = M.figurinha(st.musica);
+      box.appendChild(f); const im = box.querySelector('.stv__cartao img, img');
+      const pos = () => im ? M.posiciona(f, im, st.musica.x ?? 0.5, st.musica.y ?? 0.62) : (f.style.left = '50%', f.style.top = '62%');
+      if (im && !im.complete) im.addEventListener('load', pos, { once: true }); pos();
+      const bt = document.createElement('button'); bt.className = 'stv__som'; bt.type = 'button';
+      const pintaBt = () => { bt.innerHTML = mudo ? M.SVG_MUDO : M.SVG_SOM; bt.setAttribute('aria-label', mudo ? 'Ligar o som' : 'Tirar o som'); };
+      pintaBt(); w.appendChild(bt);
+      som = M.toca(st.musica, { mudo });
+      bt.onclick = (ev) => { ev.stopPropagation(); mudo = !mudo; try { localStorage.setItem('lembra.storyMudo', mudo ? '1' : '0'); } catch { /* ok */ } if (som) som.muted = mudo; pintaBt(); };
+      if (st.musica.link) f.onclick = (ev) => { ev.stopPropagation(); pausado = true; if (som) som.pause(); window.open(st.musica.link, '_blank', 'noopener'); };
+    }
     let gasto = 0, ult = Date.now();
     const bar = w.querySelectorAll('.stv__bars b')[si];
-    timer = setInterval(() => { const agora = Date.now(); if (zera) { zera = false; gasto = 0; } if (!pausado && !document.hidden) gasto += agora - ult; ult = agora; if (bar) bar.style.width = `${Math.min(100, (gasto / DUR) * 100)}%`; if (gasto >= DUR) proximo(); }, 50);
+    timer = setInterval(() => { const agora = Date.now(); if (zera) { zera = false; gasto = 0; } if (!pausado && !document.hidden) gasto += agora - ult; ult = agora; if (som) { if (pausado && !som.paused) som.pause(); else if (!pausado && som.paused && !document.hidden) som.play().catch(() => {}); } if (bar) bar.style.width = `${Math.min(100, (gasto / DURA) * 100)}%`; if (gasto >= DURA) proximo(); }, 50);
   }
   /* curtir, comentar, responder e repostar */
   let publico = false, coms = [], zera = false; // zera: interagiu, o tempo do story recomeça
@@ -571,19 +589,40 @@ function editorStory(foto, onChange) {
   w.className = 'stv stv--edit'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Novo story');
   (document.getElementById('sheets') || document.body).appendChild(w); document.body.classList.add('has-stv');
   w.innerHTML = `<header class="stv__top"><button class="stv__x" data-x aria-label="Cancelar">${icon('x', 22)}</button><span><b>Novo story</b><small>some em 24 h</small></span></header>
-    <div class="stv__img"><img src="${foto}" alt="" draggable="false"></div>
+    <div class="stv__img"><img src="${foto}" alt="" draggable="false"><div class="mfig-pos" data-mfig hidden></div></div>
+    <button type="button" class="stve__mus" data-mus aria-label="Adicionar música"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M9 17.5a3 3 0 1 1-2-2.83V5l12-2v11.5a3 3 0 1 1-2-2.83V6.1L9 7.4z"/></svg><span>Música</span></button>
     <div class="stve"><input class="stve__cap" type="text" maxlength="120" placeholder="Escreva uma legenda…" data-cap>
     <div class="stve__ops"><button type="button" class="stve__op${pref('com', true) ? ' is-on' : ''}" data-op="com" aria-pressed="${pref('com', true)}">${ICO.coment(18)} Comentários</button>${isTeen() ? '' : `<button type="button" class="stve__op${pref('rp', true) ? ' is-on' : ''}" data-op="rp" aria-pressed="${pref('rp', true)}">${icon('repeat', 18)} Amigos podem repostar</button>`}</div>
     <button class="stve__go" data-go>${face(store.member(store.me) || { name: 'Você' }, 26)}<span>Seu story</span>${icon('right', 18)}</button></div>`;
-  const fecha = () => { w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-stv'); }, 220); };
+  let musica = null, posM = { x: 0.5, y: 0.62 };
+  const fecha = () => { import('./musica.js').then((M) => M.para()).catch(() => {}); w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-stv'); }, 220); };
   w.querySelector('[data-x]').onclick = fecha;
+  /* música, como no Instagram: escolhe, a figurinha aparece no story (arraste para mudar de lugar; toque para trocar) */
+  const fig = w.querySelector('[data-mfig]');
+  const poeFig = async () => {
+    const M = await import('./musica.js');
+    if (!musica) { fig.hidden = true; fig.innerHTML = ''; w.querySelector('[data-mus] span').textContent = 'Música'; return; }
+    fig.hidden = false; fig.innerHTML = `${M.figurinha(musica)}<button type="button" class="mfig__tira" data-tira aria-label="Tirar a música">×</button>`;
+    M.posiciona(fig, w.querySelector('.stv__img img'), posM.x, posM.y);
+    w.querySelector('[data-mus] span').textContent = 'Trocar';
+    fig.querySelector('[data-tira]').onclick = (ev) => { ev.stopPropagation(); M.para(); musica = null; poeFig(); };
+    M.toca(musica);
+  };
+  w.querySelector('[data-mus]').onclick = async () => { const M = await import('./musica.js'); M.para(); const m = await M.escolheMusica(); if (m) { musica = m; } poeFig(); };
+  fig.addEventListener('pointerdown', (ev) => {
+    if (ev.target.closest('[data-tira]')) return;
+    const img = w.querySelector('.stv__img img'); let area = null, M = null; import('./musica.js').then((x) => { M = x; area = x.areaDaFoto(img); }); fig.setPointerCapture(ev.pointerId);
+    const move = (e) => { if (!area) return; posM = { x: Math.min(0.85, Math.max(0.15, (e.clientX - area.left) / area.width)), y: Math.min(0.9, Math.max(0.1, (e.clientY - area.top) / area.height)) }; M.posiciona(fig, img, posM.x, posM.y); };
+    const fim = () => { fig.removeEventListener('pointermove', move); fig.removeEventListener('pointerup', fim); };
+    fig.addEventListener('pointermove', move); fig.addEventListener('pointerup', fim);
+  });
   w.querySelectorAll('[data-op]').forEach((o) => (o.onclick = () => { const on = o.classList.toggle('is-on'); o.setAttribute('aria-pressed', on); }));
   const op = (k) => !!w.querySelector(`[data-op="${k}"].is-on`);
   w.querySelector('[data-go]').onclick = async (ev) => {
     const b = ev.currentTarget; b.disabled = true; b.classList.add('is-busy');
     guardaPref('com', op('com')); if (!isTeen()) guardaPref('rp', op('rp'));
     try {
-      const r = await call('/friends/story-post', { photo: foto, caption: w.querySelector('[data-cap]').value.trim(), podeCom: op('com'), podeRp: op('rp') });
+      const r = await call('/friends/story-post', { photo: foto, caption: w.querySelector('[data-cap]').value.trim(), podeCom: op('com'), podeRp: op('rp'), ...(musica ? { musica: { ...musica, x: posM.x, y: posM.y } } : {}) });
       guardaFoto(r.id, foto);
       toast('📸 Story no ar! Seus amigos vão ver por 24 h');
       fecha(); await refreshFeed(); onChange && onChange();

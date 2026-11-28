@@ -728,7 +728,7 @@ async function handle(req, env) {
       const id = Array.from(crypto.getRandomValues(new Uint8Array(12)), (x) => 'abcdefghijkmnpqrstuvwxyz23456789'[x % 32]).join('');
       const list = vivos(await getL(`stories:${meU}`));
       if (list.length >= 10) return reply(env, req, { error: 'Você já postou 10 stories hoje. Espere alguns sumirem.' }, 429);
-      list.push({ id, at: now, title: livre ? '' : clean(body.title, 60), caption: clean(body.caption, 120), ref: clean(body.ref, 80), livre, views: {}, podeCom: body.podeCom === true, podeRp: body.podeRp === true && !(await cardOf(meU)).teen });
+      list.push({ id, at: now, title: livre ? '' : clean(body.title, 60), caption: clean(body.caption, 120), ref: clean(body.ref, 80), livre, ...(musicaOk(body.musica) ? { musica: musicaOk(body.musica) } : {}), views: {}, podeCom: body.podeCom === true, podeRp: body.podeRp === true && !(await cardOf(meU)).teen });
       await env.CAL.put(`stories:${meU}`, JSON.stringify(list), { expirationTtl: 26 * 3600 });
       await env.CAL.put(`storyimg:${id}`, photo, { expirationTtl: 24 * 3600 }); // a foto some sozinha em 24h (não fica guardada)
       // pontos do ranking por story (cada story conta uma vez; o limite diário fica no recordAct)
@@ -755,7 +755,7 @@ async function handle(req, env) {
       const rows = (await Promise.all(donos.map(async (u) => {
         let l = vivos(await getL(`stories:${u}`)); if (!l.length) return null;
         if (l.some((x) => x.rp)) { const bl = []; for (const x of l) if (x.rp && x.rp.uid !== meU && (await getL(`blocks:${x.rp.uid}`)).includes(meU)) bl.push(x.id); l = l.filter((x) => !bl.includes(x.id)); if (!l.length) return null; }
-        return { ...(await cardOf(u)), me: u === meU, stories: l.map((x) => ({ id: x.id, at: x.at, title: x.title, caption: x.caption, livre: !!x.livre, seen: !!x.views[meU], views: u === meU ? Object.keys(x.views).length : undefined, gostei: !!(x.likes && x.likes[meU]), likes: u === meU ? Object.keys(x.likes || {}).length : undefined, ncom: x.ncom || 0, podeCom: x.podeCom === true, podeRp: x.podeRp === true, rp: x.rp ? { uid: x.rp.uid, id: x.rp.id, name: x.rp.name, meu: x.rp.uid === meU } : undefined, fim: x.fim || x.at + DAY })) };
+        return { ...(await cardOf(u)), me: u === meU, stories: l.map((x) => ({ id: x.id, at: x.at, title: x.title, caption: x.caption, livre: !!x.livre, ...(x.musica ? { musica: x.musica } : {}), seen: !!x.views[meU], views: u === meU ? Object.keys(x.views).length : undefined, gostei: !!(x.likes && x.likes[meU]), likes: u === meU ? Object.keys(x.likes || {}).length : undefined, ncom: x.ncom || 0, podeCom: x.podeCom === true, podeRp: x.podeRp === true, rp: x.rp ? { uid: x.rp.uid, id: x.rp.id, name: x.rp.name, meu: x.rp.uid === meU } : undefined, fim: x.fim || x.at + DAY })) };
       }))).filter(Boolean);
       // como no Instagram/WhatsApp: os seus primeiro, depois quem tem novidade, do mais recente ao mais antigo
       rows.sort((a, b) => (b.me - a.me) || (a.stories.every((x) => x.seen) - b.stories.every((x) => x.seen)) || (Math.max(...b.stories.map((x) => x.at)) - Math.max(...a.stories.map((x) => x.at))));
@@ -1321,6 +1321,15 @@ export async function cronTick(env, { now = Date.now(), meter = { pushes: 0 }, m
   return { ...r, more, pushes: meter.pushes };
 }
 
+/* música do story (trecho de 30 s do catálogo da Apple): só endereços da Apple, textos curtos */
+export function musicaOk(m) {
+  if (!m || typeof m !== 'object') return null;
+  const url = (u, re) => { try { const x = new URL(String(u)); return x.protocol === 'https:' && re.test(x.hostname) ? x.href.slice(0, 400) : null; } catch { return null; } };
+  const preview = url(m.preview, /(^|\.)(itunes\.apple\.com|mzstatic\.com)$/), capa = url(m.capa, /(^|\.)mzstatic\.com$/);
+  if (!preview) return null;
+  const t = (x, n) => String(x || '').replace(/[<>]/g, '').slice(0, n);
+  return { id: t(m.id, 20), titulo: t(m.titulo, 80), artista: t(m.artista, 80), capa, preview, link: url(m.link, /(^|\.)(music\.apple\.com|itunes\.apple\.com)$/), inicio: Math.max(0, Math.min(15, Number(m.inicio) || 0)), estilo: ['card', 'mini', 'letra'].includes(m.estilo) ? m.estilo : 'card', x: Math.max(0.1, Math.min(0.9, Number(m.x) || 0.5)), y: Math.max(0.1, Math.min(0.9, Number(m.y) || 0.62)) };
+}
 /* resposta de erro com os cabeçalhos certos (o app sempre recebe uma resposta legível) */
 export const safeHandle = (req, env) => handle(req, env).catch((e) => { console.log('erro interno', e.stack || e.message); return reply(env, req, { error: 'erro interno: ' + e.message }, 500); });
 export { handle, sendToMember };
