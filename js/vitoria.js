@@ -5,6 +5,7 @@
 import { porTime } from '../functions/times.js';
 import { roupa, cachecol } from './roupas.js';
 import { retrato } from './sininho.js';
+import { cartaoResultado } from './cartao-time.js';
 
 /* o que cada time representa (apelido, estádio, grito): texto e emoji, nada de marca registrada */
 export const ALMA = {
@@ -103,7 +104,7 @@ export async function abreVitoria(dados) {
   document.body.appendChild(w);
   w.querySelector('[data-sai]').onclick = () => { w.classList.add('is-sai'); setTimeout(() => w.remove(), 220); };
   import('./sound.js').then((m) => m.fanfare && m.fanfare()).catch(() => {});
-  const cv = await cartaoVitoria(dados);
+  const cv = await cartaoResultado({ time: dados.time, meu: dados.meu, dele: dados.dele, rivalId: dados.rivalId || '', rival: dados.rival || '', seed: (dados.meu * 7 + dados.dele * 3 + dados.time.length) });
   const box = w.querySelector('.vit__card'); box.innerHTML = '';
   if (!cv) { box.textContent = 'Não consegui montar a imagem agora.'; return; }
   const foto = cv.toDataURL('image/jpeg', 0.86);

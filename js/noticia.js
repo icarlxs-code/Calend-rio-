@@ -4,6 +4,7 @@ import { openSheet, sheetHead, toast } from './components.js';
 import { esc } from './utils.js';
 import { porTime } from '../functions/times.js';
 import { retrato } from './sininho.js';
+import { cartaoNoticia as cartaoNoticiaTime } from './cartao-time.js';
 import { roupa, cachecol } from './roupas.js';
 
 const quando = (at) => { try { return new Date(at).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
@@ -54,7 +55,7 @@ export async function abreNoticia(id, timeId = '') {
     el.querySelector('[data-share]').onclick = async () => { try { if (navigator.share) await navigator.share({ title: m.titulo, text: texto }); else { await navigator.clipboard.writeText(texto); toast('Copiado! É só colar onde quiser.'); } } catch { /* cancelou */ } };
     el.querySelector('[data-story]').onclick = async (ev) => {
       const b = ev.currentTarget; b.disabled = true; b.textContent = 'Montando o cartão…';
-      const cv = await cartaoNoticia(m, timeId);
+      const cv = await cartaoNoticiaTime({ time: timeId, titulo: m.titulo, descricao: m.descricao || m.resumo[0] || '', fonte: m.fonte, seed: String(m.id).length + Number(String(m.id).slice(-2)) });
       const S = await import('./stories.js'); a.close(); S.editorStoryFoto(cv.toDataURL('image/jpeg', 0.86));
     };
   }

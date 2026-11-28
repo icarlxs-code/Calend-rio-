@@ -175,9 +175,9 @@ export async function cartaoResultado({ time, meu, dele, rivalId = '', rival = '
   c.fillStyle = '#fff'; c.font = fonte(900, 90); c.fillText('x', W / 2, by + 270);
   raios(c, 70, by + 210, -1, AMARELO, 0.8); raios(c, W - 70, by + 210, 1, AMARELO, 0.8);
   // o grito e o estádio
-  c.font = fonte(800, 42); const linha = `${t.e} ${t.est ? `${t.est} · ` : ''}${t.nome} ${meu} x ${dele} ${rivalNome}`;
-  c.fillStyle = corTit; quebra(c, linha, W - 160).slice(0, 2).forEach((l, i) => c.fillText(l, W / 2, by + 400 + i * 52));
-  c.font = fonte(800, 30); c.fillStyle = escuro ? 'rgba(255,255,255,.85)' : 'rgba(42,20,8,.7)'; c.fillText('meulembra.com.br', W / 2, H - 46);
+  c.font = fonte(800, 42); const linha = `${t.e} ${t.est || t.ap}`;
+  c.fillStyle = corTit; c.fillText(linha, W / 2, by + 392);
+  c.font = fonte(800, 30); c.fillStyle = escuro ? 'rgba(255,255,255,.85)' : 'rgba(42,20,8,.7)'; c.fillText('meulembra.com.br', W / 2, H - 34);
   return cv;
 }
 
