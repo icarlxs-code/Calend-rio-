@@ -853,7 +853,7 @@ function passo(now) {
   const pvx = arr.vx, pvy = arr.vy;
   arr.vx += (rvx - arr.vx) * kv; arr.vy += (rvy - arr.vy) * kv;
   arr.ax += (cl((arr.vx - pvx) / dt, -26000, 26000) - arr.ax) * ka; arr.ay += (cl((arr.vy - pvy) / dt, -26000, 26000) - arr.ay) * ka;
-  if (arr.voo && arr.enc) { const k = Math.min(1, (now - arr.enc.t0) / 420), e = 1 - Math.pow(1 - k, 3); nx = arr.enc.x0 + (arr.enc.x1 - arr.enc.x0) * e; ny = arr.y; } // desliza até a borda
+  if (arr.voo && arr.enc) { const en = arr.enc, k = Math.min(1, (now - en.t0) / en.dur), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; nx = en.x0 + (en.x1 - en.x0) * e; ny = en.y0 + (en.y1 - en.y0) * e - Math.abs(Math.sin(k * Math.PI * en.passos)) * 6 * (1 - k * 0.6); } // volta andando até a borda: começa devagar, passos com balanço, para devagar
   arr.dist += Math.hypot(nx - arr.x, ny - arr.y); arr.x = nx; arr.y = ny;
   const sp = Math.hypot(arr.vx, arr.vy); arr.vmax = Math.max(arr.vmax, sp);
   if (!arr.voo) { arr.hist = (arr.hist || []).filter((h) => now - h[0] < 90); arr.hist.push([now, arr.vx, arr.vy, sp]); }
@@ -878,7 +878,7 @@ function passo(now) {
   }
   arr.viradas = arr.viradas.filter((t) => now - t < 1500); arr.picoVir = Math.max(arr.picoVir, arr.viradas.length);
   arr.agito += Math.abs(om0) * dt + (arr.viradas.length >= 2 ? dt * 1.2 : 0);
-  mover(nx, ny);
+  arr.yAgora = ny; mover(nx, ny);
   if (!arr.voo || arr.enc) { B.dataset.side = arr.enc ? arr.enc.side : nx + FIG / 2 < innerWidth / 2 ? 'l' : 'r'; B.classList.toggle('bub-baixo', ny < 170); }
   fig.style.transform = calmo() ? '' : `rotate(${((psi * 180) / Math.PI).toFixed(2)}deg)`; // "reduzir movimento": arrasta sem balançar
   const parado = (now - arr.quieto) / 1000;
@@ -902,7 +902,7 @@ function passo(now) {
     const gsp = Math.hypot(arr.gvx, arr.gvy);
     if (rg && rg.dr && gsp < 240) rg.solta({ vx: arr.gvx * 3, vy: arr.gvy * 3, tonto: arr.tonto });
     if (gsp < 14 && !arr.reagiu) { arr.reagiu = true; reage(arr); }
-    if (gsp < 14 && arr.enc && now - arr.enc.t0 > 440 && Math.abs(psi) < 0.012 && Math.abs(arr.om) < 0.06) return pousou();
+    if (gsp < 14 && arr.enc && now - arr.enc.t0 > arr.enc.dur + 30 && Math.abs(psi) < 0.012 && Math.abs(arr.om) < 0.06) return pousou();
   }
   requestAnimationFrame(passo);
 }
@@ -930,7 +930,8 @@ function pousou() {
   if (!a.reagiu) reage(a);
   B.classList.remove('is-drag');
   if (livre) encosta(livre.side, livre.y);
-  if (!falando()) state('rest');         // escondidinho na borda, como sempre
+  // só se encosta (meio escondido na borda) depois que a transição voltou: assim ele inclina e se acomoda devagar, sem pular
+  if (!falando()) setTimeout(() => { if (B && !arr && !falando()) { B.style.transition = 'transform .9s cubic-bezier(.33, 1.1, .5, 1), opacity .3s'; state('rest'); setTimeout(() => { if (B) B.style.transition = ''; }, 950); } }, 420);
 }
 /* o que ele acha da mudança (assim que para de voar) */
 function reage(a) {
@@ -938,7 +939,10 @@ function reage(a) {
   const Lm = limites(), x = cl(a.x, Lm.x0, Lm.x1), y = cl(a.y, Lm.y0, Lm.y1);
   const rg = rig(); if (rg && rg.dr) rg.solta({ tonto: a.tonto });
   const side = x + FIG / 2 < innerWidth / 2 ? 'l' : 'r';
-  a.y = y; a.enc = { t0: performance.now(), x0: a.x, x1: bordaX(side), side };   // vai deslizando pra borda mais perto
+  const x1 = bordaX(side), dist = Math.abs(x1 - a.x);
+  const y0 = Number.isFinite(a.yAgora) ? a.yAgora : a.y; // onde ele está de verdade (antes de ajustar à área permitida)
+  a.y = y; a.enc = { t0: performance.now(), x0: a.x, x1, y0, y1: y, side, dur: Math.min(1400, Math.max(520, Math.hypot(dist, y - y0) * 4)), passos: Math.max(2, Math.round(Math.hypot(dist, y - y0) / 70)) };   // vai andando pra borda mais perto
+  if (dist > 24) toca(B.querySelector('.snhbud__fig') || B, x1 > a.x ? 'direita' : 'esquerda', { ms: a.enc.dur, loop: true, ciclo: 520 }); // os passos do desenho
   livre = { side, y, em: Date.now() }; gravaPos();
   const agora = Date.now(); mudancas++; solturas = solturas.filter((t) => agora - t < 30000); solturas.push(agora);
   // o que ele acha da mudança
