@@ -1,0 +1,1 @@
+import{a,b,c,d,e}from"./c-Q6I7IEDH.js";import"./c-AGPHPKXT.js";export{a as TIMES,d as achaTimes,c as porTime,b as semAcento,e as timeDoNome};

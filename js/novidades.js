@@ -54,6 +54,12 @@ const LIGA = {
 const coresDaPessoa = () => { try { return porTime(store.profile?.teamId)?.cores || null; } catch { return null; } };
 
 export const NOVIDADES = {
+  '2.34.0': [
+    { t: 'Quem tá online', s: 'A bolinha verde|mostra quem está on-line agora. E o rostinho do lado das mensagens abre direto quem você mais conversa.', m: 'surpreso', c: 'conversa', arte: '19-socializar', v: 'digita', extra: 'conversa' },
+    { t: 'Olhando seu perfil', s: 'Te aviso na hora:|cada visita no seu perfil chega no celular. E se a pessoa voltar de novo… eu conto quantas vezes 👀', m: 'surpreso', c: 'perfil', arte: '19-socializar', v: 'digita', cara: 'estrelado' },
+    { t: 'Tá com saudade?', s: 'Quem olha o seu perfil|recebe um aviso na hora. Toque e descubra quem foi 👀', m: 'amor', c: 'perfil', arte: '19-socializar', v: 'amor', cara: 'apaixonado' },
+    { t: 'Conta um pouco de você', s: 'Respostas curtinhas|e o mascote reage a cada uma. Só você vê.', m: 'feliz', c: 'perfil', arte: '28-calma', v: 'amor', extra: 'vida', acao: { label: 'Contar agora', go: () => import('./views/vida.js').then((m) => m.abreFicha()) } },
+  ],
   '2.33.0': [
     { t: 'Chegou coisa nova!', s: 'Preparei tudo com carinho|pra deixar seu dia ainda mais leve.', m: 'feliz', c: 'abre', arte: '11-conquista-semana', v: 'conquista' },
     { t: 'Seu time do coração', s: 'Eu aviso dos jogos|e comemoro cada gol junto com você!', m: 'feliz', c: 'time', arte: '32-estadio', v: 'torcida', extra: () => (store.profile?.teamId ? 'gol' : 'escolheTime'), acao: { label: 'Escolher meu time', go: () => import('./views/vida.js').then((m) => m.pedeTime({ forca: true })) } },
@@ -62,8 +68,6 @@ export const NOVIDADES = {
     { t: 'Uma frase nova toda hora', s: 'De manhã, de tarde e de noite,|escrita só pra você.', m: 'feliz', c: 'frase', arte: '29-manha-b', v: 'manha', extra: 'frase' },
     { t: 'Contas do mês, sem esquecer', s: 'Fala do seu jeito|que eu entendo, repito todo mês e digo o valor.', m: 'feliz', c: 'assist', arte: '21-contas', v: 'dinheiro', extra: 'conta' },
     { t: 'Conversa num toque', s: 'As conversas recentes|ficam lá no topo. Um toque e pronto!', m: 'feliz', c: 'conversa', arte: '19-socializar', v: 'digita', extra: 'conversa' },
-    { t: 'Quem tá online', s: 'A bolinha verde|mostra quem está on-line agora. E o rostinho do lado das mensagens abre direto quem você mais conversa.', m: 'surpreso', c: 'conversa', arte: '19-socializar', v: 'digita', extra: 'conversa' },
-    { t: 'Olhando seu perfil', s: 'Te aviso na hora:|cada visita no seu perfil chega no celular. E se a pessoa voltar de novo… eu conto quantas vezes 👀', m: 'surpreso', c: 'perfil', arte: '19-socializar', v: 'digita', cara: 'estrelado' },
     { t: 'Eu tenho mil caras', s: 'Falou de amor, eu fico apaixonado.|Falou de dinheiro, meus olhos viram cifrão!', m: 'feliz', c: 'abre', arte: '12-lembrete', v: 'amor', cara: 'apaixonado', extra: 'caras' },
     { t: 'Eu me atualizo sozinho', s: 'Saiu versão nova?|Eu já chego atualizado, sem você fazer nada.', m: 'feliz', c: 'abre', arte: '30-ofensiva', v: 'forca' },
   ],

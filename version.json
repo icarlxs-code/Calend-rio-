@@ -1,15 +1,15 @@
 {
-  "version": "2.33.0",
-  "build": "vc4j74cp",
+  "version": "2.34.0",
+  "build": "3fuiwdcg",
   "date": "2026-11-27",
-  "min": "2.33.0",
-  "title": "Mais perto de você",
+  "min": "2.34.0",
+  "title": "Conversa e atenção",
   "notes": [
-    "O Lembra agora te conhece melhor e fala com você do seu jeito.",
-    "Contas do mês na agenda: diga \"todo dia 10 pago o aluguel de R$ 1.500\" e o Lembra entende a repetição e o valor.",
-    "Excluir empresa direto na página dela, com 24 horas para desfazer.",
-    "Futebol do seu time mais confiável, com uma segunda fonte de resultados.",
-    "Atualização automática: o app se atualiza sozinho."
+    "Quem olha o seu perfil agora aparece no Hoje, e cada visita vira um aviso com frases diferentes.",
+    "Aviso de atualização de 5 em 5 minutos até você atualizar.",
+    "Bolinha verde mostra quem está online nos stories.",
+    "Atalho direto para a conversa com quem você mais fala.",
+    "Tela \"Conta um pouco de você\" com o mascote, mais organizada, com sons suaves."
   ],
-  "builtAt": "2026-11-28T01:02:44.177Z"
+  "builtAt": "2026-11-28T01:05:06.888Z"
 }
