@@ -95,7 +95,6 @@ export function abreCamera({ soCamera = false, lado = 'environment', arrasto = n
     w.className = 'scam'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Câmera do story');
     w.innerHTML = `<div class="scam__quadro"><video class="scam__v" playsinline muted autoplay></video><div class="scam__flash"></div><p class="scam__msg" hidden></p>
         <button type="button" class="scam__x" data-x aria-label="Fechar">${icon('x', 26)}</button></div>
-      ${soCamera ? '' : '<div class="scam__dica" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg><span>Galeria</span></div>'}
       <div class="scam__zooms" hidden></div>
       <div class="scam__barra">
         ${soCamera ? '<span class="scam__vaga"></span>' : `<label class="scam__gal" aria-label="Escolher da galeria">${icon('image', 24)}<input type="file" accept="image/*" class="scam__arq" data-gal></label>`}
@@ -168,24 +167,17 @@ export function abreCamera({ soCamera = false, lado = 'environment', arrasto = n
       }
     };
     w.querySelector('[data-x]').onclick = () => sai(null);
-    const quadro = w.querySelector('.scam__quadro'), dica = w.querySelector('.scam__dica') || { style: {} };
+    const quadro = w.querySelector('.scam__quadro');
     // vai e volta (como no Instagram): com um dedo, arrastar da direita para a esquerda leva a câmera junto e fecha
     let volta = null;
     quadro.addEventListener('touchstart', (e) => { if (e.touches.length === 1 && !w.classList.contains('is-arrasto')) { const t = e.touches[0]; volta = { x: t.clientX, y: t.clientY, t: performance.now(), dx: 0, ok: null }; } else volta = null; }, { passive: true });
     quadro.addEventListener('touchmove', (e) => {
       if (!volta || e.touches.length !== 1) { if (volta && volta.ok) { w.style.transition = 'transform .2s'; w.style.transform = ''; } volta = null; return; }
       const t = e.touches[0], dx = t.clientX - volta.x, dy = t.clientY - volta.y;
-      if (volta.ok === null && Math.hypot(dx, dy) > 12) { volta.ok = dx < 0 && -dx > Math.abs(dy) * 1.3; volta.cima = !volta.ok && dy < 0 && -dy > Math.abs(dx) * 1.3; }
-      if (volta.cima) { volta.dy = Math.min(0, dy); dica.style.transform = `translate3d(-50%, ${Math.max(-60, volta.dy * 0.4)}px, 0)`; dica.style.opacity = String(Math.min(1, 0.55 - volta.dy / 200)); return; }
-      if (!volta.ok) return;
+      if (volta.ok === null && Math.hypot(dx, dy) > 12) { volta.ok = dx < 0 && -dx > Math.abs(dy) * 1.3; }
       volta.dx = Math.min(0, dx); w.style.transition = 'none'; w.style.transform = `translate3d(${volta.dx}px,0,0)`;
     }, { passive: true });
     quadro.addEventListener('touchend', () => {
-      if (volta && volta.cima) { // arrastou pra cima: abre as fotos do celular (o seletor do próprio sistema)
-        const sobe = (volta.dy || 0) < -70; volta = null; dica.style.transform = ''; dica.style.opacity = '';
-        if (sobe) { try { navigator.vibrate && navigator.vibrate(8); } catch { /* ok */ } const b = w.querySelector('.scam__gal'); b && b.classList.add('is-pisca'); setTimeout(() => b && b.classList.remove('is-pisca'), 1400); toast2('Toque em Galeria'); }
-        return;
-      }
       if (!volta || !volta.ok) { volta = null; return; }
       const v = -volta.dx / Math.max(1, performance.now() - volta.t), fecha = -volta.dx > innerWidth * 0.3 || (v > 0.5 && -volta.dx > 50); volta = null;
       if (fecha) { w.style.transition = 'transform .24s ease-in'; w.style.transform = 'translate3d(-100%,0,0)'; setTimeout(() => sai(null), 230); }
