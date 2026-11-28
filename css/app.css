@@ -4372,3 +4372,7 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .scam__barra { position: absolute; left: 0; right: 0; bottom: 0; max-width: none; height: auto; padding: 18px 0 calc(env(safe-area-inset-bottom, 0px) + 26px); z-index: 3; background: linear-gradient(to top, rgba(0,0,0,.45), transparent); }
 .scam__zooms { position: absolute; left: 50%; transform: translateX(-50%); margin: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 140px); z-index: 3; }
 .scam__msg { z-index: 3; }
+/* dica "arraste pra cima: galeria" */
+.scam__dica { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 196px); transform: translate3d(-50%, 0, 0); z-index: 3; display: flex; flex-direction: column; align-items: center; color: #fff; font: 800 12px Nunito, system-ui, sans-serif; opacity: .55; pointer-events: none; text-shadow: 0 1px 4px rgba(0,0,0,.6); animation: scamDica 1.8s ease-in-out infinite; }
+@keyframes scamDica { 50% { margin-bottom: 6px; } }
+@media (prefers-reduced-motion: reduce) { .scam__dica { animation: none; } }

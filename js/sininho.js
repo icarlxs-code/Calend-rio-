@@ -385,17 +385,17 @@ class Rig {
     } else if (name === 'maoBoca') {                              // mão na boca segurando a risada (fofoca, desconfiança)
       const m0 = this.mouth, back = e.arms;
       // segurando a risada: olhos fechados de alegria, bochecha corada e o corpo chacoalhando (sem mão solta na frente do rosto)
-      s.px.t = -14; s.happy.t = 1; this.setMouth('fechada'); s.blush.t = 0.8; s.lean.t = 1.5; this.arms(['cima', 6, 'cima', -6]);
+      s.px.t = -14; s.happy.t = 1; this.setMouth('fechada'); s.blush.t = 0.8; s.lean.t = 1.5; // braços no lugar (erguidos ao lado da cabeça pareciam orelhas)
       for (let i = 0; i < 4; i++) this.at(0.3 + i * 0.15, () => { s.sq.vel += 0.8; });
-      this.at(1.5, () => { s.px.t = 0; s.happy.t = e.happy || 0; this.setMouth(m0); s.blush.t = e.blush || 0; s.lean.t = e.lean || 0; this.arms(back); });
+      this.at(1.5, () => { s.px.t = 0; s.happy.t = e.happy || 0; this.setMouth(m0); s.blush.t = e.blush || 0; s.lean.t = e.lean || 0; });
       this.next.idle = this.t + 1.9;
     } else if (name === 'susto') {                                // leva um susto: pula pra trás, olhos arregalados
       const m0 = this.mouth; s.pz.t = 0.75; this.setMouth('oo'); s.bY.t = -24; s.by.vel -= 220; s.sq.vel -= 2; s.lean.t = 3;
       this.at(0.8, () => { s.pz.t = e.pupil || 1; this.setMouth(m0); s.bY.t = e.brow[2]; s.lean.t = e.lean || 0; });
       this.next.idle = this.t + 1.1;
     } else if (name === 'coca') {                                 // coça a cabeça pensando
-      const back = e.arms; this.front = null; this.arms([back[0], back[1], 'cima', 14]); // o braço sobe pelo lado do sino até a cabeça (na frente ele virava uma mão solta) s.px.t = 12; s.py.t = -10; s.lean.t = 1.5; s.wR.t = 0.4; s.bYr.t = (e.brow[3] ?? e.brow[2]) - 10;
-      for (let i = 0; i < 6; i++) this.at(0.15 + i * 0.12, () => { s.aR.t = i % 2 ? 22 : 8; });
+      const back = e.arms; this.front = null; s.px.t = 12; s.py.t = -14; s.lean.t = 1.5; s.bYr.t = (e.brow[3] ?? e.brow[2]) - 14; // pensando: cabeça inclinada, olhar pra cima e sobrancelha levantada (sem braço ao lado da cabeça, que parecia orelha)
+      for (let i = 0; i < 3; i++) this.at(0.2 + i * 0.3, () => { s.lean.t = i % 2 ? 0.5 : 2.5; });
       this.at(1.1, () => { this.arms(back); s.px.t = 0; s.py.t = 0; s.lean.t = e.lean || 0; s.wR.t = 0; s.bYr.t = e.brow[3] ?? e.brow[2]; });
       this.at(1.25, () => { this.front = null; });
       this.next.idle = this.t + 1.4;
