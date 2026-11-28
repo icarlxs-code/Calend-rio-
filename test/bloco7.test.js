@@ -33,6 +33,6 @@ test('enquete: só real, uma vez, 7 dias depois de fechar e no máximo duas', ()
   assert.equal(r.n, 1); assert.equal(r.fundadores, 1); assert.ok(r.indicativo);
   assert.doesNotMatch(le('../js/comeco.js'), /R\$|20 lembretes|vagas/);
 });
-test('CPF não é pedido na ficha nem guardado aberto; Azonix e Chico Xavier saíram', () => {
-  assert.doesNotMatch(le('../js/views/ficha.js'), /fi-cpf|'cpf'/); assert.doesNotMatch(le('../css/app.css'), /azonix\.otf/i); assert.doesNotMatch(le('../worker/src/mind.js'), /'Chico Xavier'/);
+test('CPF é pedido na ficha só para conferir conta única e nunca guardado aberto; Azonix e Chico Xavier saíram', () => {
+  const fi = le('../js/views/ficha.js'); assert.match(fi, /fi-cpf/); assert.doesNotMatch(fi.match(/const KEYS = \[[^\]]*\]/)[0], /'cpf'/, 'CPF fora dos campos salvos na conta'); assert.doesNotMatch(le('../css/app.css'), /azonix\.otf/i); assert.doesNotMatch(le('../worker/src/mind.js'), /'Chico Xavier'/);
 });

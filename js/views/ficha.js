@@ -137,6 +137,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       <div class="row2">${field('gender')}${field('pronoun')}</div>
       <p class="fhelp">Isso muda o jeito de falar (pronta, pronto ou “tudo pronto”) e as sugestões do seu modo Pessoal. Ninguém mais vê.</p>
       <label class="flabel" for="fi-phone">Celular (opcional)</label><input id="fi-phone" class="input" type="tel" inputmode="tel" data-f="phone" value="${esc(maskPhone(f.phone))}" placeholder="(00) 00000-0000" maxlength="20" autocomplete="tel-national">
+      <label class="flabel" for="fi-cpf">CPF</label><input id="fi-cpf" class="input" type="text" inputmode="numeric" data-f="cpf" value="${esc(maskCpf(f.cpf || ''))}" placeholder="000.000.000-00" maxlength="14" autocomplete="off"><p class="fhelp">Uma conta por pessoa. Guardamos só uma versão embaralhada do CPF, nunca o número.</p>
       ${nav()}`,
     trabalho: () => {
       return `<h2>Com o que você trabalha?</h2><p class="ficha__sub">O Lembra se adapta à sua profissão: nomes, tipos de compromisso, dicas e cobranças.</p>
@@ -334,6 +335,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       if (!f.gender) return 'Escolha como você se identifica (pode ser “Prefiro não dizer”).';
       if (!f.pronoun) return 'Escolha como o Lembra fala com você.';
       if (!validPhone(f.phone)) return 'Celular inválido. Use DDD + número, ex.: (11) 98765-4321 — ou deixe em branco.';
+      if (!store.profile?.cpfOk && !cpfOk(f.cpf)) return 'Digite um CPF válido (11 números).';
     }
     if (s === 'trabalho') {
       f.profession = f.profession.replace(/\s+/g, ' ').trim();
@@ -360,6 +362,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       // corrigiu o campo: some o aviso de erro
       if (err) { err = ''; const e = wrap.querySelector('.ficha__err'); if (e) e.hidden = true; }
       else if (k === 'phone') { el.value = maskPhone(el.value); f.phone = el.value; }
+      else if (k === 'cpf') { el.value = maskCpf(el.value); f.cpf = el.value; }
       else if (k === 'forget') { f.forget = +el.value; wrap.querySelector('.ficha__rangev b').textContent = FORGET[f.forget]; }
       else if (k === 'perDay') { f.perDay = +el.value; wrap.querySelector('[data-perday]').textContent = `${f.perDay} por dia`; }
       else f[k] = el.value;
@@ -414,9 +417,11 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       err = validate();
       if (err) return showErr();
       // celular já usado em outra conta: não deixa seguir (uma conta por número)
-      if (f.phone && wrap.querySelector('[data-f="phone"]')) {
-        const u = await telUnico(f.phone);
-        if (u === false) { err = 'Esse celular já está cadastrado em outra conta. Use outro número ou deixe em branco.'; return showErr(); }
+      if (wrap.querySelector('[data-f="phone"]') && (f.phone || f.cpf)) {
+        const u = await unico({ telefone: f.phone, cpf: store.profile?.cpfOk ? '' : f.cpf });
+        if (u && u.ocupado.includes('cpf')) { err = 'Esse CPF já tem uma conta no Lembra. Entre com a conta que você já tem.'; return showErr(); }
+        if (u && u.ocupado.includes('telefone')) { err = 'Esse celular já está cadastrado em outra conta. Use outro número ou deixe em branco.'; return showErr(); }
+        if (u && u.ok && f.cpf) { f.cpf = ''; saveUserProfile({ cpfOk: true }).catch(() => {}); store.profile = { ...(store.profile || {}), cpfOk: true }; } // o número não fica guardado
       }
       if (step < STEPS.length - 1) { step++; sub = 0; calcDone = false; render(); return; }
       // resumo: cálculo → uma conquista por página → concordância
@@ -435,6 +440,21 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
 }
 
 /* telefone único: true = livre (e já fica reservado para esta conta), false = de outra conta, null = sem internet (não trava) */
+const maskCpf = (v) => { const d = String(v || '').replace(/\D/g, '').slice(0, 11); return d.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3}\.\d{3})(\d)/, '$1.$2').replace(/^(\d{3}\.\d{3}\.\d{3})(\d)/, '$1-$2'); };
+export function cpfOk(c) {
+  const d = String(c || '').replace(/\D/g, '');
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  const dv = (n) => { let t = 0; for (let i = 0; i < n; i++) t += +d[i] * (n + 1 - i); const r = (t * 10) % 11; return r === 10 ? 0 : r; };
+  return dv(9) === +d[9] && dv(10) === +d[10];
+}
+/** confere e reserva telefone/CPF desta conta; null = sem internet (não trava) */
+export async function unico(dados) {
+  try {
+    const { api, server } = await import('../avisos.js');
+    if (store.mode !== 'cloud' || !server()) return null;
+    return await api('/conta/unico', { ws: '', ...dados, reservar: true });
+  } catch { return null; }
+}
 export async function telUnico(telefone) {
   try {
     const { api, server } = await import('../avisos.js');
