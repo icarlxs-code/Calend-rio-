@@ -49,7 +49,9 @@ export async function lembraAtualizar(env, now, send, { max = 200 } = {}) {
     const m2 = k.slice(4), L = (await env.CAL.get(`vers:${m2}`, 'json')) || [];
     // por aparelho: os que já estão na versão no ar não recebem; só os que ainda estão atrasados
     const devs = await getDevices(env, m2), ids = Object.keys(devs);
-    const atuais = ids.filter((id) => devs[id].b === no.build);
+    // aparelho que ainda não disse a versão: se a pessoa já informou a versão no ar por qualquer aparelho, ele conta como atualizado
+    const membroAtual = L.some((x) => x.b === no.build);
+    const atuais = ids.filter((id) => devs[id].b === no.build || (!devs[id].b && membroAtual));
     if (ids.length ? atuais.length === ids.length : L.some((x) => x.b === no.build)) { emDia++; continue; }
     await send(env, m2, AVISO, atuais); // os aparelhos atualizados ficam de fora deste envio
     avisos++;

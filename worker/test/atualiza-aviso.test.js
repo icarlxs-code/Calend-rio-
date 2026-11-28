@@ -51,3 +51,12 @@ test('por aparelho: o aparelho já atualizado não recebe "atualize"; o atrasado
   await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send);
   assert.deepEqual(calls, [['uPhone', ['d-novo']]], 'manda só para o aparelho atrasado');
 });
+test('aparelho sem versão informada não fica para sempre recebendo "atualize" se a pessoa já está na versão no ar', async () => {
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ version: '2.35.0', build: 'nov8888' }) });
+  const CAL = kv(), env = { CAL };
+  await CAL.put('dev:uSem', JSON.stringify({ 'd-x': { subscription: {} } }));
+  await guardaVersao(env, 'uSem', { v: '2.35.0', b: 'nov8888', nv: true });
+  const calls = []; const send = async (e, m, msg, excl) => calls.push([m, excl]);
+  const r = await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send);
+  assert.equal(calls.length, 0); assert.equal(r.emDia, 1);
+});
