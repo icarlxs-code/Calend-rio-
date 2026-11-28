@@ -113,6 +113,14 @@ export function openGuide() {
     },
   });
   try { localStorage.setItem(`lembra.guide.${store.user?.uid || 'x'}`, '1'); } catch { /* ok */ }
+  // guardado também na conta: sair, entrar de novo ou trocar de celular não mostra o "como usar" outra vez
+  import('../store.js').then((m) => m.saveProfileQuiet && m.saveProfileQuiet({ guiaVisto: Date.now() })).catch(() => {});
   return api;
 }
-export const guideSeen = () => { try { return !!localStorage.getItem(`lembra.guide.${store.user?.uid || 'x'}`); } catch { return true; } };
+/* o "como usar" aparece uma vez só por conta (de novo só se a pessoa pedir em Ajustes) */
+export const guideSeen = () => {
+  const p = store.profile || {};
+  if (p.guiaVisto) return true;
+  if (p.onboardedAt && Date.now() - p.onboardedAt > 864e5) return true; // conta que já usa o app há mais de um dia
+  try { return !!localStorage.getItem(`lembra.guide.${store.user?.uid || 'x'}`); } catch { return true; }
+};

@@ -972,7 +972,7 @@ let pendingProfile = null;
 /* qual conta entrou por último neste aparelho (protege contra sessão antiga de outra conta) */
 const LS_UID = 'lembra.uid';
 /* dados de uma conta guardados no aparelho: somem quando outra conta entra (nunca aparecem para a pessoa errada) */
-const DA_CONTA = ['cal.chat', 'lembra.fala.', 'lembra.gostos', 'lembra.vida', 'lembra.semTime', 'lembra.npDia', 'lembra.convN', 'lembra.visitasVistas', 'lembra.humor', 'lembra.amigo', 'lembra.streak.', 'lembra.st.', 'lembra.news.', 'lembra.nvOk', 'lembra.equipe.', 'lembra.ws.', 'lembra.split.', 'lembra.storyLembra'];
+const DA_CONTA = ['cal.chat', 'lembra.fala.', 'lembra.gostos', 'lembra.vida', 'lembra.semTime', 'lembra.npDia', 'lembra.convN', 'lembra.visitasVistas', 'lembra.humor', 'lembra.amigo', 'lembra.streak.', 'lembra.st.', 'lembra.news.', 'lembra.equipe.', 'lembra.ws.', 'lembra.split.', 'lembra.storyLembra'];
 function limpaContaAnterior() {
   try {
     const tira = [];
@@ -1293,6 +1293,7 @@ async function showGuideSoon() {
   const { guideSeen, openGuide } = await import('./views/guide.js');
   if (guideSeen()) return;
   const showGuide = (n = 0) => {
+    if (guideSeen()) return; // confere de novo com o perfil da conta já carregado
     if (document.querySelector('.sheet-wrap.is-open, .paywall, .iguide, .ob, .ficha') && n < 40) return setTimeout(() => showGuide(n + 1), 1500);
     openGuide();
   };

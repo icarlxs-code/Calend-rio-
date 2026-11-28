@@ -38,6 +38,24 @@ const lerArquivo = (f) => new Promise((ok, erro) => { const u = URL.createObject
 export const temCamera = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
 /** abre a câmera; devolve a foto 9:16 (data URL) ou null se fechou. soCamera: sem galeria (foto da hora) */
+/* a câmera já liberada fica pausada uns minutos depois de fechar: abrir de novo nesse tempo reaproveita a mesma
+   (no iPhone, desligar e ligar outra vez faz o sistema pedir a permissão de novo) */
+let guardada = null;
+const GUARDA_MS = 4 * 60e3;
+function pegaGuardada(chave) {
+  if (!guardada || guardada.chave !== chave) return null;
+  const f = guardada.fluxo; f.dev = guardada.dev; clearTimeout(guardada.timer); guardada = null;
+  const tr = f.getVideoTracks()[0];
+  if (!tr || tr.readyState !== 'live') return null;
+  f.getTracks().forEach((t) => (t.enabled = true));
+  return f;
+}
+function guarda(fluxo, chave, dev = null) {
+  if (!fluxo) return;
+  if (guardada) { clearTimeout(guardada.timer); if (guardada.fluxo !== fluxo) guardada.fluxo.getTracks().forEach((t) => t.stop()); }
+  fluxo.getTracks().forEach((t) => (t.enabled = false));             // pausada: sem imagem
+  guardada = { fluxo, chave, dev, timer: setTimeout(() => { fluxo.getTracks().forEach((t) => t.stop()); guardada = null; }, GUARDA_MS) };
+}
 let lentesMemo = null; // as lentes do aparelho, descobertas uma vez (a câmera abre direto na certa nas próximas)
 export function abreCamera({ soCamera = false, lado = 'environment', arrasto = null } = {}) {
   return new Promise((fim) => {
@@ -71,8 +89,9 @@ export function abreCamera({ soCamera = false, lado = 'environment', arrasto = n
     const v = w.querySelector('video'), msg = w.querySelector('.scam__msg');
     v.addEventListener('playing', () => v.classList.add('is-vivo'));
     const para = () => { if (fluxo) fluxo.getTracks().forEach((t) => t.stop()); fluxo = null; };
-    const sai = (x) => { if (acabou) return; acabou = true; para(); w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-scam'); }, 220); fim(x); };
+    const sai = (x) => { if (acabou) return; acabou = true; guarda(fluxo, chaveAtual(), opts.deviceId); fluxo = null; w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-scam'); }, 220); fim(x); };
     const opts = { deviceId: null };
+    const chaveAtual = () => (frente ? 'f' : 't');
     // quanto vale o "1x": na câmera múltipla do iPhone o zoom 1 é a ultra-angular (0.5x), então 1x = zoom 2
     const base = () => (zoomHw && zoomHw.multi && lentes && lentes.ultra ? 2 : 1);
     const niveisDisp = () => {
@@ -118,7 +137,8 @@ export function abreCamera({ soCamera = false, lado = 'environment', arrasto = n
           if (!lentes.normal || !lentes.normal.label) lentes = null; else { lentesMemo = lentes; if (lentes.multi && !opts.deviceId) opts.deviceId = lentes.multi.deviceId; }
         }
         const dev = !frente && lentes ? (opts.deviceId || null) : null;
-        fluxo = await navigator.mediaDevices.getUserMedia({ audio: false, video: { ...(dev ? { deviceId: { exact: dev } } : { facingMode: frente ? 'user' : { ideal: 'environment' } }), width: { ideal: 1920 }, height: { ideal: 1080 } } });
+        const reuso = pegaGuardada(chaveAtual()); if (reuso) opts.deviceId = reuso.dev || null; // a mesma câmera de antes (sem pedir permissão de novo)
+        fluxo = reuso || await navigator.mediaDevices.getUserMedia({ audio: false, video: { ...(dev ? { deviceId: { exact: dev } } : { facingMode: frente ? 'user' : { ideal: 'environment' } }), width: { ideal: 1920 }, height: { ideal: 1080 } } });
         if (acabou) return para();
         v.srcObject = fluxo; v.classList.toggle('is-frente', frente); await v.play().catch(() => {});
         if (!frente && !lentes) { lentes = await achaLentes(); if (lentes.normal && lentes.normal.label) lentesMemo = lentes; } // primeira vez: só descobre (a próxima já abre na câmera múltipla)
