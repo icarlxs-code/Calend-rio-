@@ -1,7 +1,7 @@
 /* IA grátis (10 mil "neurônios" por dia UTC): cada função tem o próprio saldo, e cada pessoa um limite no assistente. */
 const RATE = { big: [0.0267, 0.205], small: [0.0041, 0.035] };
 export const COTAS = { ask: 6000, amigo: 2000, lotes: 1500 };
-export const PESSOA = 600;
+export const PESSOA = 6000; // sem limite por pessoa: vale só o saldo grátis do dia do assistente (o da Cloudflare, para todo o app)
 export const MSG_PESSOA = 'Você usou a IA bastante hoje; volta às 21h 😉';
 export const custo = (model, input, saida) => { const [ri, ro] = /70b|3\.3/.test(model) ? RATE.big : RATE.small; return (JSON.stringify(input?.messages || input || '').length / 3.5) * ri + (String(saida || '').length / 3.5) * ro; };
 /* a Cloudflare passou a responder alguns modelos no formato novo (choices[0].message.content) em vez de { response }:
@@ -19,7 +19,7 @@ export function iaComCota(ai, kv, padrao = 'ask', { cotas = COTAS, pessoaMax = P
     async run(model, input, opts) {
       const k = `ia:${diaUtc(agora())}`, u = await le(k), f = u.f || {}, p = u.p || {};
       if (pessoa && (p[pessoa] || 0) >= pessoaMax) throw Object.assign(new Error(MSG_PESSOA), { status: 429 });
-      if ((f[fn] || 0) >= (cotas[fn] ?? cotas.amigo)) throw new Error('limite diário da IA grátis atingido');
+      if ((f[fn] || 0) >= (cotas[fn] ?? cotas.amigo)) throw Object.assign(new Error('A IA grátis do app acabou por hoje. Volta às 21h 😉'), { status: 429 });
       const r = textoDaIA(await ai.run(model, input, opts)), c = custo(model, input, r?.response), n = await le(k);
       n.f = { ...(n.f || {}), [fn]: Math.round((n.f?.[fn] || 0) + c) };
       if (pessoa) n.p = { ...(n.p || {}), [pessoa]: Math.round((n.p?.[pessoa] || 0) + c) };

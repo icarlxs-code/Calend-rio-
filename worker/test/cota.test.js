@@ -8,7 +8,7 @@ const ai = (log = [], resp = 'x'.repeat(3500)) => ({ run: async (m, i) => { log.
 test('esgotar o assistente não tira a IA do amigo', async () => {
   const kv = banco(), A = iaComCota(ai([], '{"title":"Oi 😊","body":"Tem dentista hoje às 15h, vamos?"}'), kv, 'amigo', { cotas: { ask: 1, amigo: 2000, lotes: 10 } });
   await A.para('ask', 'a').run('70b', { messages: 'm'.repeat(2000) });
-  await assert.rejects(A.para('ask', 'b').run('70b', {}), /limite/);
+  await assert.rejects(A.para('ask', 'b').run('70b', {}), /limite|acabou por hoje/);
   const r = await humanize({ AI: A }, { kind: 'agenda', title: 't', body: 'b', fact: 'dentista 15h' }, { name: 'Ana', ia: true, work: { profession: 'designer', goal: 'subir de cargo' }, prefs: { pronoun: 'f' } }, [], { h: 10, m: 0, wd: 3 });
   assert.ok(r && r.body); assert.ok((await usoIA(kv)).porFuncao.ask > 0);
 });

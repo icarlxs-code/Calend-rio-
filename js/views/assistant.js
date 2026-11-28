@@ -20,18 +20,25 @@ import { hasPro } from '../billing.js';
 import { okFx } from '../okfx.js';
 
 /* ---------- conversa ---------- */
-const LS_CHAT = 'cal.chat';
-let chat = (() => {
+/* a conversa é de CADA conta: a chave leva o id da pessoa (trocar de conta nunca mostra a conversa da outra) */
+const dono = () => (store.user && store.user.uid) || (store.mode === 'cloud' ? '' : 'local');
+const chaveChat = (u) => `cal.chat.${u}`;
+try { localStorage.removeItem('cal.chat'); } catch { /* conversa antiga sem dono: apagada */ }
+function leChat(u) {
+  if (!u) return [];
   try {
     // mensagens de erro antigas não ficam na conversa
-    const L = JSON.parse(localStorage.getItem(LS_CHAT) || '[]');
+    const L = JSON.parse(localStorage.getItem(chaveChat(u)) || '[]');
     // passadas as 24 h da lixeira, a conversa também não guarda o conteúdo do que foi apagado
-    for (const m of L) if (m.undo && Date.now() - (m.undo.at || 0) > 864e5) { delete m.undo; if (m.plan?.some((x) => x.apaga)) { m.plan = m.plan.map((x) => (x.apaga ? { ...x, text: 'Itens apagados', apaga: null, a: { acao: 'excluir' } } : x)); m.actions = m.plan.map((x) => x.a); } }
+    for (const m of L) if (m.undo && Date.now() - (m.undo.at || 0) > 864e5) { delete m.undo; if (m.plan?.some((x) => x.apaga)) { m.plan = m.plan.map((x) => (x.apaga ? { ...x, text: 'Itens apagados', apaga: null, a: { acao: 'excluir' } } : x)); } }
     return L.filter((m) => !m.error && !/chave do Claude/.test(m.text || '')).slice(-30);
   } catch {
     return [];
   }
-})();
+}
+let chatDono = null, chat = [];
+/** garante que a conversa carregada é a da conta que está usando o app agora */
+function garanteChat() { const u = dono(); if (u !== chatDono) { chatDono = u; chat = leChat(u); } }
 let thinking = false;
 /* Resposta dentro do app só se o servidor tiver chave da Anthropic; senão, abre o Claude com o login normal */
 let inAppChat = false;
@@ -42,8 +49,9 @@ let inAppChat = false;
   } catch { /* fica no modo "abrir no Claude" */ }
 })();
 const saveChat = () => {
+  if (!chatDono || chatDono !== dono()) return; // trocou de conta no meio: não grava na conta errada
   try {
-    localStorage.setItem(LS_CHAT, JSON.stringify(chat.slice(-30)));
+    localStorage.setItem(chaveChat(chatDono), JSON.stringify(chat.slice(-30)));
   } catch { /* ok */ }
 };
 /* texto simples com **negrito**, listas e quebras de linha (sempre escapado antes) */
@@ -194,6 +202,7 @@ export function weekProblems(person = 'all') {
 }
 
 export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {}) {
+  garanteChat();
   const pro = hasPro();
   let modo = '';
   const st = { type: 'feed', date: ui.date >= todayKey() ? ui.date : todayKey(), q: '' };

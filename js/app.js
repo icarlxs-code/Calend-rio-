@@ -963,6 +963,15 @@ let signupMode = false;
 let pendingProfile = null;
 /* qual conta entrou por último neste aparelho (protege contra sessão antiga de outra conta) */
 const LS_UID = 'lembra.uid';
+/* dados de uma conta guardados no aparelho: somem quando outra conta entra (nunca aparecem para a pessoa errada) */
+const DA_CONTA = ['cal.chat', 'lembra.fala.', 'lembra.gostos', 'lembra.vida', 'lembra.semTime', 'lembra.npDia', 'lembra.convN', 'lembra.visitasVistas', 'lembra.humor', 'lembra.amigo', 'lembra.streak.', 'lembra.st.', 'lembra.news.', 'lembra.nvOk', 'lembra.equipe.', 'lembra.ws.', 'lembra.split.', 'lembra.storyLembra'];
+function limpaContaAnterior() {
+  try {
+    const tira = [];
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && DA_CONTA.some((p) => k === p || k.startsWith(p))) tira.push(k); }
+    tira.forEach((k) => localStorage.removeItem(k));
+  } catch { /* ok */ }
+}
 /* chegou por um link de amizade (guardado até entrar): o mais comum é ainda não ter conta */
 const conviteAmigo = () => { if (/^#\/amigo\//.test(location.hash || '')) return true; try { const p = JSON.parse(localStorage.getItem('lembra.amigo') || 'null'); return !!p && Date.now() - p.at < 14 * 864e5; } catch { return false; } };
 function purgeAuth() {
@@ -1703,6 +1712,8 @@ async function boot() {
       return showLogin();
     }
     try { sessionStorage.setItem('lembra.sess', '1'); } catch { /* ok */ }
+    // trocou de conta neste aparelho: apaga tudo que era da conta anterior (conversa do assistente, frases, ficha, time…)
+    try { const antes = localStorage.getItem(LS_UID); if (antes && antes !== user.uid) limpaContaAnterior(); } catch { /* ok */ }
     try { localStorage.setItem(LS_UID, user.uid); localStorage.setItem('lembra.jaentrou', '1'); } catch { /* ok */ }
     // entrou de novo depois de sair (sem fechar o app): recomeça do zero para não misturar nada
     if (window.__saiu && started) { setTimeout(() => location.replace(location.pathname + '?r=' + Date.now()), 300); return; }

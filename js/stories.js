@@ -343,9 +343,10 @@ function openViewers(id, onClose, foto, st = {}) {
       ${foto ? `<span class="stvw__thumb"><img src="${esc(foto)}" alt=""></span>` : ''}
       <span class="stvw__n">${icon('eye', 16)} ${lista ? lista.length : st.views || 0}${lista && lista.some((c) => c.gostou) ? ` · ${ICO.coracao(15, true)} ${lista.filter((c) => c.gostou).length}` : ''}</span>${st.title ? `<small class="stvw__t">${icon('check', 12)} ${esc(st.title)}</small>` : ''}</header>
     <h3 class="stvw__h">Quem viu este story</h3>
-    ${!lista ? '<div class="fx__load"><i></i><i></i><i></i></div>' : lista.length ? lista.map((c) => `<div class="stvw__row">${face(c, 52)}<span><b>${esc(c.name)}</b><small>${desde(c.at).replace(/^há/, 'Há').replace(/^agora$/, 'Agora')}</small></span>${c.repostou ? `<i class="stvw__r">${icon('repeat', 18)}</i>` : ''}${c.gostou ? `<i class="stvw__g">${ICO.coracao(20, true)}</i>` : ''}</div>`).join('') : '<p class="fhelp">Ninguém viu ainda. Daqui a pouco aparece gente 👀</p>'}</div>`;
-  const a = openSheet({ className: 'sheet--tall sheet--stview sheet--fx', html: html(), onClose });
-  call('/friends/story-viewers', { id }).then((r) => { lista = r.viewers || []; if (!a.closed) a.set(html()); }).catch(() => { lista = []; if (!a.closed) a.set(html()); });
+    ${!lista ? '<div class="fx__load"><i></i><i></i><i></i></div>' : lista.length ? lista.map((c) => `<button class="stvw__row" data-uid="${esc(c.uid || '')}" aria-label="Ver perfil de ${esc(c.name)}">${face(c, 52)}<span><b>${esc(c.name)}</b><small>${desde(c.at).replace(/^há/, 'Há').replace(/^agora$/, 'Agora')}</small></span>${c.repostou ? `<i class="stvw__r">${icon('repeat', 18)}</i>` : ''}${c.gostou ? `<i class="stvw__g">${ICO.coracao(20, true)}</i>` : ''}</button>`).join('') : '<p class="fhelp">Ninguém viu ainda. Daqui a pouco aparece gente 👀</p>'}</div>`;
+  const liga = (el) => el.querySelectorAll('.stvw__row[data-uid]').forEach((b) => (b.onclick = async () => { const c = (lista || []).find((v) => v.uid === b.dataset.uid); if (c) (await import('./friends.js')).openFriendProfile(c); }));
+  const a = openSheet({ className: 'sheet--tall sheet--stview sheet--fx', html: html(), onClose, onMount: (x) => liga(x.el) });
+  call('/friends/story-viewers', { id }).then((r) => { lista = r.viewers || []; if (!a.closed) { a.set(html()); liga(a.el); } }).catch(() => { lista = []; if (!a.closed) { a.set(html()); liga(a.el); } });
 }
 
 /* ---------- tela "Stories" (feed) ---------- */

@@ -1233,7 +1233,7 @@ async function handle(req, env) {
   if (url.pathname === '/ask') {
     if (!env.ANTHROPIC_API_KEY && !env.AI) return reply(env, req, { error: 'A IA do assistente ainda não foi ligada no servidor.' }, 412);
     // com chave da Anthropic usa o Claude; sem chave, a IA grátis do Cloudflare
-    if (!(await porHora(env.CAL, me.id))) return reply(env, req, { error: 'Muitas perguntas nesta hora. Daqui a pouco volta 😉' }, 429);
+    if (!(await porHora(env.CAL, me.id, 200))) return reply(env, req, { error: 'Muitas perguntas seguidas. Daqui a pouco volta 😉' }, 429);
     const ask = env.ANTHROPIC_API_KEY ? (await import('./claude.js')).askClaude : (await import('./freeai.js')).askFree;
     try {
       const raw = await ask(env, { question: clean(body.question, 2000), history: body.history, context: clean(body.context, 12000), me, today: clean(body.today, 10) });

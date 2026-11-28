@@ -144,7 +144,7 @@ export function escolheTime(d, ok) {
   onMount: (x) => {
     const q = (s) => x.el.querySelector(s), inp = q('[data-q]');
     const fecha = (o) => { Object.assign(d, { teamId: '', teamOther: '', teamAvisos: false }, o); x.close(); ok(); };
-    const liga = () => x.el.querySelectorAll('[data-t]').forEach((b) => (b.onclick = () => fecha({ teamId: b.dataset.t, teamAvisos: d.teamId === b.dataset.t && d.teamAvisos })));
+    const liga = () => x.el.querySelectorAll('[data-t]').forEach((b) => (b.onclick = () => fecha({ teamId: b.dataset.t, teamAvisos: d.teamId === b.dataset.t ? d.teamAvisos !== false : true }) /* time novo: avisos ligados por padrão */));
     liga(); inp.oninput = () => { q('[data-l]').innerHTML = lista(inp.value); q('[data-ot]').textContent = inp.value.trim() ? `usar “${inp.value.trim().slice(0, 40)}” (sem avisos de jogos)` : 'escreva o nome na busca e toque aqui'; liga(); };
     q('[data-nao]').onclick = () => fecha({});
     q('[data-outro]').onclick = () => { const v = lim(inp.value, 40); if (!/\p{L}{2}/u.test(v)) { inp.focus(); return toast('Escreva o nome do time na busca.'); } fecha({ teamOther: v }); };

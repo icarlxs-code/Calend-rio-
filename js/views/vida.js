@@ -9,6 +9,7 @@ const LS = 'lembra.vida';
 /* modo sem nuvem (teste local): guarda no aparelho */
 export function vidaAtual() {
   if (store.profile?.vida) return store.profile.vida;
+  if (store.mode === 'cloud') return null; // na nuvem vale só o que está na conta (nunca o de outra conta no aparelho)
   try { return JSON.parse(localStorage.getItem(LS) || 'null'); } catch { return null; }
 }
 async function guarda(v) {
