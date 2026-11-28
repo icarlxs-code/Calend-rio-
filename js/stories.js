@@ -19,6 +19,7 @@ import { previewStory } from './game.js';
 import { todayKey } from './utils.js';
 import { ICO, rosto, falta, conversas } from './social.js';
 import { isTeen } from './teen.js';
+import { NOVIDADES } from './novidades.js';
 
 const call = (path, body = {}) => api(path, { ws: '', ...body });
 const som = (f, ...a) => import('./sound.js').then((m) => m[f] && m[f](...a)).catch(() => {});
@@ -501,7 +502,11 @@ export function openLembraStory(onChange) {
     { t: 'Quem passou no seu perfil? 👀', s: 'Em Amigos aparece quem visitou você nos últimos 7 dias.', m: 'desconfiado' },
     { t: 'Sua agenda em primeiro lugar', s: 'Marcou, eu lembro. Atrasou, eu aviso com jeitinho. Feito, a gente comemora.', m: 'acena' },
   ];
-  const slides = [...(APP_NOTES || []).slice(0, 3).map((n, i) => ({ t: i ? 'E mais…' : 'Novidade no Lembra ✨', s: n, m: i ? 'feliz' : 'danca' })), ...dicas];
+  /* as novidades vêm dos quadros da versão mais nova (sempre atualizadas); sem eles, as notas da versão */
+  const vers = Object.keys(NOVIDADES).sort((x, y) => { const A = x.split('.').map(Number), B = y.split('.').map(Number); for (let k = 0; k < 3; k++) if ((A[k] || 0) !== (B[k] || 0)) return (B[k] || 0) - (A[k] || 0); return 0; });
+  const quadros = (vers[0] && NOVIDADES[vers[0]]) || [];
+  const novas = quadros.slice(0, 5).map((q, i) => ({ t: i ? q.t : 'Novidade no Lembra ✨', s: q.s.replace('|', ' '), m: q.m || 'feliz' }));
+  const slides = [...(novas.length ? novas : (APP_NOTES || []).slice(0, 3).map((n, i) => ({ t: i ? 'E mais…' : 'Novidade no Lembra ✨', s: n, m: i ? 'feliz' : 'danca' }))), ...dicas];
   let i = 0, timer = 0, gasto = 0, ult = 0, pausado = false;
   const w = document.createElement('div'); w.className = 'stv stv--lembra'; w.setAttribute('role', 'dialog');
   (document.getElementById('sheets') || document.body).appendChild(w); document.body.classList.add('has-stv');
