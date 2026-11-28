@@ -121,3 +121,7 @@ body.lm-recua #view { transform: scale(.955); transform-origin: 50% var(--oy, 50
 .mfr { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 12px; } .mfr__i { display: grid; gap: 6px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; } .mfr__a { aspect-ratio: 9 / 16; display: grid; align-items: center; padding: 14px; border-radius: 20px; background: #FFDDBA center / cover; color: #210C04; overflow: hidden; box-shadow: var(--shadow); } .mfr__a b { font-size: 16px; line-height: 1.25; overflow-wrap: anywhere; } .mfr__i.tem b { visibility: hidden; } .mfr__i small { font-size: 13.5px; font-weight: 700; color: var(--fx-t2, var(--text-2)); } .mfr__v { text-align: center; padding: 40px 0; } .pmemocard + .pmemocard { margin-top: -2px; }
 @media (max-width: 350px) { .frp__op { padding: 0 10px; font-size: 14px; } }
 .frp__op--so { width: 46px; padding: 0; justify-content: center; } .frp__op.is-ok { background: #1B7F46 !important; color: #fff !important; }
+/* Lembra 2D (canvas): centralizado sobre a sombra */
+.c2d { display: inline-grid; place-items: end center; }
+.c2d .snh { position: relative; z-index: 1; margin-bottom: 14%; }
+.c2d .c3d__sombra { bottom: 9%; }
