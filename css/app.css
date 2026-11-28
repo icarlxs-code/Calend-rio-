@@ -4159,3 +4159,9 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .vficha__volta { margin-top: 10px; border: 0; background: none; color: #8A6A56; font-weight: 700; font-size: 14px; }
 .vficha__fim { color: #5B3B28; margin: 0 0 14px; }
 @media (prefers-reduced-motion: reduce) { .vficha, .vficha__op, .vficha__card, .vficha__snh, .ststrip__on, .msgtop { animation: none; } }
+
+/* brilhinho suave ao tocar nas novidades (sem som) */
+.nv__brilho { position: absolute; width: 0; height: 0; z-index: 4; pointer-events: none; }
+.nv__brilho i { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle, #fff 0 35%, #FFC46B 70%, transparent 72%); transform: rotate(var(--a)) translateY(0) scale(.4); opacity: 0; animation: nvBrilho .6s ease-out forwards; }
+@keyframes nvBrilho { 0% { opacity: 0; transform: rotate(var(--a)) translateY(0) scale(.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--a)) translateY(-34px) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .nv__brilho { display: none; } }

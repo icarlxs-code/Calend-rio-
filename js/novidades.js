@@ -220,10 +220,19 @@ export function abreNovidades(quadros, aoFechar) {
     if (!show(s)) say(e, s.s, { bubble: q('.snhb__txt'), speed: rapidez(s) });
     fala();
   };
-  const anda = (n) => { if (espera && n > 0) { const s = quadros[i]; if (show(s)) { tiraCena(); } else say(snh(), s.s, { bubble: q('.snhb__txt'), speed: rapidez(s) }); vez += 1; fala(); return; } if (i + n < 0) return; if (i + n >= quadros.length) { fecha(); return; } i += n; mostra(n); import('./sound.js').then((m) => m.msgVai && m.msgVai()).catch(() => {}); };
+  /* efeito sutil: um brilhinho no toque e o personagem reage de leve (sem áudio) */
+  const brilho = (x, y) => {
+    if (calmo() || !w.isConnected) return;
+    const b = document.createElement('span'); b.className = 'nv__brilho'; const r = w.getBoundingClientRect();
+    b.style.left = `${x - r.left}px`; b.style.top = `${y - r.top}px`;
+    b.innerHTML = [0, 1, 2, 3, 4].map((k) => `<i style="--a:${k * 72}deg"></i>`).join('');
+    w.appendChild(b); setTimeout(() => b.remove(), 700);
+  };
+  const reage = (n) => { const e = snh(); if (!e || calmo()) return; act(e, ['riso', 'sim', 'pulo', 'pisca'][(i + (n > 0 ? 0 : 2)) % 4]); };
+  const anda = (n) => { if (espera && n > 0) { const s = quadros[i]; if (show(s)) { tiraCena(); } else say(snh(), s.s, { bubble: q('.snhb__txt'), speed: rapidez(s) }); vez += 1; fala(); return; } if (i + n < 0) return; if (i + n >= quadros.length) { fecha(); return; } i += n; mostra(n); reage(n); import('./sound.js').then((m) => m.msgVai && m.msgVai()).catch(() => {}); };
   const tecla = (e) => { if (e.key === 'Escape') { e.preventDefault(); fecha(); } else if (e.key === 'ArrowRight' || (e.key === 'Enter' && document.activeElement === w)) anda(1); else if (e.key === 'ArrowLeft') anda(-1); else if (e.key === 'Tab') { const f = [q('[data-pula]'), q('[data-ok]')].filter((x) => !x.hidden), k = f.indexOf(document.activeElement); e.preventDefault(); f[k < 0 ? f.length - 1 : (k + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus(); } };
   document.addEventListener('keydown', tecla, true);
-  q('[data-pula]').onclick = fecha; q('[data-ok]').onclick = () => anda(1); q('[data-vai]').onclick = () => anda(1); q('[data-volta]').onclick = () => anda(-1);
+  q('[data-pula]').onclick = fecha; q('[data-ok]').onclick = (e) => { brilho(e.clientX, e.clientY); anda(1); }; q('[data-vai]').onclick = (e) => { brilho(e.clientX, e.clientY); anda(1); }; q('[data-volta]').onclick = (e) => { brilho(e.clientX, e.clientY); anda(-1); };
   requestAnimationFrame(() => w.classList.add('is-in')); mostra(); w.focus({ preventScroll: true });
   return { fecha };
 }
