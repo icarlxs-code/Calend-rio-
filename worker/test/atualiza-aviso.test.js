@@ -47,9 +47,10 @@ test('por aparelho: o aparelho já atualizado não recebe "atualize"; o atrasado
   const CAL = kv(), env = { CAL };
   await CAL.put('dev:uPhone', JSON.stringify({ 'd-novo': { b: 'nov7777', subscription: {} }, 'd-velho': { b: 'velho1', subscription: {} } }));
   await CAL.put('dev:uAllNew', JSON.stringify({ 'd-a': { b: 'nov7777', subscription: {} } }));
+  await guardaVersao(env, 'uPhone', { v: '2.35.0', b: 'nov7777', nv: false });
   const calls = []; const send = async (e, m, msg, excl) => calls.push([m, excl]);
   await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send);
-  assert.deepEqual(calls, [['uPhone', ['d-novo']]], 'manda só para o aparelho atrasado');
+  assert.deepEqual(calls, [], 'um aparelho atualizado basta: nenhum aparelho da pessoa recebe mais');
 });
 test('aparelho sem versão informada não fica para sempre recebendo "atualize" se a pessoa já está na versão no ar', async () => {
   globalThis.fetch = async () => ({ ok: true, json: async () => ({ version: '2.35.0', build: 'nov8888' }) });
