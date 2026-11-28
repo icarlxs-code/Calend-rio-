@@ -1,9 +1,10 @@
 /* Conversa com o Claude (Haiku 5.5, esforço baixo). O app envia a pergunta e o
    retrato da agenda; a chave da API fica só aqui no servidor. */
 import Anthropic from '@anthropic-ai/sdk';
+import { CONVERSA } from './assistente-conversa.js';
 
 const MODEL = 'claude-haiku-5-5';
-const SYSTEM = `Você é o assistente do Lembra, a agenda de trabalho e pessoal de quem está falando com você.
+const SYSTEM_BASE = `Você é o assistente do Lembra, a agenda de trabalho e pessoal de quem está falando com você.
 Você recebe a agenda real (com a profissão da pessoa e os tipos de compromisso dela) e responde perguntas sobre ela, falando a língua da profissão.
 Regras:
 - Responda em português do Brasil, curto e direto, como num chat de celular. Use listas curtas quando ajudar.
@@ -17,6 +18,7 @@ Formato da resposta (siga sempre):
 - Não mostre duração em minutos, nem palavras técnicas como "Tarefa", "a fazer", "status" ou "local:".
 - No máximo 8 itens e, se precisar, uma dica final curta em uma linha.
 - ANOTAÇÕES PESSOAIS: perguntas como "onde deixei o tênis?", "o que anotei hoje?", "quando foi que eu…" respondem-se pelas anotações, sempre com dia e horário (ex.: "Hoje às 14h32 você anotou: deixei o tênis em cima da mesa."). Se houver mais de uma parecida, mostre a mais recente primeiro. Se não achar, diga que não tem nada anotado sobre isso.`;
+const SYSTEM = `${SYSTEM_BASE}\n${CONVERSA}`;
 
 export async function askClaude(env, { question, history, context, me }) {
   if (!question.trim()) throw Object.assign(new Error('Escreva uma pergunta.'), { status: 400 });

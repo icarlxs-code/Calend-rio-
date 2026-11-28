@@ -287,7 +287,9 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
         const conta = entendeConta(q, todayKey());
         if (conta) { const r = respostaConta(conta); chat.push({ role: 'user', text: q }, { role: 'assistant', text: r.texto, chips: r.chips, actions: r.acoes, actStatus: 'pending' }); saveChat(); redrawChat(a); return; }
         // conta que se repete (aluguel, boleto…): conversa de verdade, uma pergunta por vez
-        const ativa = [...chat].reverse().find((m) => m.role === 'assistant' && m.coleta && !m.coleta.fim);
+        // com a IA ligada (plano Profissional), a conversa é toda com ela: entende, pergunta o que falta e lembra do que já foi dito
+        const ia = pro && inAppChat;
+        const ativa = ia ? null : [...chat].reverse().find((m) => m.role === 'assistant' && m.coleta && !m.coleta.fim);
         if (ativa) {
           chat.push({ role: 'user', text: q });
           const r = respondeConta(ativa.coleta, q);
@@ -306,14 +308,14 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
           saveChat(); redrawChat(a);
           return;
         }
-        if (x0 && ehConta(x0, q)) {
+        if (!ia && x0 && ehConta(x0, q)) {
           const c = novaConta(x0, q), p = proximoPasso(c);
           chat.push({ role: 'user', text: q }, { role: 'assistant', text: p.fala, coleta: c });
           saveChat(); redrawChat(a);
           return;
         }
         // coisa para guardar: pergunta o lugar (ou vai direto quando a pessoa já disse)
-        const x = x0;
+        const x = ia ? null : x0;
         if (x) {
           const m = { role: 'assistant', text: x.dito ? 'Certo!' : 'Onde eu guardo isso?', escolha: x };
           chat.push({ role: 'user', text: q }, m);
