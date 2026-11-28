@@ -419,6 +419,7 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       // celular já usado em outra conta: não deixa seguir (uma conta por número)
       if (wrap.querySelector('[data-f="phone"]') && (f.phone || f.cpf)) {
         const u = await unico({ telefone: f.phone, cpf: store.profile?.cpfOk ? '' : f.cpf });
+        if (u && (u.erro || !Array.isArray(u.ocupado))) { err = `Não consegui conferir agora se o CPF e o celular já têm conta (${u.erro || 'resposta inválida'}). Verifique a internet e toque em Próximo de novo.`; return showErr(); }
         if (u && u.ocupado.includes('cpf')) { err = 'Esse CPF já tem uma conta no Lembra. Entre com a conta que você já tem.'; return showErr(); }
         if (u && u.ocupado.includes('telefone')) { err = 'Esse celular já está cadastrado em outra conta. Use outro número ou deixe em branco.'; return showErr(); }
         if (u && u.ok && f.cpf) { f.cpf = ''; saveUserProfile({ cpfOk: true }).catch(() => {}); store.profile = { ...(store.profile || {}), cpfOk: true }; } // o número não fica guardado
@@ -451,9 +452,10 @@ export function cpfOk(c) {
 export async function unico(dados) {
   try {
     const { api, server } = await import('../avisos.js');
-    if (store.mode !== 'cloud' || !server()) return null;
+    if (store.mode !== 'cloud') return null;
+    if (!server()) return { erro: 'servidor não configurado' };
     return await api('/conta/unico', { ws: '', ...dados, reservar: true });
-  } catch { return null; }
+  } catch (e) { return { erro: (e && e.message) || 'sem resposta' }; }
 }
 export async function telUnico(telefone) {
   try {
