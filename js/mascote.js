@@ -849,9 +849,10 @@ function falaJa(g, ms = 1900, m) {
 let mexeu = false; // a pessoa já tocou/arrastou o Lembra nesta sessão
 function arrastavel(fig) {
   fig.addEventListener('pointerdown', (ev) => {
-    if (!B || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+    if (!B || (ev.pointerType === 'mouse' && ev.button !== 0) || document.body.classList.contains('puxando-story') || document.querySelector('.scam')) return; // abrindo o story: o mascote não vem junto
     if (arr && arr.voo && arr.enc && arr.enc.anim) { paraCaminhada(); arr = null; } // pegou de novo enquanto ele voltava andando
     if (arr) return;
+    document.body.classList.add('mascote-na-mao'); // o dedo está no mascote: o gesto do story não vale
     mexeu = true; B.classList.remove('is-hidden');
     arr = { id: ev.pointerId, x0: ev.clientX, y0: ev.clientY, fx: ev.clientX, fy: ev.clientY, on: false, t0: performance.now() };
     // segurar parado (sem arrastar): abre a caixinha para conversar com ele
@@ -868,13 +869,14 @@ function arrastavel(fig) {
     if (arr.on) { ev.preventDefault(); const Lm = limites(); mover(cl(arr.fx - arr.ox, Lm.x0 - 26, Lm.x1 + 26), cl(arr.fy - arr.oy, Lm.y0 - 30, Lm.y1 + 26)); } // segue o dedo na hora, sem esperar o próximo quadro
   });
   const fim = (ev) => {
+    document.body.classList.remove('mascote-na-mao');
     if (!arr || ev.pointerId !== arr.id || arr.voo) return;
     clearTimeout(arr.lp); clearTimeout(arr.brilho); clearInterval(arr.vib); pulsoSegura(false);
     if (arr.on) { termina(); return; }
     if (arr.pergunta) { semClique = Date.now(); toques = []; }
     arr = null;
   };
-  fig.addEventListener('pointerup', fim); fig.addEventListener('pointercancel', fim);
+  fig.addEventListener('pointerup', fim); fig.addEventListener('pointercancel', fim); fig.addEventListener('lostpointercapture', () => document.body.classList.remove('mascote-na-mao'));
   addEventListener('resize', () => { if (livre && !arr) { const L = limites(); encosta(livre.side, cl(livre.y, L.y0, L.y1)); } });
 }
 

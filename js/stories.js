@@ -674,12 +674,13 @@ let puxaLigado = false;
 /* o gesto vale de qualquer lugar da tela, menos em listas que rolam para o lado, campos de texto e o mascote */
 function rolaDeLado(el) {
   for (let e = el; e && e !== document.body; e = e.parentElement) {
-    if (e.matches && e.matches('input, textarea, select, [contenteditable], .snhbud, .snhbud *, [data-sem-puxar]')) return true;
+    if (e.matches && e.matches('input, textarea, select, [contenteditable], .snhbud, .snh, [data-snh], .c3d, .snhq, [data-sem-puxar]')) return true; // no mascote é só o mascote
     const cs = getComputedStyle(e);
     if (e.scrollWidth > e.clientWidth + 4 && /(auto|scroll)/.test(cs.overflowX)) return true;
   }
   return false;
 }
+const mascoteArrastando = () => document.body.classList.contains('mascote-na-mao'); // só enquanto o dedo segura o mascote
 export function ligaPuxar() {
   if (puxaLigado) return; puxaLigado = true;
   let ini = null, cam = null;
@@ -689,11 +690,13 @@ export function ligaPuxar() {
     ini = { x: t.clientX, y: t.clientY, t: performance.now(), dx: 0, ok: null };
   }, { passive: true });
   document.addEventListener('touchmove', (e) => {
-    if (!ini) return; const t = e.touches[0], dx = t.clientX - ini.x, dy = t.clientY - ini.y;
+    if (!ini) return;
+    if (mascoteArrastando()) { ini = null; if (cam) { const c = cam; cam = null; if (c.api) c.api.cancelar(); else c.fim = () => c.api.cancelar(); } return; } // pegou o mascote: é só o mascote
+    const t = e.touches[0], dx = t.clientX - ini.x, dy = t.clientY - ini.y;
     if (ini.ok === null && Math.hypot(dx, dy) > 12) ini.ok = dx > 0 && dx > Math.abs(dy) * 1.4;   // da esquerda pra direita, na horizontal
     if (!ini.ok) { if (ini.ok === false) ini = null; return; }
     ini.dx = Math.max(0, dx);
-    if (!cam) { // a câmera já liga aqui e vem ao vivo junto com o dedo (quando soltar, já está pronta)
+    if (!cam) { document.body.classList.add('puxando-story'); // a câmera já liga aqui e vem ao vivo junto com o dedo (quando soltar, já está pronta)
       cam = { api: null, k: 0 };
       const meu = cam;
       import('./camera-story.js').then((C) => {
@@ -705,7 +708,7 @@ export function ligaPuxar() {
   }, { passive: true });
   const fim = () => {
     if (!ini) return; const v = ini.dx / Math.max(1, performance.now() - ini.t), abre = ini.ok && (ini.dx > innerWidth * 0.3 || (v > 0.5 && ini.dx > 50));
-    ini = null; if (!cam) return; const c = cam; cam = null;
+    ini = null; document.body.classList.remove('puxando-story'); if (!cam) return; const c = cam; cam = null;
     const decide = () => { if (abre) { c.api.confirmar(); try { navigator.vibrate && navigator.vibrate(10); } catch { /* ok */ } } else c.api.cancelar(); };
     if (c.api) decide(); else c.fim = decide;
   };
