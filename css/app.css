@@ -4186,37 +4186,29 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .prim { position: relative; }
 .prim__x { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .1); color: inherit; font-size: 15px; font-weight: 800; cursor: pointer; z-index: 2; }
 
-/* ---------- segurar o Lembra: caixinha de pergunta ---------- */
-.snhq { position: fixed; inset: 0; z-index: 9100; display: flex; align-items: flex-end; justify-content: center; padding: 16px 16px calc(env(safe-area-inset-bottom, 0px) + 170px); background: rgba(0, 0, 0, .28); animation: vfIn .2s ease both; }
-.snhq.is-sai { animation: vfOut .2s ease both; }
-.snhq__box { position: relative; width: min(100%, 420px); display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 22px; background: var(--card, #1c1c1e); color: var(--text, #fff); box-shadow: 0 18px 50px rgba(0, 0, 0, .35); animation: snhqPop .38s cubic-bezier(.3, 1.4, .5, 1) both; transform-origin: 85% 100%; }
-@keyframes snhqPop { from { opacity: 0; transform: scale(.6) translateY(30px); } }
-.snhq__box b { font: 800 17px/1.2 Nunito, system-ui, sans-serif; }
-.snhq__box textarea { width: 100%; resize: none; border-radius: 14px; border: 1px solid var(--line, #333); background: var(--bg, #0b0b0b); color: inherit; padding: 10px 12px; font: 16px/1.35 inherit; }
-.snhq__bts { display: flex; gap: 8px; } .snhq__bts .btn { flex: 1; }
-.snhq__brilho { position: absolute; right: 30px; bottom: -8px; width: 0; height: 0; }
-.snhq__brilho i { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: #FFC46B; animation: nvBrilho .7s ease-out both; }
-.snhq__brilho i:nth-child(1) { --a: 0deg; } .snhq__brilho i:nth-child(2) { --a: 90deg; } .snhq__brilho i:nth-child(3) { --a: 180deg; } .snhq__brilho i:nth-child(4) { --a: 270deg; }
-@media (prefers-reduced-motion: reduce) { .snhq, .snhq__box, .snhq__brilho i { animation: none; } }
-
-/* ---------- vitória do time: cartão para o story ---------- */
-.vit { position: fixed; inset: 0; z-index: 9200; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px); background: radial-gradient(circle at 50% 30%, var(--b), var(--a)); animation: vfIn .25s ease both; overflow: hidden; }
-.vit.is-sai { animation: vfOut .2s ease both; }
-.vit__card { position: relative; width: min(100%, 360px); aspect-ratio: 9 / 16; border-radius: 22px; overflow: hidden; box-shadow: 0 18px 50px rgba(0, 0, 0, .45); background: rgba(0, 0, 0, .25); display: grid; place-items: center; animation: snhqPop .5s cubic-bezier(.3, 1.3, .5, 1) both; }
-.vit__card img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.vit__bts { width: min(100%, 360px); display: flex; flex-direction: column; gap: 8px; }
-.vit__conf i { position: absolute; top: -20px; left: var(--x); width: 9px; height: 14px; border-radius: 2px; background: var(--c); animation: vitCai 2.6s var(--d) linear infinite; }
-@keyframes vitCai { to { transform: translateY(110vh) rotate(540deg); } }
-@media (prefers-reduced-motion: reduce) { .vit__conf { display: none; } .vit, .vit__card { animation: none; } }
-
-/* ---------- notícia do time lida dentro do Lembra ---------- */
-.nota__img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 18px; display: block; margin-bottom: 12px; }
-.nota__meta { color: var(--text-3, #888); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-.nota__t { font: 900 25px/1.2 Nunito, system-ui, sans-serif; margin: 6px 0 8px; }
-.nota__d { font-size: 17px; color: var(--text-2, #bbb); margin: 0 0 14px; }
-.nota__corpo p { font-size: 17px; line-height: 1.55; margin: 0 0 14px; }
-.nota__selo { font-size: 13px !important; font-weight: 800; color: #FF7A1F; margin-bottom: 8px !important; }
-.nota__fonte { font-size: 13px; color: var(--text-3, #888); margin: 6px 0 16px; }
-.nota__fonte a { color: inherit; text-decoration: underline; }
-.nota__bts { display: flex; flex-direction: column; gap: 8px; padding-bottom: 16px; }
-.nota__dois { display: flex; gap: 8px; } .nota__dois .btn { flex: 1; }
+/* ---------- segurar o Lembra: brilho de borda que gira (estilo Siri) + caixa de conversa ---------- */
+.snh-glow { position: fixed; inset: 0; z-index: 9050; pointer-events: none; opacity: 0; transition: opacity .35s ease; }
+.snh-glow.on { opacity: 1; }
+.snh-glow::before { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 0 5px #FF6A1A, inset 0 0 26px 9px rgba(255, 210, 30, .75), inset 0 0 70px 26px rgba(255, 61, 139, .55), inset 0 0 120px 40px rgba(122, 77, 255, .35); animation: snhCor 4.2s linear infinite; }
+.snh-glow::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 90px 10px rgba(255, 106, 26, .35); animation: snhRespira 1.6s ease-in-out infinite alternate; }
+@keyframes snhCor { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
+@keyframes snhRespira { from { opacity: .55; } to { opacity: 1; } }
+.snhq { position: fixed; inset: 0; z-index: 9100; display: flex; align-items: flex-end; justify-content: center; padding: 16px 14px calc(env(safe-area-inset-bottom, 0px) + 150px); background: rgba(8, 4, 12, .34); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: vfIn .25s ease both; }
+.snhq.is-sai { animation: vfOut .22s ease both; }
+.snhq__box { position: relative; width: min(100%, 440px); display: flex; flex-direction: column; gap: 12px; padding: 18px; border-radius: 28px; background: linear-gradient(160deg, rgba(40, 26, 52, .92), rgba(20, 14, 30, .95)); border: 1px solid rgba(255, 255, 255, .12); color: #fff; box-shadow: 0 24px 60px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 106, 26, .25); animation: snhqSobe .5s cubic-bezier(.2, 1.1, .3, 1) both; }
+@keyframes snhqSobe { from { opacity: 0; transform: translateY(40px) scale(.96); } }
+.snhq__topo { display: flex; align-items: center; gap: 12px; }
+.snhq__topo b { font: 800 18px/1.2 Nunito, system-ui, sans-serif; }
+.snhq__ondas { display: inline-flex; align-items: center; gap: 4px; height: 26px; }
+.snhq__ondas i { width: 4px; border-radius: 3px; background: linear-gradient(#FFD21E, #FF6A1A, #FF3D8B); animation: snhOnda 1s ease-in-out infinite; }
+.snhq__ondas i:nth-child(1) { height: 10px; animation-delay: -.1s; } .snhq__ondas i:nth-child(2) { height: 20px; animation-delay: -.4s; }
+.snhq__ondas i:nth-child(3) { height: 26px; animation-delay: -.2s; } .snhq__ondas i:nth-child(4) { height: 16px; animation-delay: -.6s; } .snhq__ondas i:nth-child(5) { height: 9px; animation-delay: -.3s; }
+@keyframes snhOnda { 0%, 100% { transform: scaleY(.45); } 50% { transform: scaleY(1); } }
+.snhq textarea { width: 100%; resize: none; border-radius: 18px; border: 1px solid rgba(255, 255, 255, .14); background: rgba(0, 0, 0, .35); color: #fff; padding: 12px 14px; font: 500 16px/1.4 Nunito, system-ui, sans-serif; outline: none; }
+.snhq textarea:focus { border-color: #FF8A3D; box-shadow: 0 0 0 3px rgba(255, 106, 26, .25); }
+.snhq textarea::placeholder { color: rgba(255, 255, 255, .45); }
+.snhq__bts { display: flex; gap: 10px; }
+.snhq__fecha, .snhq__envia { flex: 1; height: 50px; border-radius: 16px; border: 0; font: 800 16px/1 Nunito, system-ui, sans-serif; cursor: pointer; }
+.snhq__fecha { background: rgba(255, 255, 255, .08); color: #fff; }
+.snhq__envia { background: linear-gradient(120deg, #FF6A1A, #FF3D8B 60%, #7A4DFF); color: #fff; box-shadow: 0 10px 24px rgba(255, 61, 139, .35); }
+@media (prefers-reduced-motion: reduce) { .snh-glow::before, .snh-glow::after, .snhq__ondas i, .snhq, .snhq__box { animation: none; } }

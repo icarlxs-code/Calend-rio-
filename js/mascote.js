@@ -442,6 +442,13 @@ function espera(line, gesto) {                       // guarda só a mais import
   clearTimeout(filaT);
   filaT = setTimeout(() => { const f = fila; fila = null; if (f && Date.now() < f.ate) fala(f.line, f.gesto); }, Math.max(200, lendoAte - Date.now() + 250));
 }
+/* ---------- segurar o Lembra: brilho que gira na borda da tela (estilo Siri) ---------- */
+function pulsoSegura(on) {
+  let g = document.querySelector('.snh-glow');
+  if (!on) { if (g) { g.classList.remove('on'); setTimeout(() => g.remove(), 360); } return; }
+  if (!g) { g = document.createElement('div'); g.className = 'snh-glow'; g.setAttribute('aria-hidden', 'true'); document.body.appendChild(g); }
+  requestAnimationFrame(() => g.classList.add('on'));
+}
 /* ---------- segurar o Lembra: caixinha para perguntar; a resposta sai no balão, com a boca mexendo ---------- */
 let conversaMasc = []; // só nesta sessão e só desta conta
 function mexeBoca(ms) {
@@ -454,14 +461,15 @@ function mexeBoca(ms) {
 function abrePergunta() {
   if (document.querySelector('.snhq')) return;
   import('./sfx.js').then((m) => m.ui('clique')).catch(() => {});
+  try { navigator.vibrate && navigator.vibrate([18, 40, 26]); } catch { /* sem vibração */ }
   setMood(el(), 'surpreso'); act(el(), 'pop');
   const w = document.createElement('div');
   w.className = 'snhq'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Conversar com o Lembra');
-  w.innerHTML = `<form class="snhq__box"><span class="snhq__brilho" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>Fala comigo! 💬</b><textarea name="q" rows="2" maxlength="600" placeholder="Pergunte ou peça qualquer coisa…"></textarea><div class="snhq__bts"><button type="button" class="btn btn--soft" data-sai>Fechar</button><button type="submit" class="btn btn--primary">Enviar</button></div></form>`;
+  w.innerHTML = `<form class="snhq__box"><div class="snhq__topo"><span class="snhq__ondas" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><b>Fala comigo</b></div><textarea name="q" rows="2" maxlength="600" placeholder="Pergunte ou peça qualquer coisa…"></textarea><div class="snhq__bts"><button type="button" class="snhq__fecha" data-sai>Fechar</button><button type="submit" class="snhq__envia">Enviar</button></div></form>`;
   document.body.appendChild(w);
   const f = w.querySelector('form'), t = f.q;
   setTimeout(() => t.focus(), 60);
-  const sai = () => { w.classList.add('is-sai'); setTimeout(() => w.remove(), 200); };
+  const sai = () => { w.classList.add('is-sai'); pulsoSegura(false); setTimeout(() => w.remove(), 240); };
   w.querySelector('[data-sai]').onclick = sai;
   w.addEventListener('click', (ev) => { if (ev.target === w) sai(); });
   f.onsubmit = async (ev) => {
@@ -750,17 +758,21 @@ function arrastavel(fig) {
     mexeu = true; B.classList.remove('is-hidden');
     arr = { id: ev.pointerId, x0: ev.clientX, y0: ev.clientY, fx: ev.clientX, fy: ev.clientY, on: false, t0: performance.now() };
     // segurar parado (sem arrastar): abre a caixinha para conversar com ele
-    const meu = arr; meu.lp = setTimeout(() => { if (arr === meu && !meu.on) { meu.pergunta = true; abrePergunta(); } }, 550);
+    const meu = arr;
+    // segurando: a tela acende com um brilho que gira (estilo Siri) e vibra de leve, em pulsos contínuos
+    meu.brilho = setTimeout(() => { if (arr === meu && !meu.on) pulsoSegura(true); }, 120);
+    meu.vib = setInterval(() => { if (arr === meu && !meu.on) { try { navigator.vibrate && navigator.vibrate(14); } catch { /* sem vibração */ } } }, 260);
+    meu.lp = setTimeout(() => { if (arr === meu && !meu.on) { meu.pergunta = true; clearInterval(meu.vib); pulsoSegura(false); abrePergunta(); } }, 550);
   });
   fig.addEventListener('pointermove', (ev) => {
     if (!arr || ev.pointerId !== arr.id || arr.voo) return;
     arr.fx = ev.clientX; arr.fy = ev.clientY;
-    if (!arr.on && Math.hypot(ev.clientX - arr.x0, ev.clientY - arr.y0) >= 4) { clearTimeout(arr.lp); if (arr.pergunta) return; comeca(fig, ev); }
+    if (!arr.on && Math.hypot(ev.clientX - arr.x0, ev.clientY - arr.y0) >= 4) { clearTimeout(arr.lp); clearTimeout(arr.brilho); clearInterval(arr.vib); pulsoSegura(false); if (arr.pergunta) return; comeca(fig, ev); }
     if (arr.on) { ev.preventDefault(); const Lm = limites(); mover(cl(arr.fx - arr.ox, Lm.x0 - 26, Lm.x1 + 26), cl(arr.fy - arr.oy, Lm.y0 - 30, Lm.y1 + 26)); } // segue o dedo na hora, sem esperar o próximo quadro
   });
   const fim = (ev) => {
     if (!arr || ev.pointerId !== arr.id || arr.voo) return;
-    clearTimeout(arr.lp);
+    clearTimeout(arr.lp); clearTimeout(arr.brilho); clearInterval(arr.vib); pulsoSegura(false);
     if (arr.on) { termina(); return; }
     if (arr.pergunta) { semClique = Date.now(); toques = []; }
     arr = null;
