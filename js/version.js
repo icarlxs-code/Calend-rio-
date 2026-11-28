@@ -39,7 +39,14 @@ try {
   else { prevVersion = s?.v || (window.__firstRun === false ? '1.9.0' : ''); localStorage.setItem(LS, JSON.stringify({ v: APP_VERSION, b: APP_BUILD, at: since, prev: prevVersion })); }
   if (s && s.b === APP_BUILD) prevVersion = s.prev || '';
 } catch { /* ok */ }
-export const appInfo = () => ({ v: APP_VERSION, b: APP_BUILD, since });
+const NVOK = 'lembra.nvOk';
+/** viu as novidades desta versão até o final (o servidor para de lembrar só depois disso) */
+export const novidadesOk = () => { try { return localStorage.getItem(NVOK) === APP_BUILD; } catch { return false; } };
+const marcaNovidadesOk = () => {
+  try { localStorage.setItem(NVOK, APP_BUILD); } catch { /* ok */ }
+  import('./avisos.js').then((m) => m.server() && m.api('/presence', { state: 'open', t: Date.now(), app: appInfo() })).catch(() => {});
+};
+export const appInfo = () => ({ v: APP_VERSION, b: APP_BUILD, since, nv: novidadesOk() });
 
 /* ---------- conferir se há versão nova ---------- */
 export let latest = null;
@@ -90,19 +97,24 @@ function mustUpdate(j) {
 
 /* ---------- novidades (uma vez depois de atualizar) ---------- */
 export async function maybeShowWhatsNew() {
-  if (!prevVersion) return false; // primeira instalação: quem chega agora vê a apresentação de boas-vindas, não as novidades
+  if (!prevVersion) { marcaNovidadesOk(); return false; } // primeira instalação: quem chega agora vê a apresentação de boas-vindas, não as novidades
   const { store, saveProfileQuiet } = await import('./store.js');
   const { NOVIDADES, abreNovidades, quadrosDesde, assinatura } = await import('./novidades.js');
   // número maior: tudo o que é novo desde a versão dela; mesmo número (nova publicação): os quadros desta versão
   const q = cmpVer(APP_VERSION, prevVersion) > 0 ? quadrosDesde(prevVersion, APP_VERSION) : (NOVIDADES[APP_VERSION] || []);
-  if (!q.length) { if (cmpVer(APP_VERSION, prevVersion) > 0 && APP_NOTES.length) openNews(); return false; }
+  if (!q.length) { marcaNovidadesOk(); if (cmpVer(APP_VERSION, prevVersion) > 0 && APP_NOTES.length) openNews(); return false; }
   // marcada pelo CONTEÚDO dos quadros: quadro novo aparece mesmo sem mudar o número da versão
   const sig = `${APP_VERSION}:${assinatura(q)}`;
-  if (store.profile?.newsVista === sig) return false; // já viu em outro aparelho
+  if (store.profile?.newsVista === sig) { marcaNovidadesOk(); return false; } // já viu em outro aparelho
   const key = `lembra.news.${sig}`;
-  try { if (localStorage.getItem(key)) return false; localStorage.setItem(key, '1'); } catch { return false; }
-  saveProfileQuiet({ newsVista: sig }).catch(() => {});
-  abreNovidades(q);
+  try { if (localStorage.getItem(key)) { marcaNovidadesOk(); return false; } if (sessionStorage.getItem(key)) return false; sessionStorage.setItem(key, '1'); } catch { return false; }
+  // só conta como vista quando a pessoa chega ao último quadro; se pular antes, volta a aparecer na próxima vez que abrir
+  abreNovidades(q, (fim) => {
+    if (!fim) return;
+    try { localStorage.setItem(key, '1'); } catch { /* ok */ }
+    saveProfileQuiet({ newsVista: sig }).catch(() => {});
+    marcaNovidadesOk();
+  });
   return true;
 }
 /* "Novidades" no jeito da App Store: versão, há quantos dias e um texto curto e geral

@@ -127,8 +127,8 @@ export function abreNovidades(quadros, aoFechar) {
     <button class="nv__ok" data-ok><span></span></button>`;
   document.body.appendChild(w); document.body.classList.add('has-nv'); aberta = w; alive();
   const q = (s) => w.querySelector(s), snh = () => q('.nv__snh [data-snh]');
-  const fecha = () => { if (!aberta) return; aberta = null; voz.fim(); document.removeEventListener('keydown', tecla, true); w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-nv'); }, 260); if (antes && antes.focus) antes.focus({ preventScroll: true }); if (aoFechar) aoFechar(); };
-  const voz = locutor(); let espera = false;
+  const fecha = () => { if (!aberta) return; aberta = null; voz.fim(); document.removeEventListener('keydown', tecla, true); w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-nv'); }, 260); if (antes && antes.focus) antes.focus({ preventScroll: true }); if (aoFechar) aoFechar(fimVisto || i >= quadros.length - 1); };
+  const voz = locutor(); let espera = false, fimVisto = false;
   const calmo = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const rapidez = (s) => (vozLigada() && temVoz(s.c) ? Math.round((duracao(s.c) * 0.85) / s.s.length) : 20);
   const rotulo = () => {
@@ -234,7 +234,7 @@ export function abreNovidades(quadros, aoFechar) {
     w.appendChild(b); setTimeout(() => b.remove(), 700);
   };
   const reage = (n) => { const e = snh(); if (!e || calmo()) return; act(e, ['riso', 'sim', 'pulo', 'pisca'][(i + (n > 0 ? 0 : 2)) % 4]); };
-  const anda = (n) => { if (espera && n > 0) { const s = quadros[i]; if (show(s)) { tiraCena(); } else say(snh(), s.s, { bubble: q('.snhb__txt'), speed: rapidez(s) }); vez += 1; fala(); return; } if (i + n < 0) return; if (i + n >= quadros.length) { fecha(); return; } i += n; mostra(n); reage(n); import('./sound.js').then((m) => m.msgVai && m.msgVai()).catch(() => {}); };
+  const anda = (n) => { if (espera && n > 0) { const s = quadros[i]; if (show(s)) { tiraCena(); } else say(snh(), s.s, { bubble: q('.snhb__txt'), speed: rapidez(s) }); vez += 1; fala(); return; } if (i + n < 0) return; if (i + n >= quadros.length) { fimVisto = true; fecha(); return; } i += n; mostra(n); reage(n); import('./sound.js').then((m) => m.msgVai && m.msgVai()).catch(() => {}); };
   const tecla = (e) => { if (e.key === 'Escape') { e.preventDefault(); fecha(); } else if (e.key === 'ArrowRight' || (e.key === 'Enter' && document.activeElement === w)) anda(1); else if (e.key === 'ArrowLeft') anda(-1); else if (e.key === 'Tab') { const f = [q('[data-pula]'), q('[data-ok]')].filter((x) => !x.hidden), k = f.indexOf(document.activeElement); e.preventDefault(); f[k < 0 ? f.length - 1 : (k + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus(); } };
   document.addEventListener('keydown', tecla, true);
   q('[data-pula]').onclick = fecha; q('[data-ok]').onclick = (e) => { brilho(e.clientX, e.clientY); anda(1); }; q('[data-vai]').onclick = (e) => { brilho(e.clientX, e.clientY); anda(1); }; q('[data-volta]').onclick = (e) => { brilho(e.clientX, e.clientY); anda(-1); };

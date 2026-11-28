@@ -7,7 +7,7 @@ test('avisa de 5 em 5 min quem está desatualizado; para quando atualiza; nunca 
   const CAL = kv(), env = { CAL };
   for (const m of ['uAna', 'uBia', 'uCaio']) await CAL.put(`dev:${m}`, '{}');
   await guardaVersao(env, 'uAna', { v: '2.33.0', b: 'velho999' });
-  await guardaVersao(env, 'uBia', { v: '2.33.0', b: 'novo1234' });
+  await guardaVersao(env, 'uBia', { v: '2.33.0', b: 'novo1234', nv: true });
   // uCaio nunca informou (app antigo): também é avisado
   const env1 = []; const send = async (e, m, msg) => env1.push([m, msg.tag]);
   const t0 = Date.parse('2026-11-28T15:00:00-03:00');
@@ -16,8 +16,14 @@ test('avisa de 5 em 5 min quem está desatualizado; para quando atualiza; nunca 
   assert.equal(r.emDia, 1);
   assert.equal((await lembraAtualizar(env, t0 + 60e3, send)).pulou, 'cedo', 'no máximo um aviso a cada 5 min');
   await guardaVersao(env, 'uAna', { v: '2.33.0', b: 'novo1234' });
-  env1.length = 0; await lembraAtualizar(env, t0 + 5 * 60e3, send);
-  assert.deepEqual(env1.map(([m]) => m), ['uCaio'], 'quem atualizou para de receber');
+  const txt = []; const send2 = async (e, m, msg) => txt.push([m, msg.title]);
+  await lembraAtualizar(env, t0 + 5 * 60e3, send2);
+  assert.match(txt.find(([m]) => m === 'uAna')[1], /novidade/, 'atualizou mas não viu as novidades até o final: continua avisando');
+  await guardaVersao(env, 'uAna', { v: '2.33.0', b: 'novo1234', nv: true });
+  env1.length = 0; await lembraAtualizar(env, t0 + 10 * 60e3, send);
+  assert.deepEqual(env1.map(([m]) => m), ['uCaio'], 'quem atualizou e viu tudo para de receber');
+  env1.length = 0; await lembraAtualizar(env, Date.parse('2026-11-28T23:20:00-03:00'), send);
+  assert.equal(env1.length, 1, 'até 23h30 ainda avisa');
   env1.length = 0; await lembraAtualizar(env, Date.parse('2026-11-28T23:30:00-03:00'), send);
   assert.equal(env1.length, 0, 'de madrugada, nada');
 });

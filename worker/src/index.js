@@ -1155,7 +1155,7 @@ async function handle(req, env) {
     const t = Number(body.t) || 0;
     if (t && prev.t && t < prev.t) return reply(env, req, { ok: true, ignored: true });
     const on = body.state !== 'off';
-    const app = body.app && typeof body.app === 'object' ? { v: clean(body.app.v, 20), b: clean(body.app.b, 20) } : prev.app;
+    const app = body.app && typeof body.app === 'object' ? { v: clean(body.app.v, 20), b: clean(body.app.b, 20), nv: body.app.nv === true } : prev.app;
     if (body.app && typeof body.app === 'object') await guardaVersao(env, me.id, app); // o aviso "tem versão nova" para quando ela atualiza
     P.set(me.ws, { t: t || prev.t || 0, online: on, lastPing: Date.now(), ...(on ? { lastOpen: body.state === 'open' ? Date.now() : prev.lastOpen || Date.now() } : { closedAt: Date.now(), lastOpen: prev.lastOpen }), ...(app ? { app } : {}) });
     if (P.size > 20000) { const old = [...P.entries()].sort((x, y) => x[1].lastPing - y[1].lastPing).slice(0, 5000); for (const [k] of old) P.delete(k); }
