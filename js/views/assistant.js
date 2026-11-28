@@ -289,7 +289,7 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
         // conta que se repete (aluguel, boleto…): conversa de verdade, uma pergunta por vez
         // com a IA ligada (plano Profissional), a conversa é toda com ela: entende, pergunta o que falta e lembra do que já foi dito
         const ia = pro && inAppChat;
-        const ativa = ia ? null : [...chat].reverse().find((m) => m.role === 'assistant' && m.coleta && !m.coleta.fim);
+        const ativa = [...chat].reverse().find((m) => m.role === 'assistant' && m.coleta && !m.coleta.fim);
         if (ativa) {
           chat.push({ role: 'user', text: q });
           const r = respondeConta(ativa.coleta, q);
@@ -345,6 +345,14 @@ export function openAssistant(pergunta = '', { agenda = false, nota = '' } = {})
           const r = await store.askAssistant(q, history);
           const text = typeof r === 'string' ? r : r.text;
           const actions = typeof r === 'string' ? [] : r.actions || [];
+          // conta que se repete sem valor: a IA não age sozinha; o app pergunta o valor, o dia e o lugar, uma coisa por vez
+          const conta = actions.find((a) => (a.repetir === 'monthly' || /pagar/i.test(a.categoria || '')) && !(Number(a.valor) > 0));
+          if (conta && ehConta({ texto: q, titulo: conta.titulo, repetir: 'monthly' }, q)) {
+            const c = novaConta({ texto: q, titulo: conta.titulo || q, repetir: 'monthly', diaMes: conta.dia_mes || conta.diaMes || null }, q);
+            chat.push({ role: 'assistant', text: proximoPasso(c).fala, coleta: c });
+            thinking = false; saveChat(); redrawChat(a);
+            return;
+          }
           const so = actions.length === 1 ? actions[0] : null;
           if (so && /^(pessoal|anota[cç][aã]o|bilhete)$/i.test(so.acao || '') && (!so.repetir || so.repetir === 'none') && !so.datas) { // a IA não decide sozinha entre agenda e nota
             const e2 = entende(q.slice(0, 160).replace(/\?+$/, ''), 'personal') || {};
