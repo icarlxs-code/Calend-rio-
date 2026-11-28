@@ -4208,3 +4208,15 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .vit__conf i { position: absolute; top: -20px; left: var(--x); width: 9px; height: 14px; border-radius: 2px; background: var(--c); animation: vitCai 2.6s var(--d) linear infinite; }
 @keyframes vitCai { to { transform: translateY(110vh) rotate(540deg); } }
 @media (prefers-reduced-motion: reduce) { .vit__conf { display: none; } .vit, .vit__card { animation: none; } }
+
+/* ---------- notícia do time lida dentro do Lembra ---------- */
+.nota__img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 18px; display: block; margin-bottom: 12px; }
+.nota__meta { color: var(--text-3, #888); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.nota__t { font: 900 25px/1.2 Nunito, system-ui, sans-serif; margin: 6px 0 8px; }
+.nota__d { font-size: 17px; color: var(--text-2, #bbb); margin: 0 0 14px; }
+.nota__corpo p { font-size: 17px; line-height: 1.55; margin: 0 0 14px; }
+.nota__selo { font-size: 13px !important; font-weight: 800; color: #FF7A1F; margin-bottom: 8px !important; }
+.nota__fonte { font-size: 13px; color: var(--text-3, #888); margin: 6px 0 16px; }
+.nota__fonte a { color: inherit; text-decoration: underline; }
+.nota__bts { display: flex; flex-direction: column; gap: 8px; padding-bottom: 16px; }
+.nota__dois { display: flex; gap: 8px; } .nota__dois .btn { flex: 1; }

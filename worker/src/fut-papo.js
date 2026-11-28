@@ -58,7 +58,7 @@ export async function rodaPapo(env, now, send, { max = 60 } = {}) { // 60 por mi
     if (st.dia === br.date) continue;
     const prox = await proximosEspn(env, timeApp, { now });
     if (prox[0] && prox[0].at - now < 30 * H) { await env.CAL.put(kd, JSON.stringify({ ...st, dia: br.date }), { expirationTtl: 30 * 86400 }); continue; } // dia de jogo: quem fala é o aviso do jogo
-    const seed = Number(br.date.replace(/-/g, '')) + quem.length, ordem = ['noticia', 'tabela', 'proximo'];
+    const seed = Number(br.date.replace(/-/g, '')) + quem.length, ordem = ['tabela', 'proximo', 'tabela']; // notícia tem aviso próprio (fut-noticia)
     const ini = ((st.ult ?? -1) + 1) % 3;
     let texto = '', tipo = -1;
     for (let k = 0; k < 3 && !texto; k++) {
