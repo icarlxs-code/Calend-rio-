@@ -9,7 +9,7 @@ const W = 1080, H = 1920, LIMITE = 400000; // o servidor aceita fotos até ~400 
 export function jpeg(c) {
   let q = 0.86, out = c.toDataURL('image/jpeg', q);
   while (out.length > LIMITE && q > 0.4) { q -= 0.08; out = c.toDataURL('image/jpeg', q); }
-  if (out.length > LIMITE) { const m = document.createElement('canvas'); m.width = 720; m.height = 1280; m.getContext('2d').drawImage(c, 0, 0, 720, 1280); return jpeg(m); }
+  if (out.length > LIMITE) { const m = document.createElement('canvas'); m.width = 720; m.height = Math.round(720 * c.height / c.width); m.getContext('2d').drawImage(c, 0, 0, m.width, m.height); return jpeg(m); } // menor, mesma proporção
   return out;
 }
 
@@ -166,11 +166,12 @@ export function abreCamera({ soCamera = false, lado = 'environment', arrasto = n
     if (gal) gal.onchange = async () => { const f = gal.files && gal.files[0]; if (!f) return; try { sai(await lerArquivo(f)); } catch (e) { msg.hidden = false; msg.textContent = e.message; } };
     w.querySelector('[data-foto]').onclick = () => {
       if (!v.videoWidth) return;
-      const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
-      // o mesmo corte da tela: o vídeo cobre o quadro 9:16 pelo centro
-      const vw = v.videoWidth, vh = v.videoHeight, k = Math.max(W / vw, H / vh) * zDig, dw = vw * k, dh = vh * k;
-      if (frente) { g.translate(W, 0); g.scale(-1, 1); } // a câmera da frente sai como a pessoa se viu (espelho), sem inverter
-      g.drawImage(v, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      // a foto é exatamente o que está na tela (tela cheia): mesma proporção do quadro, 1080 de largura
+      const q = w.querySelector('.scam__quadro').getBoundingClientRect(), PW = W, PH = Math.round(Math.min(2400, Math.max(H, W * (q.height / q.width))));
+      const c = document.createElement('canvas'); c.width = PW; c.height = PH; const g = c.getContext('2d');
+      const vw = v.videoWidth, vh = v.videoHeight, k = Math.max(PW / vw, PH / vh) * zDig, dw = vw * k, dh = vh * k;
+      if (frente) { g.translate(PW, 0); g.scale(-1, 1); } // a câmera da frente sai como a pessoa se viu (espelho), sem inverter
+      g.drawImage(v, (PW - dw) / 2, (PH - dh) / 2, dw, dh);
       w.querySelector('.scam__flash').animate([{ opacity: 0.9 }, { opacity: 0 }], { duration: 260, easing: 'ease-out' });
       try { navigator.vibrate && navigator.vibrate(12); } catch { /* ok */ }
       setTimeout(() => sai(jpeg(c)), 140);

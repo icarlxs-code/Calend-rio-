@@ -7,19 +7,24 @@ import { esc } from './utils.js';
 export const TRECHO = 15; // segundos que tocam no story
 const PAIS = 'BR';
 
-/** busca no catálogo da Apple Music (artista, música ou os dois) */
-export async function buscaMusicas(termo, { limite = 25 } = {}) {
+/** busca no catálogo (Apple Music e, se falhar, Deezer) pelo servidor do Lembra; sem servidor, direto na Apple */
+const memo = new Map();
+export async function buscaMusicas(termo, { limite = 30 } = {}) {
   const q = String(termo || '').trim();
   if (q.length < 2) return [];
-  const u = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&entity=song&country=${PAIS}&limit=${limite}`;
-  const r = await fetch(u);
-  if (!r.ok) throw new Error('A busca de músicas não respondeu. Tente de novo.');
-  const j = await r.json();
-  return (j.results || []).filter((x) => x.previewUrl).map((x) => ({
-    id: String(x.trackId), titulo: x.trackName, artista: x.artistName,
-    capa: String(x.artworkUrl100 || '').replace('100x100bb', '300x300bb'),
-    preview: x.previewUrl, link: x.trackViewUrl, explicita: x.trackExplicitness === 'explicit',
-  }));
+  const k = q.toLowerCase(); if (memo.has(k)) return memo.get(k);
+  let lista = null, erro = null;
+  try { const { api, server } = await import('./avisos.js'); if (server()) { const r = await api('/musica/busca', { ws: '', q }); lista = (r && r.musicas) || []; } } catch (e) { erro = e; }
+  if (!lista) {
+    try {
+      const r = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&media=music&entity=song&country=${PAIS}&limit=${limite}`);
+      if (!r.ok) throw new Error();
+      const j = await r.json();
+      lista = (j.results || []).filter((x) => x.previewUrl).map((x) => ({ id: String(x.trackId), titulo: x.trackName, artista: x.artistName, capa: String(x.artworkUrl100 || '').replace('100x100bb', '300x300bb'), preview: x.previewUrl, link: x.trackViewUrl, explicita: x.trackExplicitness === 'explicit', fonte: 'apple' }));
+    } catch { throw new Error((erro && erro.message) || 'A busca de músicas não respondeu. Confira a internet e tente de novo.'); }
+  }
+  memo.set(k, lista); if (memo.size > 40) memo.delete(memo.keys().next().value);
+  return lista;
 }
 
 /* um tocador só no app inteiro: tocar outra música para a anterior */
@@ -29,6 +34,9 @@ export function para() { if (atual) { try { atual.pause(); } catch { /* ok */ } 
 export function toca(m, { repete = true, mudo = false } = {}) {
   para();
   const a = new Audio(m.preview); a.preload = 'auto'; a.muted = mudo; atual = a;
+  if (m.fonte === 'deezer') a.addEventListener('error', async () => { // o link do trecho do Deezer expira: busca um novo
+    try { const { api } = await import('./avisos.js'); const r = await api('/musica/trecho', { ws: '', id: m.id }); if (r && r.preview && atual === a) { a.src = r.preview; a.play().catch(() => {}); } } catch { /* sem som */ }
+  }, { once: true });
   const ini = Math.max(0, Number(m.inicio) || 0);
   a.addEventListener('loadedmetadata', () => { try { a.currentTime = ini; } catch { /* ok */ } }, { once: true });
   a.ontimeupdate = () => { if (a.currentTime >= ini + TRECHO || a.currentTime >= (a.duration || 30) - 0.15) { if (repete) a.currentTime = ini; else a.pause(); } };
@@ -61,7 +69,7 @@ export function escolheMusica() {
         <div class="msel__busca"><input type="search" enterkeyhint="search" placeholder="Busque uma música ou artista" aria-label="Buscar música" data-q autocomplete="off"></div>
         <div class="msel__sug" data-sug>${sug.map((x) => `<button type="button" data-s="${esc(x)}">${esc(x)}</button>`).join('')}</div>
         <div class="msel__lista" data-lista><p class="msel__vazio">Qualquer artista, de qualquer lugar do mundo 🎵</p></div>
-        <p class="msel__cred">Trechos de 30 s do catálogo da Apple Music</p>`,
+        <p class="msel__cred">Trechos de 30 s do catálogo da Apple Music e do Deezer</p>`,
       onClose: () => { para(); if (!pronto) ok(null); },
       onMount: (x) => liga(x.el),
     });
@@ -81,9 +89,11 @@ export function escolheMusica() {
         el.querySelector('[data-sug]').hidden = termo.trim().length > 0;
         if (termo.trim().length < 2) return;
         el.querySelector('[data-lista]').innerHTML = '<div class="fx__load"><i></i><i></i><i></i></div>';
-        try { const r = await buscaMusicas(termo); if (minha !== vez) return; lista = r; desenha(el); } catch (e) { if (minha === vez) el.querySelector('[data-lista]').innerHTML = `<p class="msel__vazio">${esc(e.message)}</p>`; }
+        try { const r = await buscaMusicas(termo); if (minha !== vez) return; lista = r; desenha(el); }
+        catch (e) { if (minha !== vez) return; const L = el.querySelector('[data-lista]'); L.innerHTML = `<p class="msel__vazio">${esc(e.message || 'Não consegui buscar agora.')}</p><button type="button" class="msel__de-novo" data-de-novo>Tentar de novo</button>`; L.querySelector('[data-de-novo]').onclick = busca; }
       };
-      q.oninput = () => { clearTimeout(t); t = setTimeout(busca, 320); };
+      q.oninput = () => { clearTimeout(t); t = setTimeout(busca, 450); };
+      q.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(t); q.blur(); busca(); } };
       el.querySelectorAll('[data-s]').forEach((b) => (b.onclick = () => { q.value = b.dataset.s; busca(); }));
       setTimeout(() => q.focus(), 300);
     }

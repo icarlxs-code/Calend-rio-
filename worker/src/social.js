@@ -248,7 +248,7 @@ export async function socialRoute(c) {
   }
   if (path === '/friends/msg-media') { const v = S.midia(meU, com, body.at, body.id, now, body.abrir === true); if (v && body.abrir === true) avisa(com, { t: 'mudou', de: meU }); return v ? [{ ok: true, v }] : erro('Isso já sumiu.', 404); }
   if (path === '/friends/msg-del') { if (!S.apaga(meU, com, body.at, body.id)) return erro('Não dá mais para apagar.', 404); avisa(com, { t: 'mudou', de: meU }); return [{ ok: true }]; }
-  if (path === '/friends/msg-clear') { S.limpaPara(meU, com, now); return [{ ok: true }]; }
+  if (path === '/friends/msg-clear') { S.limpaPara(meU, com, now - 1); return [{ ok: true }]; } // -1 ms: mensagem que chega no mesmo instante da limpeza não some
   if (path === '/friends/msg-mute') { const m = (await getL(`mudo:${meU}`)).filter((x) => x !== com); if (body.on === true) m.push(com); await CAL.put(`mudo:${meU}`, JSON.stringify(m.slice(-200))); return [{ ok: true, mudo: body.on === true }]; }
   if (!(await isFriend(meU, com))) return erro('Só amigos conversam no privado.', 403);
   if (await bloqueio(meU, com)) return erro('Não dá para enviar para essa pessoa.', 403);
