@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push origin HEAD:claude/sweet-goldberg-5wxl1u)",
+      "Bash(git push -q origin HEAD:claude/sweet-goldberg-5wxl1u)",
+      "Bash(git push origin claude/ultima-alteracao-qq7tpg)",
+      "Bash(git push -q origin claude/ultima-alteracao-qq7tpg)",
+      "Bash(git push -u origin claude/ultima-alteracao-qq7tpg)"
+    ]
+  }
+}
