@@ -59,6 +59,8 @@ export const NOVIDADES = {
     { t: 'Uma frase nova toda hora', s: 'De manhã, de tarde e de noite,|escrita só pra você.', m: 'feliz', c: 'frase', arte: '29-manha-b', v: 'manha', extra: 'frase' },
     { t: 'Contas do mês, sem esquecer', s: 'Fala do seu jeito|que eu entendo, repito todo mês e digo o valor.', m: 'feliz', c: 'assist', arte: '21-contas', v: 'dinheiro', extra: 'conta' },
     { t: 'Conversa num toque', s: 'As conversas recentes|ficam lá no topo. Um toque e pronto!', m: 'feliz', c: 'conversa', arte: '19-socializar', v: 'digita', extra: 'conversa' },
+    { t: 'Quem tá online', s: 'A bolinha verde|mostra quem está on-line agora. E o rostinho do lado das mensagens abre direto quem você mais conversa.', m: 'surpreso', c: 'conversa', arte: '19-socializar', v: 'digita', extra: 'conversa' },
+    { t: 'Olhando seu perfil', s: 'Ao vivo:|quando alguém estiver olhando o seu perfil, eu te mostro na hora 👀', m: 'surpreso', c: 'perfil', arte: '19-socializar', v: 'digita', cara: 'estrelado' },
     { t: 'Eu tenho mil caras', s: 'Falou de amor, eu fico apaixonado.|Falou de dinheiro, meus olhos viram cifrão!', m: 'feliz', c: 'abre', arte: '12-lembrete', v: 'amor', cara: 'apaixonado', extra: 'caras' },
     { t: 'Eu me atualizo sozinho', s: 'Saiu versão nova?|Eu já chego atualizado, sem você fazer nada.', m: 'feliz', c: 'abre', arte: '30-ofensiva', v: 'forca' },
   ],
