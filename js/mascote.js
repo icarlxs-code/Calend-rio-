@@ -17,7 +17,7 @@ import { frasesDaVida, perguntaDoPar } from './vida.js';
 import * as papo from './papo.js';
 import { store } from './store.js';
 import { CONFIG } from '../config.js';
-import { sininho, setMood, act, say, lookAt, rigOf, reactNivel, reactErro, veste } from './sininho.js';
+import { sininho, setMood, act, say, lookAt, rigOf, reactNivel, reactErro, veste, alive } from './sininho.js';
 import { todayKey, addDays, diffDays, fmtTime } from './utils.js';
 import { personal } from './personal.js';
 import { itensAtrasados } from './views/atrasados.js';
@@ -458,22 +458,68 @@ function mexeBoca(ms) {
   mexeBoca.t = setInterval(() => { try { r.fala(S[i++ % S.length]); } catch { /* ok */ } }, 115);
   setTimeout(() => { clearInterval(mexeBoca.t); try { r.fala(null); } catch { /* ok */ } }, ms);
 }
+/* caixa "Fala comigo": o Lembra no topo acompanha com os olhos cada letra digitada; claro e escuro seguem o app */
+const SVG_ENVIA = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>';
+const SVG_TECLADO = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M18 13h.01M8 16h8"/></svg>';
+const SVG_MIC = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4"/></svg>';
+const SVG_X = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 function abrePergunta() {
   if (document.querySelector('.snhq')) return;
   import('./sfx.js').then((m) => m.ui('clique')).catch(() => {});
   try { navigator.vibrate && navigator.vibrate([18, 40, 26]); } catch { /* sem vibração */ }
   setMood(el(), 'surpreso'); act(el(), 'pop');
+  const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
   const w = document.createElement('div');
-  w.className = 'snhq'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Conversar com o Lembra');
-  w.innerHTML = `<form class="snhq__box"><div class="snhq__topo"><span class="snhq__ondas" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><b>Fala comigo</b></div><textarea name="q" rows="2" maxlength="600" placeholder="Pergunte ou peça qualquer coisa…"></textarea><div class="snhq__bts"><button type="button" class="snhq__fecha" data-sai>Fechar</button><button type="submit" class="snhq__envia">Enviar</button></div></form>`;
+  w.className = 'snhq'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-labelledby', 'snhq-t');
+  w.innerHTML = `<form class="snhq__box" novalidate>
+    <div class="snhq__cab"><span class="snhq__av">${sininho('feliz', { size: 62 })}</span><span class="snhq__nome"><b>Lembra</b><small>Seu assistente pessoal</small></span><button type="button" class="snhq__x" data-sai aria-label="Fechar">${SVG_X}</button></div>
+    <h2 class="snhq__h" id="snhq-t">Fala comigo</h2>
+    <p class="snhq__sub">Pergunte, anote, crie lembretes ou organize sua rotina.</p>
+    <div class="snhq__campo"><textarea name="q" rows="2" maxlength="600" placeholder="Pergunte ou peça qualquer coisa…" aria-label="Sua mensagem para o Lembra"></textarea>${Rec ? `<button type="button" class="snhq__mic" data-mic aria-label="Falar em vez de digitar">${SVG_MIC}</button>` : ''}</div>
+    <div class="snhq__bts"><button type="button" class="snhq__dig" data-dig>${SVG_TECLADO}<span>Digitar</span></button><button type="submit" class="snhq__env">${SVG_ENVIA}<span>Enviar</span></button></div>
+  </form>`;
   document.body.appendChild(w);
-  const f = w.querySelector('form'), t = f.q;
-  setTimeout(() => t.focus(), 60);
-  const sai = () => { w.classList.add('is-sai'); pulsoSegura(false); setTimeout(() => w.remove(), 240); };
-  w.querySelector('[data-sai]').onclick = sai;
+  alive();
+  const f = w.querySelector('form'), t = f.q, av = w.querySelector('[data-snh]');
+  requestAnimationFrame(() => w.classList.add('is-in'));
+  setTimeout(() => t.focus({ preventScroll: true }), 380);
+  /* os olhos acompanham a última letra digitada (posição medida com a fonte do campo) */
+  const med = document.createElement('canvas').getContext('2d');
+  const olha = () => {
+    if (!av) return;
+    const r = t.getBoundingClientRect(), cs = getComputedStyle(t), pl = parseFloat(cs.paddingLeft) || 12, pt = parseFloat(cs.paddingTop) || 10, lh = parseFloat(cs.lineHeight) || 22;
+    med.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const larg = r.width - pl * 2 - 34, txt = t.value.slice(0, t.selectionEnd ?? t.value.length);
+    let linha = 0, x = 0;
+    for (const par of txt.split('\n')) { let l = ''; for (const pal of par.split(' ')) { const n = l ? `${l} ${pal}` : pal; if (med.measureText(n).width > larg && l) { linha++; l = pal; } else l = n; } x = med.measureText(l).width; linha++; }
+    // olha na direção da letra que está sendo digitada, sem deixar o corpo tombar (o lookAt acumula inclinação a cada tecla)
+    const a = av.getBoundingClientRect(), cx = a.left + a.width / 2, cy = a.top + a.height * 0.45;
+    const dx = r.left + pl + Math.min(x, larg) - cx, dy = r.top + pt + Math.max(0, linha - 1) * lh + lh / 2 - t.scrollTop - cy, d = Math.hypot(dx, dy) || 1, k = a.width * 1.5;
+    lookAt(av, cx + (dx / d) * k, cy + (dy / d) * k, 1.6);
+    const rg = rigOf(av); if (rg?.s?.lean) rg.s.lean.t = Math.max(-0.25, Math.min(0.25, dx / d * 0.25));
+  };
+  ['input', 'click', 'keyup', 'focus'].forEach((e) => t.addEventListener(e, olha));
+  t.addEventListener('input', () => { if (av && t.value.length === 1) act(av, 'sim'); });
+  const sai = () => { w.classList.remove('is-in'); w.classList.add('is-sai'); pulsoSegura(false); try { rec && rec.stop(); } catch { /* ok */ } setTimeout(() => w.remove(), 320); };
+  w.querySelectorAll('[data-sai]').forEach((x) => (x.onclick = sai));
   w.addEventListener('click', (ev) => { if (ev.target === w) sai(); });
+  w.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') sai(); if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); f.requestSubmit(); } });
+  w.querySelector('[data-dig]').onclick = () => t.focus();
+  /* falar em vez de digitar (quando o navegador permite) */
+  let rec = null;
+  const mic = w.querySelector('[data-mic]');
+  if (mic) mic.onclick = () => {
+    if (rec) { try { rec.stop(); } catch { /* ok */ } return; }
+    rec = new Rec(); rec.lang = 'pt-BR'; rec.interimResults = true; const base = t.value ? `${t.value} ` : '';
+    mic.classList.add('is-on'); if (av) setMood(av, 'surpreso');
+    rec.onresult = (ev) => { t.value = base + Array.from(ev.results).map((x) => x[0].transcript).join(''); olha(); };
+    rec.onend = () => { mic.classList.remove('is-on'); rec = null; if (av) setMood(av, 'feliz'); };
+    rec.onerror = () => { mic.classList.remove('is-on'); rec = null; };
+    try { rec.start(); } catch { mic.classList.remove('is-on'); rec = null; }
+  };
   f.onsubmit = async (ev) => {
-    ev.preventDefault(); const q = (t.value || '').trim(); if (!q) return;
+    ev.preventDefault(); const q = (t.value || '').trim(); if (!q) { t.focus(); return; }
+    if (av) act(av, 'pulo');
     sai(); responde(q);
   };
 }
