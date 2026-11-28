@@ -42,3 +42,12 @@ test('quem tem um aparelho na versão nova nunca recebe "atualize", mesmo com ou
   await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send);
   assert.ok(titles.every((t) => !/Chegou versão nova/.test(t)), 'nada de "atualize"');
 });
+test('por aparelho: o aparelho já atualizado não recebe "atualize"; o atrasado recebe', async () => {
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ version: '2.35.0', build: 'nov7777' }) });
+  const CAL = kv(), env = { CAL };
+  await CAL.put('dev:uPhone', JSON.stringify({ 'd-novo': { b: 'nov7777', subscription: {} }, 'd-velho': { b: 'velho1', subscription: {} } }));
+  await CAL.put('dev:uAllNew', JSON.stringify({ 'd-a': { b: 'nov7777', subscription: {} } }));
+  const calls = []; const send = async (e, m, msg, excl) => calls.push([m, excl]);
+  await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send);
+  assert.deepEqual(calls, [['uPhone', ['d-novo']]], 'manda só para o aparelho atrasado');
+});

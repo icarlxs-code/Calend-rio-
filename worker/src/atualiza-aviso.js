@@ -4,6 +4,7 @@
    - o aviso usa sempre a mesma etiqueta: o novo SUBSTITUI o anterior no celular (não empilha 12 avisos);
    - nunca de madrugada (23h30 às 8h, horário de Brasília). */
 import { brNow } from './coach.js';
+import { getDevices } from './devices.js';
 const BLOCO = 5 * 60e3;
 
 /** a versão no ar agora (guardada por 5 min) */
@@ -46,8 +47,11 @@ export async function lembraAtualizar(env, now, send, { max = 200 } = {}) {
   for (const [k] of await env.CAL.scan('dev:')) {
     if (avisos >= max) break;
     const m2 = k.slice(4), L = (await env.CAL.get(`vers:${m2}`, 'json')) || [];
-    if (L.some((x) => x.b === no.build)) { emDia++; continue; } // já está na versão no ar: nada de "atualize"
-    await send(env, m2, AVISO);                                 // só quando a versão no ar é de verdade mais nova
+    // por aparelho: os que já estão na versão no ar não recebem; só os que ainda estão atrasados
+    const devs = await getDevices(env, m2), ids = Object.keys(devs);
+    const atuais = ids.filter((id) => devs[id].b === no.build);
+    if (ids.length ? atuais.length === ids.length : L.some((x) => x.b === no.build)) { emDia++; continue; }
+    await send(env, m2, AVISO, atuais); // os aparelhos atualizados ficam de fora deste envio
     avisos++;
   }
   return { avisos, emDia, build: no.build };

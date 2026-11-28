@@ -118,7 +118,7 @@ let beat = null;
 export function startPresence() {
   if (store.mode !== 'cloud' || !store.user) return;
   // "no app agora" fica na memória do servidor de avisos (não grava nada no banco a cada minuto)
-  const ping = (state) => import('./avisos.js').then((m) => (state === 'off' ? m.beacon('/presence', { state, t: Date.now() }) : m.server() && m.api('/presence', { state, t: Date.now(), app: appInfo() }))).catch(() => {});
+  const ping = (state) => import('./avisos.js').then((m) => (state === 'off' ? m.beacon('/presence', { state, t: Date.now() }) : m.server() && m.api('/presence', { state, t: Date.now(), app: appInfo(), dev: (() => { try { return localStorage.getItem('pauta.device') || ''; } catch { return ''; } })() }))).catch(() => {});
   const on = () => {
     ping('open');
     clearInterval(beat);

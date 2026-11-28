@@ -16,7 +16,7 @@ import { generateVapid, sendPush } from './webpush.js';
 import { verifyIdToken } from './auth.js';
 import { recordAct, getBoard, adminBoard, monthlyAward, eligible as rankEligible, standing as rankStanding, weekKey as rankWeek } from './rank.js';
 import { getBill, putBill, stripe as stripeApi } from './billing.js';
-import { getDevices, removeDevices, addDevice, upgradeSubs } from './devices.js';
+import { getDevices, saveDevices, removeDevices, addDevice, upgradeSubs } from './devices.js';
 import { runTick, planReminders, planPersonal, seedPerson, upgradeLegacy, usageMeter } from './tick.js';
 import { dueOf } from './kvsql.js';
 import { rodaFutebol, guardaTime, tiraTime, proximos } from './futebol.js';
@@ -55,11 +55,11 @@ async function getVapid(env) {
 
 /* Manda para todos os aparelhos de uma pessoa, respeitando as preferências do aparelho.
    meter.pushes conta as tentativas (o relógio para o lote antes de passar do limite grátis). */
-async function sendToMember(env, member, msg, pref, statuses = [], meter = null) {
+async function sendToMember(env, member, msg, pref, statuses = [], meter = null, excluir = []) {
   // última barreira: nome de remédio nunca sai em título ou texto de aviso (mesmo de uma versão antiga do app)
   if (msg && (msg.title || msg.body)) { const title = escondeNome(msg.title), body = escondeNome(msg.body); if (title !== msg.title || body !== msg.body) msg = { ...msg, title, body }; }
   const devs = await getDevices(env, member);
-  const list = Object.entries(devs).filter(([, d]) => !(pref && d.prefs && d.prefs[pref] === false));
+  const list = Object.entries(devs).filter(([id, d]) => !excluir.includes(id) && !(pref && d.prefs && d.prefs[pref] === false));
   if (!list.length) return 0;
   // equilíbrio: mensagens de conversa (stories, amigos, visitas, dicas, ranking) se revezam e têm limite diário
   // e respeita o que a própria pessoa escolheu (tipos ligados/desligados e quanto quer receber)
@@ -1200,6 +1200,11 @@ async function handle(req, env) {
     const on = body.state !== 'off';
     const app = body.app && typeof body.app === 'object' ? { v: clean(body.app.v, 20), b: clean(body.app.b, 20), nv: body.app.nv === true } : prev.app;
     if (body.app && typeof body.app === 'object') await guardaVersao(env, me.id, app); // o aviso "tem versão nova" para quando ela atualiza
+    // a versão de CADA aparelho: quem já atualizou não recebe mais o aviso naquele aparelho
+    if (body.app && typeof body.app === 'object' && app && app.b && body.dev) {
+      const devs = await getDevices(env, me.id), dv = devs[clean(body.dev, 120)];
+      if (dv && dv.b !== app.b) { dv.b = app.b; await saveDevices(env, me.id, devs); }
+    }
     P.set(me.ws, { t: t || prev.t || 0, online: on, lastPing: Date.now(), ...(on ? { lastOpen: body.state === 'open' ? Date.now() : prev.lastOpen || Date.now() } : { closedAt: Date.now(), lastOpen: prev.lastOpen }), ...(app ? { app } : {}) });
     if (P.size > 20000) { const old = [...P.entries()].sort((x, y) => x[1].lastPing - y[1].lastPing).slice(0, 5000); for (const [k] of old) P.delete(k); }
     return reply(env, req, { ok: true });
@@ -1288,7 +1293,7 @@ export async function cronTick(env, { now = Date.now(), meter = { pushes: 0 }, m
   if (!r.more && !kinds) {
     const safe = (name, p) => p.catch((e) => console.log(name, e.message));
     // "tem versão nova": de 5 em 5 min até a pessoa atualizar (fora da madrugada)
-    await safe('atualizar', lembraAtualizar(env, now, (e, m, msg) => sendToMember(e, m, msg)));
+    await safe('atualizar', lembraAtualizar(env, now, (e, m, msg, excl) => sendToMember(e, m, msg, null, [], null, excl)));
     await safe('story do dia', lembraStory(env, now, (e, m, msg) => sendToMember(e, m, msg)));
     await safe('aviso único', oneShot(env));
     await safe('vitalício (quem ganhou antes da surpresa)', vipMigrate(env, (uid) => vipNotify(env, uid)));
