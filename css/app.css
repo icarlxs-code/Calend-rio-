@@ -4376,3 +4376,9 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .scam__dica { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 196px); transform: translate3d(-50%, 0, 0); z-index: 3; display: flex; flex-direction: column; align-items: center; color: #fff; font: 800 12px Nunito, system-ui, sans-serif; opacity: .55; pointer-events: none; text-shadow: 0 1px 4px rgba(0,0,0,.6); animation: scamDica 1.8s ease-in-out infinite; }
 @keyframes scamDica { 50% { margin-bottom: 6px; } }
 @media (prefers-reduced-motion: reduce) { .scam__dica { animation: none; } }
+/* botão Galeria: o campo de arquivo fica por cima, transparente, para o toque do dedo abrir o seletor (exigência do iPhone) */
+.scam__gal { position: relative; overflow: hidden; }
+.scam__arq { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; }
+.scam__gal.is-pisca { animation: scamPisca .35s ease-in-out 3; }
+@keyframes scamPisca { 50% { background: #FF6A1A; transform: scale(1.12); } }
+.scam__aviso { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%); z-index: 9800; background: rgba(0,0,0,.8); color: #fff; font: 800 15px Nunito, system-ui, sans-serif; padding: 10px 16px; border-radius: 999px; white-space: nowrap; }

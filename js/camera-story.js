@@ -3,6 +3,7 @@
    frente sai como no espelho, do jeito que a pessoa se viu), sempre em 9:16 (1080×1920). */
 import { icon } from './icons.js';
 
+const toast2 = (t) => { const e = document.createElement('div'); e.className = 'scam__aviso'; e.textContent = t; document.body.appendChild(e); setTimeout(() => e.remove(), 1600); };
 const W = 1080, H = 1920, LIMITE = 400000; // o servidor aceita fotos até ~400 KB
 
 /** canvas → JPEG que cabe no limite do servidor */
@@ -82,7 +83,7 @@ export function abreCamera({ soCamera = false, lado = 'environment', arrasto = n
       ${soCamera ? '' : '<div class="scam__dica" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"/></svg><span>Galeria</span></div>'}
       <div class="scam__zooms" hidden></div>
       <div class="scam__barra">
-        ${soCamera ? '<span class="scam__vaga"></span>' : `<label class="scam__gal" aria-label="Escolher da galeria">${icon('image', 24)}<input type="file" accept="image/*" hidden data-gal></label>`}
+        ${soCamera ? '<span class="scam__vaga"></span>' : `<label class="scam__gal" aria-label="Escolher da galeria">${icon('image', 24)}<input type="file" accept="image/*" class="scam__arq" data-gal></label>`}
         <button type="button" class="scam__clique" data-foto aria-label="Tirar foto"><i></i></button>
         <button type="button" class="scam__vira" data-vira aria-label="Virar a câmera"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/></svg></button>
       </div>`;
@@ -167,7 +168,7 @@ export function abreCamera({ soCamera = false, lado = 'environment', arrasto = n
     quadro.addEventListener('touchend', () => {
       if (volta && volta.cima) { // arrastou pra cima: abre as fotos do celular (o seletor do próprio sistema)
         const sobe = (volta.dy || 0) < -70; volta = null; dica.style.transform = ''; dica.style.opacity = '';
-        if (sobe && gal) { try { navigator.vibrate && navigator.vibrate(8); } catch { /* ok */ } gal.click(); }
+        if (sobe) { try { navigator.vibrate && navigator.vibrate(8); } catch { /* ok */ } const b = w.querySelector('.scam__gal'); b && b.classList.add('is-pisca'); setTimeout(() => b && b.classList.remove('is-pisca'), 1400); toast2('Toque em Galeria'); }
         return;
       }
       if (!volta || !volta.ok) { volta = null; return; }
