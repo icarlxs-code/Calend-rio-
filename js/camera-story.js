@@ -38,7 +38,8 @@ const lerArquivo = (f) => new Promise((ok, erro) => { const u = URL.createObject
 export const temCamera = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
 /** abre a câmera; devolve a foto 9:16 (data URL) ou null se fechou. soCamera: sem galeria (foto da hora) */
-export function abreCamera({ soCamera = false, lado = 'environment' } = {}) {
+let lentesMemo = null; // as lentes do aparelho, descobertas uma vez (a câmera abre direto na certa nas próximas)
+export function abreCamera({ soCamera = false, lado = 'environment', arrasto = null } = {}) {
   return new Promise((fim) => {
     let fluxo = null, frente = lado === 'user', acabou = false;
     /* ZOOM E LENTES (como a câmera do celular): pinça e botões 0.5x / 1x / 2x.
@@ -68,6 +69,7 @@ export function abreCamera({ soCamera = false, lado = 'environment' } = {}) {
       </div>`;
     document.body.appendChild(w); document.body.classList.add('has-scam');
     const v = w.querySelector('video'), msg = w.querySelector('.scam__msg');
+    v.addEventListener('playing', () => v.classList.add('is-vivo'));
     const para = () => { if (fluxo) fluxo.getTracks().forEach((t) => t.stop()); fluxo = null; };
     const sai = (x) => { if (acabou) return; acabou = true; para(); w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-scam'); }, 220); fim(x); };
     const opts = { deviceId: null };
@@ -111,11 +113,15 @@ export function abreCamera({ soCamera = false, lado = 'environment' } = {}) {
     const liga = async () => {
       para(); msg.hidden = true;
       try {
+        if (!frente && !lentes) {                                   // já com permissão, os nomes das câmeras vêm: escolhe a lente antes de ligar
+          lentes = lentesMemo || await achaLentes();
+          if (!lentes.normal || !lentes.normal.label) lentes = null; else { lentesMemo = lentes; if (lentes.multi && !opts.deviceId) opts.deviceId = lentes.multi.deviceId; }
+        }
         const dev = !frente && lentes ? (opts.deviceId || null) : null;
         fluxo = await navigator.mediaDevices.getUserMedia({ audio: false, video: { ...(dev ? { deviceId: { exact: dev } } : { facingMode: frente ? 'user' : { ideal: 'environment' } }), width: { ideal: 1920 }, height: { ideal: 1080 } } });
         if (acabou) return para();
         v.srcObject = fluxo; v.classList.toggle('is-frente', frente); await v.play().catch(() => {});
-        if (!frente && !lentes) { lentes = await achaLentes(); if (lentes.multi && !opts.deviceId) { opts.deviceId = lentes.multi.deviceId; return liga(); } }
+        if (!frente && !lentes) { lentes = await achaLentes(); if (lentes.normal && lentes.normal.label) lentesMemo = lentes; } // primeira vez: só descobre (a próxima já abre na câmera múltipla)
         const tr = fluxo.getVideoTracks()[0], cap = tr && tr.getCapabilities ? tr.getCapabilities() : {};
         zoomHw = cap && cap.zoom && cap.zoom.max > cap.zoom.min ? { min: cap.zoom.min, max: Math.min(cap.zoom.max, 15), passo: cap.zoom.step || 0.1, multi: !!(lentes && lentes.multi && opts.deviceId === lentes.multi.deviceId) } : null;
         if (zoomHw && zoomHw.multi) irPara(nivel, false); else botoes(); // câmera múltipla: começa no 1x (o zoom 1 dela é a ultra-angular)
@@ -149,7 +155,14 @@ export function abreCamera({ soCamera = false, lado = 'environment' } = {}) {
       try { navigator.vibrate && navigator.vibrate(12); } catch { /* ok */ }
       setTimeout(() => sai(jpeg(c)), 140);
     };
-    requestAnimationFrame(() => w.classList.add('is-in'));
+    if (arrasto) {
+      w.classList.add('is-in', 'is-arrasto'); w.style.transform = 'translate3d(-100%,0,0)';
+      arrasto({
+        mover: (k) => { w.style.transform = `translate3d(${(Math.min(1, Math.max(0, k)) - 1) * 100}%,0,0)`; },
+        confirmar: () => { w.style.transition = 'transform .28s cubic-bezier(.2,.9,.3,1)'; w.style.transform = 'translate3d(0,0,0)'; setTimeout(() => { w.classList.remove('is-arrasto'); w.style.transition = ''; w.style.transform = ''; }, 300); },
+        cancelar: () => { w.style.transition = 'transform .24s ease-in'; w.style.transform = 'translate3d(-100%,0,0)'; setTimeout(() => sai(null), 240); },
+      });
+    } else requestAnimationFrame(() => w.classList.add('is-in'));
     liga();
   });
 }

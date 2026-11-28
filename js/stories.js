@@ -671,29 +671,43 @@ export async function cameraDireto(onChange) {
   const foto = await C.abreCamera(); if (foto) editorStory(foto, onChange);
 }
 let puxaLigado = false;
+/* o gesto vale de qualquer lugar da tela, menos em listas que rolam para o lado, campos de texto e o mascote */
+function rolaDeLado(el) {
+  for (let e = el; e && e !== document.body; e = e.parentElement) {
+    if (e.matches && e.matches('input, textarea, select, [contenteditable], .snhbud, .snhbud *, [data-sem-puxar]')) return true;
+    const cs = getComputedStyle(e);
+    if (e.scrollWidth > e.clientWidth + 4 && /(auto|scroll)/.test(cs.overflowX)) return true;
+  }
+  return false;
+}
 export function ligaPuxar() {
   if (puxaLigado) return; puxaLigado = true;
-  let ini = null, painel = null;
+  let ini = null, cam = null;
   const livre = () => store.user && store.mode === 'cloud' && !document.querySelector('.sheet-wrap.is-open, .stv, .scam, .snhq, .login, .vficha, .nv, dialog[open]') && !document.body.classList.contains('has-stv');
   document.addEventListener('touchstart', (e) => {
-    const t = e.touches[0]; if (e.touches.length !== 1 || t.clientX > 28 || !livre()) return;
+    const t = e.touches[0]; if (e.touches.length !== 1 || !livre() || rolaDeLado(e.target)) return;
     ini = { x: t.clientX, y: t.clientY, t: performance.now(), dx: 0, ok: null };
   }, { passive: true });
   document.addEventListener('touchmove', (e) => {
     if (!ini) return; const t = e.touches[0], dx = t.clientX - ini.x, dy = t.clientY - ini.y;
-    if (ini.ok === null && Math.hypot(dx, dy) > 10) ini.ok = dx > Math.abs(dy) * 1.3;  // é horizontal? senão deixa a tela rolar
+    if (ini.ok === null && Math.hypot(dx, dy) > 12) ini.ok = dx > 0 && dx > Math.abs(dy) * 1.4;   // da esquerda pra direita, na horizontal
     if (!ini.ok) { if (ini.ok === false) ini = null; return; }
     ini.dx = Math.max(0, dx);
-    if (!painel) { painel = document.createElement('div'); painel.className = 'puxa'; painel.innerHTML = `<span class="puxa__ic">${icon('camera', 30)}</span><b>Seu story</b>`; document.body.appendChild(painel); }
-    const k = Math.min(1, ini.dx / innerWidth);
-    painel.style.transform = `translate3d(${(-1 + k) * 100}%, 0, 0)`; painel.style.setProperty('--k', k.toFixed(3));
+    if (!cam) { // a câmera já liga aqui e vem ao vivo junto com o dedo (quando soltar, já está pronta)
+      cam = { api: null, k: 0 };
+      const meu = cam;
+      import('./camera-story.js').then((C) => {
+        if (!C.temCamera()) { cam = null; return; }
+        C.abreCamera({ arrasto: (api) => { meu.api = api; api.mover(meu.k); if (meu.fim) meu.fim(); } }).then((foto) => { if (foto) editorStory(foto); });
+      });
+    }
+    cam.k = ini.dx / innerWidth; if (cam.api) cam.api.mover(cam.k);
   }, { passive: true });
   const fim = () => {
-    if (!ini) return; const v = ini.dx / Math.max(1, performance.now() - ini.t), abre = ini.ok && (ini.dx > innerWidth * 0.33 || (v > 0.6 && ini.dx > 60));
-    ini = null; if (!painel) return; const p = painel; painel = null;
-    p.style.transition = 'transform .26s cubic-bezier(.2,.9,.3,1)'; p.style.transform = abre ? 'translate3d(0,0,0)' : 'translate3d(-100%,0,0)';
-    try { if (abre && navigator.vibrate) navigator.vibrate(10); } catch { /* ok */ }
-    setTimeout(() => { if (abre) cameraDireto(); setTimeout(() => p.remove(), abre ? 350 : 0); }, 240);
+    if (!ini) return; const v = ini.dx / Math.max(1, performance.now() - ini.t), abre = ini.ok && (ini.dx > innerWidth * 0.3 || (v > 0.5 && ini.dx > 50));
+    ini = null; if (!cam) return; const c = cam; cam = null;
+    const decide = () => { if (abre) { c.api.confirmar(); try { navigator.vibrate && navigator.vibrate(10); } catch { /* ok */ } } else c.api.cancelar(); };
+    if (c.api) decide(); else c.fim = decide;
   };
   document.addEventListener('touchend', fim, { passive: true }); document.addEventListener('touchcancel', fim, { passive: true });
 }
