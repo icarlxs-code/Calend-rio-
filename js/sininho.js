@@ -218,7 +218,7 @@ class Rig {
   /* dormir: parado de verdade (molas em repouso, nada agendado, sem loop) → não redesenha; acorda na próxima piscada/pose */
   dorme() {
     this.sleeping = true; this.sleptAt = performance.now();
-    const e = EMO[this.mood] || {}, prox = Math.min(this.next.idle, this.next.blink, e.loop ? this.loopAt : Infinity) - this.t;
+    const e = EMO[this.mood] || {}, prox = Math.min(this.next.idle, this.next.blink, this.next.vida ?? Infinity, e.loop ? this.loopAt : Infinity) - this.t;
     clearTimeout(this.wakeT); this.wakeT = setTimeout(() => this.wake(), Math.max(60, prox * 1000));
   }
   wake() {
@@ -277,8 +277,9 @@ class Rig {
   blink(dbl) {
     if (this.sleeping) this.wake();
     if (this.s.lid.t >= 0.6) return;
-    const base = this.s.lid.t; this.s.lid.t = 1;
-    this.at(0.085, () => { this.s.lid.t = base; });
+    const base = this.s.lid.t, meio = !dbl && Math.random() < 0.12;
+    this.s.lid.t = meio ? Math.max(base, 0.55) : 1;                  // às vezes só "meio piscar", como gente
+    this.at(meio ? 0.12 : 0.13, () => { this.s.lid.t = base; });
     if (dbl) this.at(0.26, () => this.blink(false));
   }
 
@@ -538,6 +539,28 @@ class Rig {
     const mix = Math.max(0.22, A); for (const k of ['fL', 'fR', 'fxL', 'fxR', 'by', 'sq', 'lean', 'bx', 'aL', 'aR']) { s[k].v += (s[k]._t - s[k].v) * mix; s[k]._vel = 0; } // entra e sai misturando, sem pular
   }
 
+  /* VIDA PRÓPRIA: a cada poucos segundos uma micro-reação natural, escolhida pelo sentimento e pela hora
+     (bocejar, olhar para um lado e para o outro, levantar a sobrancelha, sorrisinho, suspiro, piscar devagar…) */
+  vida() {
+    const m = this.mood, s = this.s, h = new Date().getHours(), noite = h >= 22 || h < 6;
+    const sono = ['cansado', 'sono', 'sonolento'].includes(m) || noite;
+    const L = [['olhaLados', 3], ['sobrancelha', 2], ['piscaLento', 2], ['balanca', m === 'feliz' || m === 'acena' ? 1.5 : 0.4], ['cabeca', 2]];
+    if (sono) L.push(['boceja', 3.5], ['piscaLento', 2]);
+    if (['feliz', 'acena', 'amor', 'apaixonado', 'emocionado'].includes(m)) L.push(['sorriso', 2.5]);
+    if (['triste', 'chorando'].includes(m)) L.push(['suspiro', 3]);
+    if (m === 'desconfiado') L.push(['sobrancelha', 3], ['olhaLados', 2]);
+    if (m === 'bravo') L.splice(0, L.length, ['bufa', 3], ['olhaLados', 1]);
+    let r = Math.random() * L.reduce((a, x) => a + x[1], 0), g = L[0][0];
+    for (const [n, w] of L) { if ((r -= w) <= 0) { g = n; break; } }
+    const e = EMO[m] || {};
+    if (g === 'piscaLento') { const b = s.lid.t; s.lid.set(5, 0.9); s.lid.t = 1; this.at(0.42, () => { s.lid.t = b; }); this.at(0.9, () => s.lid.set(16, 1)); }
+    else if (g === 'cabeca') { const d = Math.random() < 0.5 ? -1 : 1; s.lean.t = (e.lean || 0) + d * 4; s.px.t = d * 22; s.py.t = -6; this.at(1.3, () => { s.lean.t = e.lean || 0; s.px.t = 0; s.py.t = 0; }); }
+    else if (g === 'sorriso') { const bo = this.mouth; this.setMouth('riso'); s.happy.t = 0.6; this.at(1.1, () => { this.setMouth(bo); s.happy.t = e.happy || 0; }); }
+    else if (g === 'suspiro') { s.sq.vel -= 0.9; s.py.t = 14; s.bY.t = (e.brow?.[2] || 0) - 8; this.at(0.7, () => { s.sq.vel += 1.1; }); this.at(1.6, () => { s.py.t = (e.look || [0, 0])[1]; s.bY.t = e.brow?.[2] || 0; }); }
+    else if (g === 'bufa') { s.sq.vel += 1.4; s.bY.t = (e.brow?.[2] || 0) + 6; this.at(0.5, () => { s.bY.t = e.brow?.[2] || 0; }); }
+    else this.act(g);
+  }
+
   /* vida própria */
   idle() {
     const s = this.s, e = EMO[this.mood];
@@ -560,7 +583,8 @@ class Rig {
       if (Math.random() < 0.12 && !this.talk) { s.bY.t = e.brow[2] - 12; s.bYr.t = (e.brow[3] ?? e.brow[2]) - 12; this.at(0.6, () => { s.bY.t = e.brow[2]; s.bYr.t = e.brow[3] ?? e.brow[2]; }); }
       this.next.idle = this.t + 1.8 + Math.random() * 1.8;          // segura a pose (como no vídeo) e economiza bateria
     }
-    if (this.t >= this.next.blink) { this.blink(Math.random() < 0.2); this.next.blink = this.t + 2.2 + Math.random() * 3.6; }
+    if (this.t >= this.next.blink) { this.blink(Math.random() < 0.18); this.next.blink = this.t + 2 + Math.random() * 3.4; }
+    if (this.t >= (this.next.vida ?? 2.5) && !this.calm && !this.talk && !this.q.length) { this.vida(); this.next.vida = this.t + 2.8 + Math.random() * 3.8; }
     if (e.loop && !this.calm && this.t >= this.loopAt) {
       const L = e.loop;
       if (L === 'tchau') { this.act('tchau'); this.loopAt = this.t + 3.2 + Math.random() * 2; }
