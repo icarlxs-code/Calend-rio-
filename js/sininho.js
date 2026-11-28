@@ -470,14 +470,19 @@ class Rig {
     const A = Math.max(0, Math.min(1, el / 0.22, falta / 0.28));      // entra e sai suave
     const ph = el * Math.PI * 2 * 2.1;                               // 2,1 ciclos por segundo (4,2 passos)
     const sn = Math.sin(ph), salto = Math.abs(sn);
-    s.fL.t = Math.max(0, sn) * 56 * A; s.fR.t = Math.max(0, -sn) * 56 * A;          // cada pé sobe na sua vez
-    s.fxL.t = Math.cos(ph) * 28 * d * A; s.fxR.t = -Math.cos(ph) * 28 * d * A;       // e vai pra frente/trás
-    s.by.t = -salto * 30 * A;                                                          // corpo quica a cada passo
-    s.sq.t = (0.075 - salto * 0.15) * A;                                               // amassa no contato, estica no ar
-    s.lean.t = (d * 6 + Math.sin(ph * 2) * 1.3) * A + (e.lean || 0) * (1 - A);         // inclinado pra frente
-    s.bx.t = sn * 5 * A;                                                               // ginga de lado
-    s.aL.t = 22 - Math.sin(ph) * 34 * A; s.aR.t = -22 - Math.sin(ph) * 34 * A;          // braços ao contrário das pernas
+    // passada de verdade: o pé sobe enquanto vai pra FRENTE (aparece do lado do sino, não escondido atrás),
+    // pousa na frente e, no chão, empurra pra trás. Escala do desenho: ~2000 unidades de largura.
+    const R = 120 * A, SOBE = 105 * A, cs = Math.cos(ph);
+    s.fL.t = Math.max(0, sn) * SOBE;  s.fxL.t = -cs * R * d;     // pé esquerdo
+    s.fR.t = Math.max(0, -sn) * SOBE; s.fxR.t = cs * R * d;      // pé direito, meio ciclo depois
+    s.by.t = -salto * 62 * A;                                                          // corpo quica a cada passo
+    s.sq.t = (0.08 - salto * 0.16) * A;                                                // amassa no contato, estica no ar
+    s.lean.t = (d * 8 + Math.sin(ph * 2) * 1.6) * A + (e.lean || 0) * (1 - A);         // inclinado pra frente
+    s.bx.t = sn * 12 * A;                                                              // ginga de lado
+    s.aL.t = 24 + sn * 40 * A; s.aR.t = -24 + sn * 40 * A;                              // braços ao contrário das pernas
     s.px.t = d * 16 * A; s.py.t = 2;                                                   // olha para onde vai
+    // na corrida a curva vale exata em cada quadro (sem a mola atrasar nem achatar o passo)
+    const mix = Math.max(0.22, A); for (const k of ['fL', 'fR', 'fxL', 'fxR', 'by', 'sq', 'lean', 'bx', 'aL', 'aR']) { s[k].v += (s[k]._t - s[k].v) * mix; s[k]._vel = 0; } // entra e sai misturando, sem pular
   }
 
   /* vida própria */
