@@ -4064,3 +4064,6 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .ststrip__chat { position: absolute; right: 4px; top: 44px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #25A55F; color: #fff; border: 2px solid var(--bg, #fff); }
 .ststrip__n { position: absolute; right: 0; top: 0; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #E5484D; color: #fff; font-size: 11px; font-style: normal; display: grid; place-items: center; }
 .vida__bts--col { flex-direction: column; } .vida__bts--col label { justify-content: flex-start; gap: 10px; }
+.aerr__oque { margin: 6px 0; font-size: 15px; line-height: 1.4; }
+.aerr--externo { opacity: .75; }
+.aerr__tec summary { cursor: pointer; font-size: 12px; opacity: .7; margin-top: 6px; }

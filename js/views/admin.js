@@ -5,6 +5,7 @@ import { icon } from '../icons.js';
 import { esc, todayKey, addDays } from '../utils.js';
 import { CONFIG } from '../../config.js';
 import { emDia } from '../versao-em-dia.js';
+import { explica } from '../erro-claro.js';
 import { DIFFICULTIES, GOALS, JOURNEYS, GENDERS, TONES, METHODS, VOLUMES } from '../persona.js';
 
 /* "no app agora": sinal de presença do último 2,5 min (o app manda 1 por minuto enquanto está aberto) */
@@ -298,13 +299,14 @@ function originHtml(users) {
 function errorsHtml(errors) {
   if (errors === null) return '';
   return `<section class="block">
-    ${errors.length ? `<div class="aerrs">${errors.slice(0, 40).map((e) => `<div class="aerr">
-        <div class="aerr__top"><b>${esc(e.msg)}</b><span>${e.count}×</span></div>
-        <small>${esc(e.where || '—')} · ${esc(e.dev || '')} · versão ${esc(e.ver || '?')} · ${(e.users || []).length} pessoa${(e.users || []).length === 1 ? '' : 's'} · último ${esc(ago(e.last))}</small>
-        ${e.steps ? `<small class="aerr__steps">O que a pessoa fazia: ${esc(e.steps)}</small>` : ''}
-        ${/^Script error\.?$/i.test(e.msg) ? '<small class="aerr__why">Erro vindo de fora do app (o Safari esconde o detalhe): tradução automática, extensão ou outro site dentro do app. Não trava o Lembra. A partir da versão 2.0.2 aparece aqui o que a pessoa estava fazendo.</small>' : ''}
-        ${/payment_intent_data/.test(e.msg) ? '<small class="aerr__why">Corrigido na versão 2.0.2 (assinatura no cartão). Pode limpar a lista.</small>' : ''}
-      </div>`).join('')}</div>
+    ${errors.length ? `<div class="aerrs">${errors.slice(0, 40).map((e) => { const x = explica(e, latestVer?.version || ''); return `<div class="aerr aerr--${x.gravidade}">
+        <div class="aerr__top"><b>${esc(x.titulo)}</b><span>${esc(ago(e.last))}</span></div>
+        <p class="aerr__oque">${esc(x.oque)}</p>
+        <small><b>Onde:</b> ${esc(x.onde)}</small>
+        <small><b>Quem:</b> ${esc(x.quem)}</small>
+        ${x.situacao ? `<small class="aerr__why">${esc(x.situacao)}</small>` : ''}
+        <details class="aerr__tec"><summary>Detalhe técnico (para o programador)</summary><small>${esc(x.tecnico)}</small></details>
+      </div>`; }).join('')}</div>
       <button class="btn btn--soft btn--sm" data-clear-errors>Limpar a lista (depois de corrigir)</button>`
       : `<p class="fhelp">Nenhum erro registrado. 🎉 Quando algo der errado no celular de alguém, aparece aqui.</p>`}
   </section>`;

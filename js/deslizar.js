@@ -100,7 +100,13 @@ function corre(el, de, ate, ms) {
   return (a.finished || new Promise((r) => { a.onfinish = r; })).catch(() => {}).then(() => { try { el.style.transform = `translate3d(${ate}px,0,0)`; a.cancel(); } catch { /* ok */ } });
 }
 /* guarda o fim do gesto: dá para "apressar" se a pessoa tocar de novo no meio */
-function termina(promessa, fim) { let feito = false; const f = () => { if (feito) return Promise.resolve(); feito = true; acabando = null; return Promise.resolve(fim()); }; acabando = f; promessa.then(f); }
+/* espera a animação (promessa) ou um tempo em ms — fechar a janela deslizando mandava um número e quebrava ("e.then is not a function") */
+function termina(promessa, fim) {
+  let feito = false; const f = () => { if (feito) return Promise.resolve(); feito = true; acabando = null; return Promise.resolve(fim()); };
+  acabando = f;
+  const p = promessa && typeof promessa.then === 'function' ? promessa : new Promise((r) => setTimeout(r, Number(promessa) || 0));
+  p.then(f, f);
+}
 function voltaAba() {
   const { view, lados, w, dx } = g, ms = calmo() ? 0 : 240;
   const tudo = [corre(view, dx, 0, ms), ...Object.entries(lados).map(([d, n]) => corre(n, dx + d * w, d * w, ms))];
