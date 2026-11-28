@@ -760,6 +760,30 @@ function encosta(side, y, desde) {
   soltaMove(); B.classList.add('is-free'); B.style.left = ''; B.style.top = `${Math.round(y)}px`; B.dataset.side = side;
   B.classList.toggle('bub-baixo', y < 170);
 }
+/* CAMINHADA NO MOTOR GRÁFICO: o trajeto inteiro (com o balanço de cada passo) vira uma animação do navegador
+   (Web Animations), que roda no compositor da GPU a 60 quadros por segundo, mesmo com o JavaScript ocupado.
+   O JS só dá a partida e confirma onde ele parou. Começa devagar, pega ritmo e freia na borda. */
+let andando = null;
+function caminhada(el, de, ate, dur, passos, altura = 6) {
+  if (!el.animate) return null;
+  const N = Math.max(30, passos * 10), kf = [];
+  const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2); // suave na saída e na chegada
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, k = ease(t), bob = Math.abs(Math.sin(t * Math.PI * passos)) * altura * (1 - t * 0.7);
+    kf.push({ offset: t, translate: `${(de.x + (ate.x - de.x) * k).toFixed(2)}px ${(de.y + (ate.y - de.y) * k - bob).toFixed(2)}px` }); // "translate" (não "transform"): roda no compositor e não briga com o transform do arrasto
+  }
+  if (andando) { try { andando.cancel(); } catch { /* ok */ } }
+  andando = el.animate(kf, { duration: dur, easing: 'linear', fill: 'forwards' });
+  return andando;
+}
+/* pegou no meio da caminhada: fica exatamente onde estava (sem pular) e para a animação */
+function paraCaminhada() {
+  if (!andando || !B) return;
+  const r = B.getBoundingClientRect();
+  try { andando.cancel(); } catch { /* ok */ }
+  andando = null;
+  mover(r.left, r.top);
+}
 function voltaCanto() {
   livre = null; gravaPos();
   if (!B) return;
@@ -773,20 +797,12 @@ function voltaCanto() {
   if (calmo() || dist < 4) { B.style.transition = ''; return; }
   const host = B.querySelector('.snhbud__fig') || B;
   const indo = para.left > de.left ? 'direita' : 'esquerda';   // para onde ele está andando
-  const dur = Math.min(1700, Math.max(700, dist * 4.2));        // ~240 px/s de passo tranquilo
+  const dur = Math.min(1900, Math.max(800, dist * 5.5));        // ~180 px/s de passo tranquilo
   toca(host, indo, { ms: dur, loop: true, ciclo: 520 });
-  const t0 = performance.now(), passos = Math.max(3, Math.round(dist / 90));
-  const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2); // começa devagar, acelera, freia no fim
-  const frame = (now) => {
-    if (!B) return;
-    const t = Math.min(1, (now - t0) / dur), k = ease(t);
-    const bob = Math.abs(Math.sin(t * Math.PI * passos)) * 7 * (1 - t);           // balanço de cada passo
-    const x = dx * (1 - k), y = dy * (1 - k) - bob;
-    B.style.setProperty('transform', `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`, 'important');
-    if (t < 1) requestAnimationFrame(frame);
-    else { B.style.removeProperty('transform'); B.style.transition = ''; }
-  };
-  requestAnimationFrame(frame);
+  const passos = Math.max(3, Math.round(dist / 90));
+  const an = caminhada(B, { x: dx, y: dy }, { x: 0, y: 0 }, dur, passos, 7);
+  if (!an) { B.style.transition = ''; return; }
+  an.onfinish = () => { if (andando === an) andando = null; an.cancel(); if (B) B.style.transition = ''; };
 }
 const zona = (side, y) => { const cy = y + FIGH / 2, H = innerHeight; return cy < H * 0.3 ? 'topo' : cy > H * 0.72 ? 'baixo' : side === 'l' ? 'esq' : 'dir'; };
 
@@ -833,7 +849,9 @@ function falaJa(g, ms = 1900, m) {
 let mexeu = false; // a pessoa já tocou/arrastou o Lembra nesta sessão
 function arrastavel(fig) {
   fig.addEventListener('pointerdown', (ev) => {
-    if (!B || arr || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+    if (!B || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+    if (arr && arr.voo && arr.enc && arr.enc.anim) { paraCaminhada(); arr = null; } // pegou de novo enquanto ele voltava andando
+    if (arr) return;
     mexeu = true; B.classList.remove('is-hidden');
     arr = { id: ev.pointerId, x0: ev.clientX, y0: ev.clientY, fx: ev.clientX, fy: ev.clientY, on: false, t0: performance.now() };
     // segurar parado (sem arrastar): abre a caixinha para conversar com ele
@@ -883,12 +901,13 @@ function comeca(fig, ev) {
   const rg = rig(); rg && rg.pega();
   try { navigator.vibrate && navigator.vibrate(12); } catch { /* ok */ }
   setTimeout(() => { if (arr && arr.on && !arr.falou) { arr.falou = performance.now(); falaJa(era.sono || era.antigo ? 'meDeixa' : era.falava ? 'interrompe' : era.madruga ? 'madruga' : era.recente ? 'deNovo' : 'pega', 1700); } }, 280);
-  requestAnimationFrame(passo);
+  cancelAnimationFrame(lacoFis); lacoFis = requestAnimationFrame(passo); // um laço de física só (pegar de novo no meio da caminhada não cria outro)
 }
 
 /* um quadro de física */
+let lacoFis = 0;
 function passo(now) {
-  if (!arr || !B) return;
+  if (!arr || !B || !arr.on) return;
   const fig = B.querySelector('.snhbud__fig');
   const dt = cl((now - arr.lt) / 1000, 0.001, 0.034); arr.lt = now;
   const Lm = limites();
@@ -934,7 +953,7 @@ function passo(now) {
   }
   arr.viradas = arr.viradas.filter((t) => now - t < 1500); arr.picoVir = Math.max(arr.picoVir, arr.viradas.length);
   arr.agito += Math.abs(om0) * dt + (arr.viradas.length >= 2 ? dt * 1.2 : 0);
-  arr.yAgora = ny; mover(nx, ny);
+  arr.yAgora = ny; if (!(arr.enc && arr.enc.anim)) mover(nx, ny); // andando: quem move é o motor gráfico
   if (!arr.voo || arr.enc) { B.dataset.side = arr.enc ? arr.enc.side : nx + FIG / 2 < innerWidth / 2 ? 'l' : 'r'; B.classList.toggle('bub-baixo', ny < 170); }
   fig.style.transform = calmo() ? '' : `rotate(${((psi * 180) / Math.PI).toFixed(2)}deg)`; // "reduzir movimento": arrasta sem balançar
   const parado = (now - arr.quieto) / 1000;
@@ -960,7 +979,7 @@ function passo(now) {
     if (gsp < 14 && !arr.reagiu) { arr.reagiu = true; reage(arr); }
     if (gsp < 14 && arr.enc && now - arr.enc.t0 > arr.enc.dur + 30 && Math.abs(psi) < 0.012 && Math.abs(arr.om) < 0.06) return pousou();
   }
-  requestAnimationFrame(passo);
+  lacoFis = requestAnimationFrame(passo);
 }
 
 function termina() {
@@ -981,6 +1000,7 @@ function termina() {
 function pousou() {
   const a = arr; arr = null;
   if (!B) return;
+  if (a.enc && a.enc.anim) { mover(a.enc.x1, a.enc.y1); if (andando === a.enc.anim) andando = null; a.enc.anim.cancel(); } // chegou: fixa o ponto final e solta a animação
   const fig = B.querySelector('.snhbud__fig');
   fig.style.transform = ''; fig.style.transformOrigin = '';
   if (!a.reagiu) reage(a);
@@ -997,8 +1017,9 @@ function reage(a) {
   const side = x + FIG / 2 < innerWidth / 2 ? 'l' : 'r';
   const x1 = bordaX(side), dist = Math.abs(x1 - a.x);
   const y0 = Number.isFinite(a.yAgora) ? a.yAgora : a.y; // onde ele está de verdade (antes de ajustar à área permitida)
-  a.y = y; a.enc = { t0: performance.now(), x0: a.x, x1, y0, y1: y, side, dur: Math.min(1400, Math.max(520, Math.hypot(dist, y - y0) * 4)), passos: Math.max(2, Math.round(Math.hypot(dist, y - y0) / 70)) };   // vai andando pra borda mais perto
+  a.y = y; a.enc = { t0: performance.now(), x0: a.x, x1, y0, y1: y, side, dur: Math.min(1700, Math.max(800, Math.hypot(dist, y - y0) * 5.5)), passos: Math.max(2, Math.round(Math.hypot(dist, y - y0) / 70)) };   // vai andando pra borda mais perto
   if (dist > 24) toca(B.querySelector('.snhbud__fig') || B, x1 > a.x ? 'direita' : 'esquerda', { ms: a.enc.dur, loop: true, ciclo: 520 }); // os passos do desenho
+  if (!calmo()) { B.style.transition = 'none'; B.style.removeProperty('transform'); a.enc.anim = caminhada(B, { x: a.x, y: y0 }, { x: x1, y }, a.enc.dur, a.enc.passos); if (!a.enc.anim) mover(a.x, y0); }
   livre = { side, y, em: Date.now() }; gravaPos();
   const agora = Date.now(); mudancas++; solturas = solturas.filter((t) => agora - t < 30000); solturas.push(agora);
   // o que ele acha da mudança
