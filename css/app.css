@@ -4353,3 +4353,9 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .puxa { position: fixed; inset: 0; z-index: 9500; background: #000; color: #fff; display: flex; flex-direction: column; align-items: flex-end; padding-right: 22px; justify-content: center; gap: 12px; transform: translate3d(-100%, 0, 0); will-change: transform; box-shadow: 8px 0 30px rgba(0,0,0,.35); font: 800 18px Nunito, system-ui, sans-serif; pointer-events: none; }
 .puxa__ic { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, #FF8A3D, #FF3D7F); transform: scale(calc(.6 + var(--k, 0) * .5)); }
 .puxa b { opacity: calc(var(--k, 0) * 2); }
+.scam__zooms { position: relative; margin-top: -64px; margin-bottom: 16px; z-index: 2; display: flex; gap: 6px; padding: 4px; border-radius: 999px; background: rgba(0,0,0,.35); }
+.scam__zooms button { min-width: 38px; height: 38px; padding: 0 6px; border-radius: 999px; border: 0; background: rgba(255,255,255,.12); color: #fff; font: 800 13px Nunito, system-ui, sans-serif; cursor: pointer; transition: transform .15s, background .15s; }
+.scam__zooms button.is-on { background: rgba(255,255,255,.95); color: #111; transform: scale(1.1); }
+.scam__quadro { touch-action: none; }
+.scam__v { transform-origin: 50% 50%; }
+.scam__quadro.is-troca .scam__v { filter: blur(8px); transition: filter .15s; }

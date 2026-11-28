@@ -41,10 +41,26 @@ export const temCamera = () => !!(navigator.mediaDevices && navigator.mediaDevic
 export function abreCamera({ soCamera = false, lado = 'environment' } = {}) {
   return new Promise((fim) => {
     let fluxo = null, frente = lado === 'user', acabou = false;
+    /* ZOOM E LENTES (como a câmera do celular): pinça e botões 0.5x / 1x / 2x.
+       1) se o aparelho tem a câmera "múltipla" (iPhone: dupla/tripla), o zoom dela troca de lente sozinho;
+       2) senão, troca de lente pela lista de câmeras (ultra-angular, normal, tele) e completa com zoom digital. */
+    let lentes = null, zoomHw = null, zDig = 1, zAtual = 1, nivel = 1; // nivel: 0.5, 1, 2, 3… (o número que a pessoa vê)
+    const rotulo = (d) => (d.label || '').toLowerCase();
+    const ehTras = (d) => !/front|frontal|frente|user|facetime/.test(rotulo(d));
+    async function achaLentes() {
+      try {
+        const L = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput' && ehTras(d));
+        const multi = L.find((d) => /tripla|triple|dupla|dual/.test(rotulo(d)));
+        const ultra = L.find((d) => /ultra/.test(rotulo(d))), tele = L.find((d) => /tele/.test(rotulo(d)));
+        const normal = L.find((d) => d !== ultra && d !== tele && d !== multi && !/dupla|dual|tripla|triple/.test(rotulo(d))) || L[0];
+        return { multi, ultra, tele, normal };
+      } catch { return {}; }
+    }
     const w = document.createElement('div');
     w.className = 'scam'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Câmera do story');
     w.innerHTML = `<div class="scam__quadro"><video class="scam__v" playsinline muted autoplay></video><div class="scam__flash"></div><p class="scam__msg" hidden></p>
         <button type="button" class="scam__x" data-x aria-label="Fechar">${icon('x', 26)}</button></div>
+      <div class="scam__zooms" hidden></div>
       <div class="scam__barra">
         ${soCamera ? '<span class="scam__vaga"></span>' : `<label class="scam__gal" aria-label="Escolher da galeria">${icon('image', 24)}<input type="file" accept="image/*" hidden data-gal></label>`}
         <button type="button" class="scam__clique" data-foto aria-label="Tirar foto"><i></i></button>
@@ -54,26 +70,79 @@ export function abreCamera({ soCamera = false, lado = 'environment' } = {}) {
     const v = w.querySelector('video'), msg = w.querySelector('.scam__msg');
     const para = () => { if (fluxo) fluxo.getTracks().forEach((t) => t.stop()); fluxo = null; };
     const sai = (x) => { if (acabou) return; acabou = true; para(); w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-scam'); }, 220); fim(x); };
+    const opts = { deviceId: null };
+    // quanto vale o "1x": na câmera múltipla do iPhone o zoom 1 é a ultra-angular (0.5x), então 1x = zoom 2
+    const base = () => (zoomHw && zoomHw.multi && lentes && lentes.ultra ? 2 : 1);
+    const niveisDisp = () => {
+      if (frente) return [];
+      const N = [];
+      if (lentes && (lentes.ultra || (zoomHw && zoomHw.multi))) N.push(0.5);
+      N.push(1);
+      if (lentes && lentes.tele) N.push(/3/.test((lentes.tele.label || '')) ? 3 : 2); else N.push(2);
+      return N;
+    };
+    function botoes() {
+      const b = w.querySelector('.scam__zooms'); if (!b) return;
+      const N = niveisDisp(); b.hidden = N.length < 2;
+      b.innerHTML = N.map((n) => `<button type="button" data-z="${n}" class="${Math.abs(nivel - n) < 0.25 || (n === N.at(-1) && nivel > n) ? 'is-on' : ''}">${Math.abs(nivel - n) < 0.25 || (n === N.at(-1) && nivel >= n) ? `${(Math.round(nivel * 10) / 10).toString().replace('.', ',')}×` : String(n).replace('.', ',')}</button>`).join('');
+      b.querySelectorAll('[data-z]').forEach((x) => (x.onclick = () => irPara(+x.dataset.z, true)));
+    }
+    let trocando = false;
+    /** vai para o nível de zoom pedido (0.5 = ultra-angular), trocando de lente quando precisa */
+    async function irPara(n, suave) {
+      if (frente) return;
+      const N = niveisDisp(); n = Math.max(N.includes(0.5) ? 0.5 : 1, Math.min(10, n)); nivel = n;
+      const tr = fluxo && fluxo.getVideoTracks()[0];
+      if (zoomHw && tr && (zoomHw.multi || n >= 1)) {           // zoom do próprio aparelho (a câmera múltipla troca de lente sozinha)
+        const alvo = Math.max(zoomHw.min, Math.min(zoomHw.max, n * base()));
+        try { await tr.applyConstraints({ advanced: [{ zoom: alvo }] }); zAtual = alvo; zDig = 1; } catch { zDig = n; }
+        if (!zoomHw.multi && n < 1 && lentes && lentes.ultra) return trocaLente(lentes.ultra, 0.5);
+      } else if (n < 1 && lentes && lentes.ultra) { return trocaLente(lentes.ultra, 0.5); }
+      else if (n >= 2 && lentes && lentes.tele && !trocando && opts.deviceId !== lentes.tele.deviceId) { return trocaLente(lentes.tele, n); }
+      else if (n >= 1 && lentes && opts.deviceId && opts.deviceId !== (lentes.normal && lentes.normal.deviceId) && !(lentes.tele && opts.deviceId === lentes.tele.deviceId && n >= 2) && !(lentes.multi && opts.deviceId === lentes.multi.deviceId)) { return trocaLente(lentes.normal, n); }
+      else { const lenteBase = lentes && lentes.tele && opts.deviceId === lentes.tele.deviceId ? (/3/.test(lentes.tele.label) ? 3 : 2) : 1; zDig = Math.max(1, n / lenteBase); }
+      v.style.transform = `${frente ? 'scaleX(-1) ' : ''}scale(${zDig})`; v.style.transition = suave ? 'transform .2s ease-out' : 'none';
+      botoes();
+    }
+    async function trocaLente(d, n) {
+      if (!d || trocando) return; trocando = true; opts.deviceId = d.deviceId; zDig = 1; nivel = n; v.style.transform = '';
+      w.querySelector('.scam__quadro').classList.add('is-troca'); await liga(); w.querySelector('.scam__quadro').classList.remove('is-troca'); trocando = false;
+    }
     const liga = async () => {
       para(); msg.hidden = true;
       try {
-        fluxo = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: frente ? 'user' : { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+        const dev = !frente && lentes ? (opts.deviceId || null) : null;
+        fluxo = await navigator.mediaDevices.getUserMedia({ audio: false, video: { ...(dev ? { deviceId: { exact: dev } } : { facingMode: frente ? 'user' : { ideal: 'environment' } }), width: { ideal: 1920 }, height: { ideal: 1080 } } });
         if (acabou) return para();
         v.srcObject = fluxo; v.classList.toggle('is-frente', frente); await v.play().catch(() => {});
+        if (!frente && !lentes) { lentes = await achaLentes(); if (lentes.multi && !opts.deviceId) { opts.deviceId = lentes.multi.deviceId; return liga(); } }
+        const tr = fluxo.getVideoTracks()[0], cap = tr && tr.getCapabilities ? tr.getCapabilities() : {};
+        zoomHw = cap && cap.zoom && cap.zoom.max > cap.zoom.min ? { min: cap.zoom.min, max: Math.min(cap.zoom.max, 15), passo: cap.zoom.step || 0.1, multi: !!(lentes && lentes.multi && opts.deviceId === lentes.multi.deviceId) } : null;
+        if (zoomHw && zoomHw.multi) irPara(nivel, false); else botoes(); // câmera múltipla: começa no 1x (o zoom 1 dela é a ultra-angular)
       } catch (e) {
         msg.hidden = false;
         msg.textContent = /Permission|NotAllowed/i.test(e && e.name) ? 'O Lembra precisa da permissão da câmera. Libere nos ajustes do celular e tente de novo.' : 'Não consegui abrir a câmera agora.';
       }
     };
     w.querySelector('[data-x]').onclick = () => sai(null);
-    w.querySelector('[data-vira]').onclick = () => { frente = !frente; w.querySelector('[data-vira]').animate([{ transform: 'rotate(0)' }, { transform: 'rotate(180deg)' }], { duration: 320, easing: 'ease-out' }); liga(); };
+    // pinça: abrir os dedos aproxima, fechar afasta (passando de 1x para 0,5x troca para a ultra-angular)
+    const quadro = w.querySelector('.scam__quadro'); let pinca = null;
+    const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    quadro.addEventListener('touchstart', (e) => { if (e.touches.length === 2) { pinca = { d0: dist(e.touches), n0: nivel }; e.preventDefault(); } }, { passive: false });
+    quadro.addEventListener('touchmove', (e) => {
+      if (!pinca || e.touches.length !== 2) return; e.preventDefault();
+      const n = pinca.n0 * Math.pow(dist(e.touches) / pinca.d0, 1.15);
+      if (!trocando) irPara(Math.round(n * 10) / 10, false);
+    }, { passive: false });
+    quadro.addEventListener('touchend', () => { pinca = null; });
+    w.querySelector('[data-vira]').onclick = () => { opts.deviceId = null; nivel = 1; zDig = 1; v.style.transform = ''; frente = !frente; w.querySelector('[data-vira]').animate([{ transform: 'rotate(0)' }, { transform: 'rotate(180deg)' }], { duration: 320, easing: 'ease-out' }); liga(); };
     const gal = w.querySelector('[data-gal]');
     if (gal) gal.onchange = async () => { const f = gal.files && gal.files[0]; if (!f) return; try { sai(await lerArquivo(f)); } catch (e) { msg.hidden = false; msg.textContent = e.message; } };
     w.querySelector('[data-foto]').onclick = () => {
       if (!v.videoWidth) return;
       const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
       // o mesmo corte da tela: o vídeo cobre o quadro 9:16 pelo centro
-      const vw = v.videoWidth, vh = v.videoHeight, k = Math.max(W / vw, H / vh), dw = vw * k, dh = vh * k;
+      const vw = v.videoWidth, vh = v.videoHeight, k = Math.max(W / vw, H / vh) * zDig, dw = vw * k, dh = vh * k;
       if (frente) { g.translate(W, 0); g.scale(-1, 1); } // a câmera da frente sai como a pessoa se viu (espelho), sem inverter
       g.drawImage(v, (W - dw) / 2, (H - dh) / 2, dw, dh);
       w.querySelector('.scam__flash').animate([{ opacity: 0.9 }, { opacity: 0 }], { duration: 260, easing: 'ease-out' });
