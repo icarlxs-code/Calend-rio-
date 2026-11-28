@@ -4,6 +4,13 @@ export const COTAS = { ask: 6000, amigo: 2000, lotes: 1500 };
 export const PESSOA = 600;
 export const MSG_PESSOA = 'Você usou a IA bastante hoje; volta às 21h 😉';
 export const custo = (model, input, saida) => { const [ri, ro] = /70b|3\.3/.test(model) ? RATE.big : RATE.small; return (JSON.stringify(input?.messages || input || '').length / 3.5) * ri + (String(saida || '').length / 3.5) * ro; };
+/* a Cloudflare passou a responder alguns modelos no formato novo (choices[0].message.content) em vez de { response }:
+   aqui os dois viram { response }, para nenhuma parte do servidor descartar uma resposta boa */
+export function textoDaIA(r) {
+  if (!r || typeof r !== 'object' || typeof r.response === 'string') return r;
+  const c = Array.isArray(r.choices) ? r.choices[0]?.message?.content ?? r.choices[0]?.text : r.result?.response;
+  return typeof c === 'string' ? { ...r, response: c } : r;
+}
 const diaUtc = (now) => new Date(now).toISOString().slice(0, 10);
 export function iaComCota(ai, kv, padrao = 'ask', { cotas = COTAS, pessoaMax = PESSOA, agora = Date.now } = {}) {
   if (!ai) return ai;
@@ -13,7 +20,7 @@ export function iaComCota(ai, kv, padrao = 'ask', { cotas = COTAS, pessoaMax = P
       const k = `ia:${diaUtc(agora())}`, u = await le(k), f = u.f || {}, p = u.p || {};
       if (pessoa && (p[pessoa] || 0) >= pessoaMax) throw Object.assign(new Error(MSG_PESSOA), { status: 429 });
       if ((f[fn] || 0) >= (cotas[fn] ?? cotas.amigo)) throw new Error('limite diário da IA grátis atingido');
-      const r = await ai.run(model, input, opts), c = custo(model, input, r?.response), n = await le(k);
+      const r = textoDaIA(await ai.run(model, input, opts)), c = custo(model, input, r?.response), n = await le(k);
       n.f = { ...(n.f || {}), [fn]: Math.round((n.f?.[fn] || 0) + c) };
       if (pessoa) n.p = { ...(n.p || {}), [pessoa]: Math.round((n.p?.[pessoa] || 0) + c) };
       await kv.put(k, JSON.stringify(n), { expirationTtl: 3 * 86400 });

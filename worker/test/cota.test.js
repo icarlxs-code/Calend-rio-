@@ -23,3 +23,13 @@ test('contexto curto, modelo pequeno na pergunta curta e 30 por hora', async () 
   await askFree(env, { question: 'marca dentista amanhã 15h', history: [], context: '', me: { id: 'a', name: 'Ana' } }); assert.match(log[1][0], /70b/);
   const kv = banco(); let n = 0; for (let i = 0; i < 40; i++) if (await porHora(kv, 'a')) n++; assert.equal(n, 30);
 });
+
+test('resposta da IA no formato novo (choices) vira { response } para todo o servidor', async () => {
+  const { iaComCota, textoDaIA } = await import('../src/cota.js');
+  const m = new Map(), kv = { get: async (k) => (m.has(k) ? JSON.parse(m.get(k)) : null), put: async (k, v) => m.set(k, v) };
+  const novo = { choices: [{ index: 0, message: { role: 'assistant', content: '{"title":"Oi","body":"Bebe água 💧"}' } }] };
+  const ai = iaComCota({ run: async () => novo }, kv);
+  assert.equal((await ai.run('@cf/meta/llama-3.1-8b-instruct-fast', { messages: [] })).response, '{"title":"Oi","body":"Bebe água 💧"}');
+  assert.equal(textoDaIA({ response: 'antigo' }).response, 'antigo');
+  assert.equal(textoDaIA(null), null);
+});

@@ -546,6 +546,8 @@ export function personalProfile() {
   return { tz: fusoDoAparelho(),
     date: t,
     ia: iaOk(),
+    // a vida que a pessoa contou e o time: só quando ela autorizou a IA (as notificações são escritas para ela)
+    ...(iaOk() ? { vida: (() => { try { return store.profile?.vida || JSON.parse(localStorage.getItem('lembra.vida') || 'null'); } catch { return null; } })(), time: store.profile?.teamId || '' } : {}),
     prefs: { nudges: p.nudges, water: p.water, meals: p.meals, faith: p.faith, freq: p.freq, wake: p.wake, sleep: p.sleep, lunch: p.lunch, tone: p.tone, pronoun: p.pronoun || store.profile?.pronoun,
       nickname: p.nickname, age: p.age, religion: p.religion, motivation: p.motivation, perDay: p.perDay, waterEvery: p.waterEvery, mind: p.mind },
     likes: store.profile?.likes || [], goals: store.profile?.goal ? [store.profile.goal] : [],

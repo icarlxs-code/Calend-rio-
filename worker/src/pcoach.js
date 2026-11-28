@@ -408,7 +408,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
 
 /* Reescreve a mensagem com IA, como um amigo/conselheiro de verdade.
    Versículos ficam exatamente como estão (a IA só escreve em volta). */
-const AI_MODELS = ['@cf/meta/llama-3.1-8b-instruct-fast'];
+const AI_MODELS = ['@cf/meta/llama-3.3-70b-instruct-fp8-fast', '@cf/meta/llama-3.1-8b-instruct-fast']; // o maior segue melhor as regras; o menor é reserva
 const KIND_TASK = {
   morning: 'Mensagem de bom dia carinhosa e animadora, que faça a pessoa se sentir importante. Se ela tiver coisas hoje, cite 1 ou 2 com leveza.',
   night: 'Mensagem de boa noite acolhedora: reconheça o esforço do dia, diga que ela foi bem e que pode descansar.',
@@ -427,8 +427,21 @@ const KIND_TASK = {
   habit: 'Lembre com leveza deste hábito do dia a dia, como um amigo que cuida: ',
   selfcare: 'Sugira um cuidado rápido com o corpo/mente (respirar, alongar, postura, tomar um ar, descansar os olhos).',
 };
+import { repetida } from './fala.js';
+export const IA_DIA = 10;   // notificações escritas pela IA por pessoa por dia (o resto vem do banco de frases)
+/* a vida que a pessoa contou e o time dela, em uma linha para a IA (nada se ela não quis dizer) */
+export function vidaTxt(p) {
+  const v = p.vida || {}, L = [];
+  const rel = { solteiro: 'solteiro(a)', namorando: 'namorando', noivo: 'noivo(a)', casado: 'casado(a)', uniao: 'em união estável', complicado: 'num relacionamento complicado (seja acolhedor, nunca incentive aceitar agressão)', separado: 'separado(a)', viuvo: 'viúvo(a)' }[v.rel];
+  if (rel) L.push(`Relacionamento: ${rel}${v.par ? ` com ${v.par}` : ''}.`);
+  if (v.filhos === 'sim') L.push(Array.isArray(v.nomes) && v.nomes.length ? `Filhos: ${v.nomes.join(', ')}.` : 'Tem filhos.');
+  const an = { desanimado: 'anda meio desanimado(a): levante a autoestima', dificil: 'está numa fase difícil: seja acolhedor', bem: 'anda animado(a)' }[v.animo];
+  if (an) L.push(`Ânimo: ${an}.`);
+  if (p.time) L.push(`Torce para o time ${p.time}.`);
+  return L.length ? `Sobre a pessoa (use só se combinar com a mensagem, sem forçar): ${L.join(' ')}` : '';
+}
 export async function humanize(env, msg, p, recent, br) {
-  if (!env.AI || p.ia !== true || msg.kind !== 'agenda' || msg.fid) return null; // só com o consentimento da pessoa, e só recados da agenda (o resto vem do banco, sem gastar IA)
+  if (!env.AI || p.ia !== true || msg.priv || !KIND_TASK[msg.kind]) return null; // só com o consentimento da pessoa; remédio nunca (o nome não pode ir para a tela)
   const g = p.prefs?.pronoun === 'f' ? { dele: 'dela', o: 'a', ele: 'ela' } : p.prefs?.pronoun === 'm' ? { dele: 'dele', o: 'o', ele: 'ele' } : { dele: 'dele(a)', o: 'o(a)', ele: 'ele(a)' };
   const today = (p.today || []).filter((x) => !x.done).map(semNome).map((x) => `${x.time ? x.time + ' ' : ''}${x.title}`).slice(0, 5).join('; ');
   const tone = { carinhoso: 'Tom: carinhoso e acolhedor.', firme: 'Tom: amigo coach, firme e motivador, que puxa para cima.', direto: 'Tom: direto e objetivo, sem rodeios, mas gentil.' }[p.prefs?.tone] || '';
@@ -438,6 +451,8 @@ ${tone} ${work}
 Estilo: humano, caloroso, informal, como mensagem de WhatsApp de um amigo espirituoso. Frases curtas. No máximo 1 emoji. Nunca soe robótico, nunca use "lembrete:" seco, não use aspas. PROIBIDO frases batidas de autoajuda e de app: "saco vazio não para em pé", "beba água", "hidrate-se", "seu corpo agradece", "um passo de cada vez", "você é capaz", "você consegue", "foco, força e fé", "bora lá", "não desista", "acredite em você". Seja específico, com uma imagem concreta, uma observação esperta ou um desafio pequeno — como quem conhece a pessoa.
 Agora são ${String(br.h).padStart(2, '0')}h${String(br.m).padStart(2, '0')} (${['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][br.wd]}).
 ${today ? `Coisas de hoje na agenda pessoal: ${today}.` : 'Hoje a agenda pessoal está livre.'}
+${vidaTxt(p)}
+REGRAS FIRMES: nunca chame a pessoa de amor, querida(o), meu bem ou apelido carinhoso; nunca invente fatos (jogos, placares, conquistas, trabalho, pessoas) que não estão escritos aqui; ${p.prefs?.faith === false || /secular|ateu|agnost|nao_dizer/.test(p.prefs?.religion || '') ? 'não fale de Deus, fé ou religião' : 'só fale de fé se a mensagem pedir'}; body com no máximo 150 caracteres e terminando a frase.
 NÃO repita nem parafraseie estas mensagens recentes: ${(recent || []).slice(-8).join(' | ') || '—'}
 Responda SÓ com JSON: {"title":"até 38 caracteres, com 1 emoji","body":"até 170 caracteres"}`;
   const task = KIND_TASK[msg.kind] + (msg.kind === 'agenda' ? msg.fact : ['counsel', 'social', 'habit', 'checkin', 'streak', 'rank', 'mind'].includes(msg.kind) ? msg.body : '');
@@ -448,7 +463,10 @@ Responda SÓ com JSON: {"title":"até 38 caracteres, com 1 emoji","body":"até 1
       if (!m) continue;
       const j = JSON.parse(m[0]);
       if (!j.title || !j.body) continue;
-      let body = String(j.body).replace(/^["“]|["”]$/g, '').slice(0, 220);
+      let body = String(j.body).replace(/^["“]|["”]$/g, '').trim();
+      if (body.length > 200) { const c = body.slice(0, 200), f = Math.max(c.lastIndexOf('. '), c.lastIndexOf('! '), c.lastIndexOf('? ')); if (f < 60) continue; body = c.slice(0, f + 1); } // nunca corta no meio da frase
+      if (/\b(amor|querid[oa]|meu bem|benzinho)\b/i.test(`${j.title} ${body}`)) continue;
+      if (repetida(body, recent || [])) continue;                                           // parecida com uma recente: tenta o outro modelo
       if (msg.verse) body = msg.kind === 'verse' ? `${body}\n${verseText(msg.verse)}` : `${body}\n${verseText(msg.verse)}`;
       if (bloqueado(`${j.title} ${body}`) || medico(body)) continue; // a IA passa pelo mesmo filtro do banco
       return { title: String(j.title).slice(0, 50), body };
@@ -513,6 +531,14 @@ export async function amigoOne(env, sendToMember, m, now = Date.now(), rankInfo 
   if (r.msg.kind === 'agenda' && !r.msg.fid && !r.msg.priv && Math.random() < 0.7) {
     const h = await humanize(env, r.msg, p, st.recent, br).catch((e) => { console.log('humanize falhou', e.message); if (usage && usage.erro) usage.erro('amigo'); return null; });
     if (h) { out = { ...r.msg, body: h.body }; ai = true; r.state.recent = [...(r.state.recent || []), h.body].slice(-40); }
+  } else if (!r.msg.priv && p.ia === true && env.AI) {
+    // as outras notificações (bom dia, água, refeição, ânimo, versículo…) também saem escritas para a pessoa, até o teto do dia
+    const kc = `pcia:${m.id}:${br.date}`, n = Number(await env.CAL.get(kc)) || 0;
+    if (n < IA_DIA) {
+      await env.CAL.put(kc, String(n + 1), { expirationTtl: 2 * 86400 });
+      const h = await humanize(env, r.msg, p, st.recent, br).catch(() => null);
+      if (h) { out = { ...r.msg, title: h.title || r.msg.title, body: h.body }; ai = true; r.state.recent = [...(r.state.recent || []), h.body].slice(-40); }
+    }
   }
   delete r.state.usage;
   const vh = r.state.vh; delete r.state.vh;

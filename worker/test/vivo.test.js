@@ -54,8 +54,15 @@ test('remédio só na hora e nunca para consulta; conta, estudo, aniversário e 
 test('turno segue a janela da pessoa', () => { assert.equal(turnoDe(60, 900), 'manha'); assert.equal(turnoDe(500, 900), 'tarde'); assert.equal(turnoDe(850, 900), 'noite'); const n = nextNudge({ name: 'Lia', uid: 'n', prefs: { wake: '14:00', sleep: '05:00' } }, {}, at('14:35'), () => 0.4); assert.equal(n.msg.kind, 'morning'); });
 test('gramática não junta "?." e começa com maiúscula', () => { for (let i = 0; i < 400; i++) { const m = daGramatica('agua', S, i); assert.doesNotMatch(m.texto, /[?!]\.|\. \p{Ll}/u, m.texto); } });
 test('perfil: likes e goals chegam limpos', () => { const x = cleanProfile({ likes: ['games', 'xss<', 'pets', 4], goals: ['produtivo', '../'], prefs: { nickname: 'Li' } }, { name: 'Lia' }); assert.deepEqual([x.likes, x.goals, x.prefs.nickname], [['games', 'pets'], ['produtivo'], 'Li']); });
-test('humanize com profissão e objetivo não quebra; água e frases do banco não gastam IA', async () => {
-  let n = 0; const env = { AI: { run: async () => (n++, { response: '{"title":"t","body":"b"}' }) } }, p = { name: 'Lia', ia: true, prefs: {}, work: { profession: 'designer', goal: 'crescer' } }, br = brNow(at('10:00'));
-  assert.equal((await humanize(env, { kind: 'agenda', fact: 'x' }, p, [], br)).body, 'b'); assert.equal(await humanize(env, { kind: 'water' }, p, [], br), null); assert.equal(await humanize(env, { kind: 'agenda', fid: 'a', fact: 'x' }, p, [], br), null); assert.equal(n, 1);
+test('humanize: todas as notificações podem ser escritas pela IA (com consentimento), menos remédio; a vida da pessoa entra no texto', async () => {
+  let n = 0, sys = ''; const env = { AI: { run: async (m, o) => { n++; sys = o.messages[0].content; return { response: '{"title":"t","body":"b"}' }; } } };
+  const p = { name: 'Lia', ia: true, prefs: {}, work: { profession: 'designer', goal: 'crescer' }, vida: { rel: 'casado', par: 'Rui', filhos: 'sim', nomes: ['Bia'], animo: 'desanimado' }, time: 'flamengo' }, br = brNow(at('10:00'));
+  assert.equal((await humanize(env, { kind: 'agenda', fact: 'x' }, p, [], br)).body, 'b');
+  assert.equal((await humanize(env, { kind: 'water' }, p, [], br)).body, 'b', 'água agora também sai escrita para a pessoa');
+  assert.match(sys, /Filhos: Bia/); assert.match(sys, /com Rui/); assert.match(sys, /autoestima/); assert.match(sys, /flamengo/);
+  const antes = n;
+  assert.equal(await humanize(env, { kind: 'agenda', fact: 'x', priv: 'Rivotril' }, p, [], br), null, 'remédio nunca vai para a IA');
+  assert.equal(await humanize(env, { kind: 'water' }, { ...p, ia: false }, [], br), null, 'sem consentimento, frase do banco');
+  assert.equal(n, antes);
 });
 test('500 escolhas completas cabem com folga no tempo do relógio', () => { const t = performance.now(); let st = {}; for (let i = 0; i < 500; i++) { const r = nextNudge({ ...P, today: [], prefs: { religion: 'catolica' } }, { day: '2026-11-20', done: { morning: true }, vh: st.vh }, at('15:10'), () => (i % 97) / 97); if (r) st = r.state; } assert.ok((performance.now() - t) / 500 < 2); });

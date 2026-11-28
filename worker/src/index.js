@@ -6,6 +6,8 @@
    Dados guardados num Durable Object com SQLite (veja entry.js e kvsql.js): chaves VAPID, aparelhos,
    listas de lembretes e a fila do relógio. O código usa a mesma interface do KV (env.CAL). */
 import { purgaLixeira } from './lixeira.js';
+import { limpaVida } from '../../js/vida.js';
+import { porTime as porTimeApp } from '../../functions/times.js';
 import { escondeNome } from '../../functions/remedios-lista.js';
 import { loteDiario } from './lote.js';
 import { socialRoute } from './social.js';
@@ -214,6 +216,9 @@ export function cleanProfile(p, me) {
   return {
     name: me.name,
     ia: p.ia === true, // a pessoa autorizou a IA no app (sem isso, só frases prontas)
+    // o que ela contou de si (relacionamento, filhos, ânimo) e o time: só com a IA autorizada, para as notificações falarem com ela
+    ...(p.ia === true && limpaVida(p.vida) ? { vida: limpaVida(p.vida) } : {}),
+    ...(p.ia === true && porTimeApp(p.time) ? { time: p.time } : {}),
     date: day(p.date),
     ...(fusoOk(p.tz) ? { tz: p.tz } : {}),
     prefs: {
