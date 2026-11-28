@@ -3,7 +3,7 @@
    Vale para vitória, empate, derrota e notícia. Cada cartão sorteia o visual e as frases (não fica repetitivo). */
 import { porTime } from '../functions/times.js';
 import { ALMA } from './times-alma.js';
-import { roupa, cachecol } from './roupas.js';
+import { roupa } from './roupas.js';
 import { retrato } from './sininho.js';
 
 const W = 1080, H = 1920, MARROM = '#2A1408', AMARELO = '#FFD21E', ROXO = '#5B2A86', VERMELHO = '#E8392E', CREME = '#FFF4E3';
@@ -43,24 +43,45 @@ function sino(c, x, y, s) { // o sininho do logo
   c.strokeStyle = '#FFB000'; c.lineWidth = 7; c.beginPath(); c.arc(0, -38, 9, Math.PI, 0); c.stroke();
   c.restore();
 }
-/** pinta a camisa (padrão do time) por cima do corpo do Lembra */
+/** veste o Lembra com uma camiseta de verdade (gola, mangas e barra), no padrão do time.
+    Medidas tiradas do desenho do Lembra: a boca termina em ~70% da altura, o corpo vai de ~21% a ~79% da largura
+    e os pés começam em ~86%. A camiseta fica abaixo da boca: o rosto nunca é coberto. */
 function camisa(cv, cam) {
   const w = cv.width, h = cv.height, o = document.createElement('canvas'); o.width = w; o.height = h;
   const c = o.getContext('2d'); c.drawImage(cv, 0, 0);
-  c.globalCompositeOperation = 'source-atop';
-  const x0 = w * 0.18, x1 = w * 0.82, y0 = h * 0.675, y1 = h * 0.86, cs = cam.cores;
-  c.save(); c.beginPath(); c.rect(x0, y0, x1 - x0, y1 - y0); c.clip();
-  c.fillStyle = cs[0]; c.fillRect(x0, y0, x1 - x0, y1 - y0);
-  const larg = (x1 - x0), alt = (y1 - y0);
-  if (cam.c === 'lh') { const n = 7; for (let i = 0; i < n; i++) { c.fillStyle = cs[i % cs.length]; c.fillRect(x0, y0 + (i * alt) / n, larg, alt / n + 1); } }
-  else if (cam.c === 'lv') { const n = 9; for (let i = 0; i < n; i++) { c.fillStyle = cs[i % cs.length]; c.fillRect(x0 + (i * larg) / n, y0, larg / n + 1, alt); } }
-  else if (cam.c === 'tri') { const n = 9; for (let i = 0; i < n; i++) { c.fillStyle = cs[i % 3] || cs[0]; c.fillRect(x0 + (i * larg) / n, y0, larg / n + 1, alt); } }
-  else if (cam.c === 'diag') { c.fillStyle = cs[1]; c.beginPath(); c.moveTo(x0, y0 + alt * 0.05); c.lineTo(x0 + larg * 0.22, y0); c.lineTo(x1, y0 + alt * 0.78); c.lineTo(x1 - larg * 0.22, y1); c.closePath(); c.fill(); }
-  else if (cam.c === 'faixa') { c.fillStyle = cs[1]; c.fillRect(x0, y0 + alt * 0.3, larg, alt * 0.2); if (cs[2]) { c.fillStyle = cs[2]; c.fillRect(x0, y0 + alt * 0.5, larg, alt * 0.14); } }
-  // gola e sombra leve: parece roupa, não pintura
-  c.fillStyle = 'rgba(0,0,0,.12)'; c.fillRect(x0, y1 - alt * 0.12, larg, alt * 0.12);
-  c.fillStyle = cs.find((x) => x !== cs[0]) || '#fff'; c.beginPath(); c.ellipse(w / 2, y0 + 4, larg * 0.16, alt * 0.09, 0, 0, Math.PI); c.fill();
+  const X = (x) => x * w, Y = (y) => y * h, cs = cam.cores;
+  const forma = () => {
+    c.beginPath();
+    c.moveTo(X(0.37), Y(0.712));
+    c.quadraticCurveTo(X(0.5), Y(0.75), X(0.63), Y(0.712));            // gola
+    c.quadraticCurveTo(X(0.71), Y(0.716), X(0.76), Y(0.73));           // ombro direito
+    c.lineTo(X(0.83), Y(0.765)); c.lineTo(X(0.805), Y(0.805));          // manga direita
+    c.lineTo(X(0.77), Y(0.792));
+    c.quadraticCurveTo(X(0.785), Y(0.83), X(0.78), Y(0.858));          // lateral direita
+    c.quadraticCurveTo(X(0.5), Y(0.875), X(0.22), Y(0.858));           // barra
+    c.quadraticCurveTo(X(0.215), Y(0.83), X(0.23), Y(0.792));          // lateral esquerda
+    c.lineTo(X(0.195), Y(0.805)); c.lineTo(X(0.17), Y(0.765));          // manga esquerda
+    c.lineTo(X(0.24), Y(0.73));
+    c.quadraticCurveTo(X(0.29), Y(0.716), X(0.37), Y(0.712));          // ombro esquerdo
+    c.closePath();
+  };
+  c.save(); c.shadowColor = 'rgba(60,20,0,.25)'; c.shadowBlur = w * 0.012; c.shadowOffsetY = h * 0.006; forma(); c.fillStyle = cs[0]; c.fill(); c.restore();
+  c.save(); forma(); c.clip();
+  const x0 = X(0.15), x1 = X(0.85), y0 = Y(0.7), y1 = Y(0.88), alt = y1 - y0;
+  if (cam.c === 'lh') { const n = 6; for (let i = 0; i < n; i++) { c.fillStyle = cs[i % cs.length]; c.fillRect(x0, y0 + (i * alt) / n, x1 - x0, alt / n + 1); } }
+  else if (cam.c === 'lv' || cam.c === 'tri') { const lv = w * 0.05; for (let i = 0, x = X(0.5) - lv * 7.5; x < x1; i++, x += lv) { c.fillStyle = cam.c === 'tri' ? cs[i % 3] : cs[i % cs.length]; c.fillRect(x, y0, lv + 1, alt); } }
+  else if (cam.c === 'diag') { c.fillStyle = cs[1]; c.beginPath(); c.moveTo(X(0.3), y0); c.lineTo(X(0.4), y0); c.lineTo(X(0.72), y1); c.lineTo(X(0.62), y1); c.closePath(); c.fill(); }
+  else if (cam.c === 'faixa') { c.fillStyle = cs[1]; c.fillRect(x0, Y(0.765), x1 - x0, h * 0.03); if (cs[2]) { c.fillStyle = cs[2]; c.fillRect(x0, Y(0.795), x1 - x0, h * 0.02); } }
+  // tecido: luz no peito, sombra na barra e nas laterais
+  const g = c.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, 'rgba(255,255,255,.22)'); g.addColorStop(0.45, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(0,0,0,.18)');
+  c.fillStyle = g; c.fillRect(x0, y0, x1 - x0, alt);
+  const gl = c.createLinearGradient(X(0.2), 0, X(0.8), 0); gl.addColorStop(0, 'rgba(0,0,0,.14)'); gl.addColorStop(0.25, 'rgba(0,0,0,0)'); gl.addColorStop(0.75, 'rgba(0,0,0,0)'); gl.addColorStop(1, 'rgba(0,0,0,.14)');
+  c.fillStyle = gl; c.fillRect(x0, y0, x1 - x0, alt);
   c.restore();
+  // contorno e gola na segunda cor (acabamento)
+  c.save(); forma(); c.lineWidth = w * 0.006; c.strokeStyle = 'rgba(60,20,0,.35)'; c.stroke(); c.restore();
+  const golaCor = cs.find((x) => x.toLowerCase() !== String(cs[0]).toLowerCase()) || '#fff';
+  c.save(); c.beginPath(); c.moveTo(X(0.37), Y(0.712)); c.quadraticCurveTo(X(0.5), Y(0.75), X(0.63), Y(0.712)); c.lineWidth = h * 0.012; c.strokeStyle = golaCor; c.lineCap = 'round'; c.stroke(); c.restore();
   return o;
 }
 /** um Lembra pequeno da torcida, com a camisa */
@@ -139,7 +160,7 @@ export async function cartaoResultado({ time, meu, dele, rivalId = '', rival = '
     c.save(); c.lineWidth = 10; c.strokeStyle = escuro ? 'rgba(255,255,255,.9)' : '#fff'; c.beginPath(); c.roundRect(40, sy, W - 80, sh, 60); c.stroke(); c.restore();
   }
   // o Lembra com a camisa do time, bandeira e cachecol
-  const v = { ...roupa('torcida', t.cores), ros: cachecol(t.cores), mood: T.mood, boca: res === 'derrota' ? 'tristinha' : 'riso' };
+  const v = { ...roupa('torcida', t.cores), mood: T.mood, boca: res === 'derrota' ? 'tristinha' : 'riso' }; // a camisa no lugar do cachecol
   let snh = await retrato(v, 1200, 0.6).catch(() => null);
   if (snh) { snh = camisa(snh, t.cam); const lw = 760, lh = lw * (snh.height / snh.width); c.drawImage(snh, (W - lw) / 2, sy + sh - lh + 80, lw, lh); }
   // placar: o número exato, grande, com as siglas
@@ -186,7 +207,7 @@ export async function cartaoNoticia({ time, titulo, descricao = '', fonte: fnt =
     for (let i = 0; i < 10; i++) torcedor(c, 95 + i * 100, sy + 90, 0.85, t.cam, i);
     c.restore(); c.save(); c.lineWidth = 10; c.strokeStyle = '#fff'; c.beginPath(); c.roundRect(40, sy, W - 80, sh, 60); c.stroke(); c.restore();
   }
-  const v = { ...roupa('torcida', t.cores), ros: cachecol(t.cores), mood: 'surpreso' };
+  const v = { ...roupa('torcida', t.cores), mood: 'surpreso' };
   let snh = await retrato(v, 1100, 0.6).catch(() => null);
   if (snh) { snh = camisa(snh, t.cam); const lw = Math.min(700, (sh + 120) * (snh.width / snh.height)), lh = lw * (snh.height / snh.width); c.drawImage(snh, (W - lw) / 2, H - 300 - lh + 70, lw, lh); }
   pilula(c, W / 2 - 300, H - 220, 600, 96, ROXO); c.fillStyle = '#fff'; c.font = fonte(900, 44); c.fillText('Li primeiro no Lembra 👀', W / 2, H - 157);
