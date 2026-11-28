@@ -707,7 +707,21 @@ function encosta(side, y, desde) {
 function voltaCanto() {
   livre = null; gravaPos();
   if (!B) return;
-  soltaMove(); B.classList.remove('is-free', 'is-drag', 'bub-baixo'); B.style.left = B.style.top = ''; B.dataset.side = 'r';
+  /* deslize de verdade: sai de onde ele está e vai até o canto (sem pular) */
+  const de = B.getBoundingClientRect();
+  B.classList.remove('is-free', 'is-drag', 'bub-baixo'); B.style.transition = 'none'; B.style.left = B.style.top = ''; B.style.removeProperty('transform');
+  B.dataset.side = 'r';
+  const para = B.getBoundingClientRect();
+  const dx = de.left - para.left, dy = de.top - para.top;
+  if (calmo() || (Math.abs(dx) < 4 && Math.abs(dy) < 4)) { B.style.transition = ''; return; }
+  B.style.setProperty('transform', `translate3d(${dx.toFixed(1)}px, ${dy.toFixed(1)}px, 0)`, 'important');
+  void B.offsetWidth;
+  const dist = Math.hypot(dx, dy), dur = Math.min(900, Math.max(420, dist * 0.9));
+  B.style.transition = `transform ${dur}ms cubic-bezier(.22,.9,.3,1)`;
+  requestAnimationFrame(() => requestAnimationFrame(() => { if (!B) return; B.style.setProperty('transform', 'translate3d(0px, 0px, 0)', 'important'); }));
+  const fim = () => { if (!B) return; B.style.transition = ''; B.style.removeProperty('transform'); B.removeEventListener('transitionend', fim); };
+  B.addEventListener('transitionend', fim);
+  setTimeout(fim, dur + 120);
 }
 const zona = (side, y) => { const cy = y + FIGH / 2, H = innerHeight; return cy < H * 0.3 ? 'topo' : cy > H * 0.72 ? 'baixo' : side === 'l' ? 'esq' : 'dir'; };
 
