@@ -41,7 +41,7 @@ export const temCamera = () => !!(navigator.mediaDevices && navigator.mediaDevic
 /* a câmera já liberada fica pausada uns minutos depois de fechar: abrir de novo nesse tempo reaproveita a mesma
    (no iPhone, desligar e ligar outra vez faz o sistema pedir a permissão de novo) */
 let guardada = null;
-const GUARDA_MS = 4 * 60e3;
+const GUARDA_MS = 60 * 60e3; // pausada (sem imagem) enquanto o app está em uso: abrir de novo não pede permissão
 function pegaGuardada(chave) {
   if (!guardada || guardada.chave !== chave) return null;
   const f = guardada.fluxo; f.dev = guardada.dev; clearTimeout(guardada.timer); guardada = null;
@@ -151,8 +151,25 @@ export function abreCamera({ soCamera = false, lado = 'environment', arrasto = n
       }
     };
     w.querySelector('[data-x]').onclick = () => sai(null);
+    const quadro = w.querySelector('.scam__quadro');
+    // vai e volta (como no Instagram): com um dedo, arrastar da direita para a esquerda leva a câmera junto e fecha
+    let volta = null;
+    quadro.addEventListener('touchstart', (e) => { if (e.touches.length === 1 && !w.classList.contains('is-arrasto')) { const t = e.touches[0]; volta = { x: t.clientX, y: t.clientY, t: performance.now(), dx: 0, ok: null }; } else volta = null; }, { passive: true });
+    quadro.addEventListener('touchmove', (e) => {
+      if (!volta || e.touches.length !== 1) { if (volta && volta.ok) { w.style.transition = 'transform .2s'; w.style.transform = ''; } volta = null; return; }
+      const t = e.touches[0], dx = t.clientX - volta.x, dy = t.clientY - volta.y;
+      if (volta.ok === null && Math.hypot(dx, dy) > 12) volta.ok = dx < 0 && -dx > Math.abs(dy) * 1.3;
+      if (!volta.ok) return;
+      volta.dx = Math.min(0, dx); w.style.transition = 'none'; w.style.transform = `translate3d(${volta.dx}px,0,0)`;
+    }, { passive: true });
+    quadro.addEventListener('touchend', () => {
+      if (!volta || !volta.ok) { volta = null; return; }
+      const v = -volta.dx / Math.max(1, performance.now() - volta.t), fecha = -volta.dx > innerWidth * 0.3 || (v > 0.5 && -volta.dx > 50); volta = null;
+      if (fecha) { w.style.transition = 'transform .24s ease-in'; w.style.transform = 'translate3d(-100%,0,0)'; setTimeout(() => sai(null), 230); }
+      else { w.style.transition = 'transform .22s cubic-bezier(.2,.9,.3,1)'; w.style.transform = 'translate3d(0,0,0)'; }
+    });
     // pinça: abrir os dedos aproxima, fechar afasta (passando de 1x para 0,5x troca para a ultra-angular)
-    const quadro = w.querySelector('.scam__quadro'); let pinca = null;
+    let pinca = null;
     const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
     quadro.addEventListener('touchstart', (e) => { if (e.touches.length === 2) { pinca = { d0: dist(e.touches), n0: nivel }; e.preventDefault(); } }, { passive: false });
     quadro.addEventListener('touchmove', (e) => {
