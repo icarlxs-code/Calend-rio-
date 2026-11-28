@@ -413,6 +413,11 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
       if (G) uiSom('clique');
       err = validate();
       if (err) return showErr();
+      // celular já usado em outra conta: não deixa seguir (uma conta por número)
+      if (f.phone && wrap.querySelector('[data-f="phone"]')) {
+        const u = await telUnico(f.phone);
+        if (u === false) { err = 'Esse celular já está cadastrado em outra conta. Use outro número ou deixe em branco.'; return showErr(); }
+      }
       if (step < STEPS.length - 1) { step++; sub = 0; calcDone = false; render(); return; }
       // resumo: cálculo → uma conquista por página → concordância
       if (sub <= conquests().length) { sub++; if (sub <= conquests().length) tick(sub); render(); return; }
@@ -429,6 +434,15 @@ export function openFicha({ initial = {}, onDone, onClose, required = true } = {
   return { close };
 }
 
+/* telefone único: true = livre (e já fica reservado para esta conta), false = de outra conta, null = sem internet (não trava) */
+export async function telUnico(telefone) {
+  try {
+    const { api, server } = await import('../avisos.js');
+    if (store.mode !== 'cloud' || !server()) return null;
+    const r = await api('/conta/unico', { ws: '', telefone, reservar: true });
+    return !!(r && r.ok);
+  } catch { return null; }
+}
 /* ---------- salvar e quando pedir a ficha ---------- */
 const KEYS = ['name', 'nickname', 'pronoun', 'gender', 'birth', 'phone', 'profession', 'area', 'arch', 'role', 'workplace', 'journey', 'volume', 'method', 'workStart', 'workEnd', 'workDays',
   'wake', 'sleep', 'lunch', 'difficulties', 'forget', 'lead', 'tone', 'freq', 'faith', 'water', 'meals', 'goal',

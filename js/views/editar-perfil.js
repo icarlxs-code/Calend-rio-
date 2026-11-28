@@ -95,6 +95,7 @@ export function openEditProfile(after) {
       const name = lim(d.name, 60); if (!/\p{L}{2}/u.test(name)) return falha('name', 'Escreva seu nome.');
       const nick = lim(d.nickname, 30); if (nick && !/\p{L}/u.test(nick)) return falha('nickname', 'O apelido precisa ter pelo menos uma letra.');
       const te = erroTel(d.phone); if (te) return falha('phone', te);
+      if (d.phone && d.phone !== (p.phone || '')) { const F = await import('./ficha.js'); if ((await F.telUnico(d.phone)) === false) return falha('phone', 'Esse celular já está cadastrado em outra conta.'); }
       const era = ageOf(p.birth), vai = ageOf(d.birth);
       if (p.birth && !d.birth) return falha('birth', 'Informe a sua data de nascimento.');
       if (d.birth && (vai === null || vai > 110 || d.birth > new Date().toISOString().slice(0, 10))) return falha('birth', 'Confira o dia, o mês e o ano.');
