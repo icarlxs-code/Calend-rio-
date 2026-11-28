@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "grok-imagine": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["tools/grok-mcp/server.mjs"],
+      "env": {
+        "XAI_API_KEY": "${XAI_API_KEY:-proxy-injected}"
+      }
+    }
+  }
+}
