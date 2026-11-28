@@ -4,7 +4,10 @@
 import { sininho, alive, setMood, act, say, veste } from './sininho.js';
 import { roupa, cachecol } from './roupas.js';
 import { icon } from './icons.js';
-import { locutor, temVoz, vozLigada, ligaVoz, duracao, carrega, corte } from './voz-novidades.js';
+import { locutor, temVoz, duracao, carrega, corte } from './voz-novidades.js';
+/* sem narração nas novidades: o personagem não fala, só aparece e mostra o texto */
+const vozLigada = () => false;
+const ligaVoz = () => {};
 import { anel, bolinha } from './anel.js';
 import { store } from './store.js';
 import { porTime, achaTimes } from '../functions/times.js';
@@ -111,7 +114,7 @@ export function abreNovidades(quadros, aoFechar) {
   if (aberta || !quadros.length) return null;
   let i = 0, vez = 0; const antes = document.activeElement;
   const w = document.createElement('div'); w.className = 'nv'; w.tabIndex = -1; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', 'Novidades do Lembra');
-  w.innerHTML = `<div class="nv__fundo" data-fundo></div><i class="nv__bola" data-bola hidden></i><div class="nv__bars">${quadros.map(() => '<i><b></b></i>').join('')}</div><div class="nv__topo"><button class="nv__som" data-som></button><button class="nv__pula" data-pula>Pular</button></div>
+  w.innerHTML = `<div class="nv__fundo" data-fundo></div><i class="nv__bola" data-bola hidden></i><div class="nv__bars">${quadros.map(() => '<i><b></b></i>').join('')}</div><div class="nv__topo"><button class="nv__pula" data-pula>Pular</button></div>
     <div class="nvarte" data-arte hidden></div>
     <div class="nv__palco" data-palco></div>
     <div class="nv__baixo snhwrap"><h2 data-t></h2><div class="snhb nv__fala"><span class="snhb__txt" aria-live="polite"></span></div><span class="nv__snh">${sininho('feliz', { size: 220 })}</span></div>
@@ -125,8 +128,6 @@ export function abreNovidades(quadros, aoFechar) {
   const calmo = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const rapidez = (s) => (vozLigada() && temVoz(s.c) ? Math.round((duracao(s.c) * 0.85) / s.s.length) : 20);
   const rotulo = () => {
-    const on = vozLigada(), b = q('[data-som]'); b.hidden = !temVoz(quadros[i].c);
-    b.innerHTML = icon(on ? 'volume' : 'mudo', 24); b.setAttribute('aria-label', on ? 'Desligar a voz' : 'Ligar a voz');
     q('[data-ok] span').textContent = espera ? 'Ouvir' : i < quadros.length - 1 ? 'Próxima' : 'Bora!';
   };
   const show = (s) => s.s.includes('|');
@@ -220,9 +221,8 @@ export function abreNovidades(quadros, aoFechar) {
     fala();
   };
   const anda = (n) => { if (espera && n > 0) { const s = quadros[i]; if (show(s)) { tiraCena(); } else say(snh(), s.s, { bubble: q('.snhb__txt'), speed: rapidez(s) }); vez += 1; fala(); return; } if (i + n < 0) return; if (i + n >= quadros.length) { fecha(); return; } i += n; mostra(n); import('./sound.js').then((m) => m.msgVai && m.msgVai()).catch(() => {}); };
-  const tecla = (e) => { if (e.key === 'Escape') { e.preventDefault(); fecha(); } else if (e.key === 'ArrowRight' || (e.key === 'Enter' && document.activeElement === w)) anda(1); else if (e.key === 'ArrowLeft') anda(-1); else if (e.key === 'Tab') { const f = [q('[data-som]'), q('[data-pula]'), q('[data-ok]')].filter((x) => !x.hidden), k = f.indexOf(document.activeElement); e.preventDefault(); f[k < 0 ? f.length - 1 : (k + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus(); } };
+  const tecla = (e) => { if (e.key === 'Escape') { e.preventDefault(); fecha(); } else if (e.key === 'ArrowRight' || (e.key === 'Enter' && document.activeElement === w)) anda(1); else if (e.key === 'ArrowLeft') anda(-1); else if (e.key === 'Tab') { const f = [q('[data-pula]'), q('[data-ok]')].filter((x) => !x.hidden), k = f.indexOf(document.activeElement); e.preventDefault(); f[k < 0 ? f.length - 1 : (k + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus(); } };
   document.addEventListener('keydown', tecla, true);
-  q('[data-som]').onclick = () => { ligaVoz(!vozLigada()); fala(); };
   q('[data-pula]').onclick = fecha; q('[data-ok]').onclick = () => anda(1); q('[data-vai]').onclick = () => anda(1); q('[data-volta]').onclick = () => anda(-1);
   requestAnimationFrame(() => w.classList.add('is-in')); mostra(); w.focus({ preventScroll: true });
   return { fecha };
