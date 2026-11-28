@@ -120,7 +120,12 @@ export function abreCamera({ soCamera = false, lado = 'environment', arrasto = n
       </div>`;
     garanteEstiloCamera(); aplicaTelaCheia(w); document.body.appendChild(w); document.body.classList.add('has-scam');
     const v = w.querySelector('video'), msg = w.querySelector('.scam__msg');
-    v.addEventListener('playing', () => v.classList.add('is-vivo'));
+    // a tela só aparece quando o vídeo já está rodando com imagem (nada de quadro parcial ou borda enquanto a câmera acorda)
+    let revelou = false;
+    const revela = () => { if (revelou || acabou) return; revelou = true; v.classList.add('is-vivo'); w.classList.add('is-in'); };
+    v.addEventListener('playing', revela);
+    v.addEventListener('loadeddata', () => { if (v.videoWidth) revela(); });
+    setTimeout(revela, 1800); // se a câmera demorar, mostra mesmo assim (nunca fica tela preta para sempre)
     const para = () => { if (fluxo) fluxo.getTracks().forEach((t) => t.stop()); fluxo = null; };
     const sai = (x) => { if (acabou) return; acabou = true; guarda(fluxo, chaveAtual(), opts.deviceId); fluxo = null; w.classList.add('is-out'); setTimeout(() => { w.remove(); document.body.classList.remove('has-scam'); }, 220); fim(x); };
     const opts = { deviceId: null };
@@ -232,7 +237,7 @@ export function abreCamera({ soCamera = false, lado = 'environment', arrasto = n
         confirmar: () => { w.style.transition = 'transform .28s cubic-bezier(.2,.9,.3,1)'; w.style.transform = 'translate3d(0,0,0)'; setTimeout(() => { w.classList.remove('is-arrasto'); w.style.transition = ''; w.style.transform = ''; }, 300); },
         cancelar: () => { w.style.transition = 'transform .24s ease-in'; w.style.transform = 'translate3d(-100%,0,0)'; setTimeout(() => sai(null), 240); },
       });
-    } else requestAnimationFrame(() => w.classList.add('is-in'));
+    } else { /* a revelação vem quando o vídeo estiver rodando */ }
     liga();
   });
 }
