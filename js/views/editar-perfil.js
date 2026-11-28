@@ -61,7 +61,7 @@ export function openEditProfile(after) {
       <section class="ep__sec"><h3>O que seus amigos veem</h3><div class="list">
         ${menor() ? `<p class="fhelp ep__menor">${icon('shield', 14)} Para sua segurança, cidade e idade ficam escondidas até os 18 anos.</p>` : `<label class="list__row"><span><b>Minha cidade</b><small>${esc([d.cidade, d.uf].filter(Boolean).join(', ') || 'preencha acima')}</small></span><input type="checkbox" class="switch" data-chk="vCidade" ${d.vCidade ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Minha idade</b><small>só o número, nunca a data</small></span><input type="checkbox" class="switch" data-chk="vIdade" ${d.vIdade ? 'checked' : ''}></label>`}</div></section>
-        <section class="ep__sec"><div class="list"><label class="list__row"><span><b>Ver quem visitou meu perfil</b><small>Justo com todo mundo: só dá para ver quem visitou você se você também deixar os outros verem as suas visitas.</small></span><input type="checkbox" class="switch" data-vis ${visivel ? 'checked' : ''}></label></div></section>
+        <section class="ep__sec"><div class="list"><button type="button" class="list__row" data-notif><span><b>Minhas notificações</b><small>Escolha o que quer receber e quanto</small></span>${icon('right', 18)}</button><label class="list__row"><span><b>Ver quem visitou meu perfil</b><small>Justo com todo mundo: só dá para ver quem visitou você se você também deixar os outros verem as suas visitas.</small></span><input type="checkbox" class="switch" data-vis ${visivel ? 'checked' : ''}></label></div></section>
     </form>`; };
   return openSheet({ className: 'sheet--tall', html: html(), onMount: (s) => {
     const el = s.el, q = (x) => el.querySelector(x), redesenha = () => { const sc = el.querySelector('.sheet__inner') || el, y = sc.scrollTop; s.set(html()); sc.scrollTop = y; };
@@ -75,6 +75,8 @@ export function openEditProfile(after) {
     });
     const chaves = () => el.querySelectorAll('[data-chk]').forEach((c) => (c.onchange = () => { d[c.dataset.chk] = c.checked; }));
     const liga = async (on) => { try { const S = await import('../social.js'); return await S.call('/friends/visibilidade', { on }); } catch { return null; } };
+    const nb = q('[data-notif]');
+    if (nb) nb.onclick = () => import('../notif-prefs.js').then((m) => m.abreNotifPrefs({ forca: true }));
     const vis = q('[data-vis]');
     if (vis) {
       vis.onchange = async () => { const on = vis.checked; const r = await liga(on); if (!r) { vis.checked = !on; toast('Sem internet agora. Tente de novo quando voltar.'); } else { visivel = on; } };

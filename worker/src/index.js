@@ -27,6 +27,8 @@ import { geraFala } from './fala.js';
 import { lembraAtualizar, guardaVersao } from './atualiza-aviso.js';
 import { lembraStory } from './story-lembra.js';
 import { categoriaDe, cabe } from './equilibrio.js';
+import { quer, limiteDia, somaEnvio, limpaNp, CATS } from './notif-prefs.js';
+const comN = (url = './', cat) => { const [base, hash = ''] = String(url).split('#'); return `${base}${base.includes('?') ? '&' : '?'}n=${cat}${hash ? '#' + hash : ''}`; };
 import { orcamento as futOrcamento } from './fut-api.js';
 import { porHora, usoIA } from './cota.js';
 import { brNow, fusoOk } from './coach.js';
@@ -60,8 +62,16 @@ async function sendToMember(env, member, msg, pref, statuses = [], meter = null)
   const list = Object.entries(devs).filter(([, d]) => !(pref && d.prefs && d.prefs[pref] === false));
   if (!list.length) return 0;
   // equilíbrio: mensagens de conversa (stories, amigos, visitas, dicas, ranking) se revezam e têm limite diário
-  const cat = categoriaDe(msg && msg.tag);
-  if (cat && !(await cabe(env, member, cat, Date.now())).ok) return 0;
+  // e respeita o que a própria pessoa escolheu (tipos ligados/desligados e quanto quer receber)
+  const cat = categoriaDe(msg && msg.tag, msg && msg.kind);
+  if (cat) {
+    const np = await env.CAL.get(`np:${member}`, 'json'), media = (await env.CAL.get(`npm:${member}`, 'json')) || {};
+    if (!quer(np, cat)) return 0;
+    if (!(await cabe(env, member, cat, Date.now(), limiteDia(np, cat, media))).ok) return 0;
+    await env.CAL.put(`npm:${member}`, JSON.stringify(somaEnvio(media, cat)), { expirationTtl: 30 * 86400 });
+    // o link leva o tipo (?n=) para o app contar se a pessoa abriu: é assim que a média aprende
+    msg = { ...msg, url: comN(msg.url, cat) };
+  }
   const vapid = await getVapid(env);
   let sent = 0;
   const dead = [];
@@ -274,7 +284,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/friends/achar': 20, '/friends/id': 15, '/futebol': 20, '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/frase-queixa': 20, '/coach': 20, '/ask': 15, '/desabafo': 8, '/fala': 20, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/story-like': 60, '/friends/story-comment': 15, '/friends/story-comments': 60, '/friends/story-comment-del': 30, '/friends/story-repost': 6, '/friends/msg-send': 40, '/friends/msg-list': 60, '/friends/msg-media': 90, '/friends/msg-react': 60, '/friends/msg-del': 30, '/friends/convs': 40, '/friends/visit': 30, '/friends/visitors': 20, '/friends/visibilidade': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/friends/suggest': 20, '/friends/email': 15, '/friends/perto': 10, '/friends/close': 30, '/friends/dismiss': 30, '/friends/ping': 40, '/staff/me': 30, '/staff/list': 20, '/staff/set': 20, '/staff/remove': 20, '/staff/metrics': 20, '/staff/reports': 20, '/staff/report-action': 30, '/lb/report': 20, '/lb/board': 40 };
+const LIMITS = { '/friends/achar': 20, '/friends/id': 15, '/futebol': 20, '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/frase-queixa': 20, '/coach': 20, '/ask': 15, '/desabafo': 8, '/fala': 20, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/story-like': 60, '/friends/story-comment': 15, '/friends/story-comments': 60, '/friends/story-comment-del': 30, '/friends/story-repost': 6, '/friends/msg-send': 40, '/friends/msg-list': 60, '/friends/msg-media': 90, '/friends/msg-react': 60, '/friends/msg-del': 30, '/friends/convs': 40, '/friends/visit': 30, '/friends/visitors': 20, '/friends/visibilidade': 20, '/prefs/notif': 20, '/notif/abriu': 60, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/friends/suggest': 20, '/friends/email': 15, '/friends/perto': 10, '/friends/close': 30, '/friends/dismiss': 30, '/friends/ping': 40, '/staff/me': 30, '/staff/list': 20, '/staff/set': 20, '/staff/remove': 20, '/staff/metrics': 20, '/staff/reports': 20, '/staff/report-action': 30, '/lb/report': 20, '/lb/board': 40 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -762,6 +772,23 @@ async function handle(req, env) {
       if (!st) return reply(env, req, { error: 'Story não encontrado.' }, 404);
       const v = Object.entries(st.views).sort((a, b) => b[1] - a[1]).slice(0, 100);
       return reply(env, req, { ok: true, viewers: await Promise.all(v.map(async ([u, at]) => ({ ...(await cardOf(u)), at, gostou: !!(st.likes && st.likes[u]), repostou: !!(st.reps && st.reps[u]) }))) });
+    }
+    // preferências de notificação: a própria pessoa escolhe (guardado na conta e no servidor)
+    if (url.pathname === '/prefs/notif') {
+      if (body.np && typeof body.np === 'object') {
+        const np = { ...limpaNp(body.np), v: 1, at: now };
+        await env.CAL.put(`np:${me.id}`, JSON.stringify(np));
+        return reply(env, req, { ok: true, np, tipos: CATS });
+      }
+      return reply(env, req, { ok: true, np: limpaNp(await env.CAL.get(`np:${me.id}`, 'json')), tipos: CATS });
+    }
+    // a pessoa abriu um aviso (o link leva ?n=tipo): conta para a média
+    if (url.pathname === '/notif/abriu') {
+      const n = clean(body.n, 20);
+      if (!CATS.some((c) => c.id === n)) return reply(env, req, { ok: true });
+      const media = (await env.CAL.get(`npm:${me.id}`, 'json')) || {};
+      await env.CAL.put(`npm:${me.id}`, JSON.stringify(somaEnvio(media, n, true)), { expirationTtl: 30 * 86400 });
+      return reply(env, req, { ok: true });
     }
     // justo: só vê quem visitou se também deixa as visitas dela aparecerem (a mesma chave vale nos dois sentidos)
     if (url.pathname === '/friends/visibilidade') {
