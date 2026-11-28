@@ -33,7 +33,9 @@ export async function guardaVersao(env, member, app, now = Date.now()) {
 export const AVISO = { title: '✨ Chegou versão nova do Lembra', body: 'Toque aqui para atualizar. Leva 2 segundos e você não perde nada.', tag: 'atualizar', url: './?atualizar=1' };
 
 /** uma rodada: de 5 em 5 min, só para quem está com versão antiga (até a pessoa atualizar). Novidade não é aviso: quem já está na versão no ar não recebe nada. */
-export async function lembraAtualizar(env, now, send, { max = 200 } = {}) {
+/* desligado: o aviso de "versão nova" só volta quando o dono pedir (ligado: true) */
+export async function lembraAtualizar(env, now, send, { max = 200, ligado = false } = {}) {
+  if (!ligado) return { motivo: 'desligado' };
   const bloco = String(Math.floor(now / BLOCO));
   if ((await env.CAL.get('upd:bloco')) === bloco) return { pulou: 'cedo' };
   await env.CAL.put('upd:bloco', bloco, { expirationTtl: 3600 });

@@ -11,16 +11,16 @@ test('avisa de 5 em 5 min quem está desatualizado; para quando atualiza; nunca 
   // uCaio nunca informou (app antigo): também é avisado
   const env1 = []; const send = async (e, m, msg) => env1.push([m, msg.tag]);
   const t0 = Date.parse('2026-11-28T15:00:00-03:00');
-  const r = await lembraAtualizar(env, t0, send);
+  const r = await lembraAtualizar(env, t0, send, { ligado: true });
   assert.deepEqual(env1.map(([m]) => m).sort(), ['uAna', 'uCaio']); assert.equal(env1[0][1], 'atualizar', 'mesma etiqueta: substitui o aviso anterior');
   assert.equal(r.emDia, 1);
-  assert.equal((await lembraAtualizar(env, t0 + 60e3, send)).pulou, 'cedo', 'no máximo um aviso a cada 5 min');
+  assert.equal((await lembraAtualizar(env, t0 + 60e3, send, { ligado: true })).pulou, 'cedo', 'no máximo um aviso a cada 5 min');
   await guardaVersao(env, 'uAna', { v: '2.33.0', b: 'novo1234' });
-  env1.length = 0; await lembraAtualizar(env, t0 + 10 * 60e3, send);
+  env1.length = 0; await lembraAtualizar(env, t0 + 10 * 60e3, send, { ligado: true });
   assert.deepEqual(env1.map(([m]) => m), ['uCaio'], 'quem atualizou para de receber (novidade não é aviso)');
-  env1.length = 0; await lembraAtualizar(env, Date.parse('2026-11-28T23:20:00-03:00'), send);
+  env1.length = 0; await lembraAtualizar(env, Date.parse('2026-11-28T23:20:00-03:00'), send, { ligado: true });
   assert.equal(env1.length, 1, 'até 23h30 ainda avisa quem está desatualizado');
-  env1.length = 0; await lembraAtualizar(env, Date.parse('2026-11-28T23:30:00-03:00'), send);
+  env1.length = 0; await lembraAtualizar(env, Date.parse('2026-11-28T23:30:00-03:00'), send, { ligado: true });
   assert.equal(env1.length, 0, 'de madrugada, nada');
 });
 test('celular antigo que ainda pinga não reabre o aviso de quem já viu as novidades na versão nova', async () => {
@@ -29,7 +29,7 @@ test('celular antigo que ainda pinga não reabre o aviso de quem já viu as novi
   await guardaVersao(env, 'uOwner', { v: '2.34.0', b: 'nov5678', nv: true });
   await guardaVersao(env, 'uOwner', { v: '2.33.0', b: 'velho1', nv: false }); // outro aparelho, versão antiga
   const sent = []; const send = async (e, m) => sent.push(m);
-  const r = await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send);
+  const r = await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send, { ligado: true });
   assert.equal(sent.length, 0, 'não reabre o aviso'); assert.equal(r.emDia, 1);
 });
 test('quem tem um aparelho na versão nova nunca recebe "atualize", mesmo com outro aparelho antigo', async () => {
@@ -39,7 +39,7 @@ test('quem tem um aparelho na versão nova nunca recebe "atualize", mesmo com ou
   await guardaVersao(env, 'uDual', { v: '2.33.0', b: 'velho1', nv: false });
   await guardaVersao(env, 'uDual', { v: '2.33.0', b: 'velho1', nv: false });
   const titles = []; const send = async (e, m, msg) => titles.push(msg.title);
-  await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send);
+  await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send, { ligado: true });
   assert.ok(titles.every((t) => !/Chegou versão nova/.test(t)), 'nada de "atualize"');
 });
 test('por aparelho: o aparelho já atualizado não recebe "atualize"; o atrasado recebe', async () => {
@@ -49,7 +49,7 @@ test('por aparelho: o aparelho já atualizado não recebe "atualize"; o atrasado
   await CAL.put('dev:uAllNew', JSON.stringify({ 'd-a': { b: 'nov7777', subscription: {} } }));
   await guardaVersao(env, 'uPhone', { v: '2.35.0', b: 'nov7777', nv: false });
   const calls = []; const send = async (e, m, msg, excl) => calls.push([m, excl]);
-  await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send);
+  await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send, { ligado: true });
   assert.deepEqual(calls, [], 'um aparelho atualizado basta: nenhum aparelho da pessoa recebe mais');
 });
 test('aparelho sem versão informada não fica para sempre recebendo "atualize" se a pessoa já está na versão no ar', async () => {
@@ -58,6 +58,13 @@ test('aparelho sem versão informada não fica para sempre recebendo "atualize" 
   await CAL.put('dev:uSem', JSON.stringify({ 'd-x': { subscription: {} } }));
   await guardaVersao(env, 'uSem', { v: '2.35.0', b: 'nov8888', nv: true });
   const calls = []; const send = async (e, m, msg, excl) => calls.push([m, excl]);
-  const r = await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send);
+  const r = await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send, { ligado: true });
   assert.equal(calls.length, 0); assert.equal(r.emDia, 1);
+});
+test('desligado por padrão: nenhum aviso de versão nova sai sem o dono ligar', async () => {
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ version: '2.35.0', build: 'nov1111' }) });
+  const CAL = kv(), env = { CAL }; await CAL.put('dev:uX', '{}');
+  const calls = []; const send = async (e, m) => calls.push(m);
+  const r = await lembraAtualizar(env, Date.parse('2026-11-28T15:00:00-03:00'), send);
+  assert.equal(r.motivo, 'desligado'); assert.equal(calls.length, 0);
 });
