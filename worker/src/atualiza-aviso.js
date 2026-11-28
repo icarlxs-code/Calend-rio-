@@ -2,7 +2,7 @@
    - a versão publicada vem do próprio site (version.json), conferida a cada 5 min;
    - a versão de cada pessoa é a que o app informa ao abrir (ver:{pessoa});
    - o aviso usa sempre a mesma etiqueta: o novo SUBSTITUI o anterior no celular (não empilha 12 avisos);
-   - nunca de madrugada (22h às 8h, horário de Brasília). */
+   - nunca de madrugada (22h45 às 8h, horário de Brasília). */
 import { brNow } from './coach.js';
 const BLOCO = 5 * 60e3;
 
@@ -27,13 +27,14 @@ export async function guardaVersao(env, member, app, now = Date.now()) {
 }
 export const AVISO = { title: '✨ Chegou versão nova do Lembra', body: 'Toque aqui para atualizar. Leva 2 segundos e você não perde nada.', tag: 'atualizar', url: './?atualizar=1' };
 
-/** uma rodada: de 5 em 5 min, avisa quem tem aparelho cadastrado e não está na versão no ar */
+/** uma rodada: de 5 em 5 min, avisa quem tem aparelho cadastrado e não está na versão no ar (até 22h45 e a partir das 8h) */
 export async function lembraAtualizar(env, now, send, { max = 200 } = {}) {
   const bloco = String(Math.floor(now / BLOCO));
   if ((await env.CAL.get('upd:bloco')) === bloco) return { pulou: 'cedo' };
   await env.CAL.put('upd:bloco', bloco, { expirationTtl: 3600 });
-  const h = brNow(now).h;
-  if (h < 8 || h >= 22) return { motivo: 'noite' };
+  const { h, m } = brNow(now), min = h * 60 + m;
+  // silêncio da noite: das 22h45 às 8h (horário de Brasília)
+  if (min < 8 * 60 || min >= 22 * 60 + 45) return { motivo: 'noite' };
   const no = await versaoPublicada(env, now);
   if (!no) return { motivo: 'sem-versao' };
   if (typeof env.CAL.scan !== 'function') return { motivo: 'sem-lista' };
