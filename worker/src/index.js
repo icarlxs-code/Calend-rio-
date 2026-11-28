@@ -26,6 +26,7 @@ import { desabafo } from './desabafo.js';
 import { geraFala } from './fala.js';
 import { lembraAtualizar, guardaVersao } from './atualiza-aviso.js';
 import { lembraStory } from './story-lembra.js';
+import { categoriaDe, cabe } from './equilibrio.js';
 import { orcamento as futOrcamento } from './fut-api.js';
 import { porHora, usoIA } from './cota.js';
 import { brNow, fusoOk } from './coach.js';
@@ -58,6 +59,9 @@ async function sendToMember(env, member, msg, pref, statuses = [], meter = null)
   const devs = await getDevices(env, member);
   const list = Object.entries(devs).filter(([, d]) => !(pref && d.prefs && d.prefs[pref] === false));
   if (!list.length) return 0;
+  // equilíbrio: mensagens de conversa (stories, amigos, visitas, dicas, ranking) se revezam e têm limite diário
+  const cat = categoriaDe(msg && msg.tag);
+  if (cat && !(await cabe(env, member, cat, Date.now())).ok) return 0;
   const vapid = await getVapid(env);
   let sent = 0;
   const dead = [];

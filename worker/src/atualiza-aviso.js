@@ -24,6 +24,8 @@ export async function guardaVersao(env, member, app, now = Date.now()) {
   if (!member || !b || b === 'dev') return;
   const era = await env.CAL.get(`ver:${member}`, 'json');
   if (!era || era.b !== b || !!era.nv !== nv) await env.CAL.put(`ver:${member}`, JSON.stringify({ v, b, nv, at: now }), { expirationTtl: 120 * 86400 });
+  // quem já viu as novidades desta versão fica registrado à parte: um celular antigo que ainda pinga não reabre o aviso
+  if (nv) await env.CAL.put(`verok:${member}`, JSON.stringify({ b, at: now }), { expirationTtl: 30 * 86400 });
 }
 export const AVISO = { title: '✨ Chegou versão nova do Lembra', body: 'Toque aqui para atualizar. Leva 2 segundos e você não perde nada.', tag: 'atualizar', url: './?atualizar=1' };
 /* já está na versão nova, mas ainda não viu as novidades até o final */
@@ -42,8 +44,8 @@ export async function lembraAtualizar(env, now, send, { max = 200 } = {}) {
   if (typeof env.CAL.scan !== 'function') return { motivo: 'sem-lista' };
   let avisos = 0, emDia = 0;
   for (const [k] of await env.CAL.scan('dev:')) {
-    const m = k.slice(4), v = await env.CAL.get(`ver:${m}`, 'json');
-    if (v && v.b === no.build && v.nv) { emDia++; continue; } // já está na última e viu as novidades até o final: para de avisar
+    const m = k.slice(4), v = await env.CAL.get(`ver:${m}`, 'json'), ok = await env.CAL.get(`verok:${m}`, 'json');
+    if ((v && v.b === no.build && v.nv) || (ok && ok.b === no.build)) { emDia++; continue; } // já está na última e viu as novidades até o final: para de avisar
     if (avisos >= max) break;
     await send(env, m, v && v.b === no.build ? AVISO_NOVIDADES : AVISO);
     avisos++;
