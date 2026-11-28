@@ -62,17 +62,17 @@ const EMO = {
   calmo: { lid: 0.95, happy: 0, brow: [-4, 4, 4], mouth: 'fechada', enf: 'vento', arms: ['baixo', 5, 'baixo', -5], amp: 0.8, breath: 3.7 },
   cansado: { lid: 0.55, happy: 0, brow: [-12, 12, 8], mouth: 'o', enf: 'zzz', arms: ['baixo', 0, 'baixo', 0], amp: 0.6, breath: 4.2, look: [0, 5], sag: 0.015 },
   sonolento: { lid: 0.5, happy: 0, brow: [-6, 6, 8], mouth: 'fechada', arms: ['baixo', 2, 'baixo', -2], amp: 0.5, breath: 4.6, look: [0, 8], sag: 0.02 },
-  desconfiado: { lid: 0.42, happy: 0, brow: [14, -4, 8, -6], mouth: 'canto', enf: 'duvida', arms: ['baixo', 0, 'baixo', 0], amp: 0.6, breath: 3.4, look: [18, 4], lean: -2.5 },
+  desconfiado: { lid: 0.42, happy: 0, brow: [14, -4, 8, -6], mouth: 'fechada', enf: 'duvida', arms: ['baixo', 0, 'baixo', 0], amp: 0.6, breath: 3.4, look: [18, 4], lean: -2.5 },
   triste: { lid: 0.08, happy: 0, brow: [-18, 18, 0], mouth: 'tristinha', fx: 'umido', arms: ['baixo', -2, 'baixo', 2], amp: 0.5, breath: 4, look: [0, -8], sag: 0.03 },
   bravo: { lid: 0.3, happy: 0, brow: [40, -40, 30], mouth: 'cerrado', pupil: 0.82, enf: 'raiva', arms: ['baixo', 22, 'baixo', -22], amp: 0, breath: 1.4, loop: 'tremer' },
-  tonto: { lid: 0.3, happy: 0, brow: [8, 12, 4, -8], mouth: 'canto', arms: ['baixo', 6, 'baixo', -2], amp: 0, breath: 3, sag: 0.02 },
+  tonto: { lid: 0.3, happy: 0, brow: [8, 12, 4, -8], mouth: 'fechada', arms: ['baixo', 6, 'baixo', -2], amp: 0, breath: 3, sag: 0.02 },
   surpreso: { lid: 0, happy: 0, brow: [-6, 6, -34], mouth: 'oo', enf: 'susto', arms: ['aberto', 8, 'aberto', -8], amp: 0.4, breath: 2.6, pupil: 0.82 },
   // olhos especiais (como nas folhas de expressão): coração, cifrão, estrela, espiral, óculos e choro
   apaixonado: { lid: 0, happy: 0, brow: [-10, 10, -14], mouth: 'riso', arms: ['baixo', 6, 'baixo', -6], amp: 1.4, breath: 2.6, blush: 1, fx: 'coracao', enf: 'coracoes' },
   rico: { lid: 0, happy: 0, brow: [0, 0, -12], mouth: 'riso', arms: ['aberto', 14, 'aberto', -14], amp: 0.8, breath: 2.4, fx: 'cifrao' },
   estrelado: { lid: 0, happy: 0, brow: [0, 0, -16], mouth: 'riso', arms: ['aberto', 22, 'aberto', -22], amp: 0.6, breath: 2.2, fx: 'estrela' },
-  descolado: { lid: 0, happy: 0, brow: [0, 0, -4], mouth: 'canto', arms: ['baixo', 10, 'baixo', -10], amp: 0.8, breath: 3, fx: 'oculos', lean: 2 },
-  zonzo: { lid: 0.1, happy: 0, brow: [8, 12, 4, -8], mouth: 'canto', arms: ['baixo', 6, 'baixo', -2], amp: 0, breath: 3, sag: 0.02, fx: 'espiral' },
+  descolado: { lid: 0, happy: 0, brow: [0, 0, -4], mouth: 'fechada', arms: ['baixo', 10, 'baixo', -10], amp: 0.8, breath: 3, fx: 'oculos', lean: 2 },
+  zonzo: { lid: 0.1, happy: 0, brow: [8, 12, 4, -8], mouth: 'fechada', arms: ['baixo', 6, 'baixo', -2], amp: 0, breath: 3, sag: 0.02, fx: 'espiral' },
   chorando: { lid: 0, happy: 1, brow: [-22, 22, 4], mouth: 'choro', lagrima: true, arms: ['baixo', -2, 'baixo', 2], amp: 0.5, breath: 3.4, look: [0, -6], sag: 0.03, fx: 'lagrima' },
   emocionado: { lid: 0, happy: 0, brow: [-16, 16, -4], mouth: 'riso', arms: ['baixo', 8, 'baixo', -8], amp: 1, breath: 2.8, blush: 1, fx: 'brilho', lagrima: true, enf: 'brilhos' },
 };
@@ -272,7 +272,8 @@ class Rig {
   }
   /* boca falando (novidades): manda sobre os gestos enquanto houver voz */
   fala(m) { if (m === null) { if (this.voz) { this.voz = null; this.calou = this.t; this.mouth = this.antes || 'aberta'; this.pm = null; } return; } if (!this.voz) this.antes = this.mouth; this.voz = m; if (this.imgOk('boca-' + m)) { this.mouth = m; this.pm = null; } }
-  setMouth(m) { if (this.voz || (this.t - this.calou < 2.5 && /^(a|e|o)$/.test(m))) return; if (m && m !== this.mouth && this.imgOk('boca-' + m)) { this.pm = this.mouth; this.pmT = this.t; this.mouth = m; this.s.mz.v = 0.9; } }
+  setMouth(m) { if (m === 'canto') m = 'fechada'; // a boca torta não é da direção de arte: vira a boquinha fechada sorrindo
+ if (this.voz || (this.t - this.calou < 2.5 && /^(a|e|o)$/.test(m))) return; if (m && m !== this.mouth && this.imgOk('boca-' + m)) { this.pm = this.mouth; this.pmT = this.t; this.mouth = m; this.s.mz.v = 0.9; } }
   imgOk(n) { return IMG && IMG[n] && IMG[n].naturalWidth; }
   blink(dbl) {
     if (this.sleeping) this.wake();
@@ -323,7 +324,7 @@ class Rig {
     } else if (name === 'soco') {                                 // "isso!": puxa o braço com vontade, duas vezes, e pisca
       const back = opt.volta || e.arms, m0 = this.mouth, h0 = e.happy;
       this.arms([back[0], back[1], 'cima', -18]); s.sq.t = -0.06; s.lean.t = 3; s.bY.t = (e.brow[2] || 0) - 10;
-      [0.24, 0.66].forEach((b) => { this.at(b, () => { s.sq.t = 0.11; s.lean.t = -4; s.aR.t = 8; s.by.t = 8; this.setMouth('riso'); s.happy.t = 0.8; }); this.at(b + 0.17, () => { s.sq.t = -0.07; s.lean.t = 3; s.aR.t = -20; s.by.t = -36; }); this.at(b + 0.32, () => { s.by.t = 0; s.sq.t = 0; }); });
+      [0.24, 0.66].forEach((b) => { this.at(b, () => { s.sq.t = 0.11; s.lean.t = -4; s.aR.t = 8; s.by.t = 8; this.setMouth('riso'); s.happy.t = 1; }); this.at(b + 0.17, () => { s.sq.t = -0.07; s.lean.t = 3; s.aR.t = -20; s.by.t = -36; }); this.at(b + 0.32, () => { s.by.t = 0; s.sq.t = 0; }); });
       this.at(1.1, () => { s.wR.t = 1; s.happy.t = h0; }); this.at(1.5, () => { s.wR.t = 0; });
       this.at(1.35, () => { this.arms(back); s.lean.t = e.lean || 0; }); this.at(1.8, () => { this.setMouth(m0); s.bY.t = e.brow[2]; });
       this.next.idle = this.t + 2.2; this.loopAt = Math.max(this.loopAt, this.t + 2.2);
@@ -383,9 +384,10 @@ class Rig {
       this.next.idle = this.t + 2;
     } else if (name === 'maoBoca') {                              // mão na boca segurando a risada (fofoca, desconfiança)
       const m0 = this.mouth, back = e.arms;
-      s.px.t = -14; s.lid.t = 0.3; this.setMouth('riso'); s.blush.t = 0.6; s.hand.t = 1; s.lean.t = 1.5;
+      // segurando a risada: olhos fechados de alegria, bochecha corada e o corpo chacoalhando (sem mão solta na frente do rosto)
+      s.px.t = -14; s.happy.t = 1; this.setMouth('fechada'); s.blush.t = 0.8; s.lean.t = 1.5; this.arms(['cima', 6, 'cima', -6]);
       for (let i = 0; i < 4; i++) this.at(0.3 + i * 0.15, () => { s.sq.vel += 0.8; });
-      this.at(1.5, () => { s.px.t = 0; s.lid.t = e.lid; this.setMouth(m0); s.blush.t = e.blush || 0; s.hand.t = 0; s.lean.t = e.lean || 0; });
+      this.at(1.5, () => { s.px.t = 0; s.happy.t = e.happy || 0; this.setMouth(m0); s.blush.t = e.blush || 0; s.lean.t = e.lean || 0; this.arms(back); });
       this.next.idle = this.t + 1.9;
     } else if (name === 'susto') {                                // leva um susto: pula pra trás, olhos arregalados
       const m0 = this.mouth; s.pz.t = 0.75; this.setMouth('oo'); s.bY.t = -24; s.by.vel -= 220; s.sq.vel -= 2; s.lean.t = 3;
@@ -555,7 +557,7 @@ class Rig {
     const e = EMO[m] || {};
     if (g === 'piscaLento') { const b = s.lid.t; s.lid.set(5, 0.9); s.lid.t = 1; this.at(0.42, () => { s.lid.t = b; }); this.at(0.9, () => s.lid.set(16, 1)); }
     else if (g === 'cabeca') { const d = Math.random() < 0.5 ? -1 : 1; s.lean.t = (e.lean || 0) + d * 4; s.px.t = d * 22; s.py.t = -6; this.at(1.3, () => { s.lean.t = e.lean || 0; s.px.t = 0; s.py.t = 0; }); }
-    else if (g === 'sorriso') { const bo = this.mouth; this.setMouth('riso'); s.happy.t = 0.6; this.at(1.1, () => { this.setMouth(bo); s.happy.t = e.happy || 0; }); }
+    else if (g === 'sorriso') { const bo = this.mouth; this.setMouth('riso'); this.at(1.1, () => { this.setMouth(bo); s.happy.t = e.happy || 0; }); }
     else if (g === 'suspiro') { s.sq.vel -= 0.9; s.py.t = 14; s.bY.t = (e.brow?.[2] || 0) - 8; this.at(0.7, () => { s.sq.vel += 1.1; }); this.at(1.6, () => { s.py.t = (e.look || [0, 0])[1]; s.bY.t = e.brow?.[2] || 0; }); }
     else if (g === 'bufa') { s.sq.vel += 1.4; s.bY.t = (e.brow?.[2] || 0) + 6; this.at(0.5, () => { s.bY.t = e.brow?.[2] || 0; }); }
     else this.act(g);
@@ -685,7 +687,7 @@ class Rig {
       }
       const [x, y, w, h] = L['olho-' + side], cx = x + w / 2, cy = y + h / 2;
       c.save(); c.translate(cx + (side === 'l' ? -1 : 1) * X.eyeDx, cy + X.eyeDy); c.scale(X.eye, X.eye); c.translate(-cx, -cy);
-      const hp = Math.min(1, Math.max(0, s.happy.v)), open = 1 - hp;
+      const h0 = Math.min(1, Math.max(0, s.happy.v)), hp = h0 < 0.4 ? 0 : h0 > 0.6 ? 1 : (h0 - 0.4) / 0.2, open = 1 - hp; // olho aberto OU fechado de alegria (sem ficar no meio)
       if (open > 0.02) {
         c.save(); c.globalAlpha = open;
         c.translate(cx, cy); c.scale(1, 1 - hp * 0.5); c.translate(-cx, -cy);
