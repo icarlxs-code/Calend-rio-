@@ -244,6 +244,7 @@ const spanOf = (w) => ((w.end - w.start + 1440) % 1440) || 1440;
 export const inWindow = (mins, w) => relOf(mins, w) <= spanOf(w);
 /* o bom dia nunca sai antes das 7h30: se a janela da pessoa começa antes, ele espera até 7h30 */
 const MANHA = 7 * 60 + 30;
+export const FRASES_LIVRE = 3; // frases com arte por dia para quem não tem plano (além do bom dia e do boa noite)
 const MANHA_DE = (w) => { const L = spanOf(w), r = relOf(MANHA, w); return r > 0 && r < L && r < 240 ? r : 0; };
 /* Momentos fixos do dia, relativos à janela da pessoa */
 export function anchorsFor(w) {
@@ -276,7 +277,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
   const ANCHORS = anchorsFor(w);
   const mins = relOf(br.h * 60 + br.m, w); // minutos desde o começo do dia da pessoa
   st = { next: 0, day: '', done: {}, water: 0, verses: 0, recent: [], asked: {}, ...st };
-  if (st.day !== br.date) st = { ...st, day: br.date, done: {}, water: 0, verses: 0, checkins: 0 };
+  if (st.day !== br.date) st = { ...st, day: br.date, done: {}, water: 0, verses: 0, checkins: 0, frases: 0 };
   if (mins > L) return null;
   const seed = Math.floor(rand() * 1e6);
   const n = p.name || '';
@@ -317,7 +318,7 @@ export function nextNudge(p, st, now, rand = Math.random) {
       msg = { title: KIND_TITLE[anchor.key], body: fill(pick(T[anchor.key], seed), V), kind: anchor.key };
     }
   } else {
-    if (p.soMomentos) return null; // sem plano ativo: só o bom dia e o boa noite
+    if (p.soMomentos && (st.frases || 0) >= FRASES_LIVRE) return null; // sem plano ativo: bom dia, boa noite e algumas frases com arte
     // avisos de RETORNO (sequência em risco / caiu no ranking) furam a fila: não esperam o próximo horário sorteado
     const sn0 = p.seen || {}, today0 = br.date;
     const usual0 = Array.isArray(sn0.hours) && sn0.hours.some((x) => x > 0) ? sn0.hours.indexOf(Math.max(...sn0.hours)) : 19;
@@ -354,6 +355,8 @@ export function nextNudge(p, st, now, rand = Math.random) {
     if (br.h >= 10 && br.h < 21) options.push(['social', 1.5]);
     if (mins > 160 && mins < L - 240) options.push(['selfcare', 1]);
     if (prio) { const pr = options.filter(([k]) => k === 'streak' || k === 'rank'); if (pr.length) options.splice(0, options.length, ...pr); }
+    // sem plano: só as frases de ânimo, fé e conselho (as que viram arte para postar no story)
+    if (p.soMomentos) { const fr = options.filter(([k]) => ['motivation', 'counsel', 'mind', 'verse'].includes(k)); if (!fr.length) return null; options.splice(0, options.length, ...fr); }
     const total = options.reduce((a, [, w]) => a + w, 0);
     let r = rand() * total, kind = options[0][0];
     for (const [k, w] of options) { if ((r -= w) <= 0) { kind = k; break; } }
@@ -403,8 +406,10 @@ export function nextNudge(p, st, now, rand = Math.random) {
     if (r1 < 0.45 && !/^(ei|opa|ô|psiu|fala|olha)\b/i.test(msg.body) && !(n && msg.body.includes(n))) msg.body = fill(`${pick(OPENERS, Math.floor(r1 * 1e6))} ${msg.body.charAt(0).toLowerCase()}${msg.body.slice(1)}`, V);
     if (r2 < 0.4) msg.body = fill(`${msg.body} ${pick(CLOSERS, Math.floor(r2 * 1e6))}`, V);
   }
+  if (p.soMomentos && !anchor) { st.frases = (st.frases || 0) + 1; }
   if (!isWater) st.next = now + (prefs.perDay ? Math.max(25, Math.round((L / prefs.perDay) * (0.6 + rand() * 0.8))) : randomGap(prefs.freq, rand)) * 60e3;
   st.lastAny = now;
+  if (p.soMomentos) st.next = now + (150 + Math.round(rand() * 90)) * 60e3; // sem plano: uma frase a cada 2h30-4h
   st.minGap = 25 + Math.round(rand() * 22); // folga mínima também varia (25 a 47 min)
   st.recent = [...(st.recent || []), msg.body].slice(-40);
   return { msg: { ...msg, tag: 'p-amigo', url: msg.url || (['checkin', 'streak'].includes(msg.kind) ? './' : './#/p/hoje') }, state: st };

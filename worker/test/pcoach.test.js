@@ -110,11 +110,17 @@ test('bom dia a partir das 7h30 (antes disso, nada) e ainda sai até as 11h para
   assert.match(nextNudge(prof, {}, at('10:30'), () => 0.3).msg.kind, /morning/);
 });
 
-test('sem plano ativo: só o bom dia e o boa noite (nada de água, ânimo ou agenda no meio do dia)', () => {
+test('sem plano ativo: bom dia, boa noite e até 3 frases de ânimo/fé com arte, espaçadas e sem repetir', () => {
   const livre = { ...prof, soMomentos: true };
-  let st = {}; const kinds = [];
-  for (let t = at('07:00'); t <= at('23:00'); t += 60e3) { const r = nextNudge(livre, st, t, () => 0.4); if (r) { st = r.state; kinds.push(r.msg.kind); } }
-  assert.deepEqual(kinds, ['morning', 'night']);
+  let st = {}; const out = [];
+  for (let t = at('07:00'); t <= at('23:00'); t += 60e3) { const r = nextNudge(livre, st, t, Math.random); if (r) { st = r.state; out.push([t, r.msg]); } }
+  const kinds = out.map(([, m]) => m.kind);
+  assert.equal(kinds[0], 'morning'); assert.equal(kinds.at(-1), 'night');
+  const frases = out.filter(([, m]) => !['morning', 'night'].includes(m.kind));
+  assert.ok(frases.length >= 2 && frases.length <= 3, kinds.join());
+  for (const [, m] of frases) assert.ok(['motivation', 'counsel', 'mind', 'verse'].includes(m.kind), m.kind);
+  assert.equal(new Set(frases.map(([, m]) => m.body)).size, frases.length, 'sem repetir');
+  for (let i = 1; i < out.length; i++) assert.ok(out[i][0] - out[i - 1][0] >= 60 * 60e3 || out[i][1].kind === 'night', 'espaçadas');
 });
 
 test('intervalos aleatórios: nunca menos de 25 min e sem ritmo fixo; títulos por tipo', () => {

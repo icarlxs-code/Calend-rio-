@@ -132,7 +132,7 @@ test('próximo horário ignora o que já saiu e o que passou da janela', () => {
   assert.equal(nextOf([{ id: 'a', at: now - 60e3 }], { a: 1 }, now), null);
 });
 
-test('bom dia e boa noite para TODO mundo: quem não tem plano entra na fila uma vez e recebe só os dois', async () => {
+test('bom dia, boa noite e frases com arte para TODO mundo: quem não tem plano entra na fila e recebe', async () => {
   const { seedTodos } = await import('../src/tick.js');
   const d = (hhmm) => Date.parse(`2026-11-20T${hhmm}:00-03:00`);
   const { env, kv } = mkEnv({ ...reg(['L'], d('07:00'), 0), ...reg(['P'], d('07:00'), d('07:00') + 30 * 864e5), 'upgraded:v2': '1' });
@@ -142,6 +142,6 @@ test('bom dia e boa noite para TODO mundo: quem não tem plano entra na fila uma
   const out = [];
   for (let t = d('07:40'); t <= d('23:00'); t += 60e3) await runTick(env, { now: t, send: async (e, m, msg) => { out.push([m, msg.title]); return 1; }, meter: { pushes: 0 } });
   const livre = out.filter(([m]) => m === 'uL').map(([, t]) => t);
-  assert.equal(livre.length, 2, `sem plano recebeu: ${livre.join(' | ')}`);
+  assert.ok(livre.length >= 4 && livre.length <= 5, `sem plano recebeu: ${livre.join(' | ')}`);
   assert.ok(out.filter(([m]) => m === 'uP').length > 2, 'com plano continua recebendo o dia todo');
 });
