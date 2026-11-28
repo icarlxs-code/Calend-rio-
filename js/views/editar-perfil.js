@@ -25,6 +25,7 @@ export function erroTel(v) {
 }
 
 export function openEditProfile(after) {
+  let visivel = false; // quem visitou o perfil: só aparece se a pessoa também deixa as visitas dela aparecerem
   const p = store.profile || {}, me = store.member(store.me) || {}, mostra = p.mostra || {};
   const d = { teamCamps: Array.isArray(p.teamCamps) ? p.teamCamps : [], name: p.name || me.name || '', nickname: p.nickname || '', bio: p.bio || '', birth: p.birth || '', pronoun: p.pronoun || '', phone: maskPhone(p.phone || ''), role: p.role || '', workplace: p.workplace || '', cidade: p.cidade || '', uf: p.uf || '', bairro: p.bairro || '', teamId: p.teamId || '', teamOther: p.teamOther || '', teamAvisos: !!p.teamAvisos, vCidade: !!mostra.cidade, vIdade: !!mostra.idade, id: '', idEra: '' };
   const menor = () => { const a = ageOf(d.birth); return a !== null && a < 18; };
@@ -60,6 +61,7 @@ export function openEditProfile(after) {
       <section class="ep__sec"><h3>O que seus amigos veem</h3><div class="list">
         ${menor() ? `<p class="fhelp ep__menor">${icon('shield', 14)} Para sua segurança, cidade e idade ficam escondidas até os 18 anos.</p>` : `<label class="list__row"><span><b>Minha cidade</b><small>${esc([d.cidade, d.uf].filter(Boolean).join(', ') || 'preencha acima')}</small></span><input type="checkbox" class="switch" data-chk="vCidade" ${d.vCidade ? 'checked' : ''}></label>
         <label class="list__row"><span><b>Minha idade</b><small>só o número, nunca a data</small></span><input type="checkbox" class="switch" data-chk="vIdade" ${d.vIdade ? 'checked' : ''}></label>`}</div></section>
+        <section class="ep__sec"><div class="list"><label class="list__row"><span><b>Ver quem visitou meu perfil</b><small>Justo com todo mundo: só dá para ver quem visitou você se você também deixar os outros verem as suas visitas.</small></span><input type="checkbox" class="switch" data-vis ${visivel ? 'checked' : ''}></label></div></section>
     </form>`; };
   return openSheet({ className: 'sheet--tall', html: html(), onMount: (s) => {
     const el = s.el, q = (x) => el.querySelector(x), redesenha = () => { const sc = el.querySelector('.sheet__inner') || el, y = sc.scrollTop; s.set(html()); sc.scrollTop = y; };
@@ -72,6 +74,12 @@ export function openEditProfile(after) {
       if (k === 'cidade' || k === 'uf') i.addEventListener('input', () => { const m = q('[data-chk="vCidade"]'); if (m) m.parentElement.querySelector('small').textContent = [d.cidade, d.uf].filter(Boolean).join(', ') || 'preencha acima'; });
     });
     const chaves = () => el.querySelectorAll('[data-chk]').forEach((c) => (c.onchange = () => { d[c.dataset.chk] = c.checked; }));
+    const liga = async (on) => { try { const S = await import('../social.js'); return await S.call('/friends/visibilidade', { on }); } catch { return null; } };
+    const vis = q('[data-vis]');
+    if (vis) {
+      vis.onchange = async () => { const on = vis.checked; const r = await liga(on); if (!r) { vis.checked = !on; toast('Sem internet agora. Tente de novo quando voltar.'); } else { visivel = on; } };
+      liga(undefined).then((r) => { if (r && typeof r.on === 'boolean') { visivel = r.on; vis.checked = r.on; } }).catch(() => {});
+    }
     const ligaTime = () => {
       const b = q('[data-time]'); if (b) b.onclick = () => escolheTime(d, () => { q('[data-tcx]').innerHTML = time(); ligaTime(); chaves(); jogos(); });
       const c = q('[data-camps]'); if (c) c.onclick = () => escolheCamps(d.teamCamps, (L) => { d.teamCamps = L; q('[data-tcx]').innerHTML = time(); ligaTime(); chaves(); });

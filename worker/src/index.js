@@ -269,7 +269,7 @@ async function joinedProof(env, token, owner, uid) {
 }
 
 /* Limite de pedidos por minuto (por pessoa e por rota). Protege contra abuso e contra derrubar o servidor. */
-const LIMITS = { '/friends/achar': 20, '/friends/id': 15, '/futebol': 20, '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/frase-queixa': 20, '/coach': 20, '/ask': 15, '/desabafo': 8, '/fala': 20, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/story-like': 60, '/friends/story-comment': 15, '/friends/story-comments': 60, '/friends/story-comment-del': 30, '/friends/story-repost': 6, '/friends/msg-send': 40, '/friends/msg-list': 60, '/friends/msg-media': 90, '/friends/msg-react': 60, '/friends/msg-del': 30, '/friends/convs': 40, '/friends/visit': 30, '/friends/visitors': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/friends/suggest': 20, '/friends/email': 15, '/friends/perto': 10, '/friends/close': 30, '/friends/dismiss': 30, '/friends/ping': 40, '/staff/me': 30, '/staff/list': 20, '/staff/set': 20, '/staff/remove': 20, '/staff/metrics': 20, '/staff/reports': 20, '/staff/report-action': 30, '/lb/report': 20, '/lb/board': 40 };
+const LIMITS = { '/friends/achar': 20, '/friends/id': 15, '/futebol': 20, '/admin/grant': 30, '/admin/nudge-update': 20, '/log': 10, '/notify': 60, '/schedule': 30, '/personal': 30, '/frase-queixa': 20, '/coach': 20, '/ask': 15, '/desabafo': 8, '/fala': 20, '/tidy': 20, '/billing/checkout': 8, '/billing/portal': 8, '/billing/store-verify': 10, '/billing/trial': 5, '/subscribe': 10, '/unsubscribe': 10, '/test': 6, '/coach-test': 4, '/pnudge-test': 4, '/account/delete': 3, '/share/sync': 20, '/seen': 20, '/support/send': 10, '/support/thread': 30, '/support/inbox': 30, '/support/reply': 30, '/rank/act': 40, '/rank/board': 20, '/rank/admin': 20, '/friends/link': 10, '/friends/open': 20, '/friends/answer': 30, '/friends/remove': 20, '/friends/card': 10, '/friends/list': 30, '/friends/story-post': 6, '/friends/story-delete': 10, '/friends/stories': 30, '/friends/story-view': 90, '/friends/story-viewers': 20, '/friends/story-like': 60, '/friends/story-comment': 15, '/friends/story-comments': 60, '/friends/story-comment-del': 30, '/friends/story-repost': 6, '/friends/msg-send': 40, '/friends/msg-list': 60, '/friends/msg-media': 90, '/friends/msg-react': 60, '/friends/msg-del': 30, '/friends/convs': 40, '/friends/visit': 30, '/friends/visitors': 20, '/friends/visibilidade': 20, '/friends/report': 10, '/friends/block': 10, '/friends/public': 60, '/friends/request': 15, '/friends/contacts': 4, '/friends/suggest': 20, '/friends/email': 15, '/friends/perto': 10, '/friends/close': 30, '/friends/dismiss': 30, '/friends/ping': 40, '/staff/me': 30, '/staff/list': 20, '/staff/set': 20, '/staff/remove': 20, '/staff/metrics': 20, '/staff/reports': 20, '/staff/report-action': 30, '/lb/report': 20, '/lb/board': 40 };
 const hits = new Map();
 export function tooMany(key, max, now = Date.now()) {
   const h = hits.get(key);
@@ -756,9 +756,17 @@ async function handle(req, env) {
       const v = Object.entries(st.views).sort((a, b) => b[1] - a[1]).slice(0, 100);
       return reply(env, req, { ok: true, viewers: await Promise.all(v.map(async ([u, at]) => ({ ...(await cardOf(u)), at, gostou: !!(st.likes && st.likes[u]), repostou: !!(st.reps && st.reps[u]) }))) });
     }
+    // justo: só vê quem visitou se também deixa as visitas dela aparecerem (a mesma chave vale nos dois sentidos)
+    if (url.pathname === '/friends/visibilidade') {
+      if (typeof body.on !== 'boolean') return reply(env, req, { ok: true, on: !!(await env.CAL.get(`vis:${meU}`)) });
+      if (body.on) await env.CAL.put(`vis:${meU}`, '1', { expirationTtl: 400 * 864e2 }); else await env.CAL.delete(`vis:${meU}`);
+      return reply(env, req, { ok: true, on: body.on });
+    }
     if (url.pathname === '/friends/visit') {
       const other = clean(body.uid, 64);
       if (other === meU || !(await isFriend(meU, other))) return reply(env, req, { ok: true });
+      // só registra se as duas pessoas deixam as visitas aparecerem
+      if (!(await env.CAL.get(`vis:${meU}`)) || !(await env.CAL.get(`vis:${other}`))) return reply(env, req, { ok: true });
       const l = (await getL(`visits:${other}`)).filter((x) => now - x.at < 7 * DAY);
       const prev = l.find((x) => x.from === meU);
       const dia = new Date(now - 3 * 3600e3).toISOString().slice(0, 10), hj = prev && prev.hd === dia ? (prev.hj || 1) + 1 : 1;
@@ -801,8 +809,9 @@ async function handle(req, env) {
       return reply(env, req, { ok: true });
     }
     if (url.pathname === '/friends/visitors') {
+      if (!(await env.CAL.get(`vis:${meU}`))) return reply(env, req, { ok: true, on: false, visitors: [] });
       const l = (await getL(`visits:${meU}`)).filter((x) => now - x.at < 7 * DAY);
-      return reply(env, req, { ok: true, visitors: await Promise.all(l.map(async (x) => ({ ...(await cardOf(x.from)), at: x.at, n: x.n }))) });
+      return reply(env, req, { ok: true, on: true, visitors: await Promise.all(l.map(async (x) => ({ ...(await cardOf(x.from)), at: x.at, n: x.n }))) });
     }
     // ---------- perfil público (ranking), pedido de amizade, online e contatos ----------
     const relacao = async (u) => {
