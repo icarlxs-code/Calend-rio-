@@ -442,6 +442,52 @@ function espera(line, gesto) {                       // guarda só a mais import
   clearTimeout(filaT);
   filaT = setTimeout(() => { const f = fila; fila = null; if (f && Date.now() < f.ate) fala(f.line, f.gesto); }, Math.max(200, lendoAte - Date.now() + 250));
 }
+/* ---------- segurar o Lembra: caixinha para perguntar; a resposta sai no balão, com a boca mexendo ---------- */
+let conversaMasc = []; // só nesta sessão e só desta conta
+function mexeBoca(ms) {
+  const r = rigOf(el()); if (!r || !r.fala) return;
+  const S = ['a', 'e', 'o', 'fechada', 'a', 'oo', 'fechada', 'e'];
+  let i = 0; clearInterval(mexeBoca.t);
+  mexeBoca.t = setInterval(() => { try { r.fala(S[i++ % S.length]); } catch { /* ok */ } }, 115);
+  setTimeout(() => { clearInterval(mexeBoca.t); try { r.fala(null); } catch { /* ok */ } }, ms);
+}
+function abrePergunta() {
+  if (document.querySelector('.snhq')) return;
+  import('./sfx.js').then((m) => m.ui('clique')).catch(() => {});
+  setMood(el(), 'surpreso'); act(el(), 'pop');
+  const w = document.createElement('div');
+  w.className = 'snhq'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Conversar com o Lembra');
+  w.innerHTML = `<form class="snhq__box"><span class="snhq__brilho" aria-hidden="true"><i></i><i></i><i></i><i></i></span><b>Fala comigo! 💬</b><textarea name="q" rows="2" maxlength="600" placeholder="Pergunte ou peça qualquer coisa…"></textarea><div class="snhq__bts"><button type="button" class="btn btn--soft" data-sai>Fechar</button><button type="submit" class="btn btn--primary">Enviar</button></div></form>`;
+  document.body.appendChild(w);
+  const f = w.querySelector('form'), t = f.q;
+  setTimeout(() => t.focus(), 60);
+  const sai = () => { w.classList.add('is-sai'); setTimeout(() => w.remove(), 200); };
+  w.querySelector('[data-sai]').onclick = sai;
+  w.addEventListener('click', (ev) => { if (ev.target === w) sai(); });
+  f.onsubmit = async (ev) => {
+    ev.preventDefault(); const q = (t.value || '').trim(); if (!q) return;
+    sai(); responde(q);
+  };
+}
+async function responde(q) {
+  busyUntil = 0; lendoAte = 0; atual = { p: -1, ate: 0, id: atual.id };
+  fala({ t: 'Hmm… deixa eu pensar 🤔', m: 'calmo', p: PRIO.erro }, 'pensa');
+  let texto = '', acoes = null;
+  try {
+    const r = await store.askAssistant(q, conversaMasc.slice(-8));
+    texto = (typeof r === 'string' ? r : r && r.text) || 'Hmm, não consegui pensar agora. Tenta de novo?';
+    const ac = (r && r.actions) || [];
+    if (ac.length) acoes = [{ label: 'Abrir no assistente', go: () => import('./views/assistant.js').then((m) => m.openAssistant(q)) }, { label: 'Agora não' }];
+    conversaMasc = [...conversaMasc, { role: 'user', text: q }, { role: 'assistant', text: texto }].slice(-12);
+  } catch (e) {
+    texto = (e && e.message) || 'Não consegui responder agora. Tenta de novo daqui a pouco?';
+    acoes = [{ label: 'Abrir o assistente', go: () => import('./views/assistant.js').then((m) => m.openAssistant(q)) }, { label: 'Ok' }];
+  }
+  texto = texto.replace(/\*\*/g, '').replace(/<acoes>[\s\S]*?<\/acoes>/g, '').trim().slice(0, 420);
+  busyUntil = 0; lendoAte = 0; atual = { p: -1, ate: 0, id: atual.id };
+  fala({ t: texto, m: 'feliz', p: PRIO.erro, acoes }, 'sim');
+  setTimeout(() => mexeBoca(Math.min(12000, 400 + texto.length * DIGITA)), 280);
+}
 function fala(line, gesto, tentativa = 0, desde = Date.now(), id = 0) {
   if (!B || !line) return;
   if (line.k) { atualK = line.k; atualEm = Date.now(); }
@@ -703,18 +749,20 @@ function arrastavel(fig) {
     if (!B || arr || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
     mexeu = true; B.classList.remove('is-hidden');
     arr = { id: ev.pointerId, x0: ev.clientX, y0: ev.clientY, fx: ev.clientX, fy: ev.clientY, on: false, t0: performance.now() };
+    // segurar parado (sem arrastar): abre a caixinha para conversar com ele
+    const meu = arr; meu.lp = setTimeout(() => { if (arr === meu && !meu.on) { meu.pergunta = true; abrePergunta(); } }, 550);
   });
   fig.addEventListener('pointermove', (ev) => {
     if (!arr || ev.pointerId !== arr.id || arr.voo) return;
     arr.fx = ev.clientX; arr.fy = ev.clientY;
-    if (!arr.on && Math.hypot(ev.clientX - arr.x0, ev.clientY - arr.y0) >= 4) comeca(fig, ev);
+    if (!arr.on && Math.hypot(ev.clientX - arr.x0, ev.clientY - arr.y0) >= 4) { clearTimeout(arr.lp); if (arr.pergunta) return; comeca(fig, ev); }
     if (arr.on) { ev.preventDefault(); const Lm = limites(); mover(cl(arr.fx - arr.ox, Lm.x0 - 26, Lm.x1 + 26), cl(arr.fy - arr.oy, Lm.y0 - 30, Lm.y1 + 26)); } // segue o dedo na hora, sem esperar o próximo quadro
   });
   const fim = (ev) => {
     if (!arr || ev.pointerId !== arr.id || arr.voo) return;
+    clearTimeout(arr.lp);
     if (arr.on) { termina(); return; }
-    // segurou parado e soltou sem arrastar: cochilo de mentirinha (como antes)
-    if (performance.now() - arr.t0 > 700 && ev.type === 'pointerup') { semClique = Date.now(); toques = []; fala({ t: 'Zzz… me acorda se precisar 😴', m: 'sono' }, 'boceja'); }
+    if (arr.pergunta) { semClique = Date.now(); toques = []; }
     arr = null;
   };
   fig.addEventListener('pointerup', fim); fig.addEventListener('pointercancel', fim);

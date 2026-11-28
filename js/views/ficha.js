@@ -465,16 +465,14 @@ const waitIntro = () => new Promise((res) => {
 });
 export const fichaDone = () => !!store.profile?.onboardedAt;
 
-/* A ficha é oferecida uma vez, depois do primeiro lembrete, e pode ser pulada (o rascunho fica guardado). */
+/* A ficha é obrigatória para todo mundo: conta nova abre nela logo depois do cadastro,
+   e quem ainda não preencheu vê a ficha ao entrar até terminar (não dá para pular). */
 export async function ensureFicha() {
   if (store.mode !== 'cloud' || fichaDone()) return;
-  const key = `lembra.fichaOffer.${store.user?.uid || 'x'}`;
-  if (store.solo && (await import('../comeco.js')).semNada()) return; // primeiro prova o valor: anota algo
-  try { if (Date.now() - (Number(localStorage.getItem(key)) || 0) < 7 * 864e5) return; localStorage.setItem(key, String(Date.now())); } catch { return; }
   await waitIntro();
   return new Promise((resolve) => openFicha({
     initial: initialFicha(),
-    required: false,
+    required: true,
     onDone: async (r) => { await saveFicha(r); resolve(true); },
     onClose: () => resolve(false),
   }));

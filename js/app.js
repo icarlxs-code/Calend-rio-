@@ -321,6 +321,7 @@ const actions = {
   retro: () => window.__retro?.abreRetro(),
   'retro-nao': () => window.__retro?.naoQuero(),
   prim: (b) => window.__comeco?.criaPrimeiro(b.dataset.id),
+  'prim-fora': () => window.__comeco?.foraPrimeiro(),
   checkup: () => window.__comeco?.checkup(),
   enq: (b) => window.__comeco?.respondeEnquete(b.dataset.v),
   'snh-toggle': async () => {

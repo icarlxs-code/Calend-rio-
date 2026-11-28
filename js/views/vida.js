@@ -25,7 +25,7 @@ export function pede({ forca = false } = {}) {
   if (!forca && respondeu({ vida: vidaAtual() })) return false;
   if (!store.user && store.mode === 'cloud') return false;
   if (!forca && ocupado()) { setTimeout(() => pede(), 4000); return false; }
-  abreFicha();
+  abreFicha({ obrigatoria: true }); // quem ainda não respondeu precisa responder (todas têm "Prefiro não dizer")
   return true;
 }
 /* tela cheia no estilo oficial: fundo ilustrado, o Sininho vivo fazendo uma pergunta por vez,
@@ -38,7 +38,7 @@ const REACAO = {
   bem: ['estrelado', 'Adoro essa energia! ⭐'], normal: ['feliz', 'Dia normal também é dia bom 🙂'], desanimado: ['emocionado', 'Vou caprichar pra te animar 🤗'],
   dificil: ['emocionado', 'Obrigado por confiar em mim. Tô do seu lado 🤍'],
 };
-export function abreFicha({ aoFechar } = {}) {
+export function abreFicha({ aoFechar, obrigatoria = false } = {}) {
   document.querySelector('.vficha')?.remove();
   const d = { ...(vidaAtual() || {}) };
   if (typeof d.nomes === 'string') d.nomes = d.nomes.split(',');
@@ -58,10 +58,10 @@ export function abreFicha({ aoFechar } = {}) {
   /* a moldura (fundo, mascote, balão) é montada uma vez: as perguntas só trocam o cartão de baixo */
   const monta = (P) => {
     w.innerHTML = `<img class="vficha__bg" src="assets/stories/${P[0].arte}.webp" alt="" decoding="async">
-      <div class="vficha__topo"><button class="vficha__x" data-x aria-label="Fechar">✕</button><span class="vficha__pts"></span><span></span></div>
+      <div class="vficha__topo">${obrigatoria ? '<span></span>' : '<button class="vficha__x" data-x aria-label="Fechar">✕</button>'}<span class="vficha__pts"></span><span></span></div>
       <div class="vficha__palco"><div class="snhb vficha__bal"><span class="snhb__txt" aria-live="polite"></span></div><span class="vficha__snh">${S ? S.sininho('feliz', { size: Math.min(176, Math.round(innerWidth * 0.44)) }) : ''}</span></div>
       <div class="vficha__card"></div>`;
-    w.querySelector('[data-x]').onclick = fecha;
+    const xb = w.querySelector('[data-x]'); if (xb) xb.onclick = fecha;
     snh = w.querySelector('[data-snh]'); if (S && snh) S.alive();
   };
   const pinta = () => {

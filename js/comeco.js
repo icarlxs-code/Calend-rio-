@@ -25,9 +25,11 @@ const PRONTOS = [
 ];
 export const semNada = () => !personal.events.length && !store.state.events.some((e) => (e.createdBy || store.me) === store.me);
 export function cartaoPrimeiro() {
-  if (!nuvem() || !personal.ready || !semNada()) return '';
-  return `<section class="prim"><div class="prim__t"><span class="prim__snh">${sininho('acena', { size: 92 })}</span><h2>Seu primeiro lembrete</h2></div>${PRONTOS.map((p) => `<button class="prim__b" data-action="prim" data-id="${p.id}"><span>${icon(p.ic, 24)}</span><span><b>${p.t}</b><small>${p.s}</small></span>${icon('plus', 22)}</button>`).join('')}</section>`;
+  if (!nuvem() || !personal.ready || !semNada() || (le('primFora') || store.profile?.primFora)) return '';
+  return `<section class="prim"><button class="prim__x" data-action="prim-fora" aria-label="Fechar e não mostrar mais">✕</button><div class="prim__t"><span class="prim__snh">${sininho('acena', { size: 92 })}</span><h2>Seu primeiro lembrete</h2></div>${PRONTOS.map((p) => `<button class="prim__b" data-action="prim" data-id="${p.id}"><span>${icon(p.ic, 24)}</span><span><b>${p.t}</b><small>${p.s}</small></span>${icon('plus', 22)}</button>`).join('')}</section>`;
 }
+/** a pessoa fechou: nunca mais aparece (ela cria o primeiro lembrete do jeito dela) */
+export function foraPrimeiro() { poe('primFora', 1); saveProfileQuiet({ primFora: true }).catch(() => {}); document.querySelector('.prim')?.remove(); }
 export function criaPrimeiro(id) {
   const p = PRONTOS.find((x) => x.id === id); if (!p) return; const q = p.quando();
   savePersonal({ title: p.t, note: '', remind: 'auto', ...q });
