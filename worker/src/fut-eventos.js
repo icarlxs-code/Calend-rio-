@@ -97,7 +97,7 @@ const h32 = (s) => { let h = 2166136261; for (const c of String(s)) { h ^= c.cha
 const um = (L, semente) => L[h32(semente) % L.length];
 
 /** vira fala do mascote. `quem` entra na semente para duas pessoas não receberem a mesma frase. */
-export function fala(ev, { time = 'nosso time', rival = '', quem = '', tabela = null } = {}) {
+export function fala(ev, { time = 'nosso time', rival = '', quem = '', tabela = null, timeApp = '', rivalApp = '' } = {}) {
   const placar = `${ev.meu} a ${ev.dele}`;
   let base = '';
   if (ev.tipo === 'comecou') base = um(F.comecou, quem + ev.k);
@@ -118,6 +118,11 @@ export function fala(ev, { time = 'nosso time', rival = '', quem = '', tabela = 
     txt += '.';
   }
   const titulo = { comecou: `⚽ Começou: ${time}`, gol: `⚽ GOL DO ${time.toUpperCase()}!`, 'gol-sofrido': `⚽ ${time} ${ev.meu} x ${ev.dele}`, intervalo: `⚽ Intervalo: ${time}`, vermelho: `🟥 ${time}`, fim: `⚽ ${ev.meu > ev.dele ? 'Vitória do' : ev.meu === ev.dele ? 'Empate do' : 'Fim de jogo:'} ${time}` }[ev.tipo];
+  // vitória: aviso especial e o toque abre o cartão do estádio nas cores do time (para postar no story)
+  if (ev.tipo === 'fim' && ev.meu > ev.dele && timeApp) {
+    const ok = (x) => /^[a-z0-9-]{2,30}$/.test(x || '');
+    return { title: `🏆 GANHAMOS! O ${time} é o melhor!`, body: `${txt.trim()} Toque e comemore no seu story 📸`, tag: `fut-${ev.k}`, url: `./#/vitoria/${ok(timeApp) ? timeApp : 'time'}/${ev.meu}-${ev.dele}${ok(rivalApp) ? `/${rivalApp}` : ''}`, periodo: PERIODO[ev.periodo] || '' };
+  }
   return { title: titulo, body: rival ? `${txt}`.trim() : txt.trim(), tag: `fut-${ev.k}`, url: './#/hoje', periodo: PERIODO[ev.periodo] || '' };
 }
 

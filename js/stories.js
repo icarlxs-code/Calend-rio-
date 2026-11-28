@@ -564,6 +564,8 @@ export function novoStory(onChange) {
   });
   return a;
 }
+/** abre o editor de story já com uma imagem pronta (ex.: o cartão da vitória do time) */
+export function editorStoryFoto(foto, onChange) { return editorStory(foto, onChange); }
 function editorStory(foto, onChange) {
   const w = document.createElement('div');
   w.className = 'stv stv--edit'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Novo story');

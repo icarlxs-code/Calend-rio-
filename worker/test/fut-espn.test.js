@@ -91,7 +91,7 @@ test('sem chave da API-Futebol: jogo inteiro pela ESPN, para as DUAS torcidas, c
   assert.equal(L.filter((x) => /Intervalo/.test(x.title)).length, 3);
   t += 60 * 60e3; estado = resumo({ state: 'post', name: 'STATUS_FULL_TIME', period: 2, pf: 1, eventos: [ke('goal', "18'", 1, FLA, 'Pedro')] });
   await rodaAoVivo(env, t, send);
-  const fim = L.filter((x) => x.quem === 'ana' && /Vitória/.test(x.title));
+  const fim = L.filter((x) => x.quem === 'ana' && /Vitória|GANHAMOS/.test(x.title));
   assert.equal(fim.length, 1); assert.match(fim[0].body, /83 pontos e 1º lugar/, 'tabela de verdade da fonte grátis');
   const n = L.length; t += 30 * 60e3; await rodaAoVivo(env, t, send);
   assert.equal(L.length, n, 'depois do fim, silêncio');

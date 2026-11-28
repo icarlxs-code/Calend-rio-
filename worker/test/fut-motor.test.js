@@ -61,7 +61,7 @@ test('jogo inteiro: começo, gol, intervalo, gol sofrido e fim — cada um uma v
 
   t += 20 * 60e3; estado = partida({ periodo: 'fim-de-jogo', status: 'finalizado', placar_mandante: 2, placar_visitante: 1, gols: { mandante: [gol('Vitor Roque', '18:40'), gol('Estêvão', '88:00')], visitante: [gol('Hulk', '60:00')] } });
   await rodaAoVivo(a.env, t, send);
-  const fim = enviadas.filter((x) => /Vitória/.test(x.title));
+  const fim = enviadas.filter((x) => /Vitória|GANHAMOS/.test(x.title));
   assert.equal(fim.length, 2, 'a vitória foi avisada');
   assert.match(fim[0].body, /45 pontos/, 'a mensagem traz a tabela de verdade');
   assert.match(fim[0].body, /4 pontos do líder/);
@@ -138,4 +138,12 @@ test('antes do jogo: véspera, dia e pouco antes — um aviso por vez, e nunca d
   const n0 = avisos.length;
   await rodaAntes(env, madrugada, send);
   assert.equal(avisos.length, n0, 'de madrugada o Lembra não acorda ninguém');
+});
+import { fala as falaVit } from '../src/fut-eventos.js';
+test('vitória: título GANHAMOS e o toque abre o cartão do estádio do time (link seguro)', () => {
+  const m = falaVit({ tipo: 'fim', meu: 2, dele: 1, k: 'f:1' }, { time: 'Fluminense', rival: 'Flamengo', quem: 'u', timeApp: 'fluminense', rivalApp: 'flamengo' });
+  assert.match(m.title, /GANHAMOS! O Fluminense é o melhor/); assert.equal(m.url, './#/vitoria/fluminense/2-1/flamengo');
+  assert.match(m.url.split('#')[1], /^\/[\w/-]{0,120}$/, 'passa na regra de link seguro do app');
+  const d = falaVit({ tipo: 'fim', meu: 0, dele: 1, k: 'f:2' }, { time: 'Fluminense', timeApp: 'fluminense' });
+  assert.doesNotMatch(d.url, /vitoria/, 'derrota não abre o cartão');
 });

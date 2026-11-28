@@ -890,6 +890,8 @@ function openDeepLink(hash = location.hash, tries = 0) {
   if (/^#\/retro\/2026$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); window.PautaIntro && window.PautaIntro.finish(); import('./retro-telas.js').then((m) => m.abreRetro()); return true; }
   const priv = /^#\/privado(?:\/([A-Za-z0-9]{6,64}))?$/.exec(hash || '');
   if (priv) { history.replaceState(null, '', location.pathname + location.search); window.PautaIntro && window.PautaIntro.finish(); import('./privado.js').then((m) => (priv[1] ? m.openConversa(priv[1]) : m.openMensagens())); return true; }
+  const vit = /^#\/vitoria\/([a-z0-9-]{2,30})\/(\d{1,2})-(\d{1,2})(?:\/([a-z0-9-]{2,30}))?$/.exec(hash || '');
+  if (vit) { history.replaceState(null, '', location.pathname + location.search); window.PautaIntro && window.PautaIntro.finish(); import('./vitoria.js').then((m) => m.abreVitoria({ time: vit[1], meu: +vit[2], dele: +vit[3], rivalId: vit[4] || '' })); return true; }
   if (/^#\/visitas$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./stories.js').then((m) => m.openVisitors()); return true; }
   if (/^#\/amigos$/.test(hash || '')) { history.replaceState(null, '', location.pathname + location.search); import('./friends.js').then((m) => m.openFriends()); return true; }
   if (/^#\/amigo\//.test(hash || '')) { import('./friends.js').then((m) => { m.captureFriendLink(hash); m.processFriendLink(); }); return true; }
@@ -1756,7 +1758,7 @@ navigator.serviceWorker?.addEventListener('message', (ev) => {
 window.addEventListener('hashchange', () => {
   // abriu um convite com o app já aberto
   if (/^#\/convite\//.test(location.hash)) { captureInvite(); return maybeAcceptInvite(); }
-  if (/^#\/((e|d|p)\/|suporte|ranking|vitalicio|amigos|amigo\/|stories|visitas|privado|frase|frases|retro\/)/.test(location.hash)) return openDeepLink();
+  if (/^#\/((e|d|p)\/|suporte|ranking|vitalicio|amigos|amigo\/|stories|visitas|privado|frase|frases|retro\/|vitoria\/)/.test(location.hash)) return openDeepLink();
   if (/^#\/(c|v)\//.test(location.hash)) location.reload();
 });
 

@@ -128,7 +128,7 @@ export async function rodaAoVivo(env, now, send, { maxPartidas = 3 } = {}) {
         if (!passaNaGuarda(guarda, ev, novo)) continue;          // a outra fonte já tinha avisado
         for (const quem of quemTorce(p.timeApp, { liga: p.espn?.liga || r.dados.liga, camp: p.camp || novo.camp })) {
           if (enviadas >= MAX_MSG) break;
-          const msg = fala(ev, { time: clube?.nome || 'seu time', rival, quem, tabela: ev.tipo === 'fim' ? tab : null });
+          const msg = fala(ev, { time: clube?.nome || 'seu time', rival, quem, tabela: ev.tipo === 'fim' ? tab : null, timeApp: p.timeApp, rivalApp: timeDoNome(rival) || '' });
           if (!msg) continue;
           await send(env, quem, { ...msg, tag: `fut-${chave}-${ev.tipo}-${ev.meu}x${ev.dele}${ev.tipo === 'vermelho' ? `-v${guarda.vm + guarda.vd}` : ''}` }, 'futebol');
           enviadas++;
