@@ -15,6 +15,7 @@ export const NOVIDADES = {
   '2.33.0': [
     { t: 'Chegou coisa nova!', s: 'Segura essa bandeira!|Tem muita novidade pra você!', m: 'feliz', c: 'abre', v: 'torcida' },
     { t: 'Seu time do coração', s: 'Agora você escolhe|o seu time! Eu aviso dos jogos e comemoro cada gol junto!', m: 'feliz', c: 'time', v: 'torcida', acao: { label: 'Escolher meu time', go: () => import('./views/vida.js').then((m) => m.pedeTime({ forca: true })) } },
+    { t: 'Só o campeonato que você quer', s: 'Só Brasileirão? Só Libertadores?|Você escolhe! Ou recebe de todos os campeonatos.', m: 'feliz', c: 'time', v: 'torcida', acao: { label: 'Escolher campeonatos', go: () => import('./views/editar-perfil.js').then(async (E) => { const { store, saveProfileQuiet } = await import('./store.js'); E.escolheCamps(store.profile?.teamCamps || [], async (L) => { store.profile = { ...(store.profile || {}), teamCamps: L }; try { await saveProfileQuiet({ teamCamps: L }); await E.sincTime(store.profile); } catch { /* sobe depois */ } }); }) } },
     { t: 'Eu te conheço melhor', s: 'Me conta de você?|Filhos, amor, como anda o coração… eu falo do seu jeito!', m: 'feliz', c: 'perfil', v: 'torcida', acao: { label: 'Contar agora', go: () => import('./views/vida.js').then((m) => m.abreFicha()) } },
     { t: 'Frase nova toda hora', s: 'De manhã, de tarde e de noite:|uma frase nova, escrita só pra você!', m: 'feliz', c: 'frase', v: 'torcida' },
     { t: 'Contas do mês', s: '"Todo dia 10 pago o aluguel"?|Eu entendo, lembro todo mês e ainda digo o valor!', m: 'feliz', c: 'assist', v: 'torcida' },

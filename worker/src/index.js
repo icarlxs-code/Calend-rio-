@@ -1069,7 +1069,7 @@ async function handle(req, env) {
   }
   // time do coração: guarda só o id do clube, e só de quem ligou os avisos (para saber de quem avisar)
   if (url.pathname === '/futebol') {
-    const r = body.ver ? { time: clean(body.time, 20) } : await guardaTime(env, me.id, { time: clean(body.time, 20), avisos: body.avisos });
+    const r = body.ver ? { time: clean(body.time, 20) } : await guardaTime(env, me.id, { time: clean(body.time, 20), avisos: body.avisos, camps: Array.isArray(body.camps) ? body.camps : undefined });
     // a reação do mascote vem do motor (API-Futebol ou, sem ela, a fonte grátis): vale com ou sem chave
     const extra = r.time ? { cena: await cenaDoTime(env, r.time, Date.now()), aoVivo: true } : { aoVivo: false };
     let jogos = r.time ? await proximos(env, r.time) : [];

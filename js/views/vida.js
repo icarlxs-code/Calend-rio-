@@ -115,7 +115,11 @@ export async function pedeTime({ forca = false } = {}) {
     const dados = { teamId: d.teamId, teamOther: d.teamOther, teamAvisos: !!d.teamId, ...(nenhum ? { semTime: true } : {}) };
     store.profile = { ...(store.profile || {}), ...dados };
     try { await saveProfileQuiet(dados); } catch { /* sem internet: fica no aparelho e sobe depois */ }
-    if (d.teamId) falaDoTime(d.teamId, E);
+    if (d.teamId) E.escolheCamps(store.profile?.teamCamps || [], async (L) => {
+      store.profile = { ...(store.profile || {}), teamCamps: L };
+      try { await saveProfileQuiet({ teamCamps: L }); } catch { /* ok */ }
+      falaDoTime(d.teamId, E);
+    });
   });
   return true;
 }

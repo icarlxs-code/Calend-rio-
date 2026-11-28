@@ -164,3 +164,21 @@ test('rota /futebol sem chave: a tela de perfil recebe o próximo jogo pela ESPN
   await env.CAL.put('futv:cena:flamengo', JSON.stringify({ at: Date.now(), tipo: 'gol', meu: 1, dele: 0 }));
   assert.equal((await call({ ver: true, time: 'flamengo' })).cena.tipo, 'gol');
 });
+
+test('campeonatos: quem escolheu só Libertadores não recebe o jogo do Brasileirão; "todos" recebe; antes do jogo também', async () => {
+  const { campDe, quer, limpaCamps } = await import('../src/fut-camp.js');
+  assert.equal(campDe({ liga: 'bra.1' }), 'brasileirao'); assert.equal(campDe({ camp: 'Copa Libertadores da América' }), 'libertadores');
+  assert.equal(campDe({ camp: 'Campeonato Brasileiro Série B' }), 'serieb'); assert.equal(campDe({ comp: 'Paulistão' }), 'estadual'); assert.equal(campDe({ comp: 'Copa do Nordeste' }), 'outro'); assert.equal(campDe({ comp: 'Campeonato Carioca' }), 'estadual');
+  assert.ok(quer([], { liga: 'bra.1' })); assert.ok(!quer(['libertadores'], { liga: 'bra.1' })); assert.deepEqual(limpaCamps(['libertadores', 'xyz', 'libertadores']), ['libertadores']);
+  let estado = resumo({});
+  const a = monta(() => estado), env = { CAL: a.CAL };
+  await a.CAL.put('fut:gente', JSON.stringify({ tudo: 'flamengo', soLib: 'flamengo', soBra: 'flamengo' }));
+  await a.CAL.put('fut:camps', JSON.stringify({ soLib: ['libertadores'], soBra: ['brasileirao'] }));
+  const { L, send } = envio();
+  await rodaAoVivo(env, INICIO + 60e3, send);
+  assert.deepEqual([...new Set(L.map((x) => x.quem))].sort(), ['soBra', 'tudo'], 'quem quer só Libertadores não recebe o Brasileirão');
+  const A = envio();
+  for (let i = 0; i < 4; i++) await rodaAntes(env, Date.parse('2026-11-28T03:00:00-0300') + i * 60e3, A.send);
+  await rodaAntes(env, Date.parse('2026-11-28T19:00:00-0300'), A.send);
+  assert.deepEqual(A.L.map((x) => x.quem).sort(), ['soBra', 'tudo']);
+});

@@ -6,6 +6,7 @@
    - sem chave, sem orçamento do dia ou com a API-Futebol falhando, usa a segunda fonte (ESPN, grátis e sem chave);
      se nenhuma responder, não inventa nada. Mudar de fonte no meio do jogo não repete aviso (guarda por placar). */
 import { porTime, timeDoNome } from '../../functions/times.js';
+import { quer } from './fut-camp.js';
 import { temChave, orcamento, mapaTimes, idDoTime, proximasDoTime, proximasLista, partidaDetalhe, tabelaDe, intervalo } from './fut-api.js';
 import { retrato, novidades, fala, situacao, recadoAntes } from './fut-eventos.js';
 import { momentoDe, horaBR, diaBR } from './futebol.js';
@@ -19,7 +20,7 @@ const MAX_MSG = 40;          // teto de mensagens por rodada (proteção)
 const slug = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 /** a mesma partida, venha de qual fonte vier: dia + clube da casa + clube de fora */
 export const chaveJogo = (j) => `${diaBR(j.at)}:${j.casaApp || timeDoNome(j.casa) || slug(j.casa)}:${j.foraApp || timeDoNome(j.fora) || slug(j.fora)}`;
-const doEspn = (j, timeApp) => ({ id: `espn-${j.id}`, espn: j, at: j.at, casa: j.casa, fora: j.fora, casaId: j.casaId, foraId: j.foraId, casaApp: j.casaApp, foraApp: j.foraApp, camp: j.camp, estadio: j.estadio, timeApp, timeId: j.casaApp === timeApp ? j.casaId : j.foraId, fonte: 'espn' });
+const doEspn = (j, timeApp) => ({ id: `espn-${j.id}`, espn: j, liga: j.liga, at: j.at, casa: j.casa, fora: j.fora, casaId: j.casaId, foraId: j.foraId, casaApp: j.casaApp, foraApp: j.foraApp, camp: j.camp, estadio: j.estadio, timeApp, timeId: j.casaApp === timeApp ? j.casaId : j.foraId, fonte: 'espn' });
 
 /**
  * A agenda de cada time, da fonte que responder: API-Futebol (com chave e cota) e, se ela não tiver o time, estiver
@@ -69,7 +70,9 @@ export async function rodaAoVivo(env, now, send, { maxPartidas = 3 } = {}) {
   const membros = Object.entries(gente);
   if (!membros.length) return { ...fora, motivo: 'ninguem-segue' };
   const times = [...new Set(membros.map(([, t]) => t))].filter((t) => porTime(t));
-  const quemTorce = (timeApp) => membros.filter(([, t]) => t === timeApp).map(([m]) => m);
+  const campsDe = (await env.CAL.get('fut:camps', 'json')) || {};
+  // quem torce para o time E quer avisos deste campeonato
+  const quemTorce = (timeApp, jogo) => membros.filter(([m, t]) => t === timeApp && quer(campsDe[m], jogo || {})).map(([m]) => m);
   const orc = { buscas: 0 };
 
   // 1) a agenda de cada time (API-Futebol a cada 6 h; ESPN por dia de campeonato, poucas buscas por rodada)
@@ -123,7 +126,7 @@ export async function rodaAoVivo(env, now, send, { maxPartidas = 3 } = {}) {
         if (jaViu.has(ev.k)) continue;
         jaViu.add(ev.k);
         if (!passaNaGuarda(guarda, ev, novo)) continue;          // a outra fonte já tinha avisado
-        for (const quem of quemTorce(p.timeApp)) {
+        for (const quem of quemTorce(p.timeApp, { liga: p.espn?.liga || r.dados.liga, camp: p.camp || novo.camp })) {
           if (enviadas >= MAX_MSG) break;
           const msg = fala(ev, { time: clube?.nome || 'seu time', rival, quem, tabela: ev.tipo === 'fim' ? tab : null });
           if (!msg) continue;
@@ -148,11 +151,12 @@ export async function rodaAntes(env, now, send, { max = 20 } = {}) {
   const gente = Object.entries((await env.CAL.get('fut:gente', 'json')) || {});
   if (!gente.length) return { motivo: 'ninguem-segue' };
   const { porTime: ag } = await agendas(env, now, [...new Set(gente.map(([, t]) => t))].filter((t) => porTime(t)), { orc: { buscas: 0 } });
+  const campsDe = (await env.CAL.get('fut:camps', 'json')) || {};
   let n = 0;
   for (const [quem, timeApp] of gente) {
     if (n >= max) break;
     const clube = porTime(timeApp); if (!clube) continue;
-    const lista = (ag[timeApp] || []).filter((p) => p.at > now && p.at < now + 36 * H);
+    const lista = (ag[timeApp] || []).filter((p) => p.at > now && p.at < now + 36 * H && quer(campsDe[quem], p));
     if (!lista.length) continue;
     const pp = (await env.CAL.get(`pprofile:${quem}`, 'json')) || {};
     const prefs = { ...(pp.prefs || {}), tz: pp.tz };

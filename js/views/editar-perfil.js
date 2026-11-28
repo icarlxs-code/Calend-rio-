@@ -14,7 +14,7 @@ import { api } from '../avisos.js';
 const UFS = 'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ');
 const lim = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
 export const timeDe = (p = store.profile) => porTime(p?.teamId) || null;
-export const sincTime = (p = store.profile) => (store.mode === 'cloud' ? api('/futebol', { ws: '', time: p?.teamId || '', avisos: !!(p?.teamId && p?.teamAvisos) }) : Promise.resolve({ ligado: false, jogos: [] }));
+export const sincTime = (p = store.profile) => (store.mode === 'cloud' ? api('/futebol', { ws: '', time: p?.teamId || '', avisos: !!(p?.teamId && p?.teamAvisos), camps: Array.isArray(p?.teamCamps) ? p.teamCamps : [] }) : Promise.resolve({ ligado: false, jogos: [] }));
 
 /** problema do telefone em palavras (ou '' se está tudo certo) */
 export function erroTel(v) {
@@ -26,13 +26,14 @@ export function erroTel(v) {
 
 export function openEditProfile(after) {
   const p = store.profile || {}, me = store.member(store.me) || {}, mostra = p.mostra || {};
-  const d = { name: p.name || me.name || '', nickname: p.nickname || '', bio: p.bio || '', birth: p.birth || '', pronoun: p.pronoun || '', phone: maskPhone(p.phone || ''), role: p.role || '', workplace: p.workplace || '', cidade: p.cidade || '', uf: p.uf || '', bairro: p.bairro || '', teamId: p.teamId || '', teamOther: p.teamOther || '', teamAvisos: !!p.teamAvisos, vCidade: !!mostra.cidade, vIdade: !!mostra.idade, id: '', idEra: '' };
+  const d = { teamCamps: Array.isArray(p.teamCamps) ? p.teamCamps : [], name: p.name || me.name || '', nickname: p.nickname || '', bio: p.bio || '', birth: p.birth || '', pronoun: p.pronoun || '', phone: maskPhone(p.phone || ''), role: p.role || '', workplace: p.workplace || '', cidade: p.cidade || '', uf: p.uf || '', bairro: p.bairro || '', teamId: p.teamId || '', teamOther: p.teamOther || '', teamAvisos: !!p.teamAvisos, vCidade: !!mostra.cidade, vIdade: !!mostra.idade, id: '', idEra: '' };
   const menor = () => { const a = ageOf(d.birth); return a !== null && a < 18; };
   const campo = (k, rot, o = {}) => `<div class="fgroup${o.meio ? ' ep__meio' : ''}"><label class="flabel" for="ep-${k}">${rot}</label><input id="ep-${k}" class="input" data-k="${k}" type="${o.type || 'text'}" value="${esc(d[k])}" maxlength="${o.max || 60}" ${o.attrs || ''} placeholder="${esc(o.ph || '')}"><p class="ep__erro" data-erro="${k}" hidden></p></div>`;
   const selo = (txt) => `<span class="ep__selo">${icon('lock', 12)} ${txt}</span>`;
   const time = () => {
     const t = porTime(d.teamId);
     return `<button type="button" class="ep__time" data-time>${t ? boton(t, 44) : `<span class="ep__bola">${icon('heart', 20)}</span>`}<span><b>${t ? esc(t.nome) : d.teamOther ? esc(d.teamOther) : 'Escolher meu time'}</b><small>${t ? 'Toque para trocar ou tirar' : d.teamOther ? 'Sem avisos de jogos para este time' : 'Opcional'}</small></span>${icon('right', 16)}</button>
+      ${t ? `<button type="button" class="list__row ep__chave" data-camps><span><b>Campeonatos</b><small>${esc(campsTxt(d.teamCamps))}</small></span>${icon('right', 18)}</button>` : ''}
       ${t ? `<label class="list__row ep__chave"><span><b>Avisar dos jogos</b><small data-fut>só do ${esc(t.nome)}, na véspera, no dia e perto da hora</small></span><input type="checkbox" class="switch" data-chk="teamAvisos" ${d.teamAvisos ? 'checked' : ''}></label>` : ''}
       <p class="fhelp">${esc(AVISO_TIME)}</p>`;
   };
@@ -71,7 +72,10 @@ export function openEditProfile(after) {
       if (k === 'cidade' || k === 'uf') i.addEventListener('input', () => { const m = q('[data-chk="vCidade"]'); if (m) m.parentElement.querySelector('small').textContent = [d.cidade, d.uf].filter(Boolean).join(', ') || 'preencha acima'; });
     });
     const chaves = () => el.querySelectorAll('[data-chk]').forEach((c) => (c.onchange = () => { d[c.dataset.chk] = c.checked; }));
-    const ligaTime = () => { const b = q('[data-time]'); if (b) b.onclick = () => escolheTime(d, () => { q('[data-tcx]').innerHTML = time(); ligaTime(); chaves(); jogos(); }); };
+    const ligaTime = () => {
+      const b = q('[data-time]'); if (b) b.onclick = () => escolheTime(d, () => { q('[data-tcx]').innerHTML = time(); ligaTime(); chaves(); jogos(); });
+      const c = q('[data-camps]'); if (c) c.onclick = () => escolheCamps(d.teamCamps, (L) => { d.teamCamps = L; q('[data-tcx]').innerHTML = time(); ligaTime(); chaves(); });
+    };
     const jogos = () => { if (!d.teamId) return; sincTimeVer(d.teamId).then((r) => { const n = q('[data-fut]'); if (!n) return; if (r.ligado === false) n.textContent = 'a tabela de jogos ainda não chegou; assim que chegar, eu aviso'; else if (r.jogos?.[0]) n.textContent = proximoTxt(r.jogos[0], d.teamId); }).catch(() => {}); };
     chaves(); ligaTime(); jogos();
     q('[data-pic]').onclick = () => photoActions(redesenha);
@@ -90,7 +94,7 @@ export function openEditProfile(after) {
       try {
         if (d.id && d.id !== d.idEra && d.idEra) { try { d.idEra = await trocaMeuId(d.id); d.id = d.idEra; } catch (e) { b.disabled = false; return falha('id', e.message || 'Esse ID não deu certo.'); } }
         const mudouTel = d.phone.replace(/\D/g, '') !== String(p.phone || '').replace(/\D/g, '');
-        await saveMyProfile({ name, nickname: nick, bio: lim(d.bio, 80), birth: d.birth, pronoun: d.pronoun, phone: d.phone, ...(mudouTel && p.phoneVerified ? { phoneVerified: false } : {}), role: lim(d.role, 40), workplace: lim(d.workplace, 60), cidade: lim(d.cidade, 60), uf: d.uf, bairro: lim(d.bairro, 60), teamId: d.teamId, teamOther: lim(d.teamOther, 40), teamAvisos: !!(d.teamId && d.teamAvisos), mostra: { cidade: !menor() && d.vCidade, idade: !menor() && d.vIdade } });
+        await saveMyProfile({ name, nickname: nick, bio: lim(d.bio, 80), birth: d.birth, pronoun: d.pronoun, phone: d.phone, ...(mudouTel && p.phoneVerified ? { phoneVerified: false } : {}), role: lim(d.role, 40), workplace: lim(d.workplace, 60), cidade: lim(d.cidade, 60), uf: d.uf, bairro: lim(d.bairro, 60), teamId: d.teamId, teamOther: lim(d.teamOther, 40), teamAvisos: !!(d.teamId && d.teamAvisos), teamCamps: d.teamId ? d.teamCamps || [] : [], mostra: { cidade: !menor() && d.vCidade, idade: !menor() && d.vIdade } });
         sincTime().catch(() => {}); import('../friends.js').then((f) => f.publishCard()).catch(() => {});
         toast('Perfil salvo ✓'); s.close(); if (after) after();
       } catch { b.disabled = false; toast('Não consegui salvar agora. Verifique a internet.'); }
@@ -101,6 +105,23 @@ export function openEditProfile(after) {
 const sincTimeVer = (time) => (store.mode === 'cloud' ? api('/futebol', { ws: '', ver: true, jogos: true, time }) : Promise.resolve({ ligado: false, jogos: [] }));
 export function proximoTxt(j, id) { const rival = j.c === id ? j.fora : j.casa, dt = new Date(j.at); return `próximo: ${rival}, ${dt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' }).replace('.', '')} às ${dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}`; }
 
+export const CAMPS = [['brasileirao', 'Brasileirão'], ['serieb', 'Série B'], ['seriec', 'Série C'], ['copadobrasil', 'Copa do Brasil'], ['libertadores', 'Libertadores'], ['sulamericana', 'Sul-Americana'], ['estadual', 'Estaduais']];
+export const campsTxt = (L) => (!L || !L.length ? 'Todos os campeonatos' : CAMPS.filter(([k]) => L.includes(k)).map(([, n]) => n).join(', '));
+/** de quais campeonatos a pessoa quer avisos: "Todos" (padrão) ou só os marcados */
+export function escolheCamps(atual, ok) {
+  let sel = new Set(atual || []);
+  const html = () => `${sheetHead('De quais campeonatos?', { right: '<button class="btn btn--primary btn--sm" data-ok>Salvar</button>' })}
+    <div class="page page--sheet camps"><p class="fhelp">Você recebe avisos só dos jogos do seu time nos campeonatos escolhidos.</p>
+    <button type="button" class="tm${sel.size ? '' : ' is-on'}" data-todos><span class="ep__bola">${sel.size ? '' : icon('check', 18)}</span><span><b>Todos os campeonatos</b><small>qualquer jogo do seu time</small></span></button>
+    ${CAMPS.map(([k, n]) => `<button type="button" class="tm${sel.has(k) ? ' is-on' : ''}" data-c="${k}"><span class="ep__bola">${sel.has(k) ? icon('check', 18) : ''}</span><span><b>${esc(n)}</b></span></button>`).join('')}</div>`;
+  const s = openSheet({ className: 'sheet--tall', html: html(), onMount: (x) => liga(x) });
+  function liga(x) {
+    x.el.querySelector('[data-todos]').onclick = () => { sel = new Set(); s.set(html()); };
+    x.el.querySelectorAll('[data-c]').forEach((b) => (b.onclick = () => { const k = b.dataset.c; if (sel.has(k)) sel.delete(k); else sel.add(k); s.set(html()); }));
+    x.el.querySelector('[data-ok]').onclick = () => { s.close(); ok([...sel]); };
+  }
+  return s;
+}
 export function escolheTime(d, ok) {
   const linha = (t) => `<button class="tm" data-t="${t.id}">${boton(t, 42)}<span><b>${esc(t.nome)}</b><small>${t.uf}</small></span>${d.teamId === t.id ? icon('check', 20) : ''}</button>`;
   const lista = (q) => { const L = achaTimes(q); return L.length ? L.map(linha).join('') : ''; };

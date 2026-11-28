@@ -2,6 +2,7 @@
    (football-data.org) no servidor. Sem segredo: não chama nada e não avisa nada. Nenhum escudo é baixado.
    Uma busca por dia (até 6 chamadas); se falhar, usa a tabela guardada. Só avisa quem ligou, só do time da pessoa. */
 import { brNow } from './coach.js';
+import { limpaCamps, quer } from './fut-camp.js';
 import { porTime, timeDoNome } from '../../functions/times.js';
 const H = 3600e3, BR = -3 * H;
 export const diaBR = (ms) => new Date(ms + BR).toISOString().slice(0, 10);
@@ -64,10 +65,13 @@ export function momentoDe(j, now, { wake, sleep, tz } = {}) {
   return null;
 }
 /* guarda o time só de quem ligou os avisos (desligou = apaga) */
-export async function guardaTime(env, member, { time, avisos }) {
+export async function guardaTime(env, member, { time, avisos, camps }) {
   const L = (await env.CAL.get('fut:gente', 'json')) || {}, t = porTime(time) ? time : '', ok = !!t && avisos === true;
   if (ok ? L[member] !== t : member in L) { if (ok) L[member] = t; else delete L[member]; await env.CAL.put('fut:gente', JSON.stringify(L)); }
-  return { time: t, avisos: ok };
+  // de quais campeonatos a pessoa quer avisos ([] = todos)
+  const C = (await env.CAL.get('fut:camps', 'json')) || {}, c = limpaCamps(camps), era = JSON.stringify(C[member] || []);
+  if (camps !== undefined && JSON.stringify(ok ? c : []) !== era) { if (ok && c.length) C[member] = c; else delete C[member]; await env.CAL.put('fut:camps', JSON.stringify(C)); }
+  return { time: t, avisos: ok, camps: ok ? (camps !== undefined ? c : C[member] || []) : [] };
 }
 export async function tiraTime(env, member) { await guardaTime(env, member, {}); await env.CAL.delete(`fut:env:${member}`); }
 export async function proximos(env, time, now = Date.now()) { const g = await env.CAL.get('fut:jogos', 'json'); return (g?.jogos || []).filter((j) => (j.c === time || j.f === time) && j.at > now - 2 * H).slice(0, 3); }
@@ -85,11 +89,13 @@ export async function rodaFutebol(env, now, send, max = 6) {
     return 0; // os avisos saem na próxima rodada
   }
   const jogos = (g?.jogos || []).filter((j) => j.at > now && j.at < now + 36 * H); let n = 0, sobrou = false;
+  const campsDe = (await env.CAL.get('fut:camps', 'json')) || {};
   for (const [quem, time] of jogos.length ? Object.entries(gente) : []) {
     const meus = jogos.filter((j) => j.c === time || j.f === time); if (!meus.length) continue;
     if (n >= max) { sobrou = true; break; }
     const pp = (await env.CAL.get(`pprofile:${quem}`, 'json')) || {}, pf = { ...(pp.prefs || {}), tz: pp.tz }, sent = (await env.CAL.get(`fut:env:${quem}`, 'json')) || {};
     for (const j of meus) {
+      if (!quer(campsDe[quem], j)) continue;   // a pessoa não quer avisos deste campeonato
       const mo = momentoDe(j, now, pf), k = `${j.id}:${mo}`; if (!mo || sent[k]) continue;
       const msg = recado(j, time, mo, quem, pp.tz); if (!msg) continue;
       sent[k] = now; for (const [a, t] of Object.entries(sent)) if (t < now - 5 * 864e5) delete sent[a];
