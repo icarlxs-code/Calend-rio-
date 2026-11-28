@@ -1372,6 +1372,8 @@ function startApp() {
   setTimeout(() => import('./views/vida.js').then((m) => m.pede()).catch(() => {}), 7000);
   // time do coração: quem não escolheu (nem disse que não torce) escolhe ao entrar; o mascote já fala do time
   setTimeout(() => import('./views/vida.js').then((m) => m.pedeTime()).catch(() => {}), 9000);
+  // o que ainda falta no perfil: uma pergunta por vez, no máximo uma a cada 6 h ("Prefiro não dizer" encerra aquela)
+  import('./views/completa.js').then((m) => m.liga()).catch(() => {});
   // falas escritas pela IA para esta pessoa (frase do momento 3x por dia e quando toca no mascote)
   import('./fala-ia.js').then((m) => m.liga()).catch(() => {});
   window.addEventListener('lembra:fala', () => { if (!document.querySelector('.sheet-wrap.is-open')) render(); });
