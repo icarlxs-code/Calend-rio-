@@ -69,7 +69,10 @@ export function prepara(f) {
   });
 }
 /* câmera (story do compromisso: só foto da hora) */
-function tiraFoto(cam = 'environment') {
+async function tiraFoto(cam = 'environment') {
+  // câmera do próprio Lembra: 9:16 e a foto sai igual à tela (a foto é tirada agora, então vale como prova)
+  const C = await import('./camera-story.js');
+  if (C.temCamera()) { const f = await C.abreCamera({ soCamera: true, lado: cam }); if (!f) throw new Error('cancelou'); return f; }
   return new Promise((res, rej) => {
     const inp = document.createElement('input');
     inp.type = 'file'; inp.accept = 'image/*'; inp.setAttribute('capture', cam); // abre a câmera direto (sem galeria); 'user' = selfie
@@ -86,6 +89,10 @@ function tiraFoto(cam = 'environment') {
   });
 }
 
+function tiraFotoArquivo() {
+  return new Promise((res, rej) => { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.setAttribute('capture', 'environment'); inp.hidden = true; document.body.appendChild(inp);
+    inp.onchange = async () => { const f = inp.files && inp.files[0]; inp.remove(); if (!f) return rej(new Error('cancelou')); const C = await import('./camera-story.js'); const u = URL.createObjectURL(f); C.encaixa916(u).then((x) => { URL.revokeObjectURL(u); res(x); }, rej); }; inp.click(); });
+}
 /* postar o story de um compromisso concluído (kind: 'w' trabalho | 'p' pessoal) */
 export const selfie = (t) => /cabel|corte|barb|unha|manicure|sobrancelh|maqui|make|escova|penteado|academia|treino|corrida|caminhada|selfie|look|roupa|pele|dentista|clareamento/i.test(t || '');
 export async function postStory({ title = '', ref = '', kind = 'w', cam } = {}) {
@@ -567,7 +574,7 @@ export function novoStory(onChange) {
       <div class="phm__head"><span class="phm__pic"><span>${face(store.member(store.me) || { name: 'Você' }, 72)}</span></span><b>Novo story</b><small>Seus amigos veem · some em 24 h</small></div>
       ${fp ? `<div class="phm__grp"><button class="phm__row" data-tarefa><span class="phm__ic is-cam">${icon('check', 21)}</span><span class="phm__t"><b>Foto de “${esc(fp.title)}”</b><small>Prova do que você fez · +${fp.P.total} XP agora</small></span>${icon('right', 16)}</button></div>` : ''}
       <div class="phm__grp">
-        <label class="phm__row"><span class="phm__ic is-story">${icon('camera', 21)}</span><span class="phm__t"><b>Câmera</b><small>Tirar uma foto agora</small></span>${icon('right', 16)}<input type="file" accept="image/*" capture="environment" data-livre hidden></label>
+        <button type="button" class="phm__row" data-cam><span class="phm__ic is-story">${icon('camera', 21)}</span><span class="phm__t"><b>Câmera</b><small>Tirar uma foto agora</small></span>${icon('right', 16)}</button>
         <label class="phm__row"><span class="phm__ic is-n">${icon('image', 21)}</span><span class="phm__t"><b>Galeria</b><small>Escolher uma foto do celular</small></span>${icon('right', 16)}<input type="file" accept="image/*" data-livre hidden></label>
       </div>
       <button class="phm__cancel" data-close>Cancelar</button>
@@ -576,8 +583,13 @@ export function novoStory(onChange) {
       const t = x.el.querySelector('[data-tarefa]'); if (t) t.onclick = () => { x.close(); postStory({ title: fp.title, ref: fp.ref, kind: fp.kind }).then(() => onChange && onChange()); };
       x.el.querySelectorAll('[data-livre]').forEach((inp) => (inp.onchange = async () => {
         const f = inp.files && inp.files[0]; if (!f) return; x.close();
-        try { editorStory(await prepara(f), onChange); } catch (e) { toast(e.message || 'Não consegui abrir a foto.'); }
+        try { const C = await import('./camera-story.js'); const u = URL.createObjectURL(f); const foto = await C.encaixa916(u); URL.revokeObjectURL(u); editorStory(foto, onChange); } catch (e) { toast(e.message || 'Não consegui abrir a foto.'); }
       }));
+      x.el.querySelector('[data-cam]').onclick = async () => {
+        x.close(); const C = await import('./camera-story.js');
+        if (!C.temCamera()) { try { editorStory(await tiraFotoArquivo(), onChange); } catch (e) { if (e.message !== 'cancelou') toast(e.message); } return; }
+        const foto = await C.abreCamera(); if (foto) editorStory(foto, onChange);
+      };
     },
   });
   return a;

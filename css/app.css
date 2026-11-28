@@ -4332,3 +4332,20 @@ h1, .hdr h1, .phdr h1, .login h1 { font-weight: 900; letter-spacing: -.02em; lin
 .mtre__ok { width: 100%; height: 54px; border-radius: 16px; border: 0; background: #FF6A1A; color: #fff; font: 800 17px Nunito, system-ui, sans-serif; cursor: pointer; }
 .stv__img .mfig img, .mtre .mfig img { width: 48px !important; height: 48px !important; max-width: none !important; max-height: none !important; object-fit: cover; border-radius: 10px; box-shadow: none !important; position: static; }
 .stv__img .mfig-pos { width: max-content; max-width: 78%; }
+
+/* ===== Câmera do story (9:16, como no Instagram) ===== */
+.scam { position: fixed; inset: 0; z-index: 9600; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: env(safe-area-inset-top, 0px); opacity: 0; transition: opacity .2s; }
+.scam.is-in { opacity: 1; } .scam.is-out { opacity: 0; }
+.scam__quadro { position: relative; width: min(100vw, calc((100dvh - 130px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) * 9 / 16)); aspect-ratio: 9 / 16; border-radius: 18px; overflow: hidden; background: #111; }
+.scam__v { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scam__v.is-frente { transform: scaleX(-1); }
+.scam__flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.scam__msg { position: absolute; left: 24px; right: 24px; top: 40%; text-align: center; color: #fff; font: 700 16px/1.4 Nunito, system-ui, sans-serif; }
+.scam__x { position: absolute; top: 12px; left: 12px; width: 44px; height: 44px; border: 0; background: none; color: #fff; display: grid; place-items: center; filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); cursor: pointer; }
+.scam__barra { width: 100%; max-width: 480px; height: 120px; padding-bottom: env(safe-area-inset-bottom, 0px); display: flex; align-items: center; justify-content: space-around; }
+.scam__gal, .scam__vira, .scam__vaga { width: 48px; height: 48px; border-radius: 14px; border: 0; display: grid; place-items: center; color: #fff; background: rgba(255,255,255,.14); cursor: pointer; }
+.scam__vaga { background: none; }
+.scam__vira { border-radius: 50%; }
+.scam__clique { width: 78px; height: 78px; border-radius: 50%; border: 5px solid #fff; background: none; padding: 5px; cursor: pointer; }
+.scam__clique i { display: block; width: 100%; height: 100%; border-radius: 50%; background: #fff; transition: transform .12s; }
+.scam__clique:active i { transform: scale(.88); }
